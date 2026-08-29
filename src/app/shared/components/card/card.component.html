@@ -1,0 +1,55 @@
+<article
+  class="card"
+  [style.background-color]="backgroundColor()"
+  [style.border-color]="borderColor()"
+>
+  <header class="card__header">
+    <h3 class="card__title">
+      <span class="card__marker" aria-hidden="true">::</span>
+      @if (icon()) {
+        <i [class]="icon()" aria-hidden="true"></i>
+      }
+      {{ title() }}
+    </h3>
+
+    <div class="card__actions">
+      <ng-content select="[card-actions]" />
+
+      @if (showEdit()) {
+        <button type="button" class="card__link" (click)="edit.emit()">Editar</button>
+        <app-button
+          variant="primary"
+          size="sm"
+          icon="fa-solid fa-arrow-right"
+          ariaLabel="Abrir"
+          (clicked)="navigate.emit()"
+        />
+      }
+      @if (showClose()) {
+        <button
+          type="button"
+          class="card__close"
+          aria-label="Fechar card"
+          (click)="close.emit()"
+        >
+          <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+        </button>
+      }
+    </div>
+  </header>
+
+  <div class="card__body" [class.card__body--loading]="loading()">
+    @if (loading()) {
+      <div class="card__spinner" role="status" aria-live="polite">
+        <i class="fa-solid fa-seedling fa-spin" aria-hidden="true"></i>
+        <span>Carregando…</span>
+      </div>
+    } @else {
+      <ng-content />
+    }
+  </div>
+
+  <footer class="card__footer">
+    <ng-content select="[card-footer]" />
+  </footer>
+</article>

@@ -1,0 +1,109 @@
+@use 'variables' as *;
+@use 'mixins' as *;
+
+:host {
+  display: block;
+}
+
+.card {
+  @include flex-column;
+  border: 1px solid $color-border;
+  border-radius: $border-radius-lg;
+  box-shadow: $shadow-sm;
+  overflow: hidden;
+  transition: box-shadow $transition-normal, transform $transition-normal;
+
+  &:hover {
+    box-shadow: $shadow-md;
+  }
+
+  &__header {
+    @include flex-between;
+    gap: $spacing-md;
+    padding: $spacing-md $spacing-lg;
+    border-bottom: 1px solid $color-border;
+  }
+
+  &__title {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    font-family: $font-family-heading;
+    font-size: $font-size-lg;
+    font-weight: $font-weight-medium;
+    color: $color-text-primary;
+    margin: 0;
+
+    i {
+      color: $color-primary-light;
+    }
+  }
+
+  &__marker {
+    color: $color-primary-light;
+    font-weight: $font-weight-bold;
+    letter-spacing: -1px;
+  }
+
+  &__actions {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+  }
+
+  &__link {
+    font-size: $font-size-xs;
+    color: $color-text-secondary;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+
+    &:hover {
+      color: $color-primary;
+    }
+  }
+
+  &__close {
+    @include flex-center;
+    width: 24px;
+    height: 24px;
+    border-radius: $border-radius-sm;
+    color: $color-text-muted;
+    transition: background-color $transition-fast, color $transition-fast;
+
+    &:hover {
+      background-color: $color-primary-pale;
+      color: $color-secondary;
+    }
+  }
+
+  &__body {
+    flex: 1;
+    padding: $spacing-lg;
+
+    &--loading {
+      @include flex-center;
+      min-height: 160px;
+    }
+  }
+
+  &__spinner {
+    @include flex-column;
+    align-items: center;
+    gap: $spacing-sm;
+    color: $color-text-muted;
+    font-size: $font-size-xs;
+
+    i {
+      font-size: $font-size-2xl;
+      color: $color-primary-light;
+    }
+  }
+
+  &__footer:empty {
+    display: none;
+  }
+
+  &__footer {
+    padding: 0 $spacing-lg $spacing-md;
+  }
+}

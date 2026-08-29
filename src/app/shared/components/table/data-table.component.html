@@ -1,0 +1,53 @@
+<div class="table-wrap">
+  <table class="data-table">
+    <thead>
+      <tr>
+        @for (column of columns(); track column.key) {
+          <th
+            [style.width]="column.width"
+            [class]="'align-' + (column.align ?? 'left')"
+          >
+            {{ column.header }}
+          </th>
+        }
+      </tr>
+    </thead>
+
+    <tbody>
+      @if (loading()) {
+        <tr class="data-table__state">
+          <td [attr.colspan]="columns().length">
+            <i class="fa-solid fa-seedling fa-spin" aria-hidden="true"></i> Carregando…
+          </td>
+        </tr>
+      } @else if (data().length === 0) {
+        <tr class="data-table__state">
+          <td [attr.colspan]="columns().length">{{ emptyMessage() }}</td>
+        </tr>
+      } @else {
+        @for (row of data(); track trackRow($index, row)) {
+          <tr (click)="rowClick.emit(row)">
+            @for (column of columns(); track column.key) {
+              <td [class]="'align-' + (column.align ?? 'left')">
+                @switch (column.format) {
+                  @case ('date') {
+                    {{ dateValue(row, column) | dateFormat }}
+                  }
+                  @case ('currency') {
+                    {{ numberValue(row, column) | currencyFormat }}
+                  }
+                  @case ('badge') {
+                    <app-badge tone="primary" [label]="displayValue(row, column)" />
+                  }
+                  @default {
+                    {{ displayValue(row, column) }}
+                  }
+                }
+              </td>
+            }
+          </tr>
+        }
+      }
+    </tbody>
+  </table>
+</div>

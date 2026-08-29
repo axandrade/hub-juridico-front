@@ -1,0 +1,65 @@
+@use 'variables' as *;
+@use 'mixins' as *;
+
+.table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  @include thin-scrollbar;
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: $font-size-base;
+
+  thead th {
+    text-align: left;
+    padding: $spacing-sm $spacing-md;
+    background-color: $color-primary-pale;
+    color: $color-secondary;
+    font-family: $font-family-heading;
+    font-weight: $font-weight-medium;
+    border-bottom: 2px solid $color-primary-light;
+    white-space: nowrap;
+  }
+
+  tbody td {
+    padding: $spacing-sm $spacing-md;
+    border-bottom: 1px solid $color-border;
+    color: $color-text-primary;
+  }
+
+  tbody tr {
+    transition: background-color $transition-fast;
+
+    &:hover {
+      background-color: rgba($pink-pale, 0.35);
+      cursor: pointer;
+    }
+
+    &:last-child td {
+      border-bottom: none;
+    }
+  }
+
+  &__state td {
+    text-align: center;
+    padding: $spacing-lg;
+    color: $color-text-muted;
+    cursor: default;
+
+    i {
+      color: $color-primary-light;
+    }
+  }
+
+  .align-left {
+    text-align: left;
+  }
+  .align-center {
+    text-align: center;
+  }
+  .align-right {
+    text-align: right;
+  }
+}

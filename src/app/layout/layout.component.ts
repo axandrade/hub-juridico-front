@@ -26,7 +26,8 @@ export class LayoutComponent {
   }
 
   protected logout(): void {
-    this.auth.logout();
-    void this.router.navigateByUrl(`/${ROUTES.LOGIN}`);
+    this.auth.logout().subscribe({
+      complete: () => void this.router.navigateByUrl(`/${ROUTES.LOGIN}`),
+    });
   }
 }

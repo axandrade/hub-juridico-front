@@ -41,14 +41,22 @@
 
       <h1 class="login__wordmark">Hub <span>Jurídico</span></h1>
       <p class="login__pitch">
-        A plataforma de gestão para advogados e juristas — processos, prazos,
-        petições e decisões reunidos com elegância e método.
+        A plataforma de gestão para advogados e juristas — processos, prazos, petições e decisões
+        reunidos com elegância e método.
       </p>
 
       <ul class="login__features">
-        <li><i class="fa-solid fa-folder-open" aria-hidden="true"></i> Processos e andamentos sob controle</li>
-        <li><i class="fa-solid fa-gavel" aria-hidden="true"></i> Prazos e compromissos sem surpresas</li>
-        <li><i class="fa-solid fa-scale-balanced" aria-hidden="true"></i> Teses, petições e decisões organizadas</li>
+        <li>
+          <i class="fa-solid fa-folder-open" aria-hidden="true"></i> Processos e andamentos sob
+          controle
+        </li>
+        <li>
+          <i class="fa-solid fa-gavel" aria-hidden="true"></i> Prazos e compromissos sem surpresas
+        </li>
+        <li>
+          <i class="fa-solid fa-scale-balanced" aria-hidden="true"></i> Teses, petições e decisões
+          organizadas
+        </li>
       </ul>
 
       <figure class="login__maxim">
@@ -69,6 +77,13 @@
         <p>Acesse sua conta para continuar</p>
       </header>
 
+      @if (passwordChanged()) {
+        <p class="login__notice" role="status">
+          <i class="fa-solid fa-circle-check" aria-hidden="true"></i>
+          Senha alterada com sucesso. Entre novamente com a nova senha.
+        </p>
+      }
+
       @if (error()) {
         <p class="login__alert" role="alert">
           <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
@@ -77,19 +92,19 @@
       }
 
       <label class="login__field">
-        <span class="login__field-label">Usuário</span>
-        <span class="login__control" [class.is-invalid]="invalid('username')">
-          <i class="fa-solid fa-user" aria-hidden="true"></i>
+        <span class="login__field-label">CPF</span>
+        <span class="login__control" [class.is-invalid]="invalid('cpf')">
+          <i class="fa-solid fa-id-card" aria-hidden="true"></i>
           <input
             type="text"
-            formControlName="username"
-            autocomplete="username"
-            placeholder="Digite seu usuário"
+            appCpfMask
+            formControlName="cpf"
+            placeholder="000.000.000-00"
             spellcheck="false"
           />
         </span>
-        @if (invalid('username')) {
-          <span class="login__field-error">Informe seu usuário.</span>
+        @if (invalid('cpf')) {
+          <span class="login__field-error">{{ cpfError() }}</span>
         }
       </label>
 
@@ -109,7 +124,12 @@
             (click)="togglePassword()"
             [attr.aria-label]="showPassword() ? 'Ocultar senha' : 'Mostrar senha'"
           >
-            <i class="fa-solid" [class.fa-eye]="!showPassword()" [class.fa-eye-slash]="showPassword()" aria-hidden="true"></i>
+            <i
+              class="fa-solid"
+              [class.fa-eye]="!showPassword()"
+              [class.fa-eye-slash]="showPassword()"
+              aria-hidden="true"
+            ></i>
           </button>
         </span>
         @if (invalid('password')) {
@@ -134,14 +154,6 @@
           <span>Entrar</span>
         }
       </button>
-
-      <p class="login__demo">
-        <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
-        Ambiente de demonstração —
-        <button type="button" (click)="fillDemo()">
-          usar <code>{{ demo.USERNAME }}</code> / <code>{{ demo.PASSWORD }}</code>
-        </button>
-      </p>
     </form>
 
     <footer class="login__foot">

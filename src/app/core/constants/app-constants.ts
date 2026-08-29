@@ -9,16 +9,7 @@ export const APP_INFO = {
 export const ROUTES = {
   DASHBOARD: 'dashboard',
   LOGIN: 'login',
-} as const;
-
-/**
- * Credenciais estáticas de demonstração — sem back-end ainda.
- * Substituir por autenticação real (token + HttpClient) na integração.
- */
-export const AUTH_DEMO = {
-  USERNAME: 'admin',
-  PASSWORD: 'admin',
-  STORAGE_KEY: 'hub-juridico.session',
+  CHANGE_PASSWORD: 'trocar-senha',
 } as const;
 
 export interface NavItem {

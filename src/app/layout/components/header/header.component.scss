@@ -58,6 +58,16 @@
     }
   }
 
+  &__user-role {
+    padding: 2px $spacing-sm;
+    border-radius: $border-radius-sm;
+    background-color: rgba($burgundy-deep, 0.25);
+    color: $cream-warm;
+    font-size: 10px;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+  }
+
   @include respond-below($breakpoint-lg) {
     flex-wrap: wrap;
 

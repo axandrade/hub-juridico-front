@@ -35,6 +35,60 @@ npm test         # vitest (--no-watch para CI: ng test --no-watch)
 
 ---
 
+## Autenticação
+
+Integração real com o **hub-juridico-api** (JWT, `Authorization: Bearer`).
+
+### Configuração
+
+`src/environments/environment.ts` — só valores públicos, sem segredo:
+
+| Ambiente | `apiBaseUrl` |
+|---|---|
+| dev (`environment.ts`) | `http://localhost:8000/api/v1` |
+| prod (`environment.prod.ts`, via `fileReplacements`) | `/api/v1` (mesmo domínio, atrás de proxy HTTPS) |
+
+### Fluxo
+
+1. **Login** por **CPF + senha** (`POST /auth/login/` com `{ cpf, senha }`) — o campo tem
+   máscara `000.000.000-00` (`CpfMaskDirective`) e validação de dígitos verificadores
+   (`core/auth/cpf.ts`, porta do validador do back-end); o front envia só os dígitos.
+   Em seguida guarda o par de tokens e carrega o perfil (`GET /auth/me/`).
+2. **`provideAppInitializer`** roda `AuthService.bootstrap()` no start: se há refresh token
+   persistido, faz um *silent refresh* e reidrata a sessão — o F5 mantém o usuário logado.
+3. **`authInterceptor`** anexa o `Bearer` e, ao receber `401`, renova o token uma única vez
+   (`AuthService.refresh` é *single-flight*) e repete a requisição. Refresh falhou →
+   `clearSession()` + redirect para `/login`.
+4. **`must_change_password`** → `authGuard` manda para `/trocar-senha` e bloqueia o resto do
+   app; ao concluir, a sessão é encerrada e o usuário reautentica.
+5. **Logout** (`POST /auth/logout/`) revoga o refresh token no servidor (blacklist) antes de
+   limpar o estado local.
+
+### Estratégia de armazenamento de token
+
+| Token | Onde | Porquê |
+|---|---|---|
+| **access** (enviado em toda request) | só em memória (`TokenStore`) | nunca toca `storage` → reduz exposição a XSS |
+| **refresh** | `localStorage` (ou `sessionStorage` se "Lembrar-me" off) | sessão sobrevive ao reload |
+
+**Produção — endurecer:** mover o refresh token para um cookie `httpOnly; Secure;
+SameSite=Strict` (exige auth por cookie + endpoint de refresh via cookie no back-end),
+servir tudo sob **HTTPS** e publicar uma **CSP** restritiva. Como a API usa apenas o header
+`Authorization`, **CSRF não se aplica** ao modelo atual.
+
+### Rodando back-end + front-end
+
+```bash
+# terminal 1 — API (precisa de MongoDB no ar)
+cd ../../backend/python/hub-juridico-api
+.venv\Scripts\python manage.py runserver        # :8000
+
+# terminal 2 — front
+npm start                                        # :4200
+```
+
+---
+
 ## Arquitetura de pastas
 
 ```
@@ -48,13 +102,21 @@ src/
 │
 └── app/
     ├── core/                   # Singletons, sem UI. Importado uma única vez.
+    │   ├── auth/
+    │   │   ├── auth.models.ts         # tipos + extractApiErrorMessage (envelope da API)
+    │   │   ├── cpf.ts                 # onlyDigits / maskCpf / isValidCpf / cpfValidator
+    │   │   ├── password-policy.ts     # validadores espelhando o back-end
+    │   │   ├── token-store.ts         # access em memória, refresh em storage
+    │   │   └── auth.interceptor.ts    # Bearer + silent refresh em 401
     │   ├── constants/
     │   │   ├── color-palette.ts       # COLOR_PALETTE / COLOR_SEMANTIC / CHART_COLOR_SEQUENCE
-    │   │   ├── app-constants.ts       # APP_INFO, SIDEBAR_NAV, DATE_FORMAT, CURRENCY
+    │   │   ├── app-constants.ts       # APP_INFO, SIDEBAR_NAV, ROUTES, DATE_FORMAT, CURRENCY
     │   │   └── primeng-preset.ts      # preset PrimeNG derivado da paleta
+    │   ├── guards/auth.guard.ts       # authGuard / publicOnlyGuard / passwordChangeGuard
     │   ├── models/                    # ITask, ICommitment, IProcess (+ enums e labels)
     │   ├── data/mock-data.ts          # dados estáticos de demonstração
     │   └── services/
+    │       ├── auth.service.ts        # login / bootstrap / refresh / logout / changePassword
     │       ├── data.service.ts        # getTasks/getCommitments/getProcesses → Observable
     │       └── theme.service.ts       # getColors / getChartColors / getChartConfig
     │
@@ -65,7 +127,9 @@ src/
     │   │   ├── card/            # <app-card>    cabeçalho ":: título … Editar → x"
     │   │   ├── table/           # <app-data-table> genérica (columns + data + format)
     │   │   └── chart/           # <app-bar-chart> / <app-pie-chart> (paleta automática)
-    │   ├── directives/highlight.directive.ts   # [appHighlight] hover botânico
+    │   ├── directives/
+    │   │   ├── highlight.directive.ts          # [appHighlight] hover botânico
+    │   │   └── cpf-mask.directive.ts           # [appCpfMask] máscara 000.000.000-00
     │   ├── pipes/               # | dateFormat   | currencyFormat  (pt-BR / BRL)
     │   └── index.ts             # barrel
     │

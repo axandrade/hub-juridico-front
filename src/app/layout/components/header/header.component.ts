@@ -18,12 +18,17 @@ export class HeaderComponent {
   private readonly auth = inject(AuthService);
 
   protected readonly context = MOCK_CONTEXT;
-  protected readonly userName = computed(() => this.auth.user()?.name ?? MOCK_CONTEXT.userName);
+  protected readonly userName = computed(() => this.auth.user()?.nome ?? '—');
+  protected readonly userRole = computed(() => this.auth.user()?.role?.name ?? '');
 
   protected readonly quickActions = [
     { label: 'Gerar arquivo', icon: 'fa-solid fa-file-export', variant: 'secondary' as const },
     { label: 'CAACE Intimações', icon: 'fa-solid fa-bell', variant: 'primary' as const },
-    { label: 'Abrir pasta do processo', icon: 'fa-solid fa-folder-open', variant: 'tertiary' as const },
+    {
+      label: 'Abrir pasta do processo',
+      icon: 'fa-solid fa-folder-open',
+      variant: 'tertiary' as const,
+    },
     { label: 'Abrir pasta do cliente', icon: 'fa-solid fa-folder', variant: 'tertiary' as const },
   ];
 }

@@ -1,6 +1,6 @@
 import { Routes } from '@angular/router';
 
-import { authGuard, publicOnlyGuard } from './core/guards/auth.guard';
+import { authGuard, passwordChangeGuard, publicOnlyGuard } from './core/guards/auth.guard';
 import { LayoutComponent } from './layout/layout.component';
 
 export const routes: Routes = [
@@ -8,6 +8,15 @@ export const routes: Routes = [
     path: 'login',
     canActivate: [publicOnlyGuard],
     loadChildren: () => import('./features/auth/auth.routes').then((m) => m.AUTH_ROUTES),
+  },
+  {
+    path: 'trocar-senha',
+    canActivate: [passwordChangeGuard],
+    title: 'Hub Jurídico · Trocar senha',
+    loadComponent: () =>
+      import('./features/auth/components/change-password/change-password.component').then(
+        (m) => m.ChangePasswordComponent,
+      ),
   },
   {
     path: '',

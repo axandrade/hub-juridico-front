@@ -8,6 +8,17 @@ export const APP_INFO = {
 
 export const ROUTES = {
   DASHBOARD: 'dashboard',
+  LOGIN: 'login',
+} as const;
+
+/**
+ * Credenciais estáticas de demonstração — sem back-end ainda.
+ * Substituir por autenticação real (token + HttpClient) na integração.
+ */
+export const AUTH_DEMO = {
+  USERNAME: 'admin',
+  PASSWORD: 'admin',
+  STORAGE_KEY: 'hub-juridico.session',
 } as const;
 
 export interface NavItem {
@@ -16,6 +27,7 @@ export interface NavItem {
   route?: string;
   badge?: string;
   emphasis?: 'primary' | 'accent' | 'neutral';
+  action?: 'logout';
 }
 
 /** Itens de navegação da sidebar, refletindo o protótipo. */
@@ -39,7 +51,7 @@ export const SIDEBAR_NAV: readonly NavItem[] = [
   { label: 'Dashboard Jurídico', icon: 'fa-solid fa-chart-line', route: `/${ROUTES.DASHBOARD}`, emphasis: 'primary' },
   { label: 'Usuários', icon: 'fa-solid fa-user', emphasis: 'neutral' },
   { label: 'Configurações', icon: 'fa-solid fa-gear', emphasis: 'neutral' },
-  { label: 'Sair', icon: 'fa-solid fa-right-from-bracket', emphasis: 'accent' },
+  { label: 'Sair', icon: 'fa-solid fa-right-from-bracket', emphasis: 'accent', action: 'logout' },
 ];
 
 export const DATE_FORMAT = {

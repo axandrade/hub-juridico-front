@@ -13,6 +13,7 @@ import { APP_INFO, NavItem, SIDEBAR_NAV } from '../../../core/constants/app-cons
 export class SidebarComponent {
   readonly collapsed = input<boolean>(false);
   readonly toggle = output<void>();
+  readonly logout = output<void>();
 
   protected readonly appInfo = APP_INFO;
   protected readonly navItems: readonly NavItem[] = SIDEBAR_NAV;

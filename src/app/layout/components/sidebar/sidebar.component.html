@@ -39,6 +39,7 @@
               class="sidebar__link"
               [class]="'sidebar__link--' + (item.emphasis ?? 'neutral')"
               [title]="item.label"
+              (click)="item.action === 'logout' && logout.emit()"
             >
               <i [class]="item.icon" aria-hidden="true"></i>
               @if (!collapsed()) {

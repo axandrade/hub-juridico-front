@@ -1,6 +1,7 @@
-import { ChangeDetectionStrategy, Component, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
 
 import { MOCK_CONTEXT } from '../../../core/data/mock-data';
+import { AuthService } from '../../../core/services/auth.service';
 import { ButtonComponent } from '../../../shared/components/button/button.component';
 
 @Component({
@@ -14,7 +15,10 @@ export class HeaderComponent {
   readonly pageTitle = input<string>('Hub Jurídico');
   readonly pageSubtitle = input<string>('Resumo geral');
 
+  private readonly auth = inject(AuthService);
+
   protected readonly context = MOCK_CONTEXT;
+  protected readonly userName = computed(() => this.auth.user()?.name ?? MOCK_CONTEXT.userName);
 
   protected readonly quickActions = [
     { label: 'Gerar arquivo', icon: 'fa-solid fa-file-export', variant: 'secondary' as const },

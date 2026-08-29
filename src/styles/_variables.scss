@@ -1,0 +1,86 @@
+// ============================================================
+// Paleta de Cores — Mood Botânico, Gentil, Artesanal
+// ============================================================
+$burgundy-deep: #2b0f12; // Contornos, títulos, sidebar
+$rouge-dark: #8d2a3a; // Botões primários, hover
+$rouge-light: #c85c5c; // Cards, headers, elementos principais
+$pink-pale: #e8b4b8; // Backgrounds suaves, separadores, hover leve
+$cream-warm: #f4f1de; // Fundo principal
+
+// ------------------------------------------------------------
+// Cores Semânticas
+// ------------------------------------------------------------
+$color-primary: $rouge-dark;
+$color-primary-light: $rouge-light;
+$color-primary-pale: $pink-pale;
+$color-secondary: $burgundy-deep;
+$color-background: $cream-warm;
+$color-surface: #fbfaf3; // variação clara do creme para cards
+$color-text-primary: $burgundy-deep;
+$color-text-secondary: $rouge-dark;
+$color-text-muted: rgba($burgundy-deep, 0.6);
+$color-border: $pink-pale;
+$color-success: #4caf50;
+$color-warning: #ff9800;
+$color-error: $rouge-dark;
+$color-neutral-light: #f9f7f4;
+$color-overlay: rgba($burgundy-deep, 0.1);
+
+// ------------------------------------------------------------
+// Tipografia
+// ------------------------------------------------------------
+$font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+$font-family-heading: 'Georgia', 'Times New Roman', serif;
+$font-size-xs: 12px;
+$font-size-base: 14px;
+$font-size-lg: 16px;
+$font-size-xl: 18px;
+$font-size-2xl: 24px;
+$font-weight-light: 300;
+$font-weight-regular: 400;
+$font-weight-medium: 500;
+$font-weight-bold: 700;
+$line-height-base: 1.6;
+
+// ------------------------------------------------------------
+// Espaçamento
+// ------------------------------------------------------------
+$spacing-xs: 4px;
+$spacing-sm: 8px;
+$spacing-md: 16px;
+$spacing-lg: 24px;
+$spacing-xl: 32px;
+$spacing-2xl: 48px;
+
+// ------------------------------------------------------------
+// Sombras — suaves, botânicas
+// ------------------------------------------------------------
+$shadow-sm: 0 1px 3px rgba($burgundy-deep, 0.12);
+$shadow-md: 0 2px 6px rgba($burgundy-deep, 0.15);
+$shadow-lg: 0 4px 12px rgba($burgundy-deep, 0.18);
+
+// ------------------------------------------------------------
+// Borders
+// ------------------------------------------------------------
+$border-radius-sm: 4px;
+$border-radius-md: 8px;
+$border-radius-lg: 12px;
+$border-thin: 1px solid $color-border;
+
+// ------------------------------------------------------------
+// Transições
+// ------------------------------------------------------------
+$transition-fast: 150ms ease-in-out;
+$transition-normal: 300ms ease-in-out;
+$transition-slow: 500ms ease-in-out;
+
+// ------------------------------------------------------------
+// Layout
+// ------------------------------------------------------------
+$sidebar-width: 260px;
+$sidebar-width-collapsed: 72px;
+$header-height: 64px;
+$footer-height: 48px;
+$z-sidebar: 100;
+$z-header: 90;
+$z-overlay: 200;

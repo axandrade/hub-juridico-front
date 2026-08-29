@@ -1,0 +1,89 @@
+@use 'sass:color';
+@use 'variables' as *;
+
+// Flex helpers
+@mixin flex-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@mixin flex-between {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+@mixin flex-column {
+  display: flex;
+  flex-direction: column;
+}
+
+// Card base — fundo creme com borda rosa pálido
+@mixin card-surface {
+  background-color: $color-surface;
+  border: 1px solid $color-border;
+  border-radius: $border-radius-lg;
+  box-shadow: $shadow-sm;
+}
+
+// Título com contorno burgundy (uso restrito a títulos e contornos)
+@mixin heading-accent {
+  color: $color-text-primary;
+  font-family: $font-family-heading;
+  font-weight: $font-weight-medium;
+  letter-spacing: 0.3px;
+}
+
+// Hover botânico suave
+@mixin hover-pale {
+  transition: background-color $transition-normal, color $transition-normal;
+
+  &:hover {
+    background-color: $color-primary-pale;
+  }
+}
+
+// Scrollbar discreta
+@mixin thin-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: $color-primary-pale transparent;
+
+  &::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background-color: $color-primary-pale;
+    border-radius: $border-radius-sm;
+  }
+}
+
+// Truncar texto
+@mixin truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+// Responsividade
+$breakpoint-sm: 640px;
+$breakpoint-md: 768px;
+$breakpoint-lg: 1024px;
+$breakpoint-xl: 1280px;
+
+@mixin respond-below($breakpoint) {
+  @media (max-width: $breakpoint) {
+    @content;
+  }
+}
+
+// Escurecer / clarear cor da paleta
+@function darken-color($base, $amount) {
+  @return color.adjust($base, $lightness: -$amount);
+}
+
+@function lighten-color($base, $amount) {
+  @return color.adjust($base, $lightness: $amount);
+}

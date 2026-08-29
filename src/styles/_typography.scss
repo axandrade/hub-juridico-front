@@ -1,0 +1,57 @@
+@use 'variables' as *;
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: $font-family-heading;
+  font-weight: $font-weight-medium;
+  color: $color-text-primary;
+  line-height: 1.3;
+  letter-spacing: 0.3px;
+}
+
+h1 {
+  font-size: $font-size-2xl;
+}
+
+h2 {
+  font-size: $font-size-xl;
+}
+
+h3 {
+  font-size: $font-size-lg;
+}
+
+p {
+  margin-bottom: $spacing-sm;
+}
+
+a {
+  color: $color-text-secondary;
+  text-decoration: none;
+  transition: color $transition-fast;
+
+  &:hover {
+    color: $color-primary;
+  }
+}
+
+small,
+.text-muted {
+  font-size: $font-size-xs;
+  color: $color-text-muted;
+}
+
+.text-light {
+  font-weight: $font-weight-light;
+}
+
+// Marcador botânico ":: " usado nos títulos de card do protótipo
+.title-marker::before {
+  content: ':: ';
+  color: $color-primary-light;
+  font-weight: $font-weight-bold;
+}

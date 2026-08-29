@@ -1,0 +1,101 @@
+@use 'variables' as *;
+@use 'mixins' as *;
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  font-family: $font-family;
+  font-size: $font-size-base;
+  line-height: $line-height-base;
+  color: $color-text-primary;
+  background-color: $color-background;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+button {
+  font-family: $font-family;
+  cursor: pointer;
+  border: none;
+  background: none;
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
+  }
+}
+
+ul {
+  list-style: none;
+}
+
+// Utilitários
+.container-fluid {
+  width: 100%;
+  padding: $spacing-lg;
+}
+
+.divider {
+  height: 1px;
+  background-color: $color-border;
+  border: none;
+  margin: $spacing-md 0;
+}
+
+.grid {
+  display: grid;
+  gap: $spacing-lg;
+}
+
+@for $i from 1 through 4 {
+  .grid-cols-#{$i} {
+    grid-template-columns: repeat(#{$i}, minmax(0, 1fr));
+  }
+}
+
+@include respond-below($breakpoint-lg) {
+  .grid-cols-2,
+  .grid-cols-3,
+  .grid-cols-4 {
+    grid-template-columns: 1fr;
+  }
+}
+
+// Paleta em CSS custom properties — acesso via JavaScript / tema dinâmico
+:root {
+  --color-burgundy-deep: #{$burgundy-deep};
+  --color-rouge-dark: #{$rouge-dark};
+  --color-rouge-light: #{$rouge-light};
+  --color-pink-pale: #{$pink-pale};
+  --color-cream-warm: #{$cream-warm};
+
+  --color-primary: #{$color-primary};
+  --color-primary-light: #{$color-primary-light};
+  --color-primary-pale: #{$color-primary-pale};
+  --color-secondary: #{$color-secondary};
+  --color-background: #{$color-background};
+  --color-surface: #{$color-surface};
+  --color-text-primary: #{$color-text-primary};
+  --color-text-secondary: #{$color-text-secondary};
+  --color-border: #{$color-border};
+  --color-success: #{$color-success};
+  --color-warning: #{$color-warning};
+  --color-error: #{$color-error};
+
+  --shadow-sm: #{$shadow-sm};
+  --shadow-md: #{$shadow-md};
+  --shadow-lg: #{$shadow-lg};
+
+  --radius-sm: #{$border-radius-sm};
+  --radius-md: #{$border-radius-md};
+  --radius-lg: #{$border-radius-lg};
+}

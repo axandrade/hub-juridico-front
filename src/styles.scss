@@ -1,0 +1,9 @@
+/* ============================================================
+   Hub Jurídico — Estilos globais (sistema de design botânico)
+   FontAwesome é carregado via angular.json > styles.
+   PrimeNG 21 é estilizado pelo preset em app.config.ts (@primeuix/themes).
+   ============================================================ */
+
+@use 'styles/variables';
+@use 'styles/typography';
+@use 'styles/global';

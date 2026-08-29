@@ -40,6 +40,7 @@ export const SIDEBAR_NAV: readonly NavItem[] = [
   { label: 'Andamentos', icon: 'fa-solid fa-bell', emphasis: 'accent' },
   { label: 'Andamentos automáticos', icon: 'fa-solid fa-tower-broadcast', emphasis: 'accent' },
   { label: 'Clientes', icon: 'fa-solid fa-address-book', emphasis: 'neutral' },
+  { label: 'Financeiro', icon: 'fa-solid fa-address-book', emphasis: 'neutral' },
   { label: 'Processos', icon: 'fa-solid fa-folder-open', emphasis: 'neutral' },
   { label: 'Petições', icon: 'fa-solid fa-file-lines', emphasis: 'neutral' },
   { label: 'Contratos', icon: 'fa-solid fa-file-signature', emphasis: 'neutral' },

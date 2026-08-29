@@ -1,0 +1,12 @@
+@use 'variables' as *;
+@use 'mixins' as *;
+
+.footer {
+  @include flex-between;
+  min-height: $footer-height;
+  padding: $spacing-sm $spacing-lg;
+  background-color: $color-surface;
+  border-top: 1px solid $color-border;
+  color: $color-text-muted;
+  font-size: $font-size-xs;
+}

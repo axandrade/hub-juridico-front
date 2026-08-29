@@ -1,0 +1,28 @@
+<header class="header">
+  <div class="header__title">
+    <h1>{{ pageTitle() }}</h1>
+    <small>{{ pageSubtitle() }}</small>
+  </div>
+
+  <div class="header__actions">
+    @for (action of quickActions; track action.label) {
+      <app-button
+        [variant]="action.variant"
+        size="sm"
+        [icon]="action.icon"
+        [label]="action.label"
+      />
+    }
+  </div>
+
+  <div class="header__context">
+    <div>
+      <span class="header__context-label">Contexto</span>
+      <strong>{{ context.contextLabel }}</strong>
+    </div>
+    <div class="header__user">
+      <i class="fa-solid fa-circle-user" aria-hidden="true"></i>
+      <span>{{ context.userName }}</span>
+    </div>
+  </div>
+</header>

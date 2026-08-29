@@ -1,0 +1,53 @@
+<aside class="sidebar" [class.sidebar--collapsed]="collapsed()">
+  <div class="sidebar__brand">
+    <div class="sidebar__brand-text">
+      <strong>{{ appInfo.NAME }}</strong>
+      @if (!collapsed()) {
+        <small>{{ appInfo.TAGLINE }}</small>
+      }
+    </div>
+    <button
+      type="button"
+      class="sidebar__toggle"
+      aria-label="Alternar menu"
+      (click)="toggle.emit()"
+    >
+      <i class="fa-solid fa-bars" aria-hidden="true"></i>
+    </button>
+  </div>
+
+  <nav class="sidebar__nav">
+    <ul>
+      @for (item of navItems; track item.label) {
+        <li>
+          @if (item.route) {
+            <a
+              class="sidebar__link"
+              [class]="'sidebar__link--' + (item.emphasis ?? 'neutral')"
+              [routerLink]="item.route"
+              routerLinkActive="is-active"
+              [title]="item.label"
+            >
+              <i [class]="item.icon" aria-hidden="true"></i>
+              @if (!collapsed()) {
+                <span>{{ item.label }}</span>
+              }
+            </a>
+          } @else {
+            <button
+              type="button"
+              class="sidebar__link"
+              [class]="'sidebar__link--' + (item.emphasis ?? 'neutral')"
+              [title]="item.label"
+            >
+              <i [class]="item.icon" aria-hidden="true"></i>
+              @if (!collapsed()) {
+                <span>{{ item.label }}</span>
+              }
+            </button>
+          }
+        </li>
+      }
+    </ul>
+  </nav>
+</aside>

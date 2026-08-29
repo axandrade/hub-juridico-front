@@ -1,0 +1,6 @@
+<div class="widget">
+  <app-bar-chart [labels]="labels()" [series]="series()" />
+  @if (total()) {
+    <p class="widget__caption text-muted">{{ total() }} tarefa(s) no período</p>
+  }
+</div>

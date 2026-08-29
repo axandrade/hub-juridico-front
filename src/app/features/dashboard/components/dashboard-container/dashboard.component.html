@@ -1,0 +1,80 @@
+<div class="dashboard">
+  <div class="dashboard__tabs">
+    <span class="dashboard__tab is-active">Resumo geral</span>
+    <span class="dashboard__tab">Acesso rápido</span>
+  </div>
+
+  @if (vm$ | async; as vm) {
+    <section class="grid grid-cols-3">
+      <app-card
+        title="Tarefas"
+        icon="fa-solid fa-square-check"
+        (edit)="onNavigate('tarefas')"
+        (navigate)="onNavigate('tarefas')"
+      >
+        <app-tasks-widget
+          [labels]="vm.tasks.chartLabels"
+          [series]="vm.tasks.chartSeries"
+          [total]="vm.tasks.items.length"
+        />
+      </app-card>
+
+      <app-card
+        title="Compromissos"
+        icon="fa-solid fa-clock"
+        (edit)="onNavigate('compromissos')"
+        (navigate)="onNavigate('compromissos')"
+      >
+        <app-commitments-widget
+          [labels]="vm.commitments.chartLabels"
+          [series]="vm.commitments.chartSeries"
+        />
+      </app-card>
+
+      <app-card
+        title="Processos"
+        icon="fa-solid fa-folder-open"
+        (edit)="onNavigate('processos')"
+        (navigate)="onNavigate('processos')"
+      >
+        <app-processes-widget
+          [slices]="vm.processes.slices"
+          [activeCount]="vm.processes.activeCount"
+        />
+      </app-card>
+    </section>
+
+    <section class="grid grid-cols-2">
+      <app-card
+        title="Tarefas a fazer"
+        icon="fa-solid fa-list-check"
+        (edit)="onNavigate('tarefas')"
+        (navigate)="onNavigate('tarefas')"
+      >
+        <app-data-table
+          [columns]="pendingColumns"
+          [data]="vm.tasks.pendingRows"
+          emptyMessage="Sem tarefas pendentes."
+        />
+      </app-card>
+
+      <app-card
+        title="Compromissos pendentes"
+        icon="fa-solid fa-calendar-check"
+        (edit)="onNavigate('compromissos')"
+        (navigate)="onNavigate('compromissos')"
+      >
+        <app-data-table
+          [columns]="pendingColumns"
+          [data]="vm.commitments.pendingRows"
+          emptyMessage="Sem compromissos pendentes."
+        />
+      </app-card>
+    </section>
+  } @else {
+    <div class="dashboard__loading">
+      <i class="fa-solid fa-seedling fa-spin" aria-hidden="true"></i>
+      Carregando resumo geral…
+    </div>
+  }
+</div>

@@ -1,0 +1,40 @@
+@use 'variables' as *;
+@use 'mixins' as *;
+
+.dashboard {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-lg;
+
+  &__tabs {
+    display: flex;
+    gap: $spacing-lg;
+    border-bottom: 1px solid $color-border;
+    padding-bottom: $spacing-sm;
+  }
+
+  &__tab {
+    font-size: $font-size-base;
+    color: $color-text-muted;
+    padding-bottom: $spacing-xs;
+    cursor: pointer;
+
+    &.is-active {
+      color: $color-text-primary;
+      border-bottom: 2px solid $color-primary-light;
+      font-weight: $font-weight-medium;
+    }
+  }
+
+  &__loading {
+    @include flex-center;
+    gap: $spacing-sm;
+    min-height: 240px;
+    color: $color-text-muted;
+
+    i {
+      color: $color-primary-light;
+      font-size: $font-size-xl;
+    }
+  }
+}

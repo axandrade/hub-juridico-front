@@ -1,0 +1,112 @@
+@use 'variables' as *;
+@use 'mixins' as *;
+
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  width: $sidebar-width;
+  height: 100vh;
+  background-color: $burgundy-deep;
+  color: rgba($cream-warm, 0.92);
+  border-right: 3px solid $rouge-light;
+  transition: width $transition-normal;
+  overflow: hidden;
+
+  &--collapsed {
+    width: $sidebar-width-collapsed;
+  }
+
+  &__brand {
+    @include flex-between;
+    gap: $spacing-sm;
+    padding: $spacing-md $spacing-lg;
+    border-bottom: 1px solid rgba($pink-pale, 0.2);
+    min-height: $header-height;
+  }
+
+  &__brand-text {
+    @include flex-column;
+    line-height: 1.2;
+
+    strong {
+      font-family: $font-family-heading;
+      font-size: $font-size-lg;
+      color: $cream-warm;
+      letter-spacing: 0.5px;
+    }
+
+    small {
+      color: rgba($pink-pale, 0.8);
+      font-size: $font-size-xs;
+    }
+  }
+
+  &__toggle {
+    @include flex-center;
+    width: 32px;
+    height: 32px;
+    border-radius: $border-radius-sm;
+    color: $cream-warm;
+    transition: background-color $transition-fast;
+
+    &:hover {
+      background-color: rgba($pink-pale, 0.16);
+    }
+  }
+
+  &__nav {
+    flex: 1;
+    overflow-y: auto;
+    padding: $spacing-md 0;
+    @include thin-scrollbar;
+
+    ul {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+  }
+
+  &__link {
+    display: flex;
+    align-items: center;
+    gap: $spacing-md;
+    width: calc(100% - #{$spacing-md});
+    margin: 0 $spacing-sm;
+    padding: $spacing-sm $spacing-md;
+    border-radius: $border-radius-md;
+    color: rgba($cream-warm, 0.9);
+    font-size: $font-size-base;
+    text-align: left;
+    transition: background-color $transition-fast, color $transition-fast,
+      transform $transition-fast;
+
+    i {
+      width: 18px;
+      text-align: center;
+      font-size: $font-size-base;
+    }
+
+    &:hover {
+      background-color: $pink-pale;
+      color: $burgundy-deep;
+      transform: translateX(2px);
+    }
+
+    &.is-active {
+      background-color: $rouge-dark;
+      color: $cream-warm;
+      font-weight: $font-weight-medium;
+    }
+
+    // Ênfases herdadas do protótipo
+    &--primary {
+      background-color: rgba($rouge-dark, 0.55);
+      color: $cream-warm;
+    }
+
+    &--accent i {
+      color: $rouge-light;
+    }
+  }
+}

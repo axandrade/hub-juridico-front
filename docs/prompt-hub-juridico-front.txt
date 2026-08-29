@@ -1,0 +1,434 @@
+================================================================================
+PROMPT COMPLETO - PROJETO HUB JURÍDICO FRONTEND
+Arquitetura Profissional Angular 21 + Paleta de Cores Botânica
+================================================================================
+
+Crie um projeto Angular 21 com arquitetura modular e componentes altamente reutilizáveis:
+
+### CONFIGURAÇÃO DO PROJETO
+- Nome: hub-juridico-front
+- Caminho: C:\desenvolvimento\desenvolvimento_meu\frontend\hub-juridico-front
+- Framework: Angular 21
+- Package Manager: npm
+- Estilo: SCSS
+
+### DEPENDÊNCIAS OBRIGATÓRIAS
+- @angular/core: 21.x
+- @angular/common: 21.x
+- @angular/forms: 21.x
+- @angular/router: 21.x
+- primeng: 17.x
+- chart.js: ^4.x
+- ng2-charts: ^4.x
+- @fortawesome/fontawesome-free: 4.7.0
+- typescript: ~5.5.x
+- rxjs: ^7.x
+
+### PALETA DE CORES - MOOD BOTÂNICO, GENTIL, ARTESANAL
+HEX: #2B0F12 | #8D2A3A | #C85C5C | #E8B4B8 | #F4F1DE
+
+- **Burgundy Profundo (#2B0F12)**: Contornos, títulos, destaque máximo, sidebar
+- **Rouge Escuro (#8D2A3A)**: Botões primários, hover states, ênfase
+- **Rouge Claro (#C85C5C)**: Elementos interativos, cards, headers
+- **Rosa Pálido (#E8B4B8)**: Backgrounds suaves, separadores, hover leve
+- **Creme Quente (#F4F1DE)**: Fundo principal da aplicação
+
+**Princípios de Design**:
+- Limite rouge escuro (#2B0F12) a contornos e títulos
+- Mantenha sensação geral suave e botânica
+- Use creme quente como fundo predominante
+- Combine com arte de linhas finas para leveza
+- Papelaria artesanal e ilustrações florais como inspiração visual
+
+### ARQUITETURA E ORGANIZAÇÃO
+
+#### ESTRUTURA DE PASTAS (src/app/)
+```
+src/app/
+├── core/
+│   ├── services/
+│   │   ├── data.service.ts
+│   │   └── theme.service.ts
+│   ├── models/
+│   │   ├── task.model.ts
+│   │   ├── commitment.model.ts
+│   │   └── process.model.ts
+│   ├── constants/
+│   │   ├── app-constants.ts
+│   │   └── color-palette.ts     # ✨ Novo: Paleta centralizada
+│   └── core.module.ts
+│
+├── shared/
+│   ├── components/
+│   │   ├── card/
+│   │   │   ├── card.component.ts
+│   │   │   ├── card.component.html
+│   │   │   └── card.component.scss
+│   │   ├── chart/
+│   │   │   ├── bar-chart.component.ts
+│   │   │   ├── pie-chart.component.ts
+│   │   │   └── chart.component.scss
+│   │   ├── table/
+│   │   │   ├── data-table.component.ts
+│   │   │   ├── data-table.component.html
+│   │   │   └── data-table.component.scss
+│   │   ├── button/
+│   │   │   ├── button.component.ts
+│   │   │   └── button.component.scss
+│   │   └── badge/
+│   │       ├── badge.component.ts
+│   │       └── badge.component.scss
+│   ├── directives/
+│   │   └── highlight.directive.ts
+│   ├── pipes/
+│   │   ├── date-format.pipe.ts
+│   │   └── currency-format.pipe.ts
+│   └── shared.module.ts
+│
+├── layout/
+│   ├── components/
+│   │   ├── sidebar/
+│   │   │   ├── sidebar.component.ts
+│   │   │   ├── sidebar.component.html
+│   │   │   └── sidebar.component.scss
+│   │   ├── header/
+│   │   │   ├── header.component.ts
+│   │   │   ├── header.component.html
+│   │   │   └── header.component.scss
+│   │   └── footer/
+│   │       ├── footer.component.ts
+│   │       └── footer.component.scss
+│   ├── layout.component.ts
+│   ├── layout.component.html
+│   └── layout.module.ts
+│
+├── features/
+│   ├── dashboard/
+│   │   ├── components/
+│   │   │   ├── dashboard-container/
+│   │   │   │   ├── dashboard.component.ts (Smart Component)
+│   │   │   │   ├── dashboard.component.html
+│   │   │   │   └── dashboard.component.scss
+│   │   │   ├── tasks-widget/
+│   │   │   │   ├── tasks-widget.component.ts (Dumb Component)
+│   │   │   │   ├── tasks-widget.component.html
+│   │   │   │   └── tasks-widget.component.scss
+│   │   │   ├── commitments-widget/
+│   │   │   │   ├── commitments-widget.component.ts (Dumb Component)
+│   │   │   │   └── commitments-widget.component.html
+│   │   │   └── processes-widget/
+│   │   │       ├── processes-widget.component.ts (Dumb Component)
+│   │   │       └── processes-widget.component.html
+│   │   ├── services/
+│   │   │   └── dashboard.service.ts
+│   │   ├── dashboard-routing.module.ts
+│   │   └── dashboard.module.ts
+│   └── (outras features quando necessário)
+│
+├── assets/
+│   ├── data/
+│   │   └── mock-data.ts
+│   ├── styles/
+│   │   ├── _variables.scss      # ✨ Novo: Variáveis SCSS da paleta
+│   │   ├── _typography.scss
+│   │   ├── _mixins.scss
+│   │   └── _global.scss
+│   └── images/
+│
+├── app-routing.module.ts
+├── app.component.ts
+├── app.component.html
+├── app.component.scss
+└── app.module.ts
+```
+
+### CONFIGURAÇÃO DE CORES (src/app/core/constants/color-palette.ts)
+
+```typescript
+export const COLOR_PALETTE = {
+  BURGUNDY_DEEP: '#2B0F12',      // Contornos, títulos, sidebar
+  ROUGE_DARK: '#8D2A3A',          // Botões primários, hover
+  ROUGE_LIGHT: '#C85C5C',         // Cards, headers, elementos principais
+  PINK_PALE: '#E8B4B8',           // Backgrounds, separadores, hover leve
+  CREAM_WARM: '#F4F1DE'           // Fundo principal
+};
+
+export const COLOR_SEMANTIC = {
+  PRIMARY: COLOR_PALETTE.ROUGE_DARK,
+  PRIMARY_LIGHT: COLOR_PALETTE.ROUGE_LIGHT,
+  PRIMARY_PALE: COLOR_PALETTE.PINK_PALE,
+  SECONDARY: COLOR_PALETTE.BURGUNDY_DEEP,
+  BACKGROUND: COLOR_PALETTE.CREAM_WARM,
+  TEXT_PRIMARY: COLOR_PALETTE.BURGUNDY_DEEP,
+  TEXT_SECONDARY: COLOR_PALETTE.ROUGE_DARK,
+  BORDER: COLOR_PALETTE.PINK_PALE,
+  SUCCESS: '#4caf50',             // Verde (manter para status positivo)
+  WARNING: '#ff9800',             // Laranja (manter para avisos)
+  ERROR: COLOR_PALETTE.ROUGE_DARK,
+  NEUTRAL_LIGHT: '#f9f7f4',       // Variação do creme
+  OVERLAY: 'rgba(43, 15, 18, 0.1)' // Overlay suave
+};
+```
+
+### VARIÁVEIS SCSS (src/assets/styles/_variables.scss)
+
+```scss
+// Paleta de Cores - Mood Botânico
+$burgundy-deep: #2B0F12;
+$rouge-dark: #8D2A3A;
+$rouge-light: #C85C5C;
+$pink-pale: #E8B4B8;
+$cream-warm: #F4F1DE;
+
+// Cores Semânticas
+$color-primary: $rouge-dark;
+$color-primary-light: $rouge-light;
+$color-primary-pale: $pink-pale;
+$color-secondary: $burgundy-deep;
+$color-background: $cream-warm;
+$color-text-primary: $burgundy-deep;
+$color-text-secondary: $rouge-dark;
+$color-border: $pink-pale;
+$color-success: #4caf50;
+$color-warning: #ff9800;
+$color-error: $rouge-dark;
+
+// Tipografia
+$font-family: 'Arial', sans-serif;
+$font-size-base: 14px;
+$font-size-lg: 16px;
+$font-size-xl: 18px;
+$line-height-base: 1.6;
+
+// Espaçamento
+$spacing-xs: 4px;
+$spacing-sm: 8px;
+$spacing-md: 16px;
+$spacing-lg: 24px;
+$spacing-xl: 32px;
+
+// Sombras (suaves, botânicas)
+$shadow-sm: 0 1px 3px rgba($burgundy-deep, 0.12);
+$shadow-md: 0 2px 6px rgba($burgundy-deep, 0.15);
+$shadow-lg: 0 4px 12px rgba($burgundy-deep, 0.18);
+
+// Borders
+$border-radius-sm: 4px;
+$border-radius-md: 8px;
+$border-radius-lg: 12px;
+
+// Transições
+$transition-fast: 150ms ease-in-out;
+$transition-normal: 300ms ease-in-out;
+$transition-slow: 500ms ease-in-out;
+```
+
+### GLOBAL STYLES (src/assets/styles/_global.scss)
+
+```scss
+@import 'variables';
+@import 'mixins';
+@import 'typography';
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: $font-family;
+  font-size: $font-size-base;
+  line-height: $line-height-base;
+  color: $color-text-primary;
+  background-color: $color-background;
+}
+
+// Estilos globais de componentes
+button {
+  font-family: $font-family;
+  transition: all $transition-normal;
+  
+  &:hover {
+    transform: translateY(-2px);
+  }
+}
+
+// Paleta de cores em CSS variables (para JavaScript)
+:root {
+  --color-burgundy-deep: #{$burgundy-deep};
+  --color-rouge-dark: #{$rouge-dark};
+  --color-rouge-light: #{$rouge-light};
+  --color-pink-pale: #{$pink-pale};
+  --color-cream-warm: #{$cream-warm};
+  --color-primary: #{$color-primary};
+  --color-background: #{$color-background};
+  --shadow-md: #{$shadow-md};
+}
+```
+
+### PADRÕES DE COMPONENTES
+
+#### 1. SMART COMPONENTS (Container)
+- Responsáveis por lógica, gerenciamento de estado
+- Utilizam Observables do RxJS
+- Passam dados para componentes apresentacionais via @Input
+- Recebem eventos via @Output
+
+#### 2. DUMB COMPONENTS (Apresentacional)
+- Recebem dados via @Input
+- Emitem eventos via @Output
+- Sem dependências de serviços
+- Altamente reutilizáveis
+
+#### 3. COMPONENTES GENÉRICOS (Shared)
+- **card.component** - Aceita @Input para título, ícone, ações
+- **data-table.component** - Genérico com dados e colunas
+- **bar-chart.component** - Genérico com dados e labels
+- **pie-chart.component** - Genérico com dados
+- **button.component** - Genérico com tipo, tamanho, cor (usa paleta)
+
+### MODELOS E INTERFACES (src/app/core/models/)
+
+```typescript
+// task.model.ts
+export interface ITask {
+  id: string;
+  title: string;
+  category: string;
+  dueDate: Date;
+  status: TaskStatus;
+}
+
+export enum TaskStatus {
+  PENDING = 'pending',
+  COMPLETED = 'completed',
+  OVERDUE = 'overdue'
+}
+
+// commitment.model.ts
+export interface ICommitment {
+  id: string;
+  description: string;
+  date: Date;
+  category: string;
+}
+
+// process.model.ts
+export interface IProcess {
+  id: string;
+  number: string;
+  type: string;
+  status: ProcessStatus;
+}
+
+export enum ProcessStatus {
+  ACTIVE = 'active',
+  INACTIVE = 'inactive'
+}
+```
+
+### SERVIÇOS REUTILIZÁVEIS (src/app/core/services/)
+
+```typescript
+// data.service.ts
+@Injectable({ providedIn: 'root' })
+export class DataService {
+  getTasks(): Observable<ITask[]> { }
+  getCommitments(): Observable<ICommitment[]> { }
+  getProcesses(): Observable<IProcess[]> { }
+}
+
+// theme.service.ts
+@Injectable({ providedIn: 'root' })
+export class ThemeService {
+  getColors() { return COLOR_PALETTE; }
+  getChartConfig(type: string): ChartConfiguration { }
+}
+```
+
+### COMPONENTES GENÉRICOS
+
+**card.component.ts** - Reutilizável com cores da paleta
+```typescript
+@Input() title: string;
+@Input() icon: string;
+@Input() backgroundColor: string = 'var(--color-cream-warm)';
+@Input() borderColor: string = 'var(--color-pink-pale)';
+@Input() editAction: () => void;
+@Output() onEdit = new EventEmitter();
+```
+
+**button.component.ts** - Com variações de cores da paleta
+```typescript
+@Input() type: 'primary' | 'secondary' | 'tertiary' = 'primary';
+@Input() size: 'sm' | 'md' | 'lg' = 'md';
+@Input() icon: string;
+@Input() disabled: boolean = false;
+@Output() onClick = new EventEmitter();
+
+// primary = ROUGE_DARK
+// secondary = BURGUNDY_DEEP
+// tertiary = PINK_PALE
+```
+
+**data-table.component.ts** - Com estilo da paleta
+```typescript
+@Input() columns: TableColumn[];
+@Input() data: any[];
+@Input() loading: boolean = false;
+@Output() rowClick = new EventEmitter();
+```
+
+### DADOS MOCK (src/assets/data/mock-data.ts)
+
+Estruture com dados estáticos para:
+- Tarefas
+- Compromissos
+- Processos
+- Configurações de gráficos
+
+### DESIGN FINAL
+- Fundo predominante: Creme Quente (#F4F1DE)
+- Sidebar: Burgundy Profundo (#2B0F12) com texto claro
+- Botões primários: Rouge Escuro (#8D2A3A)
+- Cards: Fundo Creme com borda Rosa Pálido (#E8B4B8)
+- Headers: Rouge Claro (#C85C5C)
+- Hover states: Rosa Pálido (#E8B4B8)
+- Separadores: Rosa Pálido (#E8B4B8)
+- Tipografia: Linhas finas, espaçamento elegante
+- Ilustrações: Inspiração florais e artesanais (quando houver)
+- Sombras: Suaves e discretas (rgba com burgundy)
+
+### BEST PRACTICES ANGULAR IMPLEMENTADAS
+✅ Componentes apresentacionais vs container
+✅ Injeção de dependência
+✅ RxJS Observables
+✅ Interfaces tipadas (sem 'any')
+✅ Módulos bem separados (Core, Shared, Layout, Features)
+✅ Lazy loading de rotas
+✅ Serviços singleton via providedIn: 'root'
+✅ Componentes genéricos e reutilizáveis
+✅ Async pipe no template
+✅ CSS variables para tema dinâmico
+✅ SCSS com variáveis centralizadas
+✅ Sistema de cores coherente e escalável
+
+### INSTRUÇÕES FINAIS
+1. Criar projeto via Angular CLI
+2. Gerar estrutura de pastas descrita
+3. Criar color-palette.ts com paleta centralizada
+4. Implementar _variables.scss com all colors
+5. Gerar componentes base (card, table, chart, button)
+6. Aplicar paleta a todos os componentes
+7. Criar mock-data.ts com dados estáticos
+8. Estruturar smart/dumb component pattern
+9. Implementar theme.service para acesso às cores
+10. CSS variables em :root para flexibilidade
+11. Testes e documentação de componentes
+12. Pronto para escalabilidade e manutenção
+
+================================================================================
+FIM DO PROMPT
+================================================================================
+

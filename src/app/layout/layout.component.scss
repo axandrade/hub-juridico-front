@@ -1,0 +1,23 @@
+@use 'variables' as *;
+@use 'mixins' as *;
+
+.layout {
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+  background-color: $color-background;
+
+  &__main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+
+  &__content {
+    flex: 1;
+    overflow-y: auto;
+    padding: $spacing-lg;
+    @include thin-scrollbar;
+  }
+}

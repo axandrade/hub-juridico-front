@@ -8,6 +8,7 @@ export const APP_INFO = {
 
 export const ROUTES = {
   DASHBOARD: 'dashboard',
+  CLIENTS: 'clientes',
   LOGIN: 'login',
 } as const;
 
@@ -39,7 +40,12 @@ export const SIDEBAR_NAV: readonly NavItem[] = [
   { label: 'Compromissos', icon: 'fa-solid fa-clock', emphasis: 'neutral' },
   { label: 'Andamentos', icon: 'fa-solid fa-bell', emphasis: 'accent' },
   { label: 'Andamentos automáticos', icon: 'fa-solid fa-tower-broadcast', emphasis: 'accent' },
-  { label: 'Clientes', icon: 'fa-solid fa-address-book', emphasis: 'neutral' },
+  {
+    label: 'Clientes',
+    icon: 'fa-solid fa-address-book',
+    route: `/${ROUTES.CLIENTS}`,
+    emphasis: 'neutral',
+  },
   { label: 'Financeiro', icon: 'fa-solid fa-address-book', emphasis: 'neutral' },
   { label: 'Processos', icon: 'fa-solid fa-folder-open', emphasis: 'neutral' },
   { label: 'Petições', icon: 'fa-solid fa-file-lines', emphasis: 'neutral' },
@@ -49,7 +55,12 @@ export const SIDEBAR_NAV: readonly NavItem[] = [
   { label: 'Análise Preditiva', icon: 'fa-solid fa-chart-column', emphasis: 'neutral' },
   { label: 'Advogados', icon: 'fa-solid fa-users', emphasis: 'neutral' },
   { label: 'Ferramentas', icon: 'fa-solid fa-screwdriver-wrench', emphasis: 'accent' },
-  { label: 'Dashboard Jurídico', icon: 'fa-solid fa-chart-line', route: `/${ROUTES.DASHBOARD}`, emphasis: 'primary' },
+  {
+    label: 'Dashboard Jurídico',
+    icon: 'fa-solid fa-chart-line',
+    route: `/${ROUTES.DASHBOARD}`,
+    emphasis: 'primary',
+  },
   { label: 'Usuários', icon: 'fa-solid fa-user', emphasis: 'neutral' },
   { label: 'Configurações', icon: 'fa-solid fa-gear', emphasis: 'neutral' },
   { label: 'Sair', icon: 'fa-solid fa-right-from-bracket', emphasis: 'accent', action: 'logout' },

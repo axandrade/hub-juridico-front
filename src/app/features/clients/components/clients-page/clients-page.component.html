@@ -1,0 +1,1248 @@
+<div class="clients" [class.clients--panel-hidden]="!panelVisible()">
+  <section class="clients-panel" aria-label="Painel de clientes">
+    <header class="clients-panel__header">
+      <div>
+        <span>Painel</span>
+        <h2>{{ panelTitle() || 'Novo cliente' }}</h2>
+        <small>
+          {{ draft().legalNature === 'individual' ? 'Pessoa física' : 'Pessoa jurídica' }} |
+          {{ draft().id ? formatClientId(draft().id) : 'sem ID' }} |
+          {{ draft().folder || 'pasta será criada ao salvar' }}
+        </small>
+      </div>
+
+      <div class="clients-panel__tools" aria-label="Ferramentas do painel">
+        <button
+          type="button"
+          class="clients-icon-button"
+          [class.is-active]="draft().favorite"
+          title="Configurar favorito"
+          aria-label="Configurar favorito"
+          (click)="toggleFavorite()"
+        >
+          <i class="fa-solid fa-star" aria-hidden="true"></i>
+        </button>
+        <button
+          type="button"
+          class="clients-icon-button"
+          [class.is-active]="panelLocked()"
+          title="Travar painel"
+          aria-label="Travar painel"
+          (click)="togglePanelLock()"
+        >
+          <i class="fa-solid fa-lock" aria-hidden="true"></i>
+        </button>
+        <button
+          type="button"
+          class="clients-icon-button"
+          title="Lista de arquivos"
+          aria-label="Lista de arquivos"
+          (click)="showFilesPanel()"
+        >
+          <i class="fa-solid fa-folder-open" aria-hidden="true"></i>
+        </button>
+      </div>
+    </header>
+
+    <nav class="clients-panel__tabs" aria-label="Abas do painel">
+      @for (tab of panelTabs; track tab) {
+        <button
+          type="button"
+          [class.is-active]="activePanelTab() === tab"
+          (click)="setPanelTab(tab)"
+        >
+          @switch (tab) {
+            @case ('admin') {
+              Administrativo
+            }
+            @case ('individual') {
+              Pessoa física
+            }
+            @case ('company') {
+              Pessoa jurídica
+            }
+            @case ('records') {
+              Registros
+            }
+            @case ('files') {
+              Lista de arquivos
+            }
+          }
+        </button>
+      }
+    </nav>
+
+    <form class="clients-form" (submit)="saveClient($event)">
+      <div class="clients-form__meta">
+        <label>
+          <span>ID</span>
+          <input type="text" [value]="draft().id ? draft().id : 'Novo'" readonly />
+        </label>
+        <label>
+          <span>Natureza jurídica</span>
+          <div class="clients-nature" role="group" aria-label="Natureza jurídica">
+            @for (nature of natureOptions; track nature) {
+              <button
+                type="button"
+                [class.is-active]="draft().legalNature === nature"
+                (click)="setNature(nature)"
+              >
+                {{ nature === 'individual' ? 'Pessoa física' : 'Pessoa jurídica' }}
+              </button>
+            }
+          </div>
+        </label>
+      </div>
+
+      @switch (activePanelTab()) {
+        @case ('individual') {
+          <div class="clients-form__section">
+            @for (row of individualFields; track $index) {
+              <div class="clients-form__row">
+                @for (field of row; track field.key) {
+                  <label class="clients-field" [class.clients-field--full]="field.span === 'full'">
+                    <span>
+                      @switch (field.key) {
+                        @case ('individualName') {
+                          Nome
+                        }
+                        @case ('cpf') {
+                          CPF
+                        }
+                        @case ('identityNumber') {
+                          RG
+                        }
+                        @case ('maritalStatus') {
+                          Estado civil
+                        }
+                        @case ('occupation') {
+                          Profissão
+                        }
+                        @case ('nationality') {
+                          Nacionalidade
+                        }
+                        @case ('individualEmail') {
+                          E-mail principal
+                        }
+                        @case ('individualWhatsapp') {
+                          Telefone/WhatsApp
+                        }
+                        @case ('individualStreet') {
+                          Endereço
+                        }
+                        @case ('individualNumber') {
+                          Número
+                        }
+                        @case ('individualComplement') {
+                          Complemento
+                        }
+                        @case ('individualDistrict') {
+                          Bairro
+                        }
+                        @case ('individualState') {
+                          UF
+                        }
+                        @case ('individualCity') {
+                          Cidade
+                        }
+                        @case ('individualZipCode') {
+                          CEP
+                        }
+                        @case ('individualNotes') {
+                          Observações PF
+                        }
+                      }
+                    </span>
+
+                    @switch (field.type || 'text') {
+                      @case ('select') {
+                        <select
+                          [value]="fieldValue(field.key)"
+                          (change)="updateField(field.key, $event)"
+                        >
+                          <option value="">Selecione</option>
+                          @for (option of fieldOptions(field); track option) {
+                            <option [value]="option">
+                              @switch (option) {
+                                @case ('single') {
+                                  Solteiro(a)
+                                }
+                                @case ('married') {
+                                  Casado(a)
+                                }
+                                @case ('divorced') {
+                                  Divorciado(a)
+                                }
+                                @case ('widowed') {
+                                  Viúvo(a)
+                                }
+                                @case ('stableUnion') {
+                                  União estável
+                                }
+                                @default {
+                                  {{ option }}
+                                }
+                              }
+                            </option>
+                          }
+                        </select>
+                      }
+                      @case ('textarea') {
+                        <textarea
+                          [rows]="field.rows || 3"
+                          [value]="fieldValue(field.key)"
+                          (input)="updateField(field.key, $event)"
+                        ></textarea>
+                      }
+                      @case ('email') {
+                        <input
+                          type="email"
+                          [value]="fieldValue(field.key)"
+                          (input)="updateField(field.key, $event)"
+                        />
+                      }
+                      @case ('tel') {
+                        <input
+                          type="tel"
+                          [value]="fieldValue(field.key)"
+                          (input)="updateField(field.key, $event)"
+                        />
+                      }
+                      @default {
+                        <input
+                          type="text"
+                          [value]="fieldValue(field.key)"
+                          (input)="updateField(field.key, $event)"
+                        />
+                      }
+                    }
+                  </label>
+                }
+              </div>
+            }
+
+            @for (list of individualContactLists; track list.key) {
+              <div class="clients-contact-list">
+                <div class="clients-contact-list__title">
+                  <span>
+                    {{
+                      list.key === 'additionalIndividualEmails'
+                        ? 'E-mails adicionais'
+                        : 'Telefones adicionais'
+                    }}
+                  </span>
+                  <button type="button" (click)="addContactLine(list.key)">
+                    {{ list.inputType === 'email' ? '+ E-mail' : '+ Telefone' }}
+                  </button>
+                </div>
+                @for (line of listFieldLines(list.key); track $index; let index = $index) {
+                  <div class="clients-contact-list__line">
+                    <input
+                      [type]="list.inputType"
+                      [value]="line"
+                      [placeholder]="
+                        list.inputType === 'email' ? 'email@exemplo.com' : '(00) 00000-0000'
+                      "
+                      (input)="updateContactLine(list.key, index, $event)"
+                    />
+                    <button
+                      type="button"
+                      class="clients-icon-button"
+                      aria-label="Remover contato"
+                      (click)="removeContactLine(list.key, index)"
+                    >
+                      <i class="fa-solid fa-minus" aria-hidden="true"></i>
+                    </button>
+                  </div>
+                }
+              </div>
+            }
+          </div>
+        }
+
+        @case ('company') {
+          <div class="clients-form__section">
+            @for (row of companyFields; track $index) {
+              <div class="clients-form__row">
+                @for (field of row; track field.key) {
+                  <label class="clients-field" [class.clients-field--full]="field.span === 'full'">
+                    <span>
+                      @switch (field.key) {
+                        @case ('companyLegalName') {
+                          Razão social
+                        }
+                        @case ('companyTradeName') {
+                          Nome fantasia
+                        }
+                        @case ('cnpj') {
+                          CNPJ
+                        }
+                        @case ('stateRegistration') {
+                          Inscrição estadual
+                        }
+                        @case ('municipalRegistration') {
+                          Inscrição municipal
+                        }
+                        @case ('companyEmail') {
+                          E-mail principal
+                        }
+                        @case ('companyWhatsapp') {
+                          Telefone/WhatsApp
+                        }
+                        @case ('companyStreet') {
+                          Endereço
+                        }
+                        @case ('companyNumber') {
+                          Número
+                        }
+                        @case ('companyComplement') {
+                          Complemento
+                        }
+                        @case ('companyDistrict') {
+                          Bairro
+                        }
+                        @case ('companyState') {
+                          UF
+                        }
+                        @case ('companyCity') {
+                          Cidade
+                        }
+                        @case ('companyZipCode') {
+                          CEP
+                        }
+                        @case ('companyNotes') {
+                          Observações PJ
+                        }
+                      }
+                    </span>
+
+                    @switch (field.type || 'text') {
+                      @case ('select') {
+                        <select
+                          [value]="fieldValue(field.key)"
+                          (change)="updateField(field.key, $event)"
+                        >
+                          <option value="">Selecione</option>
+                          @for (option of fieldOptions(field); track option) {
+                            <option [value]="option">{{ option }}</option>
+                          }
+                        </select>
+                      }
+                      @case ('textarea') {
+                        <textarea
+                          [rows]="field.rows || 3"
+                          [value]="fieldValue(field.key)"
+                          (input)="updateField(field.key, $event)"
+                        ></textarea>
+                      }
+                      @case ('email') {
+                        <input
+                          type="email"
+                          [value]="fieldValue(field.key)"
+                          (input)="updateField(field.key, $event)"
+                        />
+                      }
+                      @case ('tel') {
+                        <input
+                          type="tel"
+                          [value]="fieldValue(field.key)"
+                          (input)="updateField(field.key, $event)"
+                        />
+                      }
+                      @default {
+                        <input
+                          type="text"
+                          [value]="fieldValue(field.key)"
+                          (input)="updateField(field.key, $event)"
+                        />
+                      }
+                    }
+                  </label>
+                }
+              </div>
+            }
+
+            @for (list of companyContactLists; track list.key) {
+              <div class="clients-contact-list">
+                <div class="clients-contact-list__title">
+                  <span>
+                    {{
+                      list.key === 'additionalCompanyEmails'
+                        ? 'E-mails adicionais'
+                        : 'Telefones adicionais'
+                    }}
+                  </span>
+                  <button type="button" (click)="addContactLine(list.key)">
+                    {{ list.inputType === 'email' ? '+ E-mail' : '+ Telefone' }}
+                  </button>
+                </div>
+                @for (line of listFieldLines(list.key); track $index; let index = $index) {
+                  <div class="clients-contact-list__line">
+                    <input
+                      [type]="list.inputType"
+                      [value]="line"
+                      [placeholder]="
+                        list.inputType === 'email' ? 'contato@empresa.com.br' : '(00) 00000-0000'
+                      "
+                      (input)="updateContactLine(list.key, index, $event)"
+                    />
+                    <button
+                      type="button"
+                      class="clients-icon-button"
+                      aria-label="Remover contato"
+                      (click)="removeContactLine(list.key, index)"
+                    >
+                      <i class="fa-solid fa-minus" aria-hidden="true"></i>
+                    </button>
+                  </div>
+                }
+              </div>
+            }
+
+            <div class="clients-form__divider">
+              <span>Representante legal</span>
+            </div>
+
+            @for (row of representativeFields; track $index) {
+              <div class="clients-form__row">
+                @for (field of row; track field.key) {
+                  <label class="clients-field">
+                    <span>
+                      @switch (field.key) {
+                        @case ('legalRepresentativeName') {
+                          Representante legal
+                        }
+                        @case ('legalRepresentativeCpf') {
+                          CPF do representante
+                        }
+                        @case ('legalRepresentativeRole') {
+                          Cargo
+                        }
+                        @case ('legalRepresentativeEmail') {
+                          E-mail
+                        }
+                        @case ('legalRepresentativeWhatsapp') {
+                          Telefone/WhatsApp
+                        }
+                      }
+                    </span>
+                    <input
+                      [type]="
+                        field.type === 'email' ? 'email' : field.type === 'tel' ? 'tel' : 'text'
+                      "
+                      [value]="fieldValue(field.key)"
+                      (input)="updateField(field.key, $event)"
+                    />
+                  </label>
+                }
+              </div>
+            }
+
+            @for (list of representativeContactLists; track list.key) {
+              <div class="clients-contact-list">
+                <div class="clients-contact-list__title">
+                  <span>
+                    {{
+                      list.key === 'additionalRepresentativeEmails'
+                        ? 'E-mails adicionais do representante'
+                        : 'Telefones adicionais do representante'
+                    }}
+                  </span>
+                  <button type="button" (click)="addContactLine(list.key)">
+                    {{ list.inputType === 'email' ? '+ E-mail' : '+ Telefone' }}
+                  </button>
+                </div>
+                @for (line of listFieldLines(list.key); track $index; let index = $index) {
+                  <div class="clients-contact-list__line">
+                    <input
+                      [type]="list.inputType"
+                      [value]="line"
+                      [placeholder]="
+                        list.inputType === 'email'
+                          ? 'representante@empresa.com.br'
+                          : '(00) 00000-0000'
+                      "
+                      (input)="updateContactLine(list.key, index, $event)"
+                    />
+                    <button
+                      type="button"
+                      class="clients-icon-button"
+                      aria-label="Remover contato"
+                      (click)="removeContactLine(list.key, index)"
+                    >
+                      <i class="fa-solid fa-minus" aria-hidden="true"></i>
+                    </button>
+                  </div>
+                }
+              </div>
+            }
+
+            <div class="clients-representatives">
+              <div class="clients-contact-list__title">
+                <span>Representantes adicionais</span>
+                <button type="button" (click)="addRepresentative()">Adicionar representante</button>
+              </div>
+
+              @if (representativeRows().length) {
+                @for (representative of representativeRows(); track $index; let index = $index) {
+                  <div class="clients-representatives__row">
+                    <input
+                      type="text"
+                      placeholder="Nome"
+                      [value]="representative.name"
+                      (input)="updateRepresentative(index, 'name', $event)"
+                    />
+                    <input
+                      type="text"
+                      placeholder="CPF"
+                      [value]="representative.cpf"
+                      (input)="updateRepresentative(index, 'cpf', $event)"
+                    />
+                    <input
+                      type="text"
+                      placeholder="Cargo"
+                      [value]="representative.role"
+                      (input)="updateRepresentative(index, 'role', $event)"
+                    />
+                    <input
+                      type="email"
+                      placeholder="E-mail"
+                      [value]="representative.email"
+                      (input)="updateRepresentative(index, 'email', $event)"
+                    />
+                    <input
+                      type="tel"
+                      placeholder="Telefone"
+                      [value]="representative.phone"
+                      (input)="updateRepresentative(index, 'phone', $event)"
+                    />
+                    <button
+                      type="button"
+                      class="clients-icon-button"
+                      aria-label="Remover representante"
+                      (click)="removeRepresentative(index)"
+                    >
+                      <i class="fa-solid fa-trash" aria-hidden="true"></i>
+                    </button>
+                  </div>
+                }
+              } @else {
+                <p>Nenhum representante adicional.</p>
+              }
+            </div>
+          </div>
+        }
+
+        @case ('records') {
+          <div class="clients-form__section">
+            <label class="clients-field clients-field--full">
+              <span>Registro de andamento</span>
+              <textarea
+                rows="4"
+                [value]="fieldValue('progressEntry')"
+                placeholder="Digite um novo andamento para anexar ao histórico ao salvar"
+                (input)="updateField('progressEntry', $event)"
+              ></textarea>
+            </label>
+
+            <label class="clients-field clients-field--full">
+              <span>Histórico de registro de andamento</span>
+              <textarea rows="12" [value]="fieldValue('progressHistory')" readonly></textarea>
+            </label>
+          </div>
+        }
+
+        @case ('files') {
+          <div class="clients-files">
+            <div class="clients-files__toolbar">
+              <label>
+                <span>Pesquisar arquivos</span>
+                <input
+                  type="text"
+                  [value]="fileSearch()"
+                  placeholder="pasta, contrato, arquivo..."
+                  (input)="updateFileSearch($event)"
+                />
+              </label>
+              <div>
+                <button type="button" class="clients-menu-button" (click)="openFolder()">
+                  <i class="fa-solid fa-folder-open" aria-hidden="true"></i>
+                  Abrir pasta
+                </button>
+                <button type="button" class="clients-menu-button" (click)="openFile()">
+                  <i class="fa-solid fa-file-arrow-up" aria-hidden="true"></i>
+                  Abrir arquivo
+                </button>
+              </div>
+            </div>
+
+            <div class="clients-files__table">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Nome</th>
+                    <th>Tipo</th>
+                    <th>Atualizado</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (file of panelFiles(); track file.name + file.kind) {
+                    <tr
+                      [class.is-selected]="selectedFileName() === file.name"
+                      (click)="selectFile(file)"
+                    >
+                      <td>
+                        @if (file.kind === 'contract') {
+                          Contrato {{ file.name }}
+                        } @else {
+                          {{ file.name }}
+                        }
+                      </td>
+                      <td>
+                        @switch (file.kind) {
+                          @case ('folder') {
+                            Pasta
+                          }
+                          @case ('mainFile') {
+                            Arquivo principal
+                          }
+                          @case ('contract') {
+                            Contrato
+                          }
+                        }
+                      </td>
+                      <td>{{ file.updatedAt }}</td>
+                    </tr>
+                  } @empty {
+                    <tr>
+                      <td colspan="3">Nenhum arquivo vinculado.</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </div>
+        }
+
+        @default {
+          <div class="clients-form__section">
+            @for (row of adminFields; track $index) {
+              <div class="clients-form__row">
+                @for (field of row; track field.key) {
+                  <label class="clients-field" [class.clients-field--full]="field.span === 'full'">
+                    <span>
+                      @switch (field.key) {
+                        @case ('status') {
+                          Status
+                        }
+                        @case ('hiringMode') {
+                          Modalidade de contratação
+                        }
+                        @case ('folder') {
+                          Pasta
+                        }
+                        @case ('file') {
+                          Arquivo
+                        }
+                        @case ('registeredBy') {
+                          Cadastrado por
+                        }
+                        @case ('contractNumber') {
+                          Número do contrato
+                        }
+                        @case ('contractDate') {
+                          Data do contrato
+                        }
+                        @case ('referredBy') {
+                          Indicado por
+                        }
+                        @case ('internalOwner') {
+                          Responsável interno
+                        }
+                        @case ('notes') {
+                          Observações
+                        }
+                      }
+                    </span>
+
+                    @switch (field.type || 'text') {
+                      @case ('select') {
+                        <select
+                          [value]="fieldValue(field.key)"
+                          (change)="updateField(field.key, $event)"
+                        >
+                          <option value="">Selecione</option>
+                          @for (option of fieldOptions(field); track option) {
+                            <option [value]="option">
+                              @switch (option) {
+                                @case ('active') {
+                                  Ativo
+                                }
+                                @case ('prospect') {
+                                  Prospect
+                                }
+                                @case ('inactive') {
+                                  Inativo
+                                }
+                                @case ('closed') {
+                                  Encerrado
+                                }
+                                @case ('oneOff') {
+                                  Avulso
+                                }
+                                @case ('monthly') {
+                                  Mensalista
+                                }
+                                @case ('successFee') {
+                                  Êxito
+                                }
+                                @case ('advisory') {
+                                  Consultivo
+                                }
+                                @case ('litigation') {
+                                  Contencioso
+                                }
+                                @case ('mixed') {
+                                  Misto
+                                }
+                                @default {
+                                  {{ option }}
+                                }
+                              }
+                            </option>
+                          }
+                        </select>
+                      }
+                      @case ('textarea') {
+                        <textarea
+                          [rows]="field.rows || 3"
+                          [value]="fieldValue(field.key)"
+                          (input)="updateField(field.key, $event)"
+                        ></textarea>
+                      }
+                      @case ('readonly') {
+                        <input
+                          type="text"
+                          [value]="fieldValue(field.key) || 'Será preenchido ao salvar'"
+                          readonly
+                        />
+                      }
+                      @default {
+                        <input
+                          type="text"
+                          [value]="fieldValue(field.key)"
+                          (input)="updateField(field.key, $event)"
+                        />
+                      }
+                    }
+                  </label>
+                }
+              </div>
+            }
+          </div>
+        }
+      }
+
+      <footer class="clients-panel__footer">
+        <span>
+          @switch (notice().key) {
+            @case ('selectOrCreate') {
+              Selecione um cliente na tabela ou cadastre um novo.
+            }
+            @case ('panelLocked') {
+              Painel travado na ficha atual.
+            }
+            @case ('panelUnlocked') {
+              Painel liberado.
+            }
+            @case ('newClientStarted') {
+              Novo cliente iniciado. Preencha o painel e salve.
+            }
+            @case ('panelLockedSelection') {
+              Painel travado: destrave para carregar outro cliente.
+            }
+            @case ('loaded') {
+              Ficha carregada: {{ notice().subject }}.
+            }
+            @case ('saved') {
+              Cliente salvo: {{ notice().subject }}.
+            }
+            @case ('selectToDelete') {
+              Selecione um cliente para apagar.
+            }
+            @case ('confirmDelete') {
+              Confirme para apagar {{ notice().subject }} da base local.
+            }
+            @case ('deleted') {
+              Cliente removido da tabela.
+            }
+            @case ('panelCleared') {
+              Painel limpo.
+            }
+            @case ('filtersCleared') {
+              Busca e filtros limpos.
+            }
+            @case ('fileSelected') {
+              Arquivo selecionado: {{ notice().subject }}.
+            }
+            @case ('folderReady') {
+              Pasta pronta para abrir: {{ notice().subject }}.
+            }
+            @case ('saveToCreateFolder') {
+              Salve o cliente para criar a pasta.
+            }
+            @case ('fileReady') {
+              Arquivo pronto para abrir: {{ notice().subject }}.
+            }
+            @case ('noLinkedFile') {
+              Nenhum arquivo vinculado.
+            }
+            @case ('linkedProcesses') {
+              Processos vinculados filtrados por {{ notice().subject }}.
+            }
+            @case ('selectForLinkedProcesses') {
+              Selecione ou salve um cliente para consultar vínculos.
+            }
+            @case ('shareReady') {
+              Compartilhamento de base preparado para a futura integração.
+            }
+            @case ('importReady') {
+              Importação de base preparada para a futura integração.
+            }
+            @case ('individualNameRequired') {
+              Informe o nome da pessoa física.
+            }
+            @case ('companyNameRequired') {
+              Informe a razão social da pessoa jurídica.
+            }
+            @case ('favoriteAdded') {
+              {{ notice().subject }} marcado como favorito.
+            }
+            @case ('favoriteRemoved') {
+              {{ notice().subject }} removido dos favoritos.
+            }
+          }
+        </span>
+        <div>
+          <app-button
+            variant="tertiary"
+            size="sm"
+            icon="fa-solid fa-eraser"
+            label="Limpar painel"
+            (clicked)="clearPanel()"
+          />
+          <app-button
+            variant="secondary"
+            size="sm"
+            icon="fa-solid fa-trash"
+            label="Apagar"
+            [disabled]="selectedId() === null"
+            (clicked)="requestDeleteClient()"
+          />
+          @if (notice().key === 'confirmDelete') {
+            <app-button
+              variant="secondary"
+              size="sm"
+              icon="fa-solid fa-check"
+              label="Confirmar"
+              (clicked)="deleteClient()"
+            />
+          }
+          <app-button
+            nativeType="submit"
+            variant="primary"
+            size="sm"
+            icon="fa-solid fa-floppy-disk"
+            label="Salvar"
+          />
+        </div>
+      </footer>
+    </form>
+  </section>
+
+  <section class="clients-main" aria-label="Tabela de clientes">
+    <div class="clients-actions">
+      <div class="clients-actions__buttons">
+        <app-button
+          variant="primary"
+          size="sm"
+          icon="fa-solid fa-user-plus"
+          label="Novo"
+          (clicked)="newRecord()"
+        />
+        <app-button
+          variant="secondary"
+          size="sm"
+          icon="fa-solid fa-filter"
+          label="Filtros"
+          (clicked)="toggleFilters()"
+        />
+        <app-button
+          variant="secondary"
+          size="sm"
+          icon="fa-solid fa-table-columns"
+          label="Colunas"
+          (clicked)="toggleColumns()"
+        />
+
+        <div class="clients-actions__menu">
+          <button type="button" class="clients-menu-button" (click)="toggleMoreActions()">
+            <i class="fa-solid fa-ellipsis" aria-hidden="true"></i>
+            Mais...
+          </button>
+
+          @if (showMoreActions()) {
+            <div class="clients-dropdown" role="menu">
+              <button type="button" (click)="showFilesPanel()">Painel de arquivos</button>
+              <button type="button" (click)="openFolder()">Abrir pasta</button>
+              <button type="button" (click)="openFile()">Abrir arquivo</button>
+              <button type="button" (click)="showLinkedProcesses()">Processos vinculados</button>
+              <button type="button" (click)="shareBase()">Compartilhar base de dados</button>
+              <button type="button" (click)="importBase()">Importar base de dados</button>
+              <button type="button" (click)="configureFavorite()">Configurar favorito</button>
+              <button type="button" (click)="clearSearchAndFilters()">Limpar</button>
+              <button type="button" (click)="clearPanel()">Limpar painel</button>
+            </div>
+          }
+        </div>
+      </div>
+
+      <button
+        type="button"
+        class="clients-panel-toggle"
+        [class.is-active]="panelVisible()"
+        (click)="togglePanel()"
+      >
+        <i class="fa-solid fa-table-columns" aria-hidden="true"></i>
+        {{ panelVisible() ? 'Ocultar painel' : 'Mostrar painel' }}
+      </button>
+    </div>
+
+    <div class="clients-search">
+      <label>
+        <span>Pesquisar</span>
+        <input
+          type="search"
+          [value]="searchText()"
+          placeholder='nome, CPF, CNPJ, pasta ou "termo exato"'
+          (input)="updateSearch($event)"
+        />
+      </label>
+      <span>{{ activeFilterCount() }} filtro(s)</span>
+    </div>
+
+    @if (showFilters()) {
+      <div class="clients-filter-panel">
+        <label>
+          <span>Status</span>
+          <select [value]="filters().status" (change)="updateFilter('status', $event)">
+            <option value="">Todos</option>
+            @for (status of statusOptions; track status) {
+              <option [value]="status">
+                @switch (status) {
+                  @case ('active') {
+                    Ativo
+                  }
+                  @case ('prospect') {
+                    Prospect
+                  }
+                  @case ('inactive') {
+                    Inativo
+                  }
+                  @case ('closed') {
+                    Encerrado
+                  }
+                }
+              </option>
+            }
+          </select>
+        </label>
+        <label>
+          <span>Modalidade</span>
+          <select [value]="filters().hiringMode" (change)="updateFilter('hiringMode', $event)">
+            <option value="">Todas</option>
+            @for (mode of hiringModeOptions; track mode) {
+              <option [value]="mode">
+                @switch (mode) {
+                  @case ('oneOff') {
+                    Avulso
+                  }
+                  @case ('monthly') {
+                    Mensalista
+                  }
+                  @case ('successFee') {
+                    Êxito
+                  }
+                  @case ('advisory') {
+                    Consultivo
+                  }
+                  @case ('litigation') {
+                    Contencioso
+                  }
+                  @case ('mixed') {
+                    Misto
+                  }
+                }
+              </option>
+            }
+          </select>
+        </label>
+        <label>
+          <span>Responsável interno</span>
+          <input
+            type="text"
+            [value]="filters().internalOwner"
+            (input)="updateFilter('internalOwner', $event)"
+          />
+        </label>
+      </div>
+    }
+
+    @if (showColumns()) {
+      <div class="clients-columns-panel">
+        @for (column of clientColumns; track column.key) {
+          <label>
+            <input
+              type="checkbox"
+              [checked]="isColumnVisible(column.key)"
+              (change)="toggleColumn(column.key)"
+            />
+            <span>
+              @switch (column.key) {
+                @case ('legalNature') {
+                  Natureza jurídica
+                }
+                @case ('individualName') {
+                  Nome PF
+                }
+                @case ('companyLegalName') {
+                  Razão social
+                }
+                @case ('cpf') {
+                  CPF
+                }
+                @case ('cnpj') {
+                  CNPJ
+                }
+                @case ('individualEmail') {
+                  E-mail PF
+                }
+                @case ('companyEmail') {
+                  E-mail PJ
+                }
+                @case ('individualWhatsapp') {
+                  WhatsApp PF
+                }
+                @case ('companyWhatsapp') {
+                  WhatsApp PJ
+                }
+                @case ('status') {
+                  Status
+                }
+                @case ('folder') {
+                  Pasta
+                }
+                @case ('file') {
+                  Arquivo
+                }
+                @case ('registeredBy') {
+                  Cadastrado por
+                }
+                @case ('hiringMode') {
+                  Modalidade
+                }
+                @case ('internalOwner') {
+                  Responsável
+                }
+              }
+            </span>
+          </label>
+        }
+      </div>
+    }
+
+    <div class="clients-summary" aria-label="Resumo de clientes">
+      <div>
+        <span>Total</span>
+        <strong>{{ summary().total }}</strong>
+      </div>
+      <div>
+        <span>Pessoa física</span>
+        <strong>{{ summary().individual }}</strong>
+      </div>
+      <div>
+        <span>Pessoa jurídica</span>
+        <strong>{{ summary().company }}</strong>
+      </div>
+      <div>
+        <span>Ativos</span>
+        <strong>{{ summary().active }}</strong>
+      </div>
+    </div>
+
+    <nav class="clients-table-tabs" aria-label="Tipo de cliente">
+      @for (tab of tableTabs; track tab) {
+        <button
+          type="button"
+          [class.is-active]="activeTableTab() === tab"
+          (click)="setTableTab(tab)"
+        >
+          {{ tab === 'individual' ? 'Pessoa física' : 'Pessoa jurídica' }}
+        </button>
+      }
+    </nav>
+
+    <div class="clients-table-wrap">
+      <table class="clients-table">
+        <thead>
+          <tr>
+            <th class="clients-table__pin"></th>
+            @for (column of displayedColumns(); track column.key) {
+              <th [style.width]="column.width" [class]="columnClass(column)">
+                <button type="button" (click)="sortBy(column.key)">
+                  @switch (column.key) {
+                    @case ('legalNature') {
+                      Natureza jurídica
+                    }
+                    @case ('individualName') {
+                      Nome PF
+                    }
+                    @case ('companyLegalName') {
+                      Razão social
+                    }
+                    @case ('cpf') {
+                      CPF
+                    }
+                    @case ('cnpj') {
+                      CNPJ
+                    }
+                    @case ('individualEmail') {
+                      E-mail PF
+                    }
+                    @case ('companyEmail') {
+                      E-mail PJ
+                    }
+                    @case ('individualWhatsapp') {
+                      WhatsApp PF
+                    }
+                    @case ('companyWhatsapp') {
+                      WhatsApp PJ
+                    }
+                    @case ('status') {
+                      Status
+                    }
+                    @case ('folder') {
+                      Pasta
+                    }
+                    @case ('file') {
+                      Arquivo
+                    }
+                    @case ('registeredBy') {
+                      Cadastrado por
+                    }
+                    @case ('hiringMode') {
+                      Modalidade
+                    }
+                    @case ('internalOwner') {
+                      Responsável
+                    }
+                  }
+                  <i [class]="sortIcon(column.key)" aria-hidden="true"></i>
+                </button>
+              </th>
+            }
+          </tr>
+        </thead>
+        <tbody>
+          @for (client of displayedClients(); track client.id) {
+            <tr
+              [class.is-selected]="selectedId() === client.id"
+              [class.is-favorite]="client.favorite"
+              (click)="selectClient(client)"
+            >
+              <td class="clients-table__pin">
+                <button
+                  type="button"
+                  class="clients-icon-button"
+                  [class.is-active]="client.favorite"
+                  aria-label="Favoritar cliente"
+                  (click)="toggleClientFavorite(client, $event)"
+                >
+                  <i class="fa-solid fa-star" aria-hidden="true"></i>
+                </button>
+              </td>
+              @for (column of displayedColumns(); track column.key) {
+                <td [class]="columnClass(column)">
+                  @switch (column.key) {
+                    @case ('status') {
+                      <span [class]="rowStatusClass(client)">
+                        @switch (client.status) {
+                          @case ('active') {
+                            Ativo
+                          }
+                          @case ('prospect') {
+                            Prospect
+                          }
+                          @case ('inactive') {
+                            Inativo
+                          }
+                          @case ('closed') {
+                            Encerrado
+                          }
+                        }
+                      </span>
+                    }
+                    @case ('legalNature') {
+                      {{
+                        client.legalNature === 'individual' ? 'Pessoa física' : 'Pessoa jurídica'
+                      }}
+                    }
+                    @case ('hiringMode') {
+                      @switch (client.hiringMode) {
+                        @case ('oneOff') {
+                          Avulso
+                        }
+                        @case ('monthly') {
+                          Mensalista
+                        }
+                        @case ('successFee') {
+                          Êxito
+                        }
+                        @case ('advisory') {
+                          Consultivo
+                        }
+                        @case ('litigation') {
+                          Contencioso
+                        }
+                        @case ('mixed') {
+                          Misto
+                        }
+                        @default {
+                          -
+                        }
+                      }
+                    }
+                    @default {
+                      {{ displayCellValue(client, column) }}
+                    }
+                  }
+                </td>
+              }
+            </tr>
+          } @empty {
+            <tr>
+              <td class="clients-table__empty" [attr.colspan]="displayedColumns().length + 1">
+                Nenhum cliente encontrado.
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    <footer class="clients-main__footer">
+      {{ tableStatus().visible }} cliente(s) exibido(s) | {{ tableStatus().filtered }} filtrado(s) |
+      {{ tableStatus().total }} na base
+    </footer>
+  </section>
+</div>

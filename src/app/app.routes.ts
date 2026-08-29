@@ -21,6 +21,12 @@ export const routes: Routes = [
           import('./features/dashboard/dashboard.routes').then((m) => m.DASHBOARD_ROUTES),
         title: 'Hub Jurídico · Dashboard',
       },
+      {
+        path: 'clientes',
+        loadChildren: () =>
+          import('./features/clients/clients.routes').then((m) => m.CLIENTS_ROUTES),
+        title: 'Hub Jurídico · Clientes',
+      },
     ],
   },
   { path: '**', redirectTo: '' },

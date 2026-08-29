@@ -1,8 +1,8 @@
 import { Injectable } from '@angular/core';
 import { Observable, delay, of } from 'rxjs';
 
-import { MOCK_COMMITMENTS, MOCK_PROCESSES, MOCK_TASKS } from '../data/mock-data';
-import { ICommitment, IProcess, ITask } from '../models';
+import { MOCK_CLIENTS, MOCK_COMMITMENTS, MOCK_PROCESSES, MOCK_TASKS } from '../data/mock-data';
+import { IClient, ICommitment, IProcess, ITask } from '../models';
 
 /**
  * Fonte única de dados da aplicação. Hoje serve dados mock com um pequeno
@@ -22,5 +22,9 @@ export class DataService {
 
   getProcesses(): Observable<IProcess[]> {
     return of(structuredClone(MOCK_PROCESSES)).pipe(delay(this.latencyMs));
+  }
+
+  getClients(): Observable<IClient[]> {
+    return of(structuredClone(MOCK_CLIENTS)).pipe(delay(this.latencyMs));
   }
 }

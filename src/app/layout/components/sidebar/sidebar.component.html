@@ -1,11 +1,11 @@
 <aside class="sidebar" [class.sidebar--collapsed]="collapsed()">
   <div class="sidebar__brand">
-    <div class="sidebar__brand-text">
-      <strong>{{ appInfo.NAME }}</strong>
-      @if (!collapsed()) {
+    @if (!collapsed()) {
+      <div class="sidebar__brand-text">
+        <strong>{{ appInfo.NAME }}</strong>
         <small>{{ appInfo.TAGLINE }}</small>
-      }
-    </div>
+      </div>
+    }
     <button
       type="button"
       class="sidebar__toggle"

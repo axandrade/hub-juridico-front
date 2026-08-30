@@ -14,6 +14,18 @@
 
   &--collapsed {
     width: $sidebar-width-collapsed;
+
+    .sidebar__brand {
+      justify-content: center;
+      padding-inline: $spacing-sm;
+    }
+
+    .sidebar__link {
+      justify-content: center;
+      gap: 0;
+      width: auto;
+      padding-inline: $spacing-sm;
+    }
   }
 
   &__brand {

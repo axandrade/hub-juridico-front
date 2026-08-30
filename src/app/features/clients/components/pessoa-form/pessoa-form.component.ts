@@ -42,11 +42,8 @@ type PanelTab = 'person' | 'admin' | 'records' | 'files';
 
 type NoticeKey =
   | 'selectOrCreate'
-  | 'panelLocked'
-  | 'panelUnlocked'
-  | 'newClientStarted'
   | 'panelLockedSelection'
-  | 'loaded'
+  | 'idle'
   | 'saved'
   | 'selectToDelete'
   | 'confirmDelete'
@@ -179,12 +176,12 @@ export class PessoaFormComponent {
           const found = this.store.buscar(id);
           if (found) {
             this.loadIntoForm(found);
-            this.notice.set({ key: 'loaded', subject: this.clientDisplayName(found) });
+            this.notice.set({ key: 'idle' });
           }
           return;
         }
         this.loadIntoForm(this.createEmptyClient(novoTipo));
-        this.notice.set({ key: 'newClientStarted' });
+        this.notice.set({ key: 'idle' });
       });
     });
   }
@@ -200,7 +197,6 @@ export class PessoaFormComponent {
 
   protected togglePanelLock(): void {
     this.locked.update((locked) => !locked);
-    this.notice.set({ key: this.locked() ? 'panelLocked' : 'panelUnlocked' });
   }
 
   protected toggleFavorite(): void {

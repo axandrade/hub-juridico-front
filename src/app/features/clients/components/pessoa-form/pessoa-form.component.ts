@@ -49,8 +49,6 @@ type NoticeKey =
   | 'confirmDelete'
   | 'deleted'
   | 'panelCleared'
-  | 'folderReady'
-  | 'saveToCreateFolder'
   | 'saveBeforeUpload'
   | 'uploadOk'
   | 'uploadError'
@@ -147,9 +145,6 @@ export class PessoaFormComponent {
       ? pessoa.nome.trim()
       : (pessoa.razaoSocial || pessoa.nomeFantasia).trim();
   });
-
-  /** Nome da pasta do dossiê — passado à aba "Lista de arquivos" (botão "Abrir pasta"). */
-  protected readonly filesFolder = computed(() => this.formValue().dossier.folder);
 
   /** Última ficha carregada (`id:<n>` ou `new:<tipo>`) — evita recarregar à toa. */
   private lastLoadedKey = '';

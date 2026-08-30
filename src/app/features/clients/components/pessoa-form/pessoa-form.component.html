@@ -98,11 +98,7 @@
       }
 
       @case ('files') {
-        <app-pessoa-files
-          [folder]="filesFolder()"
-          [pessoaId]="entityId()"
-          (notify)="onFilesNotice($event)"
-        />
+        <app-pessoa-files [pessoaId]="entityId()" (notify)="onFilesNotice($event)" />
       }
 
       @default {
@@ -142,12 +138,6 @@
           }
           @case ('panelCleared') {
             Painel limpo.
-          }
-          @case ('folderReady') {
-            Pasta pronta para abrir: {{ notice().subject }}.
-          }
-          @case ('saveToCreateFolder') {
-            Salve o cliente para criar a pasta.
           }
           @case ('saveBeforeUpload') {
             Salve o cliente antes de anexar arquivos.

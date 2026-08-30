@@ -14,8 +14,6 @@ import { PessoaArquivoService } from '../../services/pessoa-arquivo.service';
 import { PessoaFileUploadComponent } from '../pessoa-file-upload/pessoa-file-upload.component';
 
 export type PessoaFilesNoticeKey =
-  | 'folderReady'
-  | 'saveToCreateFolder'
   | 'saveBeforeUpload'
   | 'uploadOk'
   | 'uploadError'
@@ -44,8 +42,6 @@ export interface PessoaFilesNotice {
 export class PessoaFilesComponent {
   private readonly arquivos = inject(PessoaArquivoService);
 
-  /** Nome da pasta do dossiê (texto) — só para o botão "Abrir pasta". */
-  readonly folder = input<string>('');
   /** Id da pessoa persistida; `0` = ficha nova (ainda sem arquivos). */
   readonly pessoaId = input<number>(0);
   readonly notify = output<PessoaFilesNotice>();
@@ -85,11 +81,6 @@ export class PessoaFilesComponent {
 
   protected selectFile(row: PessoaArquivo): void {
     this.selectedId.set(row.id);
-  }
-
-  protected openFolder(): void {
-    const folder = this.folder();
-    this.notify.emit({ key: folder ? 'folderReady' : 'saveToCreateFolder', subject: folder });
   }
 
   protected openUpload(): void {

@@ -22,7 +22,7 @@ import {
 } from '../../../../core/models';
 import { ButtonComponent } from '../../../../shared/components/button/button.component';
 import { ClientStore } from '../../services/client-store';
-import { PessoaEditorComponent } from '../pessoa-editor/pessoa-editor.component';
+import { PessoaFormComponent } from '../pessoa-form/pessoa-form.component';
 
 type ClientColumnKey =
   | 'personType'
@@ -55,7 +55,7 @@ interface ClientFilters {
 @Component({
   selector: 'app-clients-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ButtonComponent, PessoaEditorComponent],
+  imports: [ButtonComponent, PessoaFormComponent],
   templateUrl: './clients-page.component.html',
   styleUrl: './clients-page.component.scss',
 })
@@ -74,7 +74,7 @@ export class ClientsPageComponent {
     'registeredBy',
   ];
 
-  private readonly editor = viewChild(PessoaEditorComponent);
+  private readonly editor = viewChild(PessoaFormComponent);
 
   protected readonly clients = this.store.clients;
   protected readonly selectedPersonId = signal<number | null>(null);

@@ -1,20 +1,277 @@
-<div class="clients-form__section">
-  @for (row of identityRows(); track $index) {
-    <div class="clients-form__row" [class.clients-form__row--cols-3]="row.length === 3">
-      @for (field of row; track field.key) {
-        <app-client-field [config]="field" [control]="control(field.key)" />
-      }
+<section class="clients-panel" aria-label="Cadastro de pessoa">
+  <header class="clients-panel__header">
+    <div>
+      <span>Painel</span>
+      <h2>{{ panelTitle() || 'Novo cliente' }}</h2>
+      <small>
+        {{ tipoPessoaAtual() === 'FISICA' ? 'Pessoa física' : 'Pessoa jurídica' }} |
+        {{ form.controls.dossier.controls.folder.value || 'pasta será criada ao salvar' }}
+      </small>
     </div>
-  }
 
-  <div class="clients-form__divider"><span>Endereço</span></div>
-  <app-client-address [group]="form().controls.pessoa.controls.endereco" />
+    <div class="clients-panel__tools" aria-label="Ferramentas do painel">
+      <button
+        type="button"
+        class="clients-icon-button"
+        [class.is-active]="favorite()"
+        title="Configurar favorito"
+        aria-label="Configurar favorito"
+        (click)="toggleFavorite()"
+      >
+        <i class="fa-solid fa-star" aria-hidden="true"></i>
+      </button>
+      <button
+        type="button"
+        class="clients-icon-button"
+        [class.is-active]="locked()"
+        title="Travar painel"
+        aria-label="Travar painel"
+        (click)="togglePanelLock()"
+      >
+        <i class="fa-solid fa-lock" aria-hidden="true"></i>
+      </button>
+    </div>
+  </header>
 
-  <app-client-email-list [array]="form().controls.pessoa.controls.emails" />
-  <app-client-contact-list [array]="form().controls.pessoa.controls.contatos" />
+  <nav class="clients-panel__tabs" aria-label="Abas do painel">
+    @for (tab of panelTabs; track tab) {
+      <button type="button" [class.is-active]="activePanelTab() === tab" (click)="setPanelTab(tab)">
+        @switch (tab) {
+          @case ('person') {
+            Dados pessoais
+          }
+          @case ('admin') {
+            Administrativo
+          }
+          @case ('records') {
+            Registros
+          }
+          @case ('files') {
+            Lista de arquivos
+          }
+        }
+      </button>
+    }
+  </nav>
 
-  @if (tipoPessoa() === 'JURIDICA') {
-    <div class="clients-form__divider"><span>Representação legal</span></div>
-    <app-client-representatives [array]="form().controls.pessoa.controls.representantes" />
-  }
-</div>
+  <form class="clients-form" (submit)="save($event)">
+    @switch (activePanelTab()) {
+      @case ('person') {
+        <div class="clients-form__section">
+          @for (row of identityRows(); track $index) {
+            <div class="clients-form__row" [class.clients-form__row--cols-3]="row.length === 3">
+              @for (field of row; track field.key) {
+                <app-client-field [config]="field" [control]="pessoaControl(field.key)" />
+              }
+            </div>
+          }
+
+          <div class="clients-form__divider"><span>Endereço</span></div>
+          <app-client-address [group]="form.controls.pessoa.controls.endereco" />
+
+          <app-client-email-list [array]="form.controls.pessoa.controls.emails" />
+          <app-client-contact-list [array]="form.controls.pessoa.controls.contatos" />
+
+          @if (tipoPessoaAtual() === 'JURIDICA') {
+            <div class="clients-form__divider"><span>Representação legal</span></div>
+            <app-client-representatives [array]="form.controls.pessoa.controls.representantes" />
+          }
+        </div>
+      }
+
+      @case ('records') {
+        <div class="clients-form__section" [formGroup]="form.controls.dossier">
+          <label class="clients-field clients-field--full">
+            <span>Registro de andamento</span>
+            <textarea
+              rows="4"
+              formControlName="progressEntry"
+              placeholder="Digite um novo andamento para anexar ao histórico ao salvar"
+            ></textarea>
+          </label>
+
+          <label class="clients-field clients-field--full">
+            <span>Histórico de registro de andamento</span>
+            <textarea rows="12" formControlName="progressHistory" readonly></textarea>
+          </label>
+        </div>
+      }
+
+      @case ('files') {
+        <div class="clients-files">
+          <div class="clients-files__toolbar">
+            <label>
+              <span>Pesquisar arquivos</span>
+              <input
+                type="text"
+                [value]="fileSearch()"
+                placeholder="pasta, contrato, arquivo..."
+                (input)="updateFileSearch($event)"
+              />
+            </label>
+            <div>
+              <button type="button" class="clients-menu-button" (click)="openFolder()">
+                <i class="fa-solid fa-folder-open" aria-hidden="true"></i>
+                Abrir pasta
+              </button>
+              <button type="button" class="clients-menu-button" (click)="openFile()">
+                <i class="fa-solid fa-file-arrow-up" aria-hidden="true"></i>
+                Abrir arquivo
+              </button>
+            </div>
+          </div>
+
+          <div class="clients-files__table">
+            <table>
+              <thead>
+                <tr>
+                  <th>Nome</th>
+                  <th>Tipo</th>
+                  <th>Atualizado</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (file of panelFiles(); track file.name + file.kind) {
+                  <tr
+                    [class.is-selected]="selectedFileName() === file.name"
+                    (click)="selectFile(file)"
+                  >
+                    <td>
+                      @if (file.kind === 'contract') {
+                        Contrato {{ file.name }}
+                      } @else {
+                        {{ file.name }}
+                      }
+                    </td>
+                    <td>
+                      @switch (file.kind) {
+                        @case ('folder') {
+                          Pasta
+                        }
+                        @case ('mainFile') {
+                          Arquivo principal
+                        }
+                        @case ('contract') {
+                          Contrato
+                        }
+                      }
+                    </td>
+                    <td>{{ file.updatedAt }}</td>
+                  </tr>
+                } @empty {
+                  <tr>
+                    <td colspan="3">Nenhum arquivo vinculado.</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </div>
+      }
+
+      @default {
+        <app-client-admin-form [group]="form.controls.dossier" />
+      }
+    }
+
+    <footer class="clients-panel__footer">
+      <span>
+        @switch (notice().key) {
+          @case ('selectOrCreate') {
+            Selecione um cliente na tabela ou cadastre um novo.
+          }
+          @case ('panelLocked') {
+            Painel travado na ficha atual.
+          }
+          @case ('panelUnlocked') {
+            Painel liberado.
+          }
+          @case ('newClientStarted') {
+            Novo cliente iniciado. Preencha o painel e salve.
+          }
+          @case ('panelLockedSelection') {
+            Painel travado: destrave para carregar outro cliente.
+          }
+          @case ('loaded') {
+            Ficha carregada: {{ notice().subject }}.
+          }
+          @case ('saved') {
+            Cliente salvo: {{ notice().subject }}.
+          }
+          @case ('selectToDelete') {
+            Selecione um cliente para apagar.
+          }
+          @case ('confirmDelete') {
+            Confirme para apagar {{ notice().subject }} da base local.
+          }
+          @case ('deleted') {
+            Cliente removido da tabela.
+          }
+          @case ('panelCleared') {
+            Painel limpo.
+          }
+          @case ('fileSelected') {
+            Arquivo selecionado: {{ notice().subject }}.
+          }
+          @case ('folderReady') {
+            Pasta pronta para abrir: {{ notice().subject }}.
+          }
+          @case ('saveToCreateFolder') {
+            Salve o cliente para criar a pasta.
+          }
+          @case ('fileReady') {
+            Arquivo pronto para abrir: {{ notice().subject }}.
+          }
+          @case ('noLinkedFile') {
+            Nenhum arquivo vinculado.
+          }
+          @case ('naturalNameRequired') {
+            Informe nome e CPF da pessoa física.
+          }
+          @case ('legalNameRequired') {
+            Informe razão social e CNPJ da pessoa jurídica.
+          }
+          @case ('favoriteAdded') {
+            {{ notice().subject }} marcado como favorito.
+          }
+          @case ('favoriteRemoved') {
+            {{ notice().subject }} removido dos favoritos.
+          }
+        }
+      </span>
+      <div>
+        <app-button
+          variant="tertiary"
+          size="sm"
+          icon="fa-solid fa-eraser"
+          label="Limpar painel"
+          (clicked)="clearPanel()"
+        />
+        <app-button
+          variant="secondary"
+          size="sm"
+          icon="fa-solid fa-trash"
+          label="Apagar"
+          [disabled]="!isPersisted()"
+          (clicked)="requestDelete()"
+        />
+        @if (notice().key === 'confirmDelete') {
+          <app-button
+            variant="secondary"
+            size="sm"
+            icon="fa-solid fa-check"
+            label="Confirmar"
+            (clicked)="confirmDelete()"
+          />
+        }
+        <app-button
+          nativeType="submit"
+          variant="primary"
+          size="sm"
+          icon="fa-solid fa-floppy-disk"
+          label="Salvar"
+        />
+      </div>
+    </footer>
+  </form>
+</section>

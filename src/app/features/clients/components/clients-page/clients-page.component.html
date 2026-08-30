@@ -1,5 +1,5 @@
 <div class="clients" [class.clients--panel-hidden]="!panelVisible()">
-  <app-pessoa-editor
+  <app-pessoa-form
     [pessoaId]="selectedPersonId()"
     [novoTipo]="activeTableTab()"
     (saved)="onSaved($event)"

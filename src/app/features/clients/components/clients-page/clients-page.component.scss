@@ -16,7 +16,7 @@
 .clients--panel-hidden {
   grid-template-columns: minmax(0, 1fr);
 
-  app-pessoa-editor {
+  app-pessoa-form {
     display: none;
   }
 }

@@ -38,7 +38,7 @@ export class ChangePasswordComponent {
   protected readonly error = signal<string | null>(null);
   protected readonly reveal = signal(false);
 
-  protected readonly userName = computed(() => this.auth.user()?.nome ?? '');
+  protected readonly userName = computed(() => this.auth.user()?.name ?? '');
 
   protected readonly form = inject(FormBuilder).nonNullable.group(
     {

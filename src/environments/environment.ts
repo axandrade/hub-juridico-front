@@ -6,6 +6,6 @@
  */
 export const environment = {
   production: false,
-  /** Base da API do hub-juridico-api (Django + DRF). */
-  apiBaseUrl: 'http://localhost:8000/api/v1',
+  /** Base da API do hub-juridico-api (Spring Boot). */
+  apiBaseUrl: 'http://localhost:8080/api/v1',
 } as const;

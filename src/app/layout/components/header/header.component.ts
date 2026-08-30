@@ -18,8 +18,8 @@ export class HeaderComponent {
   private readonly auth = inject(AuthService);
 
   protected readonly context = MOCK_CONTEXT;
-  protected readonly userName = computed(() => this.auth.user()?.nome ?? '—');
-  protected readonly userRole = computed(() => this.auth.user()?.role?.name ?? '');
+  protected readonly userName = computed(() => this.auth.user()?.name ?? '—');
+  protected readonly userRole = computed(() => this.auth.user()?.role ?? '');
 
   protected readonly quickActions = [
     { label: 'Gerar arquivo', icon: 'fa-solid fa-file-export', variant: 'secondary' as const },

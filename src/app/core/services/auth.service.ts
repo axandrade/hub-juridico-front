@@ -13,18 +13,18 @@ import {
 } from 'rxjs';
 
 import { environment } from '../../../environments/environment';
-import { AuthUser, LoginResponse, RefreshResponse } from '../auth/auth.models';
+import { AuthTokensResponse, AuthUser, toTokenPair } from '../auth/auth.models';
 import { onlyDigits } from '../auth/cpf';
 import { TokenStore } from '../auth/token-store';
 
 /**
  * Autenticação da aplicação contra o hub-juridico-api (JWT).
  *
- * - `login` obtém o par de tokens e carrega o perfil (`/auth/me/`).
+ * - `login` obtém o par de tokens e carrega o perfil (`/auth/me`).
  * - `bootstrap` (chamado por `provideAppInitializer`) reidrata a sessão a partir do
  *   refresh token persistido, fazendo um silent refresh.
  * - `refresh` é *single-flight*: vários 401 simultâneos disparam uma única chamada.
- * - `logout` revoga o refresh token no servidor (blacklist) antes de limpar o estado.
+ * - `logout` revoga o refresh token no servidor antes de limpar o estado.
  */
 @Injectable({ providedIn: 'root' })
 export class AuthService {
@@ -41,11 +41,11 @@ export class AuthService {
 
   private refreshInFlight$: Observable<string> | null = null;
 
-  login(cpf: string, senha: string, remember: boolean): Observable<void> {
+  login(cpf: string, password: string, remember: boolean): Observable<void> {
     return this.http
-      .post<LoginResponse>(`${this.base}/login/`, { cpf: onlyDigits(cpf), senha })
+      .post<AuthTokensResponse>(`${this.base}/login`, { cpf: onlyDigits(cpf), password })
       .pipe(
-        tap((res) => this.tokenStore.setTokens(res, remember)),
+        tap((res) => this.tokenStore.setTokens(toTokenPair(res), remember)),
         switchMap(() => this.loadCurrentUser()),
         map(() => undefined),
       );
@@ -77,10 +77,10 @@ export class AuthService {
     }
 
     this.refreshInFlight$ = this.http
-      .post<RefreshResponse>(`${this.base}/refresh/`, { refresh })
+      .post<AuthTokensResponse>(`${this.base}/refresh`, { refresh_token: refresh })
       .pipe(
-        tap((res) => this.tokenStore.setTokens(res)),
-        map((res) => res.access),
+        tap((res) => this.tokenStore.setTokens(toTokenPair(res))),
+        map((res) => res.access_token),
         finalize(() => (this.refreshInFlight$ = null)),
         shareReplay(1),
       );
@@ -88,13 +88,13 @@ export class AuthService {
   }
 
   loadCurrentUser(): Observable<AuthUser> {
-    return this.http.get<AuthUser>(`${this.base}/me/`).pipe(tap((user) => this._user.set(user)));
+    return this.http.get<AuthUser>(`${this.base}/me`).pipe(tap((user) => this._user.set(user)));
   }
 
   logout(): Observable<void> {
     const refresh = this.tokenStore.getRefreshToken();
     const request$: Observable<unknown> = refresh
-      ? this.http.post(`${this.base}/logout/`, { refresh })
+      ? this.http.post(`${this.base}/logout`, { refresh_token: refresh })
       : of(null);
     return request$.pipe(
       catchError(() => of(null)),
@@ -103,11 +103,11 @@ export class AuthService {
     );
   }
 
-  changePassword(senhaAtual: string, novaSenha: string): Observable<void> {
+  changePassword(currentPassword: string, newPassword: string): Observable<void> {
     return this.http
-      .post(`${environment.apiBaseUrl}/users/me/change-password/`, {
-        senha_atual: senhaAtual,
-        nova_senha: novaSenha,
+      .post(`${this.base}/change-password`, {
+        current_password: currentPassword,
+        new_password: newPassword,
       })
       .pipe(
         map(() => undefined),

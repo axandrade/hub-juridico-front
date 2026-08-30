@@ -7,7 +7,7 @@ import { AuthService } from '../services/auth.service';
 import { TokenStore } from './token-store';
 
 /** Rotas que não devem receber o header nem disparar o fluxo de refresh. */
-const AUTH_BYPASS = ['/auth/login/', '/auth/refresh/'];
+const AUTH_BYPASS = ['/auth/login', '/auth/refresh'];
 
 function isBypassed(url: string): boolean {
   return AUTH_BYPASS.some((path) => url.includes(path));

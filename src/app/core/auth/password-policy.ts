@@ -1,11 +1,11 @@
 import { AbstractControl, ValidationErrors, ValidatorFn } from '@angular/forms';
 
 /**
- * Política de senha — espelha `apps/common/validators.py::validate_strong_password`
- * do back-end. Validação no cliente é só defesa em profundidade / feedback rápido;
- * o servidor continua sendo a autoridade.
+ * Política de senha — espelha `security.auth.password` do hub-juridico-api
+ * (min 12, maiúscula + minúscula + dígito + símbolo). Validação no cliente é só
+ * feedback rápido; o servidor continua sendo a autoridade.
  */
-export const PASSWORD_MIN_LENGTH = 8;
+export const PASSWORD_MIN_LENGTH = 12;
 
 const RULES: readonly { test: RegExp; label: string }[] = [
   { test: /[A-Z]/, label: 'uma letra maiúscula' },

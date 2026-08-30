@@ -1,6 +1,6 @@
 // Estilos compartilhados pelas abas de cadastro de cliente
 // (client-field, client-address, client-email-list, client-contact-list,
-// client-representatives, client-person-form, client-admin-form). Cada
+// client-representatives, pessoa-form, client-admin-form). Cada
 // componente faz `@use 'client-form';` — o host é `display: contents` para
 // participar direto do layout flex de `.clients-form`.
 @use 'variables' as *;

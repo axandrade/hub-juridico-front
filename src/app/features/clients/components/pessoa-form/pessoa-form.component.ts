@@ -11,13 +11,13 @@ import { ClientFieldComponent } from '../client-field/client-field.component';
 import { ClientRepresentativesComponent } from '../client-representatives/client-representatives.component';
 
 /**
- * Aba de cadastro do cliente — um único formulário (`form.controls.pessoa`) para
- * pessoa física e jurídica. Só a lista de campos de identidade troca com
- * `tipoPessoa`; endereço, e-mails e contatos são compartilhados (espelham a base
+ * Aba "Dados pessoais" — um único formulário (`form.controls.pessoa`) para pessoa
+ * física e jurídica. Só a lista de campos de identidade troca com `tipoPessoa`;
+ * endereço, e-mails e contatos são compartilhados (espelham a base
  * `com.hubjuridico.dominio.Pessoa`).
  */
 @Component({
-  selector: 'app-client-person-form',
+  selector: 'app-pessoa-form',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     ClientFieldComponent,
@@ -26,10 +26,10 @@ import { ClientRepresentativesComponent } from '../client-representatives/client
     ClientContactListComponent,
     ClientRepresentativesComponent,
   ],
-  templateUrl: './client-person-form.component.html',
-  styleUrl: './client-person-form.component.scss',
+  templateUrl: './pessoa-form.component.html',
+  styleUrl: './pessoa-form.component.scss',
 })
-export class ClientPersonFormComponent {
+export class PessoaFormComponent {
   readonly form = input.required<ClientForm>();
   readonly tipoPessoa = input.required<TipoPessoa>();
 

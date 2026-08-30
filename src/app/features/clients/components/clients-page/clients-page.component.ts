@@ -5,10 +5,9 @@ import {
   computed,
   inject,
   signal,
+  viewChild,
 } from '@angular/core';
-import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
-import { ReactiveFormsModule } from '@angular/forms';
-import { map, startWith } from 'rxjs';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 import {
   CLIENT_HIRING_MODES,
@@ -16,24 +15,14 @@ import {
   ClientHiringMode,
   ClientStatus,
   IClient,
-  IRepresentanteLegal,
   TIPOS_PESSOA,
   TipoPessoa,
   contatoPrincipal,
   emailPrincipal,
-  emptyDossier,
-  emptyPessoa,
 } from '../../../../core/models';
-import { DataService } from '../../../../core/services/data.service';
 import { ButtonComponent } from '../../../../shared/components/button/button.component';
-import {
-  ClientForm,
-  createClientForm,
-  patchClientForm,
-  readClientForm,
-} from '../../forms/client-form.factory';
-import { ClientAdminFormComponent } from '../client-admin-form/client-admin-form.component';
-import { ClientPersonFormComponent } from '../client-person-form/client-person-form.component';
+import { ClientStore } from '../../services/client-store';
+import { PessoaEditorComponent } from '../pessoa-editor/pessoa-editor.component';
 
 type ClientColumnKey =
   | 'personType'
@@ -47,34 +36,8 @@ type ClientColumnKey =
   | 'registeredBy'
   | 'hiringMode'
   | 'internalOwner';
-type PanelTab = 'admin' | 'person' | 'records' | 'files';
 type SortDirection = 'asc' | 'desc';
-type NoticeKey =
-  | 'selectOrCreate'
-  | 'panelLocked'
-  | 'panelUnlocked'
-  | 'newClientStarted'
-  | 'panelLockedSelection'
-  | 'loaded'
-  | 'saved'
-  | 'selectToDelete'
-  | 'confirmDelete'
-  | 'deleted'
-  | 'panelCleared'
-  | 'filtersCleared'
-  | 'fileSelected'
-  | 'folderReady'
-  | 'saveToCreateFolder'
-  | 'fileReady'
-  | 'noLinkedFile'
-  | 'linkedProcesses'
-  | 'selectForLinkedProcesses'
-  | 'shareReady'
-  | 'importReady'
-  | 'naturalNameRequired'
-  | 'legalNameRequired'
-  | 'favoriteAdded'
-  | 'favoriteRemoved';
+type PageNotice = '' | 'filtersCleared' | 'shareReady' | 'importReady';
 
 interface ClientColumn {
   key: ClientColumnKey;
@@ -89,33 +52,16 @@ interface ClientFilters {
   internalOwner: string;
 }
 
-interface ClientFileRow {
-  name: string;
-  kind: 'folder' | 'mainFile' | 'contract';
-  updatedAt: string;
-}
-
-interface ClientNotice {
-  key: NoticeKey;
-  subject?: string;
-}
-
 @Component({
   selector: 'app-clients-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [
-    ButtonComponent,
-    ReactiveFormsModule,
-    ClientPersonFormComponent,
-    ClientAdminFormComponent,
-  ],
+  imports: [ButtonComponent, PessoaEditorComponent],
   templateUrl: './clients-page.component.html',
   styleUrl: './clients-page.component.scss',
 })
 export class ClientsPageComponent {
-  private readonly data = inject(DataService);
+  private readonly store = inject(ClientStore);
   private readonly destroyRef = inject(DestroyRef);
-  private readonly defaultUser = 'Lincoln';
   private readonly defaultVisibleColumns: readonly ClientColumnKey[] = [
     'personType',
     'name',
@@ -128,31 +74,16 @@ export class ClientsPageComponent {
     'registeredBy',
   ];
 
-  protected readonly form: ClientForm = createClientForm();
-  private readonly formValue = toSignal(
-    this.form.valueChanges.pipe(
-      startWith(null),
-      map(() => this.form.getRawValue()),
-    ),
-    { requireSync: true },
-  );
-  private readonly pessoaValue = computed(() => this.formValue().pessoa);
+  private readonly editor = viewChild(PessoaEditorComponent);
 
-  protected readonly clients = signal<IClient[]>([]);
-  protected readonly selectedId = signal<number | null>(null);
-  protected readonly entityId = signal(0);
-  protected readonly registeredAt = signal(new Date());
-  protected readonly favorite = signal(false);
+  protected readonly clients = this.store.clients;
+  protected readonly selectedPersonId = signal<number | null>(null);
   protected readonly activeTableTab = signal<TipoPessoa>('FISICA');
-  protected readonly activePanelTab = signal<PanelTab>('person');
   protected readonly panelVisible = signal(true);
-  protected readonly panelLocked = signal(false);
   protected readonly showFilters = signal(false);
   protected readonly showColumns = signal(false);
   protected readonly showMoreActions = signal(false);
   protected readonly searchText = signal('');
-  protected readonly fileSearch = signal('');
-  protected readonly selectedFileName = signal('');
   protected readonly sortColumn = signal<ClientColumnKey>('folder');
   protected readonly sortDirection = signal<SortDirection>('asc');
   protected readonly visibleColumnKeys = signal<ReadonlySet<ClientColumnKey>>(
@@ -163,12 +94,11 @@ export class ClientsPageComponent {
     hiringMode: '',
     internalOwner: '',
   });
-  protected readonly notice = signal<ClientNotice>({ key: 'selectOrCreate' });
+  protected readonly pageNotice = signal<PageNotice>('');
 
   protected readonly statusOptions = CLIENT_STATUSES;
   protected readonly hiringModeOptions = CLIENT_HIRING_MODES;
   protected readonly tableTabs: readonly TipoPessoa[] = TIPOS_PESSOA;
-  protected readonly panelTabs: readonly PanelTab[] = ['person', 'admin', 'records', 'files'];
 
   protected readonly clientColumns: readonly ClientColumn[] = [
     { key: 'personType', width: '138px', getter: (client) => client.pessoa.tipo },
@@ -188,8 +118,6 @@ export class ClientsPageComponent {
     { key: 'hiringMode', width: '150px', getter: (client) => client.dossier.hiringMode },
     { key: 'internalOwner', width: '160px', getter: (client) => client.dossier.internalOwner },
   ];
-
-  protected readonly tipoPessoaAtual = computed<TipoPessoa>(() => this.pessoaValue().tipo);
 
   protected readonly displayedColumns = computed(() => {
     const visible = this.visibleColumnKeys();
@@ -259,13 +187,6 @@ export class ClientsPageComponent {
     };
   });
 
-  protected readonly panelTitle = computed(() => {
-    const pessoa = this.pessoaValue();
-    return pessoa.tipo === 'FISICA'
-      ? pessoa.nome.trim()
-      : (pessoa.razaoSocial || pessoa.nomeFantasia).trim();
-  });
-
   protected readonly activeFilterCount = computed(
     () =>
       [
@@ -282,205 +203,77 @@ export class ClientsPageComponent {
     total: this.clients().length,
   }));
 
-  protected readonly panelFiles = computed<ClientFileRow[]>(() => {
-    const dossier = this.formValue().dossier;
-    const registeredAt = this.registeredAt();
-    const search = this.normalizeKey(this.fileSearch());
-    const rows: ClientFileRow[] = [];
-
-    if (dossier.folder) {
-      rows.push({ name: dossier.folder, kind: 'folder', updatedAt: this.formatDate(registeredAt) });
-    }
-
-    if (dossier.file) {
-      rows.push({ name: dossier.file, kind: 'mainFile', updatedAt: this.formatDate(registeredAt) });
-    }
-
-    if (dossier.contractNumber) {
-      rows.push({
-        name: dossier.contractNumber,
-        kind: 'contract',
-        updatedAt: dossier.contractDate || this.formatDate(registeredAt),
-      });
-    }
-
-    return search
-      ? rows.filter((row) => this.normalizeKey(`${row.name} ${row.kind}`).includes(search))
-      : rows;
-  });
-
   constructor() {
-    this.data
-      .getClients()
+    this.store
+      .carregarLista()
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((clients) => {
-        const cloned = clients.map((client) => this.cloneClient(client));
-        this.clients.set(cloned);
-
-        const firstClient =
-          cloned.find((client) => client.pessoa.tipo === this.activeTableTab()) ?? cloned[0];
-
-        if (firstClient) {
-          this.selectClient(firstClient);
-          return;
-        }
-
-        this.newRecord();
+        const firstOfTab = clients.find((client) => client.pessoa.tipo === this.activeTableTab());
+        this.selectedPersonId.set(firstOfTab?.id ?? clients[0]?.id ?? null);
       });
   }
 
   protected setTableTab(tab: TipoPessoa): void {
     this.activeTableTab.set(tab);
-
-    const firstClient = this.clients().find((client) => client.pessoa.tipo === tab);
-    if (firstClient) {
-      this.selectClient(firstClient);
-      return;
-    }
-
-    this.newRecord(tab);
-  }
-
-  protected setPanelTab(tab: PanelTab): void {
-    this.activePanelTab.set(tab);
+    const firstOfTab = this.clients().find((client) => client.pessoa.tipo === tab);
+    this.selectClient(firstOfTab ?? null);
   }
 
   protected togglePanel(): void {
     this.panelVisible.update((visible) => !visible);
   }
 
-  protected togglePanelLock(): void {
-    this.panelLocked.update((locked) => !locked);
-    this.notice.set({ key: this.panelLocked() ? 'panelLocked' : 'panelUnlocked' });
-  }
-
-  protected toggleFavorite(): void {
-    const next = !this.favorite();
-    this.favorite.set(next);
-
-    const id = this.entityId();
-    if (!id) {
-      return;
-    }
-
-    this.clients.update((clients) =>
-      clients.map((client) => (client.id === id ? { ...client, favorite: next } : client)),
-    );
-  }
-
   protected toggleClientFavorite(client: IClient, event: MouseEvent): void {
     event.stopPropagation();
-    const favorite = !client.favorite;
-
-    this.clients.update((clients) =>
-      clients.map((item) => (item.id === client.id ? { ...item, favorite } : item)),
-    );
-
-    if (this.entityId() === client.id) {
-      this.favorite.set(favorite);
-    }
-
-    this.notice.set({
-      key: favorite ? 'favoriteAdded' : 'favoriteRemoved',
-      subject: this.clientDisplayName(client),
-    });
+    this.store.alternarFavorito(client.id);
   }
 
-  protected newRecord(tipoPessoa: TipoPessoa = this.activeTableTab()): void {
-    this.selectedId.set(null);
-    this.loadIntoForm(this.createEmptyClient(tipoPessoa));
+  protected newRecord(): void {
+    this.selectedPersonId.set(null);
     this.panelVisible.set(true);
-    this.activePanelTab.set('person');
-    this.activeTableTab.set(tipoPessoa);
-    this.notice.set({ key: 'newClientStarted' });
   }
 
-  protected selectClient(client: IClient): void {
-    if (this.panelLocked() && this.selectedId() !== client.id) {
-      this.notice.set({ key: 'panelLockedSelection' });
+  protected selectClient(client: IClient | null): void {
+    const id = client?.id ?? null;
+
+    const editor = this.editor();
+    if (editor?.locked() && this.selectedPersonId() !== id) {
+      editor.notifyLockedSelection();
       return;
     }
 
-    this.selectedId.set(client.id);
-    this.loadIntoForm(client);
-    this.activePanelTab.set('person');
+    this.selectedPersonId.set(id);
     this.panelVisible.set(true);
-    this.notice.set({ key: 'loaded', subject: this.clientDisplayName(client) });
   }
 
-  protected saveClient(event?: Event): void {
-    event?.preventDefault();
-
-    if (this.form.invalid) {
-      this.form.markAllAsTouched();
-      this.notice.set({
-        key: this.tipoPessoaAtual() === 'JURIDICA' ? 'legalNameRequired' : 'naturalNameRequired',
-      });
-      this.activePanelTab.set('person');
-      return;
-    }
-
-    const prepared = this.prepareClientForSave(this.assembleClient());
-    const isExisting =
-      prepared.id > 0 && this.clients().some((client) => client.id === prepared.id);
-    const savedClient: IClient = {
-      ...prepared,
-      id: isExisting ? prepared.id : this.nextClientId(),
-      registeredAt: isExisting ? prepared.registeredAt : new Date(),
-    };
-
-    this.clients.update((clients) =>
-      isExisting
-        ? clients.map((client) =>
-            client.id === savedClient.id ? this.cloneClient(savedClient) : client,
-          )
-        : [this.cloneClient(savedClient), ...clients],
-    );
-    this.selectedId.set(savedClient.id);
-    this.activeTableTab.set(savedClient.pessoa.tipo);
-    this.activePanelTab.set('person');
-    this.loadIntoForm(savedClient);
-    this.notice.set({ key: 'saved', subject: this.clientDisplayName(savedClient) });
+  protected onSaved(client: IClient): void {
+    this.selectedPersonId.set(client.id);
+    this.activeTableTab.set(client.pessoa.tipo);
   }
 
-  protected requestDeleteClient(): void {
-    if (!this.selectedId()) {
-      this.notice.set({ key: 'selectToDelete' });
-      return;
-    }
-
-    this.notice.set({ key: 'confirmDelete', subject: this.panelTitle() });
-  }
-
-  protected deleteClient(): void {
-    const selectedId = this.selectedId();
-    if (!selectedId) {
-      this.notice.set({ key: 'selectToDelete' });
-      return;
-    }
-
-    this.clients.update((clients) => clients.filter((client) => client.id !== selectedId));
-    this.newRecord(this.activeTableTab());
-    this.notice.set({ key: 'deleted' });
-  }
-
-  protected clearPanel(): void {
-    this.newRecord(this.activeTableTab());
-    this.notice.set({ key: 'panelCleared' });
+  protected onRemovedOrCleared(): void {
+    this.selectedPersonId.set(null);
   }
 
   protected clearSearchAndFilters(): void {
     this.searchText.set('');
     this.filters.set({ status: '', hiringMode: '', internalOwner: '' });
-    this.notice.set({ key: 'filtersCleared' });
+    this.pageNotice.set('filtersCleared');
+    this.showMoreActions.set(false);
+  }
+
+  protected shareBase(): void {
+    this.pageNotice.set('shareReady');
+    this.showMoreActions.set(false);
+  }
+
+  protected importBase(): void {
+    this.pageNotice.set('importReady');
+    this.showMoreActions.set(false);
   }
 
   protected updateSearch(event: Event): void {
     this.searchText.set((event.target as HTMLInputElement).value);
-  }
-
-  protected updateFileSearch(event: Event): void {
-    this.fileSearch.set((event.target as HTMLInputElement).value);
   }
 
   protected updateFilter(field: keyof ClientFilters, event: Event): void {
@@ -563,125 +356,6 @@ export class ClientsPageComponent {
     return column.align === 'center' ? 'is-center' : '';
   }
 
-  protected selectFile(row: ClientFileRow): void {
-    this.selectedFileName.set(row.name);
-    this.notice.set({ key: 'fileSelected', subject: row.name });
-  }
-
-  protected showFilesPanel(): void {
-    this.panelVisible.set(true);
-    this.activePanelTab.set('files');
-    this.showMoreActions.set(false);
-  }
-
-  protected openFolder(): void {
-    const folder = this.form.controls.dossier.controls.folder.value;
-    this.notice.set({ key: folder ? 'folderReady' : 'saveToCreateFolder', subject: folder });
-    this.showMoreActions.set(false);
-  }
-
-  protected openFile(): void {
-    const file = this.form.controls.dossier.controls.file.value || this.selectedFileName();
-    this.notice.set({ key: file ? 'fileReady' : 'noLinkedFile', subject: file });
-    this.showMoreActions.set(false);
-  }
-
-  protected showLinkedProcesses(): void {
-    const name = this.panelTitle();
-    this.notice.set({
-      key: name ? 'linkedProcesses' : 'selectForLinkedProcesses',
-      subject: name,
-    });
-    this.showMoreActions.set(false);
-  }
-
-  protected shareBase(): void {
-    this.notice.set({ key: 'shareReady' });
-    this.showMoreActions.set(false);
-  }
-
-  protected importBase(): void {
-    this.notice.set({ key: 'importReady' });
-    this.showMoreActions.set(false);
-  }
-
-  protected configureFavorite(): void {
-    this.toggleFavorite();
-    this.showMoreActions.set(false);
-  }
-
-  protected formatClientId(id: number): string {
-    return id.toString().padStart(6, '0');
-  }
-
-  private loadIntoForm(client: IClient): void {
-    this.entityId.set(client.id);
-    this.registeredAt.set(new Date(client.registeredAt));
-    this.favorite.set(client.favorite);
-    patchClientForm(this.form, client);
-  }
-
-  private assembleClient(): IClient {
-    return {
-      ...readClientForm(this.form),
-      id: this.entityId(),
-      registeredAt: this.registeredAt(),
-      favorite: this.favorite(),
-    };
-  }
-
-  private prepareClientForSave(client: IClient): IClient {
-    const base = this.cloneClient(client);
-
-    base.pessoa.nome = this.toUppercaseName(base.pessoa.nome);
-    base.pessoa.razaoSocial = this.toUppercaseName(base.pessoa.razaoSocial);
-    base.pessoa.nomeFantasia = this.toUppercaseName(base.pessoa.nomeFantasia);
-    base.pessoa.representantes = base.pessoa.representantes.map(
-      (representante): IRepresentanteLegal => ({
-        ...representante,
-        nome: this.toUppercaseName(representante.nome),
-      }),
-    );
-
-    const dossier = base.dossier;
-    dossier.status = dossier.status || 'active';
-    dossier.registeredBy = dossier.registeredBy.trim() || this.defaultUser;
-    dossier.internalOwner = dossier.internalOwner.trim() || this.defaultUser;
-
-    if (!dossier.folder.trim()) {
-      dossier.folder = this.clientFolderName(base);
-    }
-
-    const progress = dossier.progressEntry.trim();
-    if (progress) {
-      const historyLine = `${this.formatDateTime(new Date())} | ${progress}`;
-      dossier.progressHistory = [dossier.progressHistory.trim(), historyLine]
-        .filter(Boolean)
-        .join('\n');
-      dossier.progressEntry = '';
-    }
-
-    return base;
-  }
-
-  private createEmptyClient(tipoPessoa: TipoPessoa): IClient {
-    return {
-      id: 0,
-      registeredAt: new Date(),
-      favorite: false,
-      pessoa: emptyPessoa(tipoPessoa),
-      dossier: {
-        ...emptyDossier(),
-        registeredBy: this.defaultUser,
-        internalOwner: this.defaultUser,
-      },
-    };
-  }
-
-  private cloneClient(client: IClient): IClient {
-    return structuredClone(client);
-  }
-
   private parseSearchTerms(value: string): string[] {
     const matches = value.match(/"[^"]+"|\S+/g) ?? [];
     return matches.map((term) => term.replace(/^"|"$/g, '')).filter(Boolean);
@@ -716,40 +390,6 @@ export class ClientsPageComponent {
     return client.pessoa.tipo === 'FISICA'
       ? client.pessoa.nome.trim()
       : (client.pessoa.razaoSocial || client.pessoa.nomeFantasia).trim();
-  }
-
-  private nextClientId(): number {
-    return this.clients().reduce((next, client) => Math.max(next, client.id + 1), 1);
-  }
-
-  private clientFolderName(client: IClient): string {
-    const name = this.sanitizeFolderName(this.clientDisplayName(client) || 'CLIENTE');
-    return `Pasta - ${this.formatClientId(client.id || this.nextClientId())} - ${name}`;
-  }
-
-  private sanitizeFolderName(value: string): string {
-    return this.toUppercaseName(value)
-      .replace(/[\\/:*?"<>|]/g, ' ')
-      .replace(/\s+/g, ' ')
-      .trim();
-  }
-
-  private toUppercaseName(value: string): string {
-    return value.trim().toLocaleUpperCase('pt-BR');
-  }
-
-  private formatDate(date: Date): string {
-    return new Intl.DateTimeFormat('pt-BR').format(date);
-  }
-
-  private formatDateTime(date: Date): string {
-    return new Intl.DateTimeFormat('pt-BR', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    }).format(date);
   }
 
   private normalizeKey(value: string): string {

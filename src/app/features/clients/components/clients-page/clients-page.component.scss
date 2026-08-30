@@ -16,73 +16,35 @@
 .clients--panel-hidden {
   grid-template-columns: minmax(0, 1fr);
 
-  .clients-panel {
+  app-pessoa-editor {
     display: none;
   }
 }
 
-.clients-panel,
 .clients-main {
+  display: flex;
+  flex-direction: column;
   min-width: 0;
+  max-height: calc(100vh - 132px);
+  overflow: hidden;
   border: 1px solid $color-border;
   border-radius: $border-radius-md;
   background-color: $color-surface;
   box-shadow: $shadow-sm;
 }
 
-.clients-panel {
-  display: flex;
-  flex-direction: column;
-  max-height: calc(100vh - 132px);
-  overflow: hidden;
-}
-
-.clients-panel__header {
-  @include flex-between;
-  align-items: flex-start;
-  gap: $spacing-md;
-  padding: $spacing-md;
-  border-bottom: 1px solid rgba($color-border, 0.75);
-
-  span {
-    color: $color-text-secondary;
-    font-size: $font-size-xs;
-    font-weight: $font-weight-bold;
-    text-transform: uppercase;
-  }
-
-  h2 {
-    @include heading-accent;
-    margin: $spacing-xs 0;
-    font-size: $font-size-xl;
-    line-height: 1.2;
-  }
-
-  small {
-    display: block;
-    max-width: 270px;
-    color: $color-text-muted;
-    font-size: $font-size-xs;
-    line-height: 1.35;
-  }
-}
-
-.clients-panel__tools,
-.clients-actions__buttons,
-.clients-panel__footer > div,
-.clients-files__toolbar > div {
+.clients-actions__buttons {
   display: flex;
   align-items: center;
   gap: $spacing-xs;
+  flex-wrap: wrap;
 }
 
-.clients-icon-button,
 .clients-menu-button,
 .clients-panel-toggle,
-.clients-panel__tabs button,
 .clients-table-tabs button,
 .clients-dropdown button,
-.clients-contact-list__title button {
+.clients-icon-button {
   border: 1px solid $color-border;
   border-radius: $border-radius-sm;
   background-color: $color-neutral-light;
@@ -114,7 +76,18 @@
   }
 }
 
-.clients-panel__tabs,
+.clients-menu-button,
+.clients-panel-toggle {
+  display: inline-flex;
+  min-height: 34px;
+  align-items: center;
+  gap: $spacing-xs;
+  padding: 0 $spacing-sm;
+  white-space: nowrap;
+  font-size: $font-size-xs;
+  font-weight: $font-weight-medium;
+}
+
 .clients-table-tabs {
   display: flex;
   gap: $spacing-xs;
@@ -131,29 +104,8 @@
   }
 }
 
-.clients-form {
-  display: flex;
-  flex: 1;
-  min-height: 0;
-  flex-direction: column;
-}
-
-.clients-form__section,
-.clients-files {
-  @include thin-scrollbar;
-  display: flex;
-  flex: 1;
-  min-height: 0;
-  flex-direction: column;
-  gap: $spacing-sm;
-  padding: $spacing-md;
-  overflow: auto;
-}
-
-.clients-field,
 .clients-search label,
-.clients-filter-panel label,
-.clients-files__toolbar label {
+.clients-filter-panel label {
   display: flex;
   min-width: 0;
   flex-direction: column;
@@ -163,17 +115,9 @@
   font-weight: $font-weight-medium;
 }
 
-.clients-field--full {
-  grid-column: 1 / -1;
-}
-
-.clients-form input,
-.clients-form select,
-.clients-form textarea,
 .clients-search input,
 .clients-filter-panel input,
-.clients-filter-panel select,
-.clients-files input {
+.clients-filter-panel select {
   width: 100%;
   min-height: 36px;
   border: 1px solid $color-border;
@@ -191,35 +135,6 @@
     border-color: $color-primary-light;
     box-shadow: 0 0 0 3px rgba($rouge-light, 0.16);
   }
-
-  &[readonly] {
-    background-color: rgba($color-primary-pale, 0.2);
-    color: $color-text-muted;
-  }
-}
-
-.clients-form textarea {
-  resize: vertical;
-}
-
-.clients-panel__footer {
-  @include flex-between;
-  gap: $spacing-md;
-  padding: $spacing-sm $spacing-md;
-  border-top: 1px solid rgba($color-border, 0.75);
-
-  > span {
-    min-width: 0;
-    color: $color-text-muted;
-    font-size: $font-size-xs;
-  }
-}
-
-.clients-main {
-  display: flex;
-  flex-direction: column;
-  max-height: calc(100vh - 132px);
-  overflow: hidden;
 }
 
 .clients-actions,
@@ -237,24 +152,8 @@
   gap: $spacing-md;
 }
 
-.clients-actions__buttons {
-  flex-wrap: wrap;
-}
-
 .clients-actions__menu {
   position: relative;
-}
-
-.clients-menu-button,
-.clients-panel-toggle {
-  display: inline-flex;
-  min-height: 34px;
-  align-items: center;
-  gap: $spacing-xs;
-  padding: 0 $spacing-sm;
-  white-space: nowrap;
-  font-size: $font-size-xs;
-  font-weight: $font-weight-medium;
 }
 
 .clients-dropdown {
@@ -441,38 +340,6 @@
   text-align: center;
 }
 
-.clients-files__toolbar {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: $spacing-sm;
-  align-items: end;
-}
-
-.clients-files__table {
-  overflow: auto;
-
-  table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: $font-size-xs;
-  }
-
-  th,
-  td {
-    border-bottom: 1px solid rgba($color-border, 0.65);
-    padding: $spacing-sm;
-    text-align: left;
-  }
-
-  tr {
-    cursor: pointer;
-  }
-
-  .is-selected {
-    background-color: rgba($color-primary-pale, 0.35);
-  }
-}
-
 .clients-main__footer {
   border-bottom: 0;
   color: $color-text-muted;
@@ -490,7 +357,6 @@
     grid-template-columns: 1fr;
   }
 
-  .clients-panel,
   .clients-main {
     max-height: none;
   }
@@ -499,13 +365,11 @@
 @include respond-below($breakpoint-sm) {
   .clients-filter-panel,
   .clients-summary,
-  .clients-search,
-  .clients-files__toolbar {
+  .clients-search {
     grid-template-columns: 1fr;
   }
 
-  .clients-actions,
-  .clients-panel__footer {
+  .clients-actions {
     align-items: stretch;
     flex-direction: column;
   }

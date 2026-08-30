@@ -14,11 +14,11 @@ import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { map, startWith } from 'rxjs';
 
 import {
-  IClient,
+  IPessoa,
   IRepresentanteLegal,
   TipoPessoa,
-  emptyDossier,
-  emptyPessoa,
+  emptyDossie,
+  emptyDadosPessoa,
 } from '../../../../core/models';
 import { AuthService } from '../../../../core/services/auth.service';
 import { ButtonComponent } from '../../../../shared/components/button/button.component';
@@ -29,7 +29,7 @@ import {
   readClientForm,
 } from '../../forms/client-form.factory';
 import { PESSOA_FISICA_FIELDS, PESSOA_JURIDICA_FIELDS } from '../../models/client-form.model';
-import { ClientStore } from '../../services/client-store';
+import { PessoaStore } from '../../services/pessoa-store';
 import { ClientAddressComponent } from '../client-address/client-address.component';
 import { ClientAdminFormComponent } from '../client-admin-form/client-admin-form.component';
 import { ClientContactListComponent } from '../client-contact-list/client-contact-list.component';
@@ -78,7 +78,7 @@ interface ClientFileRow {
 /**
  * Tela autônoma de cadastro/edição de pessoa (física ou jurídica). Dona do
  * `FormGroup` raiz; carrega a ficha por id (ou vazia para novo cadastro), valida,
- * e persiste via `ClientStore`. O `clients-page` só decide qual `pessoaId` mostrar
+ * e persiste via `PessoaStore`. O `clients-page` só decide qual `pessoaId` mostrar
  * e reage aos outputs.
  */
 @Component({
@@ -98,7 +98,7 @@ interface ClientFileRow {
   styleUrl: './pessoa-form.component.scss',
 })
 export class PessoaFormComponent {
-  private readonly store = inject(ClientStore);
+  private readonly store = inject(PessoaStore);
   private readonly auth = inject(AuthService);
 
   /** Nome do usuário logado — preenche "Cadastrado por" (campo do sistema). */
@@ -111,7 +111,7 @@ export class PessoaFormComponent {
   /** Natureza de um cadastro novo (vem da aba ativa da tabela). */
   readonly novoTipo = input<TipoPessoa>('FISICA');
 
-  readonly saved = output<IClient>();
+  readonly saved = output<IPessoa>();
   readonly removed = output<number>();
   readonly cleared = output<void>();
 
@@ -326,14 +326,14 @@ export class PessoaFormComponent {
     return id.toString().padStart(6, '0');
   }
 
-  private loadIntoForm(client: IClient): void {
+  private loadIntoForm(client: IPessoa): void {
     this.entityId.set(client.id);
     this.registeredAt.set(new Date(client.registeredAt));
     this.favorite.set(client.favorite);
     patchClientForm(this.form, client);
   }
 
-  private assembleClient(): IClient {
+  private assembleClient(): IPessoa {
     return {
       ...readClientForm(this.form),
       id: this.entityId(),
@@ -342,7 +342,7 @@ export class PessoaFormComponent {
     };
   }
 
-  private prepareClientForSave(client: IClient): IClient {
+  private prepareClientForSave(client: IPessoa): IPessoa {
     const base = structuredClone(client);
 
     base.pessoa.nome = this.toUppercaseName(base.pessoa.nome);
@@ -376,27 +376,27 @@ export class PessoaFormComponent {
     return base;
   }
 
-  private createEmptyClient(tipoPessoa: TipoPessoa): IClient {
+  private createEmptyClient(tipoPessoa: TipoPessoa): IPessoa {
     return {
       id: 0,
       registeredAt: new Date(),
       favorite: false,
-      pessoa: emptyPessoa(tipoPessoa),
+      pessoa: emptyDadosPessoa(tipoPessoa),
       dossier: {
-        ...emptyDossier(),
+        ...emptyDossie(),
         registeredBy: this.usuarioLogado(),
         internalOwner: this.usuarioLogado(),
       },
     };
   }
 
-  private clientDisplayName(client: IClient): string {
+  private clientDisplayName(client: IPessoa): string {
     return client.pessoa.tipo === 'FISICA'
       ? client.pessoa.nome.trim()
       : (client.pessoa.razaoSocial || client.pessoa.nomeFantasia).trim();
   }
 
-  private clientFolderName(client: IClient): string {
+  private clientFolderName(client: IPessoa): string {
     const name = this.sanitizeFolderName(this.clientDisplayName(client) || 'CLIENTE');
     return `Pasta - ${this.formatClientId(client.id || this.store.proximoId())} - ${name}`;
   }

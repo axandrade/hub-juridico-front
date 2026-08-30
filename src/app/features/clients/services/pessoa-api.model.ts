@@ -3,7 +3,7 @@ import { EstadoCivil, TipoContato, TipoPessoa } from '../../../core/models';
 /**
  * DTOs da API `/api/v1/pessoas` (Spring). O JSON do backend é **snake_case**
  * (ver `JacksonConfig`), então os nomes aqui são snake_case de propósito — a
- * conversão para/de `IClient` fica em `pessoa-mapper.ts`.
+ * conversão para/de `IPessoa` fica em `pessoa-mapper.ts`.
  */
 
 // ---------- blocos comuns ----------

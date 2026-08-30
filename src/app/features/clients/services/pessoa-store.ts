@@ -3,7 +3,7 @@ import { Injectable, inject, signal } from '@angular/core';
 import { Observable, map, tap } from 'rxjs';
 
 import { environment } from '../../../../environments/environment';
-import { IClient, TipoPessoa } from '../../../core/models';
+import { IPessoa, TipoPessoa } from '../../../core/models';
 import { AuthService } from '../../../core/services/auth.service';
 import { PaginaApi, PessoaRespApi } from './pessoa-api.model';
 import {
@@ -16,18 +16,18 @@ import {
  * Página pedida ao backend. Hoje o único filtro do endpoint é `tipo`
  * (`GET /api/v1/pessoas?page&size&tipo`); busca/status seguem client-side.
  */
-export interface ClientListQuery {
+export interface PessoaListQuery {
   page: number;
   tipo: TipoPessoa | null;
 }
 
 /**
- * Fonte única da lista de clientes para a feature. Fala com a API
+ * Fonte única da lista de pessoas (clientes) para a feature. Fala com a API
  * `/api/v1/pessoas` (Spring), que pagina de 10 em 10; os componentes só falam
  * com o store. `favorite` é por usuário (`PATCH /pessoas/{id}/favorito`).
  */
 @Injectable({ providedIn: 'root' })
-export class ClientStore {
+export class PessoaStore {
   private readonly http = inject(HttpClient);
   private readonly auth = inject(AuthService);
   private readonly base = `${environment.apiBaseUrl}/pessoas`;
@@ -35,7 +35,7 @@ export class ClientStore {
   /** Tamanho de página fixo do backend (`max-page-size: 10`). */
   static readonly PAGE_SIZE = 10;
 
-  private readonly _clients = signal<IClient[]>([]);
+  private readonly _clients = signal<IPessoa[]>([]);
   readonly clients = this._clients.asReadonly();
 
   private readonly _page = signal(0);
@@ -52,15 +52,15 @@ export class ClientStore {
   /** `true` quando não há próxima página. */
   readonly last = this._last.asReadonly();
 
-  private toClient(res: PessoaRespApi): IClient {
+  private toClient(res: PessoaRespApi): IPessoa {
     return pessoaRespToClient(res, this.auth.user());
   }
 
   /** Carrega uma página da lista (`tipo` opcional; `FISICA`/`JURIDICA` como no backend). */
-  carregar(query: ClientListQuery): Observable<IClient[]> {
+  carregar(query: PessoaListQuery): Observable<IPessoa[]> {
     let params = new HttpParams()
       .set('page', query.page)
-      .set('size', ClientStore.PAGE_SIZE);
+      .set('size', PessoaStore.PAGE_SIZE);
     if (query.tipo) {
       params = params.set('tipo', query.tipo);
     }
@@ -78,7 +78,7 @@ export class ClientStore {
   }
 
   /** Cliente já carregado, por id (ou `null`). */
-  buscar(id: number | null): IClient | null {
+  buscar(id: number | null): IPessoa | null {
     if (id === null) {
       return null;
     }
@@ -86,7 +86,7 @@ export class ClientStore {
   }
 
   /** `POST` (id 0) ou `PUT` (id existente); devolve o registro do backend. */
-  salvar(client: IClient): Observable<IClient> {
+  salvar(client: IPessoa): Observable<IPessoa> {
     const request$ =
       client.id > 0
         ? this.http.put<PessoaRespApi>(

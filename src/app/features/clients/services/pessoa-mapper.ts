@@ -1,11 +1,11 @@
 import { maskCpf, onlyDigits } from '../../../core/auth/cpf';
 import {
   EstadoCivil,
-  IClient,
-  IClientDossier,
+  IPessoa,
+  IDossie,
   IEndereco,
   IRepresentanteLegal,
-  emptyDossier,
+  emptyDossie,
   emptyEndereco,
 } from '../../../core/models';
 import {
@@ -19,7 +19,7 @@ import {
 } from './pessoa-api.model';
 
 /**
- * Conversão entre `IClient` (frontend) e os DTOs da API `/pessoas`.
+ * Conversão entre `IPessoa` (frontend) e os DTOs da API `/pessoas`.
  *
  * Lacunas conhecidas (sem campo no backend hoje): `pessoa.profissao`,
  * `dossier.folder`, `dossier.progressEntry/progressHistory`. O
@@ -38,9 +38,9 @@ export interface CurrentUser {
   name: string;
 }
 
-// ===================== Response -> IClient =====================
+// ===================== Response -> IPessoa =====================
 
-export function pessoaRespToClient(res: PessoaRespApi, currentUser: CurrentUser | null): IClient {
+export function pessoaRespToClient(res: PessoaRespApi, currentUser: CurrentUser | null): IPessoa {
   const adm = res.dados_administrativos;
   return {
     id: res.id,
@@ -69,7 +69,7 @@ export function pessoaRespToClient(res: PessoaRespApi, currentUser: CurrentUser 
       representantes: (res.representantes ?? []).map(representanteFromApi),
     },
     dossier: {
-      ...emptyDossier(),
+      ...emptyDossie(),
       file: adm?.caminho_arquivo ?? '',
       status: adm?.status === 'INATIVO' ? 'inactive' : 'active',
       hiringMode: '',
@@ -128,9 +128,9 @@ function representanteFromApi(r: RepresentanteRespApi): IRepresentanteLegal {
   };
 }
 
-// ===================== IClient -> Request =====================
+// ===================== IPessoa -> Request =====================
 
-export function clientToCriarRequest(client: IClient): CriarPessoaApi {
+export function clientToCriarRequest(client: IPessoa): CriarPessoaApi {
   const p = client.pessoa;
   const comum = comumRequest(client);
 
@@ -158,7 +158,7 @@ export function clientToCriarRequest(client: IClient): CriarPessoaApi {
   };
 }
 
-export function clientToAtualizarRequest(client: IClient): AtualizarPessoaApi {
+export function clientToAtualizarRequest(client: IPessoa): AtualizarPessoaApi {
   const req = clientToCriarRequest(client);
   if (req.tipo === 'FISICA') {
     const { cpf: _cpf, ...rest } = req;
@@ -168,7 +168,7 @@ export function clientToAtualizarRequest(client: IClient): AtualizarPessoaApi {
   return rest;
 }
 
-function comumRequest(client: IClient) {
+function comumRequest(client: IPessoa) {
   const p = client.pessoa;
   return {
     endereco: enderecoToApi(p.endereco),
@@ -183,7 +183,7 @@ function comumRequest(client: IClient) {
 }
 
 /** Mínimo válido: `numero_contrato` e `responsavel_interno` são `@NotBlank` no backend. */
-function dadosAdmFromDossier(d: IClientDossier): DadosAdministrativosApi {
+function dadosAdmFromDossier(d: IDossie): DadosAdministrativosApi {
   return {
     status: d.status === 'inactive' || d.status === 'closed' ? 'INATIVO' : 'ATIVO',
     modalidade: null,

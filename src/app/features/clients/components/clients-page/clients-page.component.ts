@@ -12,23 +12,23 @@ import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
 import { EMPTY, catchError, distinctUntilChanged, switchMap } from 'rxjs';
 
 import {
-  CLIENT_HIRING_MODES,
-  CLIENT_STATUSES,
-  ClientHiringMode,
-  ClientStatus,
-  IClient,
+  MODALIDADES_CLIENTE,
+  STATUS_CLIENTE,
+  ModalidadeCliente,
+  StatusCliente,
+  IPessoa,
   TipoPessoa,
   contatoPrincipal,
   emailPrincipal,
 } from '../../../../core/models';
 import { ButtonComponent } from '../../../../shared/components/button/button.component';
-import { ClientStore } from '../../services/client-store';
+import { PessoaStore } from '../../services/pessoa-store';
 import { PessoaFormComponent } from '../pessoa-form/pessoa-form.component';
 
 /** Aba da tabela: 'ALL' (padrão) mostra PF e PJ juntos. */
 type TableTab = TipoPessoa | 'ALL';
 
-type ClientColumnKey =
+type ColunaTabelaKey =
   | 'personType'
   | 'name'
   | 'document'
@@ -43,16 +43,16 @@ type ClientColumnKey =
 type SortDirection = 'asc' | 'desc';
 type PageNotice = '' | 'filtersCleared' | 'shareReady' | 'importReady' | 'loadError';
 
-interface ClientColumn {
-  key: ClientColumnKey;
+interface ColunaTabela {
+  key: ColunaTabelaKey;
   width: string;
   align?: 'center';
-  getter: (client: IClient) => string;
+  getter: (client: IPessoa) => string;
 }
 
-interface ClientFilters {
-  status: ClientStatus | '';
-  hiringMode: ClientHiringMode | '';
+interface FiltrosTabela {
+  status: StatusCliente | '';
+  hiringMode: ModalidadeCliente | '';
   internalOwner: string;
 }
 
@@ -64,9 +64,9 @@ interface ClientFilters {
   styleUrl: './clients-page.component.scss',
 })
 export class ClientsPageComponent {
-  private readonly store = inject(ClientStore);
+  private readonly store = inject(PessoaStore);
   private readonly destroyRef = inject(DestroyRef);
-  private readonly defaultVisibleColumns: readonly ClientColumnKey[] = [
+  private readonly defaultVisibleColumns: readonly ColunaTabelaKey[] = [
     'personType',
     'name',
     'document',
@@ -92,20 +92,20 @@ export class ClientsPageComponent {
   protected readonly showColumns = signal(false);
   protected readonly showMoreActions = signal(false);
   protected readonly searchText = signal('');
-  protected readonly sortColumn = signal<ClientColumnKey>('folder');
+  protected readonly sortColumn = signal<ColunaTabelaKey>('folder');
   protected readonly sortDirection = signal<SortDirection>('asc');
-  protected readonly visibleColumnKeys = signal<ReadonlySet<ClientColumnKey>>(
+  protected readonly visibleColumnKeys = signal<ReadonlySet<ColunaTabelaKey>>(
     new Set(this.defaultVisibleColumns),
   );
-  protected readonly filters = signal<ClientFilters>({
+  protected readonly filters = signal<FiltrosTabela>({
     status: '',
     hiringMode: '',
     internalOwner: '',
   });
   protected readonly pageNotice = signal<PageNotice>('');
 
-  protected readonly statusOptions = CLIENT_STATUSES;
-  protected readonly hiringModeOptions = CLIENT_HIRING_MODES;
+  protected readonly statusOptions = STATUS_CLIENTE;
+  protected readonly hiringModeOptions = MODALIDADES_CLIENTE;
   protected readonly tableTabs: readonly TableTab[] = ['ALL', 'FISICA', 'JURIDICA'];
 
   /** Total de clientes do filtro atual (base inteira quando sem filtro de tipo/busca). */
@@ -129,7 +129,7 @@ export class ClientsPageComponent {
     return tab === 'ALL' ? 'FISICA' : tab;
   });
 
-  protected readonly clientColumns: readonly ClientColumn[] = [
+  protected readonly clientColumns: readonly ColunaTabela[] = [
     { key: 'personType', width: '138px', getter: (client) => client.pessoa.tipo },
     { key: 'name', width: '240px', getter: (client) => this.clientDisplayName(client) },
     {
@@ -271,7 +271,7 @@ export class ClientsPageComponent {
     this.panelVisible.update((visible) => !visible);
   }
 
-  protected toggleClientFavorite(client: IClient, event: MouseEvent): void {
+  protected toggleClientFavorite(client: IPessoa, event: MouseEvent): void {
     event.stopPropagation();
     this.store.alternarFavorito(client.id);
   }
@@ -281,7 +281,7 @@ export class ClientsPageComponent {
     this.panelVisible.set(true);
   }
 
-  protected selectClient(client: IClient | null): void {
+  protected selectClient(client: IPessoa | null): void {
     const id = client?.id ?? null;
 
     const editor = this.editor();
@@ -311,7 +311,7 @@ export class ClientsPageComponent {
     this.selectedPersonId.set(null);
   }
 
-  protected onSaved(client: IClient): void {
+  protected onSaved(client: IPessoa): void {
     this.selectedPersonId.set(client.id);
     if (this.activeTableTab() !== 'ALL' && this.activeTableTab() !== client.pessoa.tipo) {
       this.activeTableTab.set(client.pessoa.tipo);
@@ -348,15 +348,15 @@ export class ClientsPageComponent {
     this.searchText.set((event.target as HTMLInputElement).value);
   }
 
-  protected updateFilter(field: keyof ClientFilters, event: Event): void {
+  protected updateFilter(field: keyof FiltrosTabela, event: Event): void {
     const value = (event.target as HTMLInputElement | HTMLSelectElement).value;
 
     this.filters.update((filters) => {
       switch (field) {
         case 'status':
-          return { ...filters, status: value as ClientStatus | '' };
+          return { ...filters, status: value as StatusCliente | '' };
         case 'hiringMode':
-          return { ...filters, hiringMode: value as ClientHiringMode | '' };
+          return { ...filters, hiringMode: value as ModalidadeCliente | '' };
         case 'internalOwner':
           return { ...filters, internalOwner: value };
       }
@@ -381,7 +381,7 @@ export class ClientsPageComponent {
     this.showFilters.set(false);
   }
 
-  protected toggleColumn(column: ClientColumnKey): void {
+  protected toggleColumn(column: ColunaTabelaKey): void {
     const next = new Set(this.visibleColumnKeys());
 
     if (next.has(column) && next.size > 1) {
@@ -393,11 +393,11 @@ export class ClientsPageComponent {
     this.visibleColumnKeys.set(next);
   }
 
-  protected isColumnVisible(column: ClientColumnKey): boolean {
+  protected isColumnVisible(column: ColunaTabelaKey): boolean {
     return this.visibleColumnKeys().has(column);
   }
 
-  protected sortBy(column: ClientColumnKey): void {
+  protected sortBy(column: ColunaTabelaKey): void {
     if (this.sortColumn() === column) {
       this.sortDirection.update((direction) => (direction === 'asc' ? 'desc' : 'asc'));
       return;
@@ -407,7 +407,7 @@ export class ClientsPageComponent {
     this.sortDirection.set('asc');
   }
 
-  protected sortIcon(column: ClientColumnKey): string {
+  protected sortIcon(column: ColunaTabelaKey): string {
     if (this.sortColumn() !== column) {
       return 'fa-solid fa-sort';
     }
@@ -415,16 +415,16 @@ export class ClientsPageComponent {
     return this.sortDirection() === 'asc' ? 'fa-solid fa-sort-up' : 'fa-solid fa-sort-down';
   }
 
-  protected displayCellValue(client: IClient, column: ClientColumn): string {
+  protected displayCellValue(client: IPessoa, column: ColunaTabela): string {
     const value = column.getter(client);
     return value || '-';
   }
 
-  protected rowStatusClass(client: IClient): string {
+  protected rowStatusClass(client: IPessoa): string {
     return `clients-table__status clients-table__status--${client.dossier.status}`;
   }
 
-  protected columnClass(column: ClientColumn): string {
+  protected columnClass(column: ColunaTabela): string {
     return column.align === 'center' ? 'is-center' : '';
   }
 
@@ -433,7 +433,7 @@ export class ClientsPageComponent {
     return matches.map((term) => term.replace(/^"|"$/g, '')).filter(Boolean);
   }
 
-  private searchableClientText(client: IClient): string {
+  private searchableClientText(client: IPessoa): string {
     return this.normalizeKey(
       [
         client.pessoa.tipo,
@@ -458,7 +458,7 @@ export class ClientsPageComponent {
     return left.localeCompare(right, 'pt-BR', { numeric: true, sensitivity: 'base' });
   }
 
-  private clientDisplayName(client: IClient): string {
+  private clientDisplayName(client: IPessoa): string {
     return client.pessoa.tipo === 'FISICA'
       ? client.pessoa.nome.trim()
       : (client.pessoa.razaoSocial || client.pessoa.nomeFantasia).trim();

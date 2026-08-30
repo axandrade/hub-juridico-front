@@ -1,8 +1,8 @@
 import {
   BRAZILIAN_STATES,
-  CLIENT_CITIES,
-  CLIENT_HIRING_MODES,
-  CLIENT_STATUSES,
+  CIDADES_CLIENTE,
+  MODALIDADES_CLIENTE,
+  STATUS_CLIENTE,
   ESTADOS_CIVIS,
 } from '../../../core/models';
 
@@ -71,12 +71,12 @@ export const CLIENT_OPTION_LABELS: Record<string, string> = {
   // TipoContato
   TELEFONE: 'Telefone',
   WHATSAPP: 'WhatsApp',
-  // ClientStatus
+  // StatusCliente
   active: 'Ativo',
   prospect: 'Prospect',
   inactive: 'Inativo',
   closed: 'Encerrado',
-  // ClientHiringMode
+  // ModalidadeCliente
   oneOff: 'Avulso',
   monthly: 'Mensalista',
   successFee: 'Êxito',
@@ -106,15 +106,15 @@ export const ENDERECO_FIELDS: FieldGroups = [
   [{ key: 'complemento' }, { key: 'bairro' }],
   [
     { key: 'uf', type: 'select', options: BRAZILIAN_STATES },
-    { key: 'cidade', type: 'select', options: CLIENT_CITIES },
+    { key: 'cidade', type: 'select', options: CIDADES_CLIENTE },
     { key: 'cep' },
   ],
 ];
 
 export const DOSSIER_FIELDS: FieldGroups = [
   [
-    { key: 'status', type: 'select', options: CLIENT_STATUSES },
-    { key: 'hiringMode', type: 'select', options: CLIENT_HIRING_MODES },
+    { key: 'status', type: 'select', options: STATUS_CLIENTE },
+    { key: 'hiringMode', type: 'select', options: MODALIDADES_CLIENTE },
   ],
   [{ key: 'folder', type: 'readonly' }, { key: 'file' }],
   [{ key: 'registeredBy', type: 'readonly' }, { key: 'contractNumber' }, { key: 'contractDate' }],

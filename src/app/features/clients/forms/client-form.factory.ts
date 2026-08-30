@@ -1,10 +1,10 @@
 import { AbstractControl, FormArray, FormControl, FormGroup, Validators } from '@angular/forms';
 
 import {
-  ClientHiringMode,
-  ClientStatus,
+  ModalidadeCliente,
+  StatusCliente,
   EstadoCivil,
-  IClient,
+  IPessoa,
   IContato,
   IEmail,
   IEndereco,
@@ -88,7 +88,7 @@ export type ClientForm = FormGroup<{
   dossier: DossierGroup;
 }>;
 
-export type ClientEditableFields = Omit<IClient, 'id' | 'registeredAt' | 'favorite'>;
+export type ClientEditableFields = Omit<IPessoa, 'id' | 'registeredAt' | 'favorite'>;
 
 function text(value = ''): FormControl<string> {
   return new FormControl(value, { nonNullable: true });
@@ -206,7 +206,7 @@ function setRequired(control: AbstractControl, isRequired: boolean): void {
   control.updateValueAndValidity({ emitEvent: false });
 }
 
-export function patchClientForm(form: ClientForm, client: IClient): void {
+export function patchClientForm(form: ClientForm, client: IPessoa): void {
   const pessoa = form.controls.pessoa;
   const { pessoa: source } = client;
 
@@ -250,8 +250,8 @@ export function readClientForm(form: ClientForm): ClientEditableFields {
     },
     dossier: {
       ...raw.dossier,
-      status: (raw.dossier.status || 'active') as ClientStatus,
-      hiringMode: raw.dossier.hiringMode as ClientHiringMode | '',
+      status: (raw.dossier.status || 'active') as StatusCliente,
+      hiringMode: raw.dossier.hiringMode as ModalidadeCliente | '',
     },
   };
 }

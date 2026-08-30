@@ -49,6 +49,9 @@ export interface DadosAdministrativosApi {
   indicado_por: string | null;
   observacoes: string | null;
   caminho_arquivo: string | null;
+  // Só na requisição: no `PessoaResponse` os andamentos vêm na raiz (ver `PessoaRespApi`).
+  registro_andamento: string | null;
+  historico_andamentos: string | null;
 }
 
 // ---------- requisição (POST / PUT) ----------
@@ -91,7 +94,8 @@ export interface RepresentanteRespApi extends RepresentanteApi {
   id: number;
 }
 
-export interface DadosAdministrativosRespApi extends DadosAdministrativosApi {
+export interface DadosAdministrativosRespApi
+  extends Omit<DadosAdministrativosApi, 'registro_andamento' | 'historico_andamentos'> {
   cadastrado_por_id: number | null;
   cadastrado_por_nome: string | null;
   criado_em: string | null;
@@ -117,6 +121,8 @@ export interface PessoaRespApi {
   representantes?: RepresentanteRespApi[];
   // comum
   favorito?: boolean;
+  registro_andamento?: string | null;
+  historico_andamentos?: string | null;
   endereco: EnderecoApi | null;
   contatos: ContatoApi[];
   emails: EmailApi[];

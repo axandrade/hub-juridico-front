@@ -131,6 +131,8 @@ export class PessoaFormComponent {
   protected readonly entityId = signal(0);
   protected readonly registeredAt = signal(new Date());
   protected readonly favorite = signal(false);
+  /** `registro_andamento` como veio do backend — base para detectar mudança e logar no histórico. */
+  private readonly loadedProgress = signal('');
   protected readonly activePanelTab = signal<PanelTab>('person');
   protected readonly fileSearch = signal('');
   protected readonly selectedFileName = signal('');
@@ -330,6 +332,7 @@ export class PessoaFormComponent {
     this.entityId.set(client.id);
     this.registeredAt.set(new Date(client.registeredAt));
     this.favorite.set(client.favorite);
+    this.loadedProgress.set(client.dossier.progressEntry);
     patchClientForm(this.form, client);
   }
 
@@ -364,13 +367,15 @@ export class PessoaFormComponent {
       dossier.folder = this.clientFolderName(base);
     }
 
+    // `progressEntry` é o andamento atual (persiste em `registro_andamento`).
+    // Toda vez que muda, registra uma linha datada no histórico.
     const progress = dossier.progressEntry.trim();
-    if (progress) {
+    dossier.progressEntry = progress;
+    if (progress && progress !== this.loadedProgress().trim()) {
       const historyLine = `${this.formatDateTime(new Date())} | ${progress}`;
       dossier.progressHistory = [dossier.progressHistory.trim(), historyLine]
         .filter(Boolean)
         .join('\n');
-      dossier.progressEntry = '';
     }
 
     return base;

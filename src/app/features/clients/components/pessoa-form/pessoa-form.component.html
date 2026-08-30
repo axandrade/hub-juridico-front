@@ -82,16 +82,16 @@
       @case ('records') {
         <div class="clients-form__section" [formGroup]="form.controls.dossier">
           <label class="clients-field clients-field--full">
-            <span>Registro de andamento</span>
+            <span>Andamento atual</span>
             <textarea
               rows="4"
               formControlName="progressEntry"
-              placeholder="Digite um novo andamento para anexar ao histórico ao salvar"
+              placeholder="Situação atual do caso — cada alteração vira uma linha datada no histórico ao salvar"
             ></textarea>
           </label>
 
           <label class="clients-field clients-field--full">
-            <span>Histórico de registro de andamento</span>
+            <span>Histórico de andamentos</span>
             <textarea rows="12" formControlName="progressHistory" readonly></textarea>
           </label>
         </div>

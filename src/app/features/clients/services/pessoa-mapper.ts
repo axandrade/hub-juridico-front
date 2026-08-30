@@ -22,9 +22,11 @@ import {
  * Conversão entre `IPessoa` (frontend) e os DTOs da API `/pessoas`.
  *
  * Lacunas conhecidas (sem campo no backend hoje): `pessoa.profissao`,
- * `dossier.folder`, `dossier.progressEntry/progressHistory`. O
- * `dossier.hiringMode` não é enviado porque o enum `modalidade` do backend
- * (CLT/PJ/...) trata de vínculo trabalhista, não de honorários.
+ * `dossier.folder`. O `dossier.hiringMode` não é enviado porque o enum
+ * `modalidade` do backend (CLT/PJ/...) trata de vínculo trabalhista, não de
+ * honorários. `dossier.progressEntry` ↔ `registro_andamento` e
+ * `dossier.progressHistory` ↔ `historico_andamentos` (andamentos vêm na raiz do
+ * response; vão dentro de `dados_administrativos` na requisição).
  * `favorite` vem do `favorito` do response (por usuário) e é alterado via
  * `PATCH /pessoas/{id}/favorito` — nunca no corpo de criar/atualizar.
  *
@@ -81,6 +83,9 @@ export function pessoaRespToClient(res: PessoaRespApi, currentUser: CurrentUser 
         adm?.cadastrado_por_nome?.trim() ||
         resolveCadastradoPor(adm?.cadastrado_por_id, currentUser),
       notes: adm?.observacoes ?? '',
+      // Andamentos vêm na raiz do `PessoaResponse`, não em `dados_administrativos`.
+      progressEntry: res.registro_andamento ?? '',
+      progressHistory: res.historico_andamentos ?? '',
     },
   };
 }
@@ -193,6 +198,8 @@ function dadosAdmFromDossier(d: IDossie): DadosAdministrativosApi {
     indicado_por: nullif(d.referredBy),
     observacoes: nullif(d.notes),
     caminho_arquivo: nullif(d.file),
+    registro_andamento: nullif(d.progressEntry),
+    historico_andamentos: nullif(d.progressHistory),
   };
 }
 

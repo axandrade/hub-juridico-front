@@ -2,10 +2,10 @@ export const TIPOS_PESSOA = ['FISICA', 'JURIDICA'] as const;
 /** Discriminador da hierarquia `com.hubjuridico.dominio.Pessoa` (tabelas `pessoas_fisicas` / `pessoas_juridicas`). */
 export type TipoPessoa = (typeof TIPOS_PESSOA)[number];
 
-export const CLIENT_STATUSES = ['active', 'prospect', 'inactive', 'closed'] as const;
-export type ClientStatus = (typeof CLIENT_STATUSES)[number];
+export const STATUS_CLIENTE = ['active', 'prospect', 'inactive', 'closed'] as const;
+export type StatusCliente = (typeof STATUS_CLIENTE)[number];
 
-export const CLIENT_HIRING_MODES = [
+export const MODALIDADES_CLIENTE = [
   'oneOff',
   'monthly',
   'successFee',
@@ -13,7 +13,7 @@ export const CLIENT_HIRING_MODES = [
   'litigation',
   'mixed',
 ] as const;
-export type ClientHiringMode = (typeof CLIENT_HIRING_MODES)[number];
+export type ModalidadeCliente = (typeof MODALIDADES_CLIENTE)[number];
 
 /** Espelha `com.hubjuridico.dominio.enums.EstadoCivil`. */
 export const ESTADOS_CIVIS = [
@@ -59,7 +59,7 @@ export const BRAZILIAN_STATES = [
   'TO',
 ] as const;
 
-export const CLIENT_CITIES = ['Fortaleza', 'Juazeiro do Norte', 'Sobral'] as const;
+export const CIDADES_CLIENTE = ['Fortaleza', 'Juazeiro do Norte', 'Sobral'] as const;
 
 /** Espelha `com.hubjuridico.dominio.Endereco` (embeddable, único por pessoa). */
 export interface IEndereco {
@@ -96,13 +96,13 @@ export interface IRepresentanteLegal {
 }
 
 /**
- * Uma pessoa do cliente — física ou jurídica. Espelha a hierarquia
+ * Bloco de identidade da pessoa — física ou jurídica. Espelha a hierarquia
  * `com.hubjuridico.dominio.Pessoa` como um único objeto discriminado por `tipo`:
  * `endereco`/`emails`/`contatos` vêm da base `Pessoa`; os demais campos são de
  * `PessoaFisica` ou `PessoaJuridica` e só o bloco do `tipo` ativo é
  * preenchido/validado.
  */
-export interface IPessoa {
+export interface IDadosPessoa {
   tipo: TipoPessoa;
   // Pessoa (base)
   endereco: IEndereco;
@@ -128,11 +128,11 @@ export interface IPessoa {
  * Metadados do escritório sobre o cliente (pasta, contrato, andamento). Não têm
  * entidade no backend — vivem só no frontend por enquanto.
  */
-export interface IClientDossier {
+export interface IDossie {
   folder: string;
   file: string;
-  status: ClientStatus;
-  hiringMode: ClientHiringMode | '';
+  status: StatusCliente;
+  hiringMode: ModalidadeCliente | '';
   contractNumber: string;
   contractDate: string;
   referredBy: string;
@@ -144,14 +144,16 @@ export interface IClientDossier {
 }
 
 /**
- * Cliente = uma `Pessoa` (física ou jurídica) + o dossiê do escritório.
+ * Uma `Pessoa` (física ou jurídica) do ponto de vista do frontend: o bloco de
+ * identidade (`pessoa`) + o dossiê do escritório (`dossier`) + metadados do
+ * registro. Corresponde ao agregado `com.hubjuridico.dominio.Pessoa`.
  */
-export interface IClient {
+export interface IPessoa {
   id: number;
   registeredAt: Date;
   favorite: boolean;
-  pessoa: IPessoa;
-  dossier: IClientDossier;
+  pessoa: IDadosPessoa;
+  dossier: IDossie;
 }
 
 export function emptyEndereco(): IEndereco {
@@ -166,7 +168,7 @@ export function emptyEndereco(): IEndereco {
   };
 }
 
-export function emptyPessoa(tipo: TipoPessoa = 'FISICA'): IPessoa {
+export function emptyDadosPessoa(tipo: TipoPessoa = 'FISICA'): IDadosPessoa {
   return {
     tipo,
     endereco: emptyEndereco(),
@@ -187,7 +189,7 @@ export function emptyPessoa(tipo: TipoPessoa = 'FISICA'): IPessoa {
   };
 }
 
-export function emptyDossier(): IClientDossier {
+export function emptyDossie(): IDossie {
   return {
     folder: '',
     file: '',

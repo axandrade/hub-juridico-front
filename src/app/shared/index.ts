@@ -14,5 +14,6 @@ export type { BarChartSeries } from './components/chart/bar-chart.component';
 export { PieChartComponent } from './components/chart/pie-chart.component';
 export type { PieChartSlice } from './components/chart/pie-chart.component';
 export { HighlightDirective } from './directives/highlight.directive';
+export { CpfMaskDirective } from './directives/cpf-mask.directive';
 export { DateFormatPipe } from './pipes/date-format.pipe';
 export { CurrencyFormatPipe } from './pipes/currency-format.pipe';

@@ -1,10 +1,20 @@
-import { ChangeDetectionStrategy, Component, DestroyRef, computed, inject, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  DestroyRef,
+  computed,
+  inject,
+  signal,
+} from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { finalize } from 'rxjs';
 
-import { APP_INFO, AUTH_DEMO, ROUTES } from '../../../../core/constants/app-constants';
+import { APP_INFO, ROUTES } from '../../../../core/constants/app-constants';
+import { extractApiErrorMessage } from '../../../../core/auth/auth.models';
+import { cpfValidator } from '../../../../core/auth/cpf';
 import { AuthService } from '../../../../core/services/auth.service';
+import { CpfMaskDirective } from '../../../../shared/directives/cpf-mask.directive';
 
 interface LegalMaxim {
   latin: string;
@@ -12,14 +22,14 @@ interface LegalMaxim {
 }
 
 /**
- * Tela de acesso do Hub Jurídico — identidade visual botânica com temática
- * de advocacia (balança da justiça, louro, máximas latinas).
- * Sem back-end: valida as credenciais de demonstração `admin` / `admin`.
+ * Tela de acesso do Hub Jurídico — autentica contra o hub-juridico-api
+ * (`POST /auth/login/`). Em caso de `must_change_password`, o guard redireciona
+ * o usuário para a troca de senha.
  */
 @Component({
   selector: 'app-login',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ReactiveFormsModule],
+  imports: [ReactiveFormsModule, CpfMaskDirective],
   templateUrl: './login.component.html',
   styleUrl: './login.component.scss',
 })
@@ -29,15 +39,17 @@ export class LoginComponent {
   private readonly route = inject(ActivatedRoute);
 
   protected readonly appInfo = APP_INFO;
-  protected readonly demo = AUTH_DEMO;
   protected readonly year = new Date().getFullYear();
 
   protected readonly loading = signal(false);
   protected readonly error = signal<string | null>(null);
   protected readonly showPassword = signal(false);
+  protected readonly passwordChanged = signal(
+    this.route.snapshot.queryParamMap.get('trocaOk') === '1',
+  );
 
   protected readonly form = inject(FormBuilder).nonNullable.group({
-    username: ['', [Validators.required]],
+    cpf: ['', [Validators.required, cpfValidator]],
     password: ['', [Validators.required]],
     remember: [true],
   });
@@ -63,18 +75,17 @@ export class LoginComponent {
     this.showPassword.update((value) => !value);
   }
 
-  protected fillDemo(): void {
-    this.form.setValue({
-      username: AUTH_DEMO.USERNAME,
-      password: AUTH_DEMO.PASSWORD,
-      remember: true,
-    });
-    this.error.set(null);
-  }
-
-  protected invalid(control: 'username' | 'password'): boolean {
+  protected invalid(control: 'cpf' | 'password'): boolean {
     const field = this.form.controls[control];
     return field.invalid && (field.touched || field.dirty);
+  }
+
+  protected cpfError(): string {
+    const field = this.form.controls.cpf;
+    if (field.hasError('required')) {
+      return 'Informe seu CPF.';
+    }
+    return field.hasError('cpf') ? 'CPF inválido.' : '';
   }
 
   protected submit(): void {
@@ -88,19 +99,25 @@ export class LoginComponent {
 
     this.loading.set(true);
     this.error.set(null);
+    this.passwordChanged.set(false);
 
-    const { username, password, remember } = this.form.getRawValue();
+    const { cpf, password, remember } = this.form.getRawValue();
 
     this.auth
-      .login(username, password, remember)
+      .login(cpf, password, remember)
       .pipe(finalize(() => this.loading.set(false)))
       .subscribe({
         next: () => {
+          if (this.auth.mustChangePassword()) {
+            void this.router.navigateByUrl(`/${ROUTES.CHANGE_PASSWORD}`);
+            return;
+          }
           const returnUrl =
             this.route.snapshot.queryParamMap.get('returnUrl') ?? `/${ROUTES.DASHBOARD}`;
           void this.router.navigateByUrl(returnUrl);
         },
-        error: (err: Error) => this.error.set(err.message),
+        error: (err: unknown) =>
+          this.error.set(extractApiErrorMessage(err, 'CPF ou senha inválidos.')),
       });
   }
 }

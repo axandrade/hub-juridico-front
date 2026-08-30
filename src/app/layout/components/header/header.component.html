@@ -23,6 +23,9 @@
     <div class="header__user">
       <i class="fa-solid fa-circle-user" aria-hidden="true"></i>
       <span>{{ userName() }}</span>
+      @if (userRole()) {
+        <small class="header__user-role">{{ userRole() }}</small>
+      }
     </div>
   </div>
 </header>

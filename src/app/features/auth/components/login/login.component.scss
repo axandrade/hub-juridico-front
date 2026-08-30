@@ -65,9 +65,18 @@
   width: 100%;
   height: 100%;
 
-  .ring { fill: none; stroke: currentColor; }
-  .ring--outer { stroke-width: 1.5; opacity: 0.55; }
-  .ring--inner { stroke-width: 0.75; opacity: 0.3; }
+  .ring {
+    fill: none;
+    stroke: currentColor;
+  }
+  .ring--outer {
+    stroke-width: 1.5;
+    opacity: 0.55;
+  }
+  .ring--inner {
+    stroke-width: 0.75;
+    opacity: 0.3;
+  }
   .stroke {
     fill: none;
     stroke: currentColor;
@@ -75,9 +84,15 @@
     stroke-linecap: round;
     stroke-linejoin: round;
   }
-  .stroke--thin { stroke-width: 1.6; }
-  .fill { fill: currentColor; }
-  .leaf-stem { opacity: 0.7; }
+  .stroke--thin {
+    stroke-width: 1.6;
+  }
+  .fill {
+    fill: currentColor;
+  }
+  .leaf-stem {
+    opacity: 0.7;
+  }
 }
 
 .login__wordmark {
@@ -230,7 +245,9 @@
   background-color: $color-neutral-light;
   border: 1px solid $color-border;
   border-radius: $border-radius-md;
-  transition: border-color $transition-fast, box-shadow $transition-fast,
+  transition:
+    border-color $transition-fast,
+    box-shadow $transition-fast,
     background-color $transition-fast;
 
   > i {
@@ -275,7 +292,9 @@
   height: 28px;
   border-radius: $border-radius-sm;
   color: $color-text-muted;
-  transition: color $transition-fast, background-color $transition-fast;
+  transition:
+    color $transition-fast,
+    background-color $transition-fast;
 
   &:hover {
     color: $rouge-dark;
@@ -334,7 +353,9 @@
   font-size: $font-size-lg;
   font-weight: $font-weight-medium;
   letter-spacing: 0.3px;
-  transition: transform $transition-fast, box-shadow $transition-normal,
+  transition:
+    transform $transition-fast,
+    box-shadow $transition-normal,
     filter $transition-normal;
 
   &:hover:not(:disabled) {
@@ -353,32 +374,17 @@
   }
 }
 
-.login__demo {
-  margin: $spacing-lg 0 0;
-  padding-top: $spacing-md;
-  border-top: 1px dashed $color-border;
-  text-align: center;
+.login__notice {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  margin-bottom: $spacing-md;
+  padding: $spacing-sm $spacing-md;
+  border-radius: $border-radius-md;
+  border: 1px solid rgba($color-success, 0.4);
+  background-color: rgba($color-success, 0.12);
+  color: darken-color($color-success, 12%);
   font-size: $font-size-xs;
-  color: $color-text-muted;
-
-  button {
-    color: $color-text-secondary;
-    font-weight: $font-weight-medium;
-    font-size: $font-size-xs;
-    text-decoration: underline;
-
-    &:hover {
-      color: $color-primary;
-    }
-  }
-
-  code {
-    padding: 1px 5px;
-    border-radius: $border-radius-sm;
-    background-color: $color-primary-pale;
-    color: $burgundy-deep;
-    font-size: $font-size-xs;
-  }
 }
 
 .login__foot {

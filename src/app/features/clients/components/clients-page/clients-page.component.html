@@ -6,7 +6,6 @@
         <h2>{{ panelTitle() || 'Novo cliente' }}</h2>
         <small>
           {{ currentPersonType() === 'NATURAL' ? 'Pessoa física' : 'Pessoa jurídica' }} |
-          {{ entityId() ? formatClientId(entityId()) : 'sem ID' }} |
           {{ form.controls.dossier.controls.folder.value || 'pasta será criada ao salvar' }}
         </small>
       </div>
@@ -71,10 +70,6 @@
 
     <form class="clients-form" (submit)="saveClient($event)">
       <div class="clients-form__meta">
-        <label>
-          <span>ID</span>
-          <input type="text" [value]="entityId() ? entityId() : 'Novo'" readonly />
-        </label>
         <label>
           <span>Natureza jurídica</span>
           <div class="clients-nature" role="group" aria-label="Natureza jurídica">

@@ -1,0 +1,47 @@
+<app-modal
+  [open]="open()"
+  title="Enviar arquivo"
+  [dismissable]="!sending()"
+  (closed)="close()"
+>
+  <div class="file-upload">
+    <div class="file-upload__field">
+      <span>Tipo</span>
+      <div class="file-upload__tipos">
+        @for (option of tipos; track option) {
+          <button
+            type="button"
+            [class.is-active]="tipo() === option"
+            (click)="setTipo(option)"
+          >
+            {{ tipoLabel[option] }}
+          </button>
+        }
+      </div>
+    </div>
+
+    <label class="file-upload__field">
+      <span>Arquivo</span>
+      <input type="file" (change)="pickFile($event)" />
+    </label>
+
+    @if (file(); as picked) {
+      <p class="file-upload__hint">Selecionado: {{ picked.name }}</p>
+    }
+  </div>
+
+  <ng-container modalFooter>
+    <app-button
+      variant="tertiary"
+      label="Cancelar"
+      [disabled]="sending()"
+      (clicked)="close()"
+    />
+    <app-button
+      variant="primary"
+      [label]="sending() ? 'Enviando...' : 'Enviar'"
+      [disabled]="!file() || sending()"
+      (clicked)="submit()"
+    />
+  </ng-container>
+</app-modal>

@@ -51,8 +51,12 @@ type NoticeKey =
   | 'panelCleared'
   | 'folderReady'
   | 'saveToCreateFolder'
-  | 'fileReady'
-  | 'noLinkedFile'
+  | 'saveBeforeUpload'
+  | 'uploadOk'
+  | 'uploadError'
+  | 'fileRemoved'
+  | 'removeError'
+  | 'downloadError'
   | 'naturalNameRequired'
   | 'legalNameRequired'
   | 'favoriteAdded'
@@ -144,17 +148,8 @@ export class PessoaFormComponent {
       : (pessoa.razaoSocial || pessoa.nomeFantasia).trim();
   });
 
-  /** Recorte do dossiê que a aba "Lista de arquivos" (`app-pessoa-files`) consome. */
-  protected readonly filesInfo = computed(() => {
-    const dossier = this.formValue().dossier;
-    return {
-      folder: dossier.folder,
-      file: dossier.file,
-      contractNumber: dossier.contractNumber,
-      contractDate: dossier.contractDate,
-      registeredAt: this.registeredAt(),
-    };
-  });
+  /** Nome da pasta do dossiê — passado à aba "Lista de arquivos" (botão "Abrir pasta"). */
+  protected readonly filesFolder = computed(() => this.formValue().dossier.folder);
 
   /** Última ficha carregada (`id:<n>` ou `new:<tipo>`) — evita recarregar à toa. */
   private lastLoadedKey = '';

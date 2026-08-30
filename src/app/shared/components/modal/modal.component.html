@@ -1,0 +1,26 @@
+@if (open()) {
+  <div class="modal" (click)="onBackdrop()">
+    <div
+      class="modal__dialog"
+      role="dialog"
+      aria-modal="true"
+      [attr.aria-label]="title() || null"
+      (click)="$event.stopPropagation()"
+    >
+      <header class="modal__header">
+        <h2>{{ title() }}</h2>
+        <button type="button" class="modal__close" aria-label="Fechar" (click)="close()">
+          <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+        </button>
+      </header>
+
+      <div class="modal__body">
+        <ng-content />
+      </div>
+
+      <footer class="modal__footer">
+        <ng-content select="[modalFooter]" />
+      </footer>
+    </div>
+  </div>
+}

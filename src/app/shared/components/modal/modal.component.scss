@@ -1,0 +1,78 @@
+@use 'variables' as *;
+@use 'mixins' as *;
+
+.modal {
+  position: fixed;
+  inset: 0;
+  z-index: $z-overlay;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: $spacing-lg;
+  background-color: rgba($burgundy-deep, 0.45);
+}
+
+.modal__dialog {
+  display: flex;
+  width: 100%;
+  max-width: 440px;
+  max-height: calc(100vh - #{$spacing-2xl});
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid $color-border;
+  border-radius: $border-radius-lg;
+  background-color: $color-surface;
+  box-shadow: $shadow-lg;
+}
+
+.modal__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $spacing-sm;
+  padding: $spacing-md $spacing-lg;
+  border-bottom: 1px solid rgba($color-border, 0.65);
+
+  h2 {
+    margin: 0;
+    color: $color-text-primary;
+    font-family: $font-family-heading;
+    font-size: $font-size-lg;
+  }
+}
+
+.modal__close {
+  display: inline-flex;
+  width: 28px;
+  height: 28px;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: $border-radius-sm;
+  background: transparent;
+  color: $color-text-secondary;
+  cursor: pointer;
+  transition: background-color $transition-fast;
+
+  &:hover {
+    background-color: rgba($color-primary-pale, 0.55);
+  }
+}
+
+.modal__body {
+  @include thin-scrollbar;
+  overflow: auto;
+  padding: $spacing-lg;
+}
+
+.modal__footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: $spacing-sm;
+  padding: $spacing-md $spacing-lg;
+  border-top: 1px solid rgba($color-border, 0.65);
+
+  &:empty {
+    display: none;
+  }
+}

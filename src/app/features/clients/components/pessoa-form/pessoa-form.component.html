@@ -98,7 +98,11 @@
       }
 
       @case ('files') {
-        <app-pessoa-files [info]="filesInfo()" (notify)="onFilesNotice($event)" />
+        <app-pessoa-files
+          [folder]="filesFolder()"
+          [pessoaId]="entityId()"
+          (notify)="onFilesNotice($event)"
+        />
       }
 
       @default {
@@ -145,8 +149,23 @@
           @case ('saveToCreateFolder') {
             Salve o cliente para criar a pasta.
           }
-          @case ('noLinkedFile') {
-            Nenhum arquivo vinculado.
+          @case ('saveBeforeUpload') {
+            Salve o cliente antes de anexar arquivos.
+          }
+          @case ('uploadOk') {
+            Arquivo enviado: {{ notice().subject }}.
+          }
+          @case ('uploadError') {
+            Não foi possível enviar: {{ notice().subject }}
+          }
+          @case ('fileRemoved') {
+            Arquivo removido: {{ notice().subject }}.
+          }
+          @case ('removeError') {
+            Não foi possível remover: {{ notice().subject }}
+          }
+          @case ('downloadError') {
+            Não foi possível baixar: {{ notice().subject }}
           }
           @case ('naturalNameRequired') {
             Informe nome e CPF da pessoa física.

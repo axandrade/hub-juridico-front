@@ -113,6 +113,35 @@
   }
 }
 
+.pessoa-files__row-actions {
+  display: flex;
+  gap: $spacing-xs;
+  white-space: nowrap;
+
+  button {
+    display: inline-flex;
+    width: 28px;
+    height: 28px;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid $color-border;
+    border-radius: $border-radius-sm;
+    background-color: $color-neutral-light;
+    color: $color-text-secondary;
+    cursor: pointer;
+    transition:
+      background-color $transition-fast,
+      border-color $transition-fast,
+      color $transition-fast;
+
+    &:hover {
+      border-color: $color-primary-light;
+      background-color: rgba($color-primary-pale, 0.55);
+      color: $color-primary;
+    }
+  }
+}
+
 @include respond-below($breakpoint-sm) {
   .pessoa-files__toolbar {
     grid-template-columns: 1fr;

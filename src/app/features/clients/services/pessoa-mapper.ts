@@ -1,4 +1,4 @@
-import { onlyDigits } from '../../../core/auth/cpf';
+import { maskCpf, onlyDigits } from '../../../core/auth/cpf';
 import {
   EstadoCivil,
   IClient,
@@ -45,7 +45,7 @@ export function pessoaRespToClient(res: PessoaRespApi): IClient {
         principal: c.principal,
       })),
       nome: res.nome ?? '',
-      cpf: res.cpf ?? '',
+      cpf: maskCpf(res.cpf ?? ''),
       rg: res.rg ?? '',
       profissao: '',
       nacionalidade: res.nacionalidade ?? '',
@@ -90,7 +90,7 @@ function enderecoFromApi(e: EnderecoApi | null): IEndereco {
 function representanteFromApi(r: RepresentanteRespApi): IRepresentanteLegal {
   return {
     nome: r.nome ?? '',
-    cpf: r.cpf ?? '',
+    cpf: maskCpf(r.cpf ?? ''),
     cargo: r.cargo ?? '',
     endereco: enderecoFromApi(r.endereco),
     emails: (r.emails ?? []).map((e) => ({ endereco: e.endereco, principal: e.principal })),

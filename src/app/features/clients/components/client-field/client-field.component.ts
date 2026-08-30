@@ -1,10 +1,12 @@
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 
+import { CpfMaskDirective } from '../../../../shared/directives/cpf-mask.directive';
 import {
   CLIENT_FIELD_LABELS,
   CLIENT_OPTION_LABELS,
   ClientFieldConfig,
+  ClientInputKind,
 } from '../../models/client-form.model';
 
 /**
@@ -14,7 +16,7 @@ import {
 @Component({
   selector: 'app-client-field',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ReactiveFormsModule],
+  imports: [ReactiveFormsModule, CpfMaskDirective],
   template: `
     <label class="clients-field" [class.clients-field--full]="config().span === 'full'">
       <span>{{ label() }}</span>
@@ -39,6 +41,9 @@ import {
             placeholder="Será preenchido ao salvar"
           />
         }
+        @case ('cpf') {
+          <input type="text" appCpfMask [formControl]="control()" />
+        }
         @default {
           <input [type]="kind()" [formControl]="control()" />
         }
@@ -54,7 +59,9 @@ export class ClientFieldComponent {
   protected readonly label = computed(
     () => CLIENT_FIELD_LABELS[this.config().key] ?? this.config().key,
   );
-  protected readonly kind = computed(() => this.config().type ?? 'text');
+  protected readonly kind = computed<ClientInputKind | 'cpf'>(() =>
+    this.config().mask === 'cpf' ? 'cpf' : (this.config().type ?? 'text'),
+  );
 
   protected optionLabel(option: string): string {
     return CLIENT_OPTION_LABELS[option] ?? option;

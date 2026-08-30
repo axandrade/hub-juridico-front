@@ -15,6 +15,8 @@ export interface ClientFieldConfig {
   options?: readonly string[];
   rows?: number;
   span?: 'full';
+  /** Máscara de digitação aplicada ao input. */
+  mask?: 'cpf';
 }
 
 type FieldGroups = readonly (readonly ClientFieldConfig[])[];
@@ -84,7 +86,7 @@ export const CLIENT_OPTION_LABELS: Record<string, string> = {
 };
 
 export const PESSOA_FISICA_FIELDS: FieldGroups = [
-  [{ key: 'nome' }, { key: 'cpf' }],
+  [{ key: 'nome' }, { key: 'cpf', mask: 'cpf' }],
   [{ key: 'rg' }, { key: 'estadoCivil', type: 'select', options: ESTADOS_CIVIS }],
   [{ key: 'profissao' }, { key: 'nacionalidade' }],
 ];
@@ -95,7 +97,7 @@ export const PESSOA_JURIDICA_FIELDS: FieldGroups = [
 ];
 
 export const REPRESENTANTE_FIELDS: FieldGroups = [
-  [{ key: 'nome' }, { key: 'cpf' }],
+  [{ key: 'nome' }, { key: 'cpf', mask: 'cpf' }],
   [{ key: 'cargo' }],
 ];
 

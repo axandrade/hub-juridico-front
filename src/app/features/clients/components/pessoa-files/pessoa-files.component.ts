@@ -10,7 +10,6 @@ export interface PessoaFilesInfo {
 }
 
 export type PessoaFilesNoticeKey =
-  | 'fileSelected'
   | 'folderReady'
   | 'saveToCreateFolder'
   | 'fileReady'
@@ -77,7 +76,6 @@ export class PessoaFilesComponent {
 
   protected selectFile(row: FileRow): void {
     this.selectedName.set(row.name);
-    this.notify.emit({ key: 'fileSelected', subject: row.name });
   }
 
   protected openFolder(): void {

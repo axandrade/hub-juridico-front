@@ -49,7 +49,6 @@ type NoticeKey =
   | 'confirmDelete'
   | 'deleted'
   | 'panelCleared'
-  | 'fileSelected'
   | 'folderReady'
   | 'saveToCreateFolder'
   | 'fileReady'

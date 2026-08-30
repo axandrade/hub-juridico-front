@@ -168,7 +168,7 @@ export class ClientsPageComponent {
   protected readonly statusOptions = CLIENT_STATUSES;
   protected readonly hiringModeOptions = CLIENT_HIRING_MODES;
   protected readonly tableTabs: readonly TipoPessoa[] = TIPOS_PESSOA;
-  protected readonly panelTabs: readonly PanelTab[] = ['admin', 'person', 'records', 'files'];
+  protected readonly panelTabs: readonly PanelTab[] = ['person', 'admin', 'records', 'files'];
 
   protected readonly clientColumns: readonly ClientColumn[] = [
     { key: 'personType', width: '138px', getter: (client) => client.pessoa.tipo },

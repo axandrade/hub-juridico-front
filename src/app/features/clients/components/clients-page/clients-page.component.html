@@ -51,11 +51,11 @@
           (click)="setPanelTab(tab)"
         >
           @switch (tab) {
+            @case ('person') {
+              Dados pessoais
+            }
             @case ('admin') {
               Administrativo
-            }
-            @case ('person') {
-              Cadastro
             }
             @case ('records') {
               Registros

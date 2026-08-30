@@ -25,11 +25,20 @@ import {
  * `dossier.folder`, `favorite`, `dossier.progressEntry/progressHistory`. O
  * `dossier.hiringMode` não é enviado porque o enum `modalidade` do backend
  * (CLT/PJ/...) trata de vínculo trabalhista, não de honorários.
+ *
+ * "Cadastrado por": uso `cadastrado_por_nome` do backend; se vier vazio, resolvo
+ * pelo usuário logado quando o id bate, senão mostro `Usuário #<id>`.
  */
+
+/** Shape mínimo do usuário logado (compatível com `AuthUser`). */
+export interface CurrentUser {
+  id: number;
+  name: string;
+}
 
 // ===================== Response -> IClient =====================
 
-export function pessoaRespToClient(res: PessoaRespApi): IClient {
+export function pessoaRespToClient(res: PessoaRespApi, currentUser: CurrentUser | null): IClient {
   const adm = res.dados_administrativos;
   return {
     id: res.id,
@@ -66,10 +75,25 @@ export function pessoaRespToClient(res: PessoaRespApi): IClient {
       contractDate: adm?.data_contrato ?? '',
       referredBy: adm?.indicado_por ?? '',
       internalOwner: adm?.responsavel_interno ?? '',
-      registeredBy: adm?.cadastrado_por ?? '',
+      registeredBy:
+        adm?.cadastrado_por_nome?.trim() ||
+        resolveCadastradoPor(adm?.cadastrado_por_id, currentUser),
       notes: adm?.observacoes ?? '',
     },
   };
+}
+
+function resolveCadastradoPor(
+  id: number | null | undefined,
+  currentUser: CurrentUser | null,
+): string {
+  if (id == null) {
+    return '';
+  }
+  if (currentUser && currentUser.id === id) {
+    return currentUser.name;
+  }
+  return `Usuário #${id}`;
 }
 
 function enderecoFromApi(e: EnderecoApi | null): IEndereco {

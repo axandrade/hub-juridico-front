@@ -4,6 +4,7 @@ import { Observable, map, tap } from 'rxjs';
 
 import { environment } from '../../../../environments/environment';
 import { IClient } from '../../../core/models';
+import { AuthService } from '../../../core/services/auth.service';
 import { PaginaApi, PessoaRespApi } from './pessoa-api.model';
 import {
   clientToAtualizarRequest,
@@ -19,15 +20,20 @@ import {
 @Injectable({ providedIn: 'root' })
 export class ClientStore {
   private readonly http = inject(HttpClient);
+  private readonly auth = inject(AuthService);
   private readonly base = `${environment.apiBaseUrl}/pessoas`;
 
   private readonly _clients = signal<IClient[]>([]);
   readonly clients = this._clients.asReadonly();
 
+  private toClient(res: PessoaRespApi): IClient {
+    return pessoaRespToClient(res, this.auth.user());
+  }
+
   /** Carrega (ou recarrega) a lista. Paginação do backend: pego uma página grande. */
   carregarLista(): Observable<IClient[]> {
     return this.http.get<PaginaApi<PessoaRespApi>>(this.base, { params: { size: 200 } }).pipe(
-      map((page) => (page.conteudo ?? []).map(pessoaRespToClient)),
+      map((page) => (page.conteudo ?? []).map((res) => this.toClient(res))),
       tap((clients) => this._clients.set(clients)),
     );
   }
@@ -51,7 +57,7 @@ export class ClientStore {
         : this.http.post<PessoaRespApi>(this.base, clientToCriarRequest(client));
 
     return request$.pipe(
-      map(pessoaRespToClient),
+      map((res) => this.toClient(res)),
       tap((salvo) =>
         this._clients.update((clients) =>
           clients.some((item) => item.id === salvo.id)

@@ -92,7 +92,8 @@ export interface RepresentanteRespApi extends RepresentanteApi {
 }
 
 export interface DadosAdministrativosRespApi extends DadosAdministrativosApi {
-  cadastrado_por: string | null;
+  cadastrado_por_id: number | null;
+  cadastrado_por_nome: string | null;
   criado_em: string | null;
   atualizado_em: string | null;
 }

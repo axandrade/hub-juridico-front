@@ -20,6 +20,7 @@ import {
   emptyDossier,
   emptyPessoa,
 } from '../../../../core/models';
+import { AuthService } from '../../../../core/services/auth.service';
 import { ButtonComponent } from '../../../../shared/components/button/button.component';
 import {
   ClientForm,
@@ -98,7 +99,12 @@ interface ClientFileRow {
 })
 export class PessoaFormComponent {
   private readonly store = inject(ClientStore);
-  private readonly defaultUser = 'Lincoln';
+  private readonly auth = inject(AuthService);
+
+  /** Nome do usuário logado — preenche "Cadastrado por" (campo do sistema). */
+  private usuarioLogado(): string {
+    return this.auth.user()?.name?.trim() || 'Sistema';
+  }
 
   /** Id do registro a editar; `null` = novo cadastro. */
   readonly pessoaId = input<number | null>(null);
@@ -351,8 +357,8 @@ export class PessoaFormComponent {
 
     const dossier = base.dossier;
     dossier.status = dossier.status || 'active';
-    dossier.registeredBy = dossier.registeredBy.trim() || this.defaultUser;
-    dossier.internalOwner = dossier.internalOwner.trim() || this.defaultUser;
+    dossier.registeredBy = dossier.registeredBy.trim() || this.usuarioLogado();
+    dossier.internalOwner = dossier.internalOwner.trim() || this.usuarioLogado();
 
     if (!dossier.folder.trim()) {
       dossier.folder = this.clientFolderName(base);
@@ -378,8 +384,8 @@ export class PessoaFormComponent {
       pessoa: emptyPessoa(tipoPessoa),
       dossier: {
         ...emptyDossier(),
-        registeredBy: this.defaultUser,
-        internalOwner: this.defaultUser,
+        registeredBy: this.usuarioLogado(),
+        internalOwner: this.usuarioLogado(),
       },
     };
   }

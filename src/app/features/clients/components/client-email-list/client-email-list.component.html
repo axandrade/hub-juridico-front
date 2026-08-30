@@ -9,15 +9,15 @@
       <button
         type="button"
         class="clients-primary-toggle"
-        [class.is-active]="group.controls.primary.value"
+        [class.is-active]="group.controls.principal.value"
         [attr.aria-label]="
-          group.controls.primary.value ? 'E-mail principal' : 'Definir como principal'
+          group.controls.principal.value ? 'E-mail principal' : 'Definir como principal'
         "
         (click)="makePrimary(i)"
       >
         <i class="fa-solid fa-star" aria-hidden="true"></i>
       </button>
-      <input type="email" formControlName="address" placeholder="email@exemplo.com" />
+      <input type="email" formControlName="endereco" placeholder="email@exemplo.com" />
       <button
         type="button"
         class="clients-icon-button"

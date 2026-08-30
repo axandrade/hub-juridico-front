@@ -1,13 +1,13 @@
 import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 import { FormArray, ReactiveFormsModule } from '@angular/forms';
 
-import { CONTACT_TYPES } from '../../../../core/models';
-import { ContactGroup, createContactGroup } from '../../forms/client-form.factory';
+import { TIPOS_CONTATO } from '../../../../core/models';
+import { ContatoGroup, createContatoGroup } from '../../forms/client-form.factory';
 import { CLIENT_OPTION_LABELS } from '../../models/client-form.model';
 
 /**
- * Editor da lista de contatos (`FormArray<ContactGroup>`) — telefone/WhatsApp com
- * marcação de principal. Espelha `Person.contacts` do backend.
+ * Editor da lista de contatos (`FormArray<ContatoGroup>`) — telefone/WhatsApp com
+ * marcação de principal. Espelha `Pessoa.contatos` do backend.
  */
 @Component({
   selector: 'app-client-contact-list',
@@ -17,27 +17,27 @@ import { CLIENT_OPTION_LABELS } from '../../models/client-form.model';
   styleUrl: './client-contact-list.component.scss',
 })
 export class ClientContactListComponent {
-  readonly array = input.required<FormArray<ContactGroup>>();
+  readonly array = input.required<FormArray<ContatoGroup>>();
 
-  protected readonly contactTypes = CONTACT_TYPES;
+  protected readonly contactTypes = TIPOS_CONTATO;
 
   protected typeLabel(type: string): string {
     return CLIENT_OPTION_LABELS[type] ?? type;
   }
 
   protected add(): void {
-    this.array().push(createContactGroup({ primary: this.array().length === 0 }));
+    this.array().push(createContatoGroup({ principal: this.array().length === 0 }));
   }
 
   protected remove(index: number): void {
-    const wasPrimary = this.array().at(index).controls.primary.value;
+    const wasPrimary = this.array().at(index).controls.principal.value;
     this.array().removeAt(index);
     if (wasPrimary && this.array().length) {
-      this.array().at(0).controls.primary.setValue(true);
+      this.array().at(0).controls.principal.setValue(true);
     }
   }
 
   protected makePrimary(index: number): void {
-    this.array().controls.forEach((group, i) => group.controls.primary.setValue(i === index));
+    this.array().controls.forEach((group, i) => group.controls.principal.setValue(i === index));
   }
 }

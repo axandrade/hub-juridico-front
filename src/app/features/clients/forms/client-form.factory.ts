@@ -1,65 +1,72 @@
-import { FormArray, FormControl, FormGroup, Validators } from '@angular/forms';
+import { AbstractControl, FormArray, FormControl, FormGroup, Validators } from '@angular/forms';
 
 import {
   ClientHiringMode,
   ClientStatus,
-  ContactType,
-  IAddress,
+  EstadoCivil,
   IClient,
-  IContact,
+  IContato,
   IEmail,
-  ILegalRepresentative,
-  MaritalStatus,
-  PersonType,
+  IEndereco,
+  IRepresentanteLegal,
+  TipoContato,
+  TipoPessoa,
 } from '../../../core/models';
 
-export type AddressGroup = FormGroup<{
-  street: FormControl<string>;
-  number: FormControl<string>;
-  complement: FormControl<string>;
-  district: FormControl<string>;
-  city: FormControl<string>;
-  state: FormControl<string>;
-  zipCode: FormControl<string>;
+export type EnderecoGroup = FormGroup<{
+  logradouro: FormControl<string>;
+  numero: FormControl<string>;
+  complemento: FormControl<string>;
+  bairro: FormControl<string>;
+  cidade: FormControl<string>;
+  cep: FormControl<string>;
+  uf: FormControl<string>;
 }>;
 
 export type EmailGroup = FormGroup<{
-  address: FormControl<string>;
-  primary: FormControl<boolean>;
+  endereco: FormControl<string>;
+  principal: FormControl<boolean>;
 }>;
 
-export type ContactGroup = FormGroup<{
-  value: FormControl<string>;
-  type: FormControl<ContactType>;
-  primary: FormControl<boolean>;
+export type ContatoGroup = FormGroup<{
+  valor: FormControl<string>;
+  tipo: FormControl<TipoContato>;
+  principal: FormControl<boolean>;
 }>;
 
-export type RepresentativeGroup = FormGroup<{
-  name: FormControl<string>;
+export type RepresentanteGroup = FormGroup<{
+  nome: FormControl<string>;
   cpf: FormControl<string>;
-  position: FormControl<string>;
-  address: AddressGroup;
+  cargo: FormControl<string>;
+  endereco: EnderecoGroup;
   emails: FormArray<EmailGroup>;
-  contacts: FormArray<ContactGroup>;
+  contatos: FormArray<ContatoGroup>;
 }>;
 
-export type NaturalPersonGroup = FormGroup<{
-  name: FormControl<string>;
+export type PessoaGroup = FormGroup<{
+  tipo: FormControl<TipoPessoa>;
+  endereco: EnderecoGroup;
+  emails: FormArray<EmailGroup>;
+  contatos: FormArray<ContatoGroup>;
+  nome: FormControl<string>;
   cpf: FormControl<string>;
   rg: FormControl<string>;
-  occupation: FormControl<string>;
-  nationality: FormControl<string>;
-  maritalStatus: FormControl<string>;
+  profissao: FormControl<string>;
+  nacionalidade: FormControl<string>;
+  estadoCivil: FormControl<string>;
+  razaoSocial: FormControl<string>;
+  nomeFantasia: FormControl<string>;
+  cnpj: FormControl<string>;
+  inscricaoEstadual: FormControl<string>;
+  inscricaoMunicipal: FormControl<string>;
+  representantes: FormArray<RepresentanteGroup>;
 }>;
 
-export type LegalPersonGroup = FormGroup<{
-  legalName: FormControl<string>;
-  tradeName: FormControl<string>;
-  cnpj: FormControl<string>;
-  stateRegistration: FormControl<string>;
-  municipalRegistration: FormControl<string>;
-  representatives: FormArray<RepresentativeGroup>;
-}>;
+/** Controles obrigatórios apenas quando a pessoa é do `tipo` correspondente. */
+const REQUIRED_BY_TIPO_PESSOA: Record<TipoPessoa, readonly string[]> = {
+  FISICA: ['nome', 'cpf'],
+  JURIDICA: ['razaoSocial', 'cnpj'],
+};
 
 export type DossierGroup = FormGroup<{
   folder: FormControl<string>;
@@ -77,12 +84,7 @@ export type DossierGroup = FormGroup<{
 }>;
 
 export type ClientForm = FormGroup<{
-  personType: FormControl<PersonType>;
-  address: AddressGroup;
-  emails: FormArray<EmailGroup>;
-  contacts: FormArray<ContactGroup>;
-  naturalPerson: NaturalPersonGroup;
-  legalPerson: LegalPersonGroup;
+  pessoa: PessoaGroup;
   dossier: DossierGroup;
 }>;
 
@@ -92,70 +94,65 @@ function text(value = ''): FormControl<string> {
   return new FormControl(value, { nonNullable: true });
 }
 
-function required(value = ''): FormControl<string> {
-  return new FormControl(value, { nonNullable: true, validators: [Validators.required] });
-}
-
 function flag(value = false): FormControl<boolean> {
   return new FormControl(value, { nonNullable: true });
 }
 
-export function createAddressGroup(value?: Partial<IAddress>): AddressGroup {
+export function createEnderecoGroup(value?: Partial<IEndereco>): EnderecoGroup {
   return new FormGroup({
-    street: text(value?.street),
-    number: text(value?.number),
-    complement: text(value?.complement),
-    district: text(value?.district),
-    city: text(value?.city),
-    state: text(value?.state),
-    zipCode: text(value?.zipCode),
+    logradouro: text(value?.logradouro),
+    numero: text(value?.numero),
+    complemento: text(value?.complemento),
+    bairro: text(value?.bairro),
+    cidade: text(value?.cidade),
+    cep: text(value?.cep),
+    uf: text(value?.uf),
   });
 }
 
 export function createEmailGroup(value?: Partial<IEmail>): EmailGroup {
-  return new FormGroup({ address: text(value?.address), primary: flag(value?.primary) });
+  return new FormGroup({ endereco: text(value?.endereco), principal: flag(value?.principal) });
 }
 
-export function createContactGroup(value?: Partial<IContact>): ContactGroup {
+export function createContatoGroup(value?: Partial<IContato>): ContatoGroup {
   return new FormGroup({
-    value: text(value?.value),
-    type: new FormControl<ContactType>(value?.type ?? 'WHATSAPP', { nonNullable: true }),
-    primary: flag(value?.primary),
+    valor: text(value?.valor),
+    tipo: new FormControl<TipoContato>(value?.tipo ?? 'WHATSAPP', { nonNullable: true }),
+    principal: flag(value?.principal),
   });
 }
 
-export function createRepresentativeGroup(
-  value?: Partial<ILegalRepresentative>,
-): RepresentativeGroup {
+export function createRepresentanteGroup(
+  value?: Partial<IRepresentanteLegal>,
+): RepresentanteGroup {
   return new FormGroup({
-    name: text(value?.name),
+    nome: text(value?.nome),
     cpf: text(value?.cpf),
-    position: text(value?.position),
-    address: createAddressGroup(value?.address),
+    cargo: text(value?.cargo),
+    endereco: createEnderecoGroup(value?.endereco),
     emails: new FormArray((value?.emails ?? []).map((email) => createEmailGroup(email))),
-    contacts: new FormArray((value?.contacts ?? []).map((contact) => createContactGroup(contact))),
+    contatos: new FormArray((value?.contatos ?? []).map((contato) => createContatoGroup(contato))),
   });
 }
 
-function createNaturalPersonGroup(): NaturalPersonGroup {
+function createPessoaGroup(): PessoaGroup {
   return new FormGroup({
-    name: required(),
-    cpf: required(),
+    tipo: new FormControl<TipoPessoa>('FISICA', { nonNullable: true }),
+    endereco: createEnderecoGroup(),
+    emails: new FormArray<EmailGroup>([]),
+    contatos: new FormArray<ContatoGroup>([]),
+    nome: text(),
+    cpf: text(),
     rg: text(),
-    occupation: text(),
-    nationality: text(),
-    maritalStatus: text(),
-  });
-}
-
-function createLegalPersonGroup(): LegalPersonGroup {
-  return new FormGroup({
-    legalName: required(),
-    tradeName: text(),
-    cnpj: required(),
-    stateRegistration: text(),
-    municipalRegistration: text(),
-    representatives: new FormArray<RepresentativeGroup>([]),
+    profissao: text(),
+    nacionalidade: text(),
+    estadoCivil: text(),
+    razaoSocial: text(),
+    nomeFantasia: text(),
+    cnpj: text(),
+    inscricaoEstadual: text(),
+    inscricaoMunicipal: text(),
+    representantes: new FormArray<RepresentanteGroup>([]),
   });
 }
 
@@ -178,64 +175,66 @@ function createDossierGroup(): DossierGroup {
 
 export function createClientForm(): ClientForm {
   const form: ClientForm = new FormGroup({
-    personType: new FormControl<PersonType>('NATURAL', { nonNullable: true }),
-    address: createAddressGroup(),
-    emails: new FormArray<EmailGroup>([]),
-    contacts: new FormArray<ContactGroup>([]),
-    naturalPerson: createNaturalPersonGroup(),
-    legalPerson: createLegalPersonGroup(),
+    pessoa: createPessoaGroup(),
     dossier: createDossierGroup(),
   });
-  setPersonType(form, 'NATURAL');
+  setTipoPessoa(form, 'FISICA');
   return form;
 }
 
 /**
- * Habilita o grupo de identidade da natureza escolhida e desabilita o outro — o
- * grupo desabilitado sai de `form.valid`/`.value` (mas continua em
- * `getRawValue()`), então os validators `required` só valem para o tipo ativo.
+ * Aplica a natureza jurídica escolhida: grava `pessoa.tipo` e mantém os
+ * validators `required` apenas nos campos de identidade do tipo ativo (os do
+ * outro tipo ficam opcionais, mas continuam no formulário).
  */
-export function setPersonType(form: ClientForm, type: PersonType): void {
+export function setTipoPessoa(form: ClientForm, tipo: TipoPessoa): void {
+  const pessoa = form.controls.pessoa;
+
   // Emite valueChanges (sem { emitEvent: false }) para que os signals derivados
   // do formulário reajam à troca de natureza.
-  form.controls.personType.setValue(type);
+  pessoa.controls.tipo.setValue(tipo);
 
-  const natural = form.controls.naturalPerson;
-  const legal = form.controls.legalPerson;
-
-  if (type === 'NATURAL') {
-    legal.disable({ emitEvent: false });
-    natural.enable({ emitEvent: false });
-  } else {
-    natural.disable({ emitEvent: false });
-    legal.enable({ emitEvent: false });
+  for (const [tipoPessoa, keys] of Object.entries(REQUIRED_BY_TIPO_PESSOA)) {
+    for (const key of keys) {
+      setRequired(pessoa.get(key)!, tipoPessoa === tipo);
+    }
   }
 }
 
+function setRequired(control: AbstractControl, isRequired: boolean): void {
+  control.setValidators(isRequired ? [Validators.required] : []);
+  control.updateValueAndValidity({ emitEvent: false });
+}
+
 export function patchClientForm(form: ClientForm, client: IClient): void {
-  form.controls.address.patchValue(client.address, { emitEvent: false });
-  form.controls.naturalPerson.patchValue(client.naturalPerson, { emitEvent: false });
-  form.controls.legalPerson.patchValue(
+  const pessoa = form.controls.pessoa;
+  const { pessoa: source } = client;
+
+  pessoa.patchValue(
     {
-      legalName: client.legalPerson.legalName,
-      tradeName: client.legalPerson.tradeName,
-      cnpj: client.legalPerson.cnpj,
-      stateRegistration: client.legalPerson.stateRegistration,
-      municipalRegistration: client.legalPerson.municipalRegistration,
+      tipo: source.tipo,
+      nome: source.nome,
+      cpf: source.cpf,
+      rg: source.rg,
+      profissao: source.profissao,
+      nacionalidade: source.nacionalidade,
+      estadoCivil: source.estadoCivil,
+      razaoSocial: source.razaoSocial,
+      nomeFantasia: source.nomeFantasia,
+      cnpj: source.cnpj,
+      inscricaoEstadual: source.inscricaoEstadual,
+      inscricaoMunicipal: source.inscricaoMunicipal,
     },
     { emitEvent: false },
   );
+  pessoa.controls.endereco.patchValue(source.endereco, { emitEvent: false });
   form.controls.dossier.patchValue(client.dossier, { emitEvent: false });
 
-  fillFormArray(form.controls.emails, client.emails, createEmailGroup);
-  fillFormArray(form.controls.contacts, client.contacts, createContactGroup);
-  fillFormArray(
-    form.controls.legalPerson.controls.representatives,
-    client.legalPerson.representatives,
-    createRepresentativeGroup,
-  );
+  fillFormArray(pessoa.controls.emails, source.emails, createEmailGroup);
+  fillFormArray(pessoa.controls.contatos, source.contatos, createContatoGroup);
+  fillFormArray(pessoa.controls.representantes, source.representantes, createRepresentanteGroup);
 
-  setPersonType(form, client.personType);
+  setTipoPessoa(form, source.tipo);
   form.markAsPristine();
   form.markAsUntouched();
   form.updateValueAndValidity();
@@ -245,15 +244,10 @@ export function readClientForm(form: ClientForm): ClientEditableFields {
   const raw = form.getRawValue();
 
   return {
-    personType: raw.personType,
-    address: raw.address,
-    emails: raw.emails,
-    contacts: raw.contacts,
-    naturalPerson: {
-      ...raw.naturalPerson,
-      maritalStatus: raw.naturalPerson.maritalStatus as MaritalStatus | '',
+    pessoa: {
+      ...raw.pessoa,
+      estadoCivil: raw.pessoa.estadoCivil as EstadoCivil | '',
     },
-    legalPerson: raw.legalPerson,
     dossier: {
       ...raw.dossier,
       status: (raw.dossier.status || 'active') as ClientStatus,

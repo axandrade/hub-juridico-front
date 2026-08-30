@@ -5,7 +5,7 @@ import { EmailGroup, createEmailGroup } from '../../forms/client-form.factory';
 
 /**
  * Editor da lista de e-mails (`FormArray<EmailGroup>`). Um item é marcado como
- * principal (estrela) — espelha `Person.getPrimaryEmail()` do backend.
+ * principal (estrela) — espelha `Pessoa.getEmailPrincipal()` do backend.
  */
 @Component({
   selector: 'app-client-email-list',
@@ -18,18 +18,18 @@ export class ClientEmailListComponent {
   readonly array = input.required<FormArray<EmailGroup>>();
 
   protected add(): void {
-    this.array().push(createEmailGroup({ primary: this.array().length === 0 }));
+    this.array().push(createEmailGroup({ principal: this.array().length === 0 }));
   }
 
   protected remove(index: number): void {
-    const wasPrimary = this.array().at(index).controls.primary.value;
+    const wasPrimary = this.array().at(index).controls.principal.value;
     this.array().removeAt(index);
     if (wasPrimary && this.array().length) {
-      this.array().at(0).controls.primary.setValue(true);
+      this.array().at(0).controls.principal.setValue(true);
     }
   }
 
   protected makePrimary(index: number): void {
-    this.array().controls.forEach((group, i) => group.controls.primary.setValue(i === index));
+    this.array().controls.forEach((group, i) => group.controls.principal.setValue(i === index));
   }
 }

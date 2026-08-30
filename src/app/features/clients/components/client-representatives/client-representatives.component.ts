@@ -1,17 +1,17 @@
 import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 import { FormArray, FormControl } from '@angular/forms';
 
-import { RepresentativeGroup, createRepresentativeGroup } from '../../forms/client-form.factory';
-import { REPRESENTATIVE_IDENTITY_FIELDS } from '../../models/client-form.model';
+import { RepresentanteGroup, createRepresentanteGroup } from '../../forms/client-form.factory';
+import { REPRESENTANTE_FIELDS } from '../../models/client-form.model';
 import { ClientAddressComponent } from '../client-address/client-address.component';
 import { ClientContactListComponent } from '../client-contact-list/client-contact-list.component';
 import { ClientEmailListComponent } from '../client-email-list/client-email-list.component';
 import { ClientFieldComponent } from '../client-field/client-field.component';
 
 /**
- * Editor dos representantes legais (`FormArray<RepresentativeGroup>`). Cada item é
+ * Editor dos representantes legais (`FormArray<RepresentanteGroup>`). Cada item é
  * um mini-cadastro de pessoa (identidade + endereço + e-mails + contatos),
- * espelhando `com.hubjuridico.domain.LegalRepresentative`.
+ * espelhando `com.hubjuridico.dominio.RepresentanteLegal`.
  */
 @Component({
   selector: 'app-client-representatives',
@@ -26,16 +26,16 @@ import { ClientFieldComponent } from '../client-field/client-field.component';
   styleUrl: './client-representatives.component.scss',
 })
 export class ClientRepresentativesComponent {
-  readonly array = input.required<FormArray<RepresentativeGroup>>();
+  readonly array = input.required<FormArray<RepresentanteGroup>>();
 
-  protected readonly identityRows = REPRESENTATIVE_IDENTITY_FIELDS;
+  protected readonly identityRows = REPRESENTANTE_FIELDS;
 
-  protected control(group: RepresentativeGroup, key: string): FormControl<string> {
+  protected control(group: RepresentanteGroup, key: string): FormControl<string> {
     return group.get(key) as FormControl<string>;
   }
 
   protected add(): void {
-    this.array().push(createRepresentativeGroup());
+    this.array().push(createRepresentanteGroup());
   }
 
   protected remove(index: number): void {

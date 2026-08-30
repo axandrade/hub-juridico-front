@@ -27,10 +27,10 @@
       }
 
       <div class="clients-form__divider"><span>Endereço</span></div>
-      <app-client-address [group]="group.controls.address" />
+      <app-client-address [group]="group.controls.endereco" />
 
       <app-client-email-list [array]="group.controls.emails" />
-      <app-client-contact-list [array]="group.controls.contacts" />
+      <app-client-contact-list [array]="group.controls.contatos" />
     </div>
   } @empty {
     <p class="clients-contact-list__empty">Nenhum representante cadastrado.</p>

@@ -80,7 +80,6 @@
 .clients-menu-button,
 .clients-panel-toggle,
 .clients-panel__tabs button,
-.clients-nature button,
 .clients-table-tabs button,
 .clients-dropdown button,
 .clients-contact-list__title button {
@@ -139,13 +138,6 @@
   flex-direction: column;
 }
 
-.clients-form__meta {
-  display: grid;
-  gap: $spacing-sm;
-  padding: $spacing-md;
-  border-bottom: 1px solid rgba($color-border, 0.65);
-}
-
 .clients-form__section,
 .clients-files {
   @include thin-scrollbar;
@@ -159,7 +151,6 @@
 }
 
 .clients-field,
-.clients-form__meta label,
 .clients-search label,
 .clients-filter-panel label,
 .clients-files__toolbar label {
@@ -209,18 +200,6 @@
 
 .clients-form textarea {
   resize: vertical;
-}
-
-.clients-nature {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: $spacing-xs;
-
-  button {
-    min-height: 36px;
-    padding: 0 $spacing-xs;
-    font-size: $font-size-xs;
-  }
 }
 
 .clients-panel__footer {
@@ -518,7 +497,6 @@
 }
 
 @include respond-below($breakpoint-sm) {
-  .clients-form__meta,
   .clients-filter-panel,
   .clients-summary,
   .clients-search,

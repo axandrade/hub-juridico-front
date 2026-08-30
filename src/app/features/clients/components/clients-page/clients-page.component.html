@@ -5,7 +5,7 @@
         <span>Painel</span>
         <h2>{{ panelTitle() || 'Novo cliente' }}</h2>
         <small>
-          {{ currentPersonType() === 'NATURAL' ? 'Pessoa física' : 'Pessoa jurídica' }} |
+          {{ tipoPessoaAtual() === 'FISICA' ? 'Pessoa física' : 'Pessoa jurídica' }} |
           {{ form.controls.dossier.controls.folder.value || 'pasta será criada ao salvar' }}
         </small>
       </div>
@@ -69,26 +69,9 @@
     </nav>
 
     <form class="clients-form" (submit)="saveClient($event)">
-      <div class="clients-form__meta">
-        <label>
-          <span>Natureza jurídica</span>
-          <div class="clients-nature" role="group" aria-label="Natureza jurídica">
-            @for (type of personTypeOptions; track type) {
-              <button
-                type="button"
-                [class.is-active]="currentPersonType() === type"
-                (click)="setPersonType(type)"
-              >
-                {{ type === 'NATURAL' ? 'Pessoa física' : 'Pessoa jurídica' }}
-              </button>
-            }
-          </div>
-        </label>
-      </div>
-
       @switch (activePanelTab()) {
         @case ('person') {
-          <app-client-person-form [form]="form" [personType]="currentPersonType()" />
+          <app-client-person-form [form]="form" [tipoPessoa]="tipoPessoaAtual()" />
         }
 
         @case ('records') {
@@ -518,7 +501,7 @@
           [class.is-active]="activeTableTab() === tab"
           (click)="setTableTab(tab)"
         >
-          {{ tab === 'NATURAL' ? 'Pessoa física' : 'Pessoa jurídica' }}
+          {{ tab === 'FISICA' ? 'Pessoa física' : 'Pessoa jurídica' }}
         </button>
       }
     </nav>
@@ -612,7 +595,7 @@
                       </span>
                     }
                     @case ('personType') {
-                      {{ client.personType === 'NATURAL' ? 'Pessoa física' : 'Pessoa jurídica' }}
+                      {{ client.pessoa.tipo === 'FISICA' ? 'Pessoa física' : 'Pessoa jurídica' }}
                     }
                     @case ('hiringMode') {
                       @switch (client.dossier.hiringMode) {

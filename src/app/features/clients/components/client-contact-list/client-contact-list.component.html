@@ -9,16 +9,16 @@
       <button
         type="button"
         class="clients-primary-toggle"
-        [class.is-active]="group.controls.primary.value"
+        [class.is-active]="group.controls.principal.value"
         [attr.aria-label]="
-          group.controls.primary.value ? 'Contato principal' : 'Definir como principal'
+          group.controls.principal.value ? 'Contato principal' : 'Definir como principal'
         "
         (click)="makePrimary(i)"
       >
         <i class="fa-solid fa-star" aria-hidden="true"></i>
       </button>
-      <input type="tel" formControlName="value" placeholder="(00) 00000-0000" />
-      <select formControlName="type">
+      <input type="tel" formControlName="valor" placeholder="(00) 00000-0000" />
+      <select formControlName="tipo">
         @for (type of contactTypes; track type) {
           <option [value]="type">{{ typeLabel(type) }}</option>
         }

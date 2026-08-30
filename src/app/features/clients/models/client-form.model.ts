@@ -3,7 +3,7 @@ import {
   CLIENT_CITIES,
   CLIENT_HIRING_MODES,
   CLIENT_STATUSES,
-  MARITAL_STATUSES,
+  ESTADOS_CIVIS,
 } from '../../../core/models';
 
 export type ClientInputKind = 'text' | 'email' | 'tel' | 'select' | 'textarea' | 'readonly';
@@ -20,29 +20,29 @@ export interface ClientFieldConfig {
 type FieldGroups = readonly (readonly ClientFieldConfig[])[];
 
 export const CLIENT_FIELD_LABELS: Record<string, string> = {
-  // NaturalPerson
-  name: 'Nome',
+  // PessoaFisica
+  nome: 'Nome',
   cpf: 'CPF',
   rg: 'RG',
-  maritalStatus: 'Estado civil',
-  occupation: 'Profissão',
-  nationality: 'Nacionalidade',
-  // LegalPerson
-  legalName: 'Razão social',
-  tradeName: 'Nome fantasia',
+  estadoCivil: 'Estado civil',
+  profissao: 'Profissão',
+  nacionalidade: 'Nacionalidade',
+  // PessoaJuridica
+  razaoSocial: 'Razão social',
+  nomeFantasia: 'Nome fantasia',
   cnpj: 'CNPJ',
-  stateRegistration: 'Inscrição estadual',
-  municipalRegistration: 'Inscrição municipal',
-  // LegalRepresentative
-  position: 'Cargo',
-  // Address
-  street: 'Endereço',
-  number: 'Número',
-  complement: 'Complemento',
-  district: 'Bairro',
-  state: 'UF',
-  city: 'Cidade',
-  zipCode: 'CEP',
+  inscricaoEstadual: 'Inscrição estadual',
+  inscricaoMunicipal: 'Inscrição municipal',
+  // RepresentanteLegal
+  cargo: 'Cargo',
+  // Endereco
+  logradouro: 'Endereço',
+  numero: 'Número',
+  complemento: 'Complemento',
+  bairro: 'Bairro',
+  uf: 'UF',
+  cidade: 'Cidade',
+  cep: 'CEP',
   // Dossiê
   status: 'Status',
   hiringMode: 'Modalidade de contratação',
@@ -57,17 +57,17 @@ export const CLIENT_FIELD_LABELS: Record<string, string> = {
 };
 
 export const CLIENT_OPTION_LABELS: Record<string, string> = {
-  // PersonType
-  NATURAL: 'Pessoa física',
-  LEGAL: 'Pessoa jurídica',
-  // MaritalStatus
-  SINGLE: 'Solteiro(a)',
-  MARRIED: 'Casado(a)',
-  DIVORCED: 'Divorciado(a)',
-  WIDOWED: 'Viúvo(a)',
-  STABLE_UNION: 'União estável',
-  // ContactType
-  PHONE: 'Telefone',
+  // TipoPessoa
+  FISICA: 'Pessoa física',
+  JURIDICA: 'Pessoa jurídica',
+  // EstadoCivil
+  SOLTEIRO: 'Solteiro(a)',
+  CASADO: 'Casado(a)',
+  DIVORCIADO: 'Divorciado(a)',
+  VIUVO: 'Viúvo(a)',
+  UNIAO_ESTAVEL: 'União estável',
+  // TipoContato
+  TELEFONE: 'Telefone',
   WHATSAPP: 'WhatsApp',
   // ClientStatus
   active: 'Ativo',
@@ -83,29 +83,29 @@ export const CLIENT_OPTION_LABELS: Record<string, string> = {
   mixed: 'Misto',
 };
 
-export const NATURAL_IDENTITY_FIELDS: FieldGroups = [
-  [{ key: 'name' }, { key: 'cpf' }],
-  [{ key: 'rg' }, { key: 'maritalStatus', type: 'select', options: MARITAL_STATUSES }],
-  [{ key: 'occupation' }, { key: 'nationality' }],
+export const PESSOA_FISICA_FIELDS: FieldGroups = [
+  [{ key: 'nome' }, { key: 'cpf' }],
+  [{ key: 'rg' }, { key: 'estadoCivil', type: 'select', options: ESTADOS_CIVIS }],
+  [{ key: 'profissao' }, { key: 'nacionalidade' }],
 ];
 
-export const LEGAL_IDENTITY_FIELDS: FieldGroups = [
-  [{ key: 'legalName' }, { key: 'tradeName' }],
-  [{ key: 'cnpj' }, { key: 'stateRegistration' }, { key: 'municipalRegistration' }],
+export const PESSOA_JURIDICA_FIELDS: FieldGroups = [
+  [{ key: 'razaoSocial' }, { key: 'nomeFantasia' }],
+  [{ key: 'cnpj' }, { key: 'inscricaoEstadual' }, { key: 'inscricaoMunicipal' }],
 ];
 
-export const REPRESENTATIVE_IDENTITY_FIELDS: FieldGroups = [
-  [{ key: 'name' }, { key: 'cpf' }],
-  [{ key: 'position' }],
+export const REPRESENTANTE_FIELDS: FieldGroups = [
+  [{ key: 'nome' }, { key: 'cpf' }],
+  [{ key: 'cargo' }],
 ];
 
-export const ADDRESS_FIELDS: FieldGroups = [
-  [{ key: 'street' }, { key: 'number' }],
-  [{ key: 'complement' }, { key: 'district' }],
+export const ENDERECO_FIELDS: FieldGroups = [
+  [{ key: 'logradouro' }, { key: 'numero' }],
+  [{ key: 'complemento' }, { key: 'bairro' }],
   [
-    { key: 'state', type: 'select', options: BRAZILIAN_STATES },
-    { key: 'city', type: 'select', options: CLIENT_CITIES },
-    { key: 'zipCode' },
+    { key: 'uf', type: 'select', options: BRAZILIAN_STATES },
+    { key: 'cidade', type: 'select', options: CLIENT_CITIES },
+    { key: 'cep' },
   ],
 ];
 

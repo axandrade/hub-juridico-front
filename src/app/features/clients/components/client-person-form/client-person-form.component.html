@@ -8,13 +8,13 @@
   }
 
   <div class="clients-form__divider"><span>Endereço</span></div>
-  <app-client-address [group]="form().controls.address" />
+  <app-client-address [group]="form().controls.pessoa.controls.endereco" />
 
-  <app-client-email-list [array]="form().controls.emails" />
-  <app-client-contact-list [array]="form().controls.contacts" />
+  <app-client-email-list [array]="form().controls.pessoa.controls.emails" />
+  <app-client-contact-list [array]="form().controls.pessoa.controls.contatos" />
 
-  @if (personType() === 'LEGAL') {
+  @if (tipoPessoa() === 'JURIDICA') {
     <div class="clients-form__divider"><span>Representação legal</span></div>
-    <app-client-representatives [array]="form().controls.legalPerson.controls.representatives" />
+    <app-client-representatives [array]="form().controls.pessoa.controls.representantes" />
   }
 </div>

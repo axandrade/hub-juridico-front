@@ -1,5 +1,6 @@
-export const PERSON_TYPES = ['NATURAL', 'LEGAL'] as const;
-export type PersonType = (typeof PERSON_TYPES)[number];
+export const TIPOS_PESSOA = ['FISICA', 'JURIDICA'] as const;
+/** Discriminador da hierarquia `com.hubjuridico.dominio.Pessoa` (tabelas `pessoas_fisicas` / `pessoas_juridicas`). */
+export type TipoPessoa = (typeof TIPOS_PESSOA)[number];
 
 export const CLIENT_STATUSES = ['active', 'prospect', 'inactive', 'closed'] as const;
 export type ClientStatus = (typeof CLIENT_STATUSES)[number];
@@ -14,19 +15,19 @@ export const CLIENT_HIRING_MODES = [
 ] as const;
 export type ClientHiringMode = (typeof CLIENT_HIRING_MODES)[number];
 
-/** Espelha `com.hubjuridico.domain.enuns.MaritalStatus`. */
-export const MARITAL_STATUSES = [
-  'SINGLE',
-  'MARRIED',
-  'DIVORCED',
-  'WIDOWED',
-  'STABLE_UNION',
+/** Espelha `com.hubjuridico.dominio.enums.EstadoCivil`. */
+export const ESTADOS_CIVIS = [
+  'SOLTEIRO',
+  'CASADO',
+  'DIVORCIADO',
+  'VIUVO',
+  'UNIAO_ESTAVEL',
 ] as const;
-export type MaritalStatus = (typeof MARITAL_STATUSES)[number];
+export type EstadoCivil = (typeof ESTADOS_CIVIS)[number];
 
-/** Espelha `com.hubjuridico.domain.enuns.ContactType`. */
-export const CONTACT_TYPES = ['PHONE', 'WHATSAPP'] as const;
-export type ContactType = (typeof CONTACT_TYPES)[number];
+/** Espelha `com.hubjuridico.dominio.enums.TipoContato`. */
+export const TIPOS_CONTATO = ['TELEFONE', 'WHATSAPP'] as const;
+export type TipoContato = (typeof TIPOS_CONTATO)[number];
 
 export const BRAZILIAN_STATES = [
   'AC',
@@ -60,58 +61,67 @@ export const BRAZILIAN_STATES = [
 
 export const CLIENT_CITIES = ['Fortaleza', 'Juazeiro do Norte', 'Sobral'] as const;
 
-/** Espelha `com.hubjuridico.domain.Address` (embeddable, único por pessoa). */
-export interface IAddress {
-  street: string;
-  number: string;
-  complement: string;
-  district: string;
-  city: string;
-  state: string;
-  zipCode: string;
+/** Espelha `com.hubjuridico.dominio.Endereco` (embeddable, único por pessoa). */
+export interface IEndereco {
+  logradouro: string;
+  numero: string;
+  complemento: string;
+  bairro: string;
+  cidade: string;
+  cep: string;
+  uf: string;
 }
 
-/** Espelha `com.hubjuridico.domain.Email`. */
+/** Espelha `com.hubjuridico.dominio.Email`. */
 export interface IEmail {
-  address: string;
-  primary: boolean;
+  endereco: string;
+  principal: boolean;
 }
 
-/** Espelha `com.hubjuridico.domain.Contact`. */
-export interface IContact {
-  value: string;
-  type: ContactType;
-  primary: boolean;
+/** Espelha `com.hubjuridico.dominio.Contato`. */
+export interface IContato {
+  valor: string;
+  tipo: TipoContato;
+  principal: boolean;
 }
 
-/** Campos de `com.hubjuridico.domain.NaturalPerson` (+ `occupation`, extra do frontend). */
-export interface INaturalPerson {
-  name: string;
+/** Espelha `com.hubjuridico.dominio.RepresentanteLegal` (≈ mini-Pessoa). */
+export interface IRepresentanteLegal {
+  nome: string;
+  cpf: string;
+  cargo: string;
+  endereco: IEndereco;
+  emails: IEmail[];
+  contatos: IContato[];
+}
+
+/**
+ * Uma pessoa do cliente — física ou jurídica. Espelha a hierarquia
+ * `com.hubjuridico.dominio.Pessoa` como um único objeto discriminado por `tipo`:
+ * `endereco`/`emails`/`contatos` vêm da base `Pessoa`; os demais campos são de
+ * `PessoaFisica` ou `PessoaJuridica` e só o bloco do `tipo` ativo é
+ * preenchido/validado.
+ */
+export interface IPessoa {
+  tipo: TipoPessoa;
+  // Pessoa (base)
+  endereco: IEndereco;
+  emails: IEmail[];
+  contatos: IContato[];
+  // PessoaFisica (+ `profissao`, extra do frontend)
+  nome: string;
   cpf: string;
   rg: string;
-  occupation: string;
-  nationality: string;
-  maritalStatus: MaritalStatus | '';
-}
-
-/** Espelha `com.hubjuridico.domain.LegalRepresentative` (≈ mini-Person). */
-export interface ILegalRepresentative {
-  name: string;
-  cpf: string;
-  position: string;
-  address: IAddress;
-  emails: IEmail[];
-  contacts: IContact[];
-}
-
-/** Campos de `com.hubjuridico.domain.LegalPerson`. */
-export interface ILegalPerson {
-  legalName: string;
-  tradeName: string;
+  profissao: string;
+  nacionalidade: string;
+  estadoCivil: EstadoCivil | '';
+  // PessoaJuridica
+  razaoSocial: string;
+  nomeFantasia: string;
   cnpj: string;
-  stateRegistration: string;
-  municipalRegistration: string;
-  representatives: ILegalRepresentative[];
+  inscricaoEstadual: string;
+  inscricaoMunicipal: string;
+  representantes: IRepresentanteLegal[];
 }
 
 /**
@@ -134,47 +144,46 @@ export interface IClientDossier {
 }
 
 /**
- * Cliente = uma `Person` (natural ou jurídica) + o dossiê do escritório.
- * `naturalPerson` / `legalPerson` sempre existem; apenas o correspondente a
- * `personType` é preenchido/validado.
+ * Cliente = uma `Pessoa` (física ou jurídica) + o dossiê do escritório.
  */
 export interface IClient {
   id: number;
   registeredAt: Date;
   favorite: boolean;
-  personType: PersonType;
-  address: IAddress;
-  emails: IEmail[];
-  contacts: IContact[];
-  naturalPerson: INaturalPerson;
-  legalPerson: ILegalPerson;
+  pessoa: IPessoa;
   dossier: IClientDossier;
 }
 
-export function emptyAddress(): IAddress {
+export function emptyEndereco(): IEndereco {
   return {
-    street: '',
-    number: '',
-    complement: '',
-    district: '',
-    city: '',
-    state: '',
-    zipCode: '',
+    logradouro: '',
+    numero: '',
+    complemento: '',
+    bairro: '',
+    cidade: '',
+    cep: '',
+    uf: '',
   };
 }
 
-export function emptyNaturalPerson(): INaturalPerson {
-  return { name: '', cpf: '', rg: '', occupation: '', nationality: '', maritalStatus: '' };
-}
-
-export function emptyLegalPerson(): ILegalPerson {
+export function emptyPessoa(tipo: TipoPessoa = 'FISICA'): IPessoa {
   return {
-    legalName: '',
-    tradeName: '',
+    tipo,
+    endereco: emptyEndereco(),
+    emails: [],
+    contatos: [],
+    nome: '',
+    cpf: '',
+    rg: '',
+    profissao: '',
+    nacionalidade: '',
+    estadoCivil: '',
+    razaoSocial: '',
+    nomeFantasia: '',
     cnpj: '',
-    stateRegistration: '',
-    municipalRegistration: '',
-    representatives: [],
+    inscricaoEstadual: '',
+    inscricaoMunicipal: '',
+    representantes: [],
   };
 }
 
@@ -195,12 +204,12 @@ export function emptyDossier(): IClientDossier {
   };
 }
 
-/** E-mail marcado como principal (ou o primeiro, ou vazio). */
-export function primaryEmail(emails: readonly IEmail[]): string {
-  return (emails.find((email) => email.primary) ?? emails[0])?.address ?? '';
+/** E-mail marcado como principal (ou o primeiro, ou vazio) — espelha `Pessoa.getEmailPrincipal()`. */
+export function emailPrincipal(emails: readonly IEmail[]): string {
+  return (emails.find((email) => email.principal) ?? emails[0])?.endereco ?? '';
 }
 
-/** Contato marcado como principal (ou o primeiro, ou vazio). */
-export function primaryContact(contacts: readonly IContact[]): string {
-  return (contacts.find((contact) => contact.primary) ?? contacts[0])?.value ?? '';
+/** Contato marcado como principal (ou o primeiro, ou vazio) — espelha `Pessoa.getContatoPrincipal()`. */
+export function contatoPrincipal(contatos: readonly IContato[]): string {
+  return (contatos.find((contato) => contato.principal) ?? contatos[0])?.valor ?? '';
 }

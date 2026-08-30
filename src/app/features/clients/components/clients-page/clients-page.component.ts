@@ -2,6 +2,7 @@ import {
   ChangeDetectionStrategy,
   Component,
   DestroyRef,
+  HostListener,
   computed,
   inject,
   signal,
@@ -257,15 +258,17 @@ export class ClientsPageComponent {
   }
 
   /**
-   * Clique no "vazio" da área da tabela (fora de qualquer linha/botão) desmarca
-   * o cliente e limpa o painel — a não ser que o cadeado esteja travado.
+   * Clique em qualquer lugar do documento fora de uma linha da tabela e fora do
+   * painel desmarca o cliente e limpa a ficha — a não ser que o cadeado esteja
+   * travado (aí a ficha selecionada permanece).
    */
-  protected onListBackgroundClick(event: MouseEvent): void {
-    const target = event.target as HTMLElement;
-    if (target.closest('tr') || target.closest('button') || target.closest('a')) {
+  @HostListener('document:click', ['$event'])
+  protected onDocumentClick(event: MouseEvent): void {
+    if (this.selectedPersonId() === null || this.editor()?.locked()) {
       return;
     }
-    if (this.selectedPersonId() === null || this.editor()?.locked()) {
+    const target = event.target as HTMLElement | null;
+    if (!target || target.closest('tr, app-pessoa-form')) {
       return;
     }
     this.selectedPersonId.set(null);

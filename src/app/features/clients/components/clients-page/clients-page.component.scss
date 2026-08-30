@@ -346,6 +346,23 @@
   font-size: $font-size-xs;
 }
 
+.clients-pagination {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: $spacing-sm;
+
+  button[disabled] {
+    cursor: not-allowed;
+    opacity: 0.45;
+  }
+
+  &__total {
+    margin-left: auto;
+    font-weight: $font-weight-medium;
+  }
+}
+
 .clients-link-button {
   border: 0;
   background: none;

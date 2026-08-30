@@ -8,7 +8,8 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
+import { EMPTY, catchError, distinctUntilChanged, switchMap } from 'rxjs';
 
 import {
   CLIENT_HIRING_MODES,
@@ -16,7 +17,6 @@ import {
   ClientHiringMode,
   ClientStatus,
   IClient,
-  TIPOS_PESSOA,
   TipoPessoa,
   contatoPrincipal,
   emailPrincipal,
@@ -24,6 +24,9 @@ import {
 import { ButtonComponent } from '../../../../shared/components/button/button.component';
 import { ClientStore } from '../../services/client-store';
 import { PessoaFormComponent } from '../pessoa-form/pessoa-form.component';
+
+/** Aba da tabela: 'ALL' (padrão) mostra PF e PJ juntos. */
+type TableTab = TipoPessoa | 'ALL';
 
 type ClientColumnKey =
   | 'personType'
@@ -79,7 +82,11 @@ export class ClientsPageComponent {
 
   protected readonly clients = this.store.clients;
   protected readonly selectedPersonId = signal<number | null>(null);
-  protected readonly activeTableTab = signal<TipoPessoa>('FISICA');
+  protected readonly activeTableTab = signal<TableTab>('ALL');
+  /** Página pedida ao backend (0-based). */
+  protected readonly pageIndex = signal(0);
+  /** Bumpado para forçar um recarregamento com os mesmos filtros. */
+  private readonly refreshTick = signal(0);
   protected readonly panelVisible = signal(true);
   protected readonly showFilters = signal(false);
   protected readonly showColumns = signal(false);
@@ -99,7 +106,28 @@ export class ClientsPageComponent {
 
   protected readonly statusOptions = CLIENT_STATUSES;
   protected readonly hiringModeOptions = CLIENT_HIRING_MODES;
-  protected readonly tableTabs: readonly TipoPessoa[] = TIPOS_PESSOA;
+  protected readonly tableTabs: readonly TableTab[] = ['ALL', 'FISICA', 'JURIDICA'];
+
+  /** Total de clientes do filtro atual (base inteira quando sem filtro de tipo/busca). */
+  protected readonly totalClients = this.store.totalElements;
+  /** Página atual exibida (1-based, para leitura humana). */
+  protected readonly currentPageLabel = computed(() => this.store.page() + 1);
+  /** Quantidade de páginas do filtro atual (mínimo 1). */
+  protected readonly pageCount = computed(() => Math.max(this.store.totalPages(), 1));
+  protected readonly canGoPrev = computed(() => this.store.page() > 0);
+  protected readonly canGoNext = computed(() => !this.store.last());
+
+  /** Tipo enviado ao backend: `null` na aba "Todos". */
+  private readonly tipoFilter = computed<TipoPessoa | null>(() => {
+    const tab = this.activeTableTab();
+    return tab === 'ALL' ? null : tab;
+  });
+
+  /** Natureza de um cadastro novo — na aba "Todos" começa como física. */
+  protected readonly novoTipoPadrao = computed<TipoPessoa>(() => {
+    const tab = this.activeTableTab();
+    return tab === 'ALL' ? 'FISICA' : tab;
+  });
 
   protected readonly clientColumns: readonly ClientColumn[] = [
     { key: 'personType', width: '138px', getter: (client) => client.pessoa.tipo },
@@ -125,16 +153,16 @@ export class ClientsPageComponent {
     return this.clientColumns.filter((column) => visible.has(column.key));
   });
 
+  /**
+   * Só `tipo` é resolvido no backend. Busca, status, modalidade e responsável
+   * refinam localmente a página carregada (10 linhas) — o endpoint ainda não
+   * tem esses filtros.
+   */
   protected readonly filteredClients = computed(() => {
-    const activeTab = this.activeTableTab();
     const filters = this.filters();
     const searchTerms = this.parseSearchTerms(this.searchText());
 
     return this.clients().filter((client) => {
-      if (client.pessoa.tipo !== activeTab) {
-        return false;
-      }
-
       if (filters.status && client.dossier.status !== filters.status) {
         return false;
       }
@@ -178,16 +206,6 @@ export class ClientsPageComponent {
     });
   });
 
-  protected readonly summary = computed(() => {
-    const clients = this.clients();
-    return {
-      total: clients.length,
-      natural: clients.filter((client) => client.pessoa.tipo === 'FISICA').length,
-      legal: clients.filter((client) => client.pessoa.tipo === 'JURIDICA').length,
-      active: clients.filter((client) => client.dossier.status === 'active').length,
-    };
-  });
-
   protected readonly activeFilterCount = computed(
     () =>
       [
@@ -198,36 +216,55 @@ export class ClientsPageComponent {
       ].filter(Boolean).length,
   );
 
-  protected readonly tableStatus = computed(() => ({
-    visible: this.displayedClients().length,
-    filtered: this.filteredClients().length,
-    total: this.clients().length,
-  }));
-
   constructor() {
-    this.reloadList();
-  }
+    // Uma requisição por combinação de página + tipo (únicos filtros do endpoint).
+    // `refreshTick` força recarregar após salvar/apagar.
+    const query = computed(() => ({
+      page: this.pageIndex(),
+      tipo: this.tipoFilter(),
+      tick: this.refreshTick(),
+    }));
 
-  protected reloadList(): void {
-    this.store
-      .carregarLista()
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
-        next: (clients) => {
-          const firstOfTab = clients.find((client) => client.pessoa.tipo === this.activeTableTab());
-          this.selectedPersonId.set(firstOfTab?.id ?? clients[0]?.id ?? null);
-          if (this.pageNotice() === 'loadError') {
-            this.pageNotice.set('');
-          }
-        },
-        error: () => this.pageNotice.set('loadError'),
+    toObservable(query)
+      .pipe(
+        distinctUntilChanged(
+          (a, b) => a.page === b.page && a.tipo === b.tipo && a.tick === b.tick,
+        ),
+        switchMap(({ page, tipo }) =>
+          this.store.carregar({ page, tipo }).pipe(
+            catchError(() => {
+              this.pageNotice.set('loadError');
+              return EMPTY;
+            }),
+          ),
+        ),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe(() => {
+        if (this.pageNotice() === 'loadError') {
+          this.pageNotice.set('');
+        }
       });
   }
 
-  protected setTableTab(tab: TipoPessoa): void {
+  protected reloadList(): void {
+    this.refreshTick.update((tick) => tick + 1);
+  }
+
+  protected setTableTab(tab: TableTab): void {
+    if (this.activeTableTab() === tab) {
+      return;
+    }
     this.activeTableTab.set(tab);
-    const firstOfTab = this.clients().find((client) => client.pessoa.tipo === tab);
-    this.selectClient(firstOfTab ?? null);
+    this.pageIndex.set(0);
+  }
+
+  protected goToPage(delta: number): void {
+    const next = this.pageIndex() + delta;
+    if (next < 0 || next >= this.pageCount()) {
+      return;
+    }
+    this.pageIndex.set(next);
   }
 
   protected togglePanel(): void {
@@ -276,16 +313,22 @@ export class ClientsPageComponent {
 
   protected onSaved(client: IClient): void {
     this.selectedPersonId.set(client.id);
-    this.activeTableTab.set(client.pessoa.tipo);
+    if (this.activeTableTab() !== 'ALL' && this.activeTableTab() !== client.pessoa.tipo) {
+      this.activeTableTab.set(client.pessoa.tipo);
+    }
+    this.pageIndex.set(0);
+    this.reloadList();
   }
 
   protected onRemovedOrCleared(): void {
     this.selectedPersonId.set(null);
+    this.reloadList();
   }
 
   protected clearSearchAndFilters(): void {
     this.searchText.set('');
     this.filters.set({ status: '', hiringMode: '', internalOwner: '' });
+    this.pageIndex.set(0);
     this.pageNotice.set('filtersCleared');
     this.showMoreActions.set(false);
   }
@@ -301,6 +344,7 @@ export class ClientsPageComponent {
   }
 
   protected updateSearch(event: Event): void {
+    // Busca é client-side (só a página carregada) — não reinicia a paginação.
     this.searchText.set((event.target as HTMLInputElement).value);
   }
 

@@ -1,7 +1,7 @@
 <div class="clients" [class.clients--panel-hidden]="!panelVisible()">
   <app-pessoa-form
     [pessoaId]="selectedPersonId()"
-    [novoTipo]="activeTableTab()"
+    [novoTipo]="novoTipoPadrao()"
     (saved)="onSaved($event)"
     (removed)="onRemovedOrCleared()"
     (cleared)="onRemovedOrCleared()"
@@ -65,7 +65,7 @@
         <input
           type="search"
           [value]="searchText()"
-          placeholder='nome, CPF, CNPJ, pasta ou "termo exato"'
+          placeholder='nesta página: nome, CPF, CNPJ ou "termo exato"'
           (input)="updateSearch($event)"
         />
       </label>
@@ -192,20 +192,32 @@
 
     <div class="clients-summary" aria-label="Resumo de clientes">
       <div>
-        <span>Total</span>
-        <strong>{{ summary().total }}</strong>
+        <span>
+          @switch (activeTableTab()) {
+            @case ('FISICA') {
+              Pessoas físicas
+            }
+            @case ('JURIDICA') {
+              Pessoas jurídicas
+            }
+            @default {
+              Clientes cadastrados
+            }
+          }
+        </span>
+        <strong>{{ totalClients() }}</strong>
       </div>
       <div>
-        <span>Pessoa física</span>
-        <strong>{{ summary().natural }}</strong>
+        <span>Nesta página</span>
+        <strong>{{ displayedClients().length }}</strong>
       </div>
       <div>
-        <span>Pessoa jurídica</span>
-        <strong>{{ summary().legal }}</strong>
+        <span>Página</span>
+        <strong>{{ currentPageLabel() }} / {{ pageCount() }}</strong>
       </div>
       <div>
-        <span>Ativos</span>
-        <strong>{{ summary().active }}</strong>
+        <span>Filtros ativos</span>
+        <strong>{{ activeFilterCount() }}</strong>
       </div>
     </div>
 
@@ -216,7 +228,17 @@
           [class.is-active]="activeTableTab() === tab"
           (click)="setTableTab(tab)"
         >
-          {{ tab === 'FISICA' ? 'Pessoa física' : 'Pessoa jurídica' }}
+          @switch (tab) {
+            @case ('ALL') {
+              Todos
+            }
+            @case ('FISICA') {
+              Pessoa física
+            }
+            @case ('JURIDICA') {
+              Pessoa jurídica
+            }
+          }
         </button>
       }
     </nav>
@@ -356,8 +378,30 @@
     </div>
 
     <footer class="clients-main__footer">
-      {{ tableStatus().visible }} cliente(s) exibido(s) | {{ tableStatus().filtered }} filtrado(s) |
-      {{ tableStatus().total }} na base
+      <div class="clients-pagination">
+        <button
+          type="button"
+          class="clients-menu-button"
+          [disabled]="!canGoPrev()"
+          (click)="goToPage(-1)"
+        >
+          <i class="fa-solid fa-chevron-left" aria-hidden="true"></i>
+          Anterior
+        </button>
+        <span>Página {{ currentPageLabel() }} de {{ pageCount() }}</span>
+        <button
+          type="button"
+          class="clients-menu-button"
+          [disabled]="!canGoNext()"
+          (click)="goToPage(1)"
+        >
+          Próxima
+          <i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
+        </button>
+        <span class="clients-pagination__total">
+          {{ totalClients() }} cliente(s){{ activeTableTab() === 'ALL' ? ' cadastrado(s)' : ' no tipo' }}
+        </span>
+      </div>
       @switch (pageNotice()) {
         @case ('filtersCleared') {
           <span>· Busca e filtros limpos.</span>

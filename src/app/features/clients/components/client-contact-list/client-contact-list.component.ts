@@ -37,7 +37,14 @@ export class ClientContactListComponent {
     }
   }
 
+  /** Marca como principal e move para o topo da lista. */
   protected makePrimary(index: number): void {
-    this.array().controls.forEach((group, i) => group.controls.principal.setValue(i === index));
+    const array = this.array();
+    if (index > 0) {
+      const group = array.at(index);
+      array.removeAt(index);
+      array.insert(0, group);
+    }
+    array.controls.forEach((group, i) => group.controls.principal.setValue(i === 0));
   }
 }

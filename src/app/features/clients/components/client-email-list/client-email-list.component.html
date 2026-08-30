@@ -4,7 +4,7 @@
     <button type="button" (click)="add()">+ E-mail</button>
   </div>
 
-  @for (group of array().controls; track $index; let i = $index) {
+  @for (group of array().controls; track group; let i = $index) {
     <div class="clients-contact-list__line" [formGroup]="group">
       <button
         type="button"

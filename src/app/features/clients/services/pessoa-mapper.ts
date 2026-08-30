@@ -51,12 +51,12 @@ export function pessoaRespToClient(res: PessoaRespApi, currentUser: CurrentUser 
     pessoa: {
       tipo: res.tipo,
       endereco: enderecoFromApi(res.endereco),
-      emails: (res.emails ?? []).map((e) => ({ endereco: e.endereco, principal: e.principal })),
-      contatos: (res.contatos ?? []).map((c) => ({
-        valor: c.valor,
-        tipo: c.tipo,
-        principal: c.principal,
-      })),
+      emails: principalPrimeiro(
+        (res.emails ?? []).map((e) => ({ endereco: e.endereco, principal: e.principal })),
+      ),
+      contatos: principalPrimeiro(
+        (res.contatos ?? []).map((c) => ({ valor: c.valor, tipo: c.tipo, principal: c.principal })),
+      ),
       nome: res.nome ?? '',
       cpf: maskCpf(res.cpf ?? ''),
       rg: res.rg ?? '',
@@ -124,13 +124,18 @@ function representanteFromApi(r: RepresentanteRespApi): IRepresentanteLegal {
     cpf: maskCpf(r.cpf ?? ''),
     cargo: r.cargo ?? '',
     endereco: enderecoFromApi(r.endereco),
-    emails: (r.emails ?? []).map((e) => ({ endereco: e.endereco, principal: e.principal })),
-    contatos: (r.contatos ?? []).map((c) => ({
-      valor: c.valor,
-      tipo: c.tipo,
-      principal: c.principal,
-    })),
+    emails: principalPrimeiro(
+      (r.emails ?? []).map((e) => ({ endereco: e.endereco, principal: e.principal })),
+    ),
+    contatos: principalPrimeiro(
+      (r.contatos ?? []).map((c) => ({ valor: c.valor, tipo: c.tipo, principal: c.principal })),
+    ),
   };
+}
+
+/** Ordena com o item `principal` no topo; `Array.sort` é estável, então o resto mantém a ordem. */
+function principalPrimeiro<T extends { principal: boolean }>(items: T[]): T[] {
+  return [...items].sort((a, b) => Number(b.principal) - Number(a.principal));
 }
 
 // ===================== IPessoa -> Request =====================

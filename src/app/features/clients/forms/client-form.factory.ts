@@ -230,9 +230,15 @@ export function patchClientForm(form: ClientForm, client: IPessoa): void {
   pessoa.controls.endereco.patchValue(source.endereco, { emitEvent: false });
   form.controls.dossier.patchValue(client.dossier, { emitEvent: false });
 
-  fillFormArray(pessoa.controls.emails, source.emails, createEmailGroup);
-  fillFormArray(pessoa.controls.contatos, source.contatos, createContatoGroup);
-  fillFormArray(pessoa.controls.representantes, source.representantes, createRepresentanteGroup);
+  // `setControl` (em vez de limpar/reencher no lugar) troca a referência do
+  // `FormArray` — assim o `[array]` dos editores `client-*` (OnPush) muda e eles
+  // re-renderizam a lista da pessoa recém-carregada.
+  pessoa.setControl('emails', new FormArray(source.emails.map((e) => createEmailGroup(e))));
+  pessoa.setControl('contatos', new FormArray(source.contatos.map((c) => createContatoGroup(c))));
+  pessoa.setControl(
+    'representantes',
+    new FormArray(source.representantes.map((r) => createRepresentanteGroup(r))),
+  );
 
   setTipoPessoa(form, source.tipo);
   form.markAsPristine();
@@ -256,15 +262,3 @@ export function readClientForm(form: ClientForm): ClientEditableFields {
   };
 }
 
-function fillFormArray<T, G extends FormGroup>(
-  array: FormArray<G>,
-  items: readonly T[],
-  make: (item: T) => G,
-): void {
-  array.clear({ emitEvent: false });
-  for (const item of items) {
-    array.push(make(item), { emitEvent: false });
-  }
-  // Emite uma vez para os editores de lista (OnPush) reagirem à reconstrução.
-  array.updateValueAndValidity();
-}

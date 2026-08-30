@@ -121,6 +121,7 @@ export interface PessoaRespApi {
   representantes?: RepresentanteRespApi[];
   // comum
   favorito?: boolean;
+  // Andamentos: o backend (`PessoaFisicaResponse`/`PessoaJuridicaResponse`) manda na raiz.
   registro_andamento?: string | null;
   historico_andamentos?: string | null;
   endereco: EnderecoApi | null;

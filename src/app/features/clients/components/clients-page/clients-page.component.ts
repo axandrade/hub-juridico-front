@@ -6,55 +6,52 @@ import {
   inject,
   signal,
 } from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
+import { ReactiveFormsModule } from '@angular/forms';
+import { map, startWith } from 'rxjs';
 
 import {
-  BRAZILIAN_STATES,
-  CLIENT_CITIES,
   CLIENT_HIRING_MODES,
-  CLIENT_MARITAL_STATUSES,
-  CLIENT_NATURES,
   CLIENT_STATUSES,
   ClientHiringMode,
-  ClientNature,
   ClientStatus,
   IClient,
+  ILegalRepresentative,
+  PERSON_TYPES,
+  PersonType,
+  emptyAddress,
+  emptyDossier,
+  emptyLegalPerson,
+  emptyNaturalPerson,
+  primaryContact,
+  primaryEmail,
 } from '../../../../core/models';
 import { DataService } from '../../../../core/services/data.service';
 import { ButtonComponent } from '../../../../shared/components/button/button.component';
+import {
+  ClientForm,
+  createClientForm,
+  patchClientForm,
+  readClientForm,
+  setPersonType,
+} from '../../forms/client-form.factory';
+import { ClientAdminFormComponent } from '../client-admin-form/client-admin-form.component';
+import { ClientPersonFormComponent } from '../client-person-form/client-person-form.component';
 
-type StringKeys<T> = {
-  [K in keyof T]-?: T[K] extends string ? K : never;
-}[keyof T];
-
-type ClientStringField = StringKeys<IClient>;
-type ClientListField =
-  | 'additionalIndividualEmails'
-  | 'additionalIndividualPhones'
-  | 'additionalCompanyEmails'
-  | 'additionalCompanyPhones'
-  | 'additionalRepresentativeEmails'
-  | 'additionalRepresentativePhones';
 type ClientColumnKey =
-  | 'legalNature'
-  | 'individualName'
-  | 'companyLegalName'
-  | 'cpf'
-  | 'cnpj'
-  | 'individualEmail'
-  | 'companyEmail'
-  | 'individualWhatsapp'
-  | 'companyWhatsapp'
+  | 'personType'
+  | 'name'
+  | 'document'
+  | 'email'
+  | 'phone'
   | 'status'
   | 'folder'
   | 'file'
   | 'registeredBy'
   | 'hiringMode'
   | 'internalOwner';
-type PanelTab = ClientNature | 'admin' | 'records' | 'files';
-type InputKind = 'text' | 'email' | 'tel' | 'select' | 'textarea' | 'readonly';
+type PanelTab = 'admin' | 'person' | 'records' | 'files';
 type SortDirection = 'asc' | 'desc';
-type RepresentativeField = keyof RepresentativeDraft;
 type NoticeKey =
   | 'selectOrCreate'
   | 'panelLocked'
@@ -77,23 +74,10 @@ type NoticeKey =
   | 'selectForLinkedProcesses'
   | 'shareReady'
   | 'importReady'
-  | 'individualNameRequired'
-  | 'companyNameRequired'
+  | 'naturalNameRequired'
+  | 'legalNameRequired'
   | 'favoriteAdded'
   | 'favoriteRemoved';
-
-interface ClientFieldConfig {
-  key: ClientStringField;
-  type?: InputKind;
-  options?: readonly string[];
-  rows?: number;
-  span?: 'full';
-}
-
-interface ClientContactList {
-  key: ClientListField;
-  inputType: 'email' | 'tel';
-}
 
 interface ClientColumn {
   key: ClientColumnKey;
@@ -119,18 +103,15 @@ interface ClientNotice {
   subject?: string;
 }
 
-interface RepresentativeDraft {
-  name: string;
-  cpf: string;
-  role: string;
-  email: string;
-  phone: string;
-}
-
 @Component({
   selector: 'app-clients-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ButtonComponent],
+  imports: [
+    ButtonComponent,
+    ReactiveFormsModule,
+    ClientPersonFormComponent,
+    ClientAdminFormComponent,
+  ],
   templateUrl: './clients-page.component.html',
   styleUrl: './clients-page.component.scss',
 })
@@ -139,32 +120,33 @@ export class ClientsPageComponent {
   private readonly destroyRef = inject(DestroyRef);
   private readonly defaultUser = 'Lincoln';
   private readonly defaultVisibleColumns: readonly ClientColumnKey[] = [
-    'legalNature',
-    'individualName',
-    'companyLegalName',
-    'cpf',
-    'cnpj',
-    'individualEmail',
-    'companyEmail',
-    'individualWhatsapp',
-    'companyWhatsapp',
+    'personType',
+    'name',
+    'document',
+    'email',
+    'phone',
     'status',
     'folder',
     'file',
     'registeredBy',
   ];
-  private readonly uppercaseFields: readonly ClientStringField[] = [
-    'individualName',
-    'companyLegalName',
-    'companyTradeName',
-    'legalRepresentativeName',
-  ];
+
+  protected readonly form: ClientForm = createClientForm();
+  private readonly formValue = toSignal(
+    this.form.valueChanges.pipe(
+      startWith(null),
+      map(() => this.form.getRawValue()),
+    ),
+    { requireSync: true },
+  );
 
   protected readonly clients = signal<IClient[]>([]);
   protected readonly selectedId = signal<number | null>(null);
-  protected readonly draft = signal<IClient>(this.createEmptyClient('individual'));
-  protected readonly activeTableTab = signal<ClientNature>('individual');
-  protected readonly activePanelTab = signal<PanelTab>('individual');
+  protected readonly entityId = signal(0);
+  protected readonly registeredAt = signal(new Date());
+  protected readonly favorite = signal(false);
+  protected readonly activeTableTab = signal<PersonType>('NATURAL');
+  protected readonly activePanelTab = signal<PanelTab>('person');
   protected readonly panelVisible = signal(true);
   protected readonly panelLocked = signal(false);
   protected readonly showFilters = signal(false);
@@ -185,141 +167,32 @@ export class ClientsPageComponent {
   });
   protected readonly notice = signal<ClientNotice>({ key: 'selectOrCreate' });
 
-  protected readonly natureOptions = CLIENT_NATURES;
+  protected readonly personTypeOptions = PERSON_TYPES;
   protected readonly statusOptions = CLIENT_STATUSES;
   protected readonly hiringModeOptions = CLIENT_HIRING_MODES;
-  protected readonly maritalStatusOptions = CLIENT_MARITAL_STATUSES;
-  protected readonly stateOptions = BRAZILIAN_STATES;
-  protected readonly cityOptions = CLIENT_CITIES;
-  protected readonly tableTabs: readonly ClientNature[] = CLIENT_NATURES;
-  protected readonly panelTabs: readonly PanelTab[] = [
-    'admin',
-    'individual',
-    'company',
-    'records',
-    'files',
-  ];
+  protected readonly tableTabs: readonly PersonType[] = PERSON_TYPES;
+  protected readonly panelTabs: readonly PanelTab[] = ['admin', 'person', 'records', 'files'];
 
   protected readonly clientColumns: readonly ClientColumn[] = [
+    { key: 'personType', width: '138px', getter: (client) => client.personType },
+    { key: 'name', width: '240px', getter: (client) => this.clientDisplayName(client) },
     {
-      key: 'legalNature',
-      width: '148px',
-      getter: (client) => client.legalNature,
+      key: 'document',
+      width: '170px',
+      getter: (client) =>
+        client.personType === 'NATURAL' ? client.naturalPerson.cpf : client.legalPerson.cnpj,
     },
-    { key: 'individualName', width: '210px', getter: (client) => client.individualName },
-    {
-      key: 'companyLegalName',
-      width: '230px',
-      getter: (client) => client.companyLegalName,
-    },
-    { key: 'cpf', width: '140px', getter: (client) => client.cpf },
-    { key: 'cnpj', width: '160px', getter: (client) => client.cnpj },
-    { key: 'individualEmail', width: '220px', getter: (client) => client.individualEmail },
-    { key: 'companyEmail', width: '220px', getter: (client) => client.companyEmail },
-    {
-      key: 'individualWhatsapp',
-      width: '150px',
-      getter: (client) => client.individualWhatsapp,
-    },
-    {
-      key: 'companyWhatsapp',
-      width: '150px',
-      getter: (client) => client.companyWhatsapp,
-    },
-    {
-      key: 'status',
-      width: '110px',
-      align: 'center',
-      getter: (client) => client.status,
-    },
-    { key: 'folder', width: '260px', getter: (client) => client.folder },
-    { key: 'file', width: '180px', getter: (client) => client.file },
-    {
-      key: 'registeredBy',
-      width: '145px',
-      getter: (client) => client.registeredBy,
-    },
-    {
-      key: 'hiringMode',
-      width: '145px',
-      getter: (client) => client.hiringMode,
-    },
-    {
-      key: 'internalOwner',
-      width: '155px',
-      getter: (client) => client.internalOwner,
-    },
+    { key: 'email', width: '230px', getter: (client) => primaryEmail(client.emails) },
+    { key: 'phone', width: '160px', getter: (client) => primaryContact(client.contacts) },
+    { key: 'status', width: '110px', align: 'center', getter: (client) => client.dossier.status },
+    { key: 'folder', width: '260px', getter: (client) => client.dossier.folder },
+    { key: 'file', width: '180px', getter: (client) => client.dossier.file },
+    { key: 'registeredBy', width: '150px', getter: (client) => client.dossier.registeredBy },
+    { key: 'hiringMode', width: '150px', getter: (client) => client.dossier.hiringMode },
+    { key: 'internalOwner', width: '160px', getter: (client) => client.dossier.internalOwner },
   ];
 
-  protected readonly individualFields: readonly (readonly ClientFieldConfig[])[] = [
-    [{ key: 'individualName' }, { key: 'cpf' }],
-    [
-      { key: 'identityNumber' },
-      { key: 'maritalStatus', type: 'select', options: this.maritalStatusOptions },
-    ],
-    [{ key: 'occupation' }, { key: 'nationality' }],
-    [
-      { key: 'individualEmail', type: 'email' },
-      { key: 'individualWhatsapp', type: 'tel' },
-    ],
-    [{ key: 'individualStreet' }, { key: 'individualNumber' }],
-    [{ key: 'individualComplement' }, { key: 'individualDistrict' }],
-    [
-      { key: 'individualState', type: 'select', options: this.stateOptions },
-      { key: 'individualCity', type: 'select', options: this.cityOptions },
-      { key: 'individualZipCode' },
-    ],
-    [{ key: 'individualNotes', type: 'textarea', rows: 3, span: 'full' }],
-  ];
-
-  protected readonly individualContactLists: readonly ClientContactList[] = [
-    { key: 'additionalIndividualEmails', inputType: 'email' },
-    { key: 'additionalIndividualPhones', inputType: 'tel' },
-  ];
-
-  protected readonly companyFields: readonly (readonly ClientFieldConfig[])[] = [
-    [{ key: 'companyLegalName' }, { key: 'companyTradeName' }],
-    [{ key: 'cnpj' }, { key: 'stateRegistration' }, { key: 'municipalRegistration' }],
-    [
-      { key: 'companyEmail', type: 'email' },
-      { key: 'companyWhatsapp', type: 'tel' },
-    ],
-    [{ key: 'companyStreet' }, { key: 'companyNumber' }],
-    [{ key: 'companyComplement' }, { key: 'companyDistrict' }],
-    [
-      { key: 'companyState', type: 'select', options: this.stateOptions },
-      { key: 'companyCity', type: 'select', options: this.cityOptions },
-      { key: 'companyZipCode' },
-    ],
-    [{ key: 'companyNotes', type: 'textarea', rows: 3, span: 'full' }],
-  ];
-
-  protected readonly companyContactLists: readonly ClientContactList[] = [
-    { key: 'additionalCompanyEmails', inputType: 'email' },
-    { key: 'additionalCompanyPhones', inputType: 'tel' },
-  ];
-
-  protected readonly representativeFields: readonly (readonly ClientFieldConfig[])[] = [
-    [{ key: 'legalRepresentativeName' }, { key: 'legalRepresentativeCpf' }],
-    [{ key: 'legalRepresentativeRole' }, { key: 'legalRepresentativeEmail', type: 'email' }],
-    [{ key: 'legalRepresentativeWhatsapp', type: 'tel' }],
-  ];
-
-  protected readonly representativeContactLists: readonly ClientContactList[] = [
-    { key: 'additionalRepresentativeEmails', inputType: 'email' },
-    { key: 'additionalRepresentativePhones', inputType: 'tel' },
-  ];
-
-  protected readonly adminFields: readonly (readonly ClientFieldConfig[])[] = [
-    [
-      { key: 'status', type: 'select', options: this.statusOptions },
-      { key: 'hiringMode', type: 'select', options: this.hiringModeOptions },
-    ],
-    [{ key: 'folder', type: 'readonly' }, { key: 'file' }],
-    [{ key: 'registeredBy', type: 'readonly' }, { key: 'contractNumber' }, { key: 'contractDate' }],
-    [{ key: 'referredBy' }, { key: 'internalOwner' }],
-    [{ key: 'notes', type: 'textarea', rows: 4, span: 'full' }],
-  ];
+  protected readonly currentPersonType = computed<PersonType>(() => this.formValue().personType);
 
   protected readonly displayedColumns = computed(() => {
     const visible = this.visibleColumnKeys();
@@ -332,21 +205,23 @@ export class ClientsPageComponent {
     const searchTerms = this.parseSearchTerms(this.searchText());
 
     return this.clients().filter((client) => {
-      if (client.legalNature !== activeTab) {
+      if (client.personType !== activeTab) {
         return false;
       }
 
-      if (filters.status && client.status !== filters.status) {
+      if (filters.status && client.dossier.status !== filters.status) {
         return false;
       }
 
-      if (filters.hiringMode && client.hiringMode !== filters.hiringMode) {
+      if (filters.hiringMode && client.dossier.hiringMode !== filters.hiringMode) {
         return false;
       }
 
       if (
         filters.internalOwner.trim() &&
-        !this.normalizeKey(client.internalOwner).includes(this.normalizeKey(filters.internalOwner))
+        !this.normalizeKey(client.dossier.internalOwner).includes(
+          this.normalizeKey(filters.internalOwner),
+        )
       ) {
         return false;
       }
@@ -377,22 +252,22 @@ export class ClientsPageComponent {
     });
   });
 
-  protected readonly selectedClient = computed(() => {
-    const selectedId = this.selectedId();
-    return selectedId ? (this.clients().find((client) => client.id === selectedId) ?? null) : null;
-  });
-
   protected readonly summary = computed(() => {
     const clients = this.clients();
     return {
       total: clients.length,
-      individual: clients.filter((client) => client.legalNature === 'individual').length,
-      company: clients.filter((client) => client.legalNature === 'company').length,
-      active: clients.filter((client) => client.status === 'active').length,
+      natural: clients.filter((client) => client.personType === 'NATURAL').length,
+      legal: clients.filter((client) => client.personType === 'LEGAL').length,
+      active: clients.filter((client) => client.dossier.status === 'active').length,
     };
   });
 
-  protected readonly panelTitle = computed(() => this.clientDisplayName(this.draft()));
+  protected readonly panelTitle = computed(() => {
+    const value = this.formValue();
+    return value.personType === 'NATURAL'
+      ? value.naturalPerson.name.trim()
+      : (value.legalPerson.legalName || value.legalPerson.tradeName).trim();
+  });
 
   protected readonly activeFilterCount = computed(
     () =>
@@ -411,31 +286,24 @@ export class ClientsPageComponent {
   }));
 
   protected readonly panelFiles = computed<ClientFileRow[]>(() => {
-    const draft = this.draft();
+    const dossier = this.formValue().dossier;
+    const registeredAt = this.registeredAt();
     const search = this.normalizeKey(this.fileSearch());
     const rows: ClientFileRow[] = [];
 
-    if (draft.folder) {
-      rows.push({
-        name: draft.folder,
-        kind: 'folder',
-        updatedAt: this.formatDate(draft.registeredAt),
-      });
+    if (dossier.folder) {
+      rows.push({ name: dossier.folder, kind: 'folder', updatedAt: this.formatDate(registeredAt) });
     }
 
-    if (draft.file) {
-      rows.push({
-        name: draft.file,
-        kind: 'mainFile',
-        updatedAt: this.formatDate(draft.registeredAt),
-      });
+    if (dossier.file) {
+      rows.push({ name: dossier.file, kind: 'mainFile', updatedAt: this.formatDate(registeredAt) });
     }
 
-    if (draft.contractNumber) {
+    if (dossier.contractNumber) {
       rows.push({
-        name: draft.contractNumber,
+        name: dossier.contractNumber,
         kind: 'contract',
-        updatedAt: draft.contractDate || this.formatDate(draft.registeredAt),
+        updatedAt: dossier.contractDate || this.formatDate(registeredAt),
       });
     }
 
@@ -453,7 +321,7 @@ export class ClientsPageComponent {
         this.clients.set(cloned);
 
         const firstClient =
-          cloned.find((client) => client.legalNature === this.activeTableTab()) ?? cloned[0];
+          cloned.find((client) => client.personType === this.activeTableTab()) ?? cloned[0];
 
         if (firstClient) {
           this.selectClient(firstClient);
@@ -464,10 +332,10 @@ export class ClientsPageComponent {
       });
   }
 
-  protected setTableTab(tab: ClientNature): void {
+  protected setTableTab(tab: PersonType): void {
     this.activeTableTab.set(tab);
 
-    const firstClient = this.clients().find((client) => client.legalNature === tab);
+    const firstClient = this.clients().find((client) => client.personType === tab);
     if (firstClient) {
       this.selectClient(firstClient);
       return;
@@ -478,10 +346,6 @@ export class ClientsPageComponent {
 
   protected setPanelTab(tab: PanelTab): void {
     this.activePanelTab.set(tab);
-
-    if (this.isNature(tab)) {
-      this.setNature(tab);
-    }
   }
 
   protected togglePanel(): void {
@@ -494,17 +358,16 @@ export class ClientsPageComponent {
   }
 
   protected toggleFavorite(): void {
-    const id = this.draft().id;
-    this.draft.update((draft) => ({ ...draft, favorite: !draft.favorite }));
+    const next = !this.favorite();
+    this.favorite.set(next);
 
+    const id = this.entityId();
     if (!id) {
       return;
     }
 
     this.clients.update((clients) =>
-      clients.map((client) =>
-        client.id === id ? { ...client, favorite: !client.favorite } : client,
-      ),
+      clients.map((client) => (client.id === id ? { ...client, favorite: next } : client)),
     );
   }
 
@@ -516,8 +379,8 @@ export class ClientsPageComponent {
       clients.map((item) => (item.id === client.id ? { ...item, favorite } : item)),
     );
 
-    if (this.draft().id === client.id) {
-      this.draft.update((draft) => ({ ...draft, favorite }));
+    if (this.entityId() === client.id) {
+      this.favorite.set(favorite);
     }
 
     this.notice.set({
@@ -526,12 +389,12 @@ export class ClientsPageComponent {
     });
   }
 
-  protected newRecord(nature: ClientNature = this.activeTableTab()): void {
+  protected newRecord(personType: PersonType = this.activeTableTab()): void {
     this.selectedId.set(null);
+    this.loadIntoForm(this.createEmptyClient(personType));
     this.panelVisible.set(true);
-    this.activePanelTab.set(nature);
-    this.activeTableTab.set(nature);
-    this.draft.set(this.createEmptyClient(nature));
+    this.activePanelTab.set('person');
+    this.activeTableTab.set(personType);
     this.notice.set({ key: 'newClientStarted' });
   }
 
@@ -542,8 +405,8 @@ export class ClientsPageComponent {
     }
 
     this.selectedId.set(client.id);
-    this.draft.set(this.cloneClient(client));
-    this.activePanelTab.set(client.legalNature);
+    this.loadIntoForm(client);
+    this.activePanelTab.set('person');
     this.panelVisible.set(true);
     this.notice.set({ key: 'loaded', subject: this.clientDisplayName(client) });
   }
@@ -551,11 +414,16 @@ export class ClientsPageComponent {
   protected saveClient(event?: Event): void {
     event?.preventDefault();
 
-    const prepared = this.prepareClientForSave(this.draft());
-    if (!prepared) {
+    if (this.form.invalid) {
+      this.form.markAllAsTouched();
+      this.notice.set({
+        key: this.currentPersonType() === 'LEGAL' ? 'legalNameRequired' : 'naturalNameRequired',
+      });
+      this.activePanelTab.set('person');
       return;
     }
 
+    const prepared = this.prepareClientForSave(this.assembleClient());
     const isExisting =
       prepared.id > 0 && this.clients().some((client) => client.id === prepared.id);
     const savedClient: IClient = {
@@ -572,20 +440,19 @@ export class ClientsPageComponent {
         : [this.cloneClient(savedClient), ...clients],
     );
     this.selectedId.set(savedClient.id);
-    this.activeTableTab.set(savedClient.legalNature);
-    this.activePanelTab.set(savedClient.legalNature);
-    this.draft.set(this.cloneClient(savedClient));
+    this.activeTableTab.set(savedClient.personType);
+    this.activePanelTab.set('person');
+    this.loadIntoForm(savedClient);
     this.notice.set({ key: 'saved', subject: this.clientDisplayName(savedClient) });
   }
 
   protected requestDeleteClient(): void {
-    const selectedId = this.selectedId();
-    if (!selectedId) {
+    if (!this.selectedId()) {
       this.notice.set({ key: 'selectToDelete' });
       return;
     }
 
-    this.notice.set({ key: 'confirmDelete', subject: this.clientDisplayName(this.draft()) });
+    this.notice.set({ key: 'confirmDelete', subject: this.panelTitle() });
   }
 
   protected deleteClient(): void {
@@ -634,90 +501,10 @@ export class ClientsPageComponent {
     });
   }
 
-  protected updateField(field: ClientStringField, event: Event): void {
-    this.setDraftField(
-      field,
-      (event.target as HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement).value,
-    );
-  }
-
-  protected setNature(nature: ClientNature): void {
-    this.draft.update((draft) => ({ ...draft, legalNature: nature }));
-    this.activeTableTab.set(nature);
-    this.activePanelTab.set(nature);
-  }
-
-  protected isNature(value: PanelTab): value is ClientNature {
-    return value === 'individual' || value === 'company';
-  }
-
-  protected fieldValue(field: ClientStringField): string {
-    return this.draft()[field];
-  }
-
-  protected fieldOptions(field: ClientFieldConfig): readonly string[] {
-    return field.options ?? [];
-  }
-
-  protected listFieldLines(field: ClientListField): string[] {
-    return this.draft()[field].split('\n');
-  }
-
-  protected addContactLine(field: ClientListField): void {
-    const lines = this.listFieldLines(field);
-    this.setListFieldLines(field, [...lines, '']);
-  }
-
-  protected updateContactLine(field: ClientListField, index: number, event: Event): void {
-    const lines = this.listFieldLines(field);
-    lines[index] = (event.target as HTMLInputElement).value;
-    this.setListFieldLines(field, lines);
-  }
-
-  protected removeContactLine(field: ClientListField, index: number): void {
-    const lines = this.listFieldLines(field);
-
-    if (lines.length <= 1) {
-      this.setDraftField(field, '');
-      return;
-    }
-
-    lines.splice(index, 1);
-    this.setListFieldLines(field, lines);
-  }
-
-  protected representativeRows(): RepresentativeDraft[] {
-    return this.parseRepresentatives(this.draft().additionalRepresentatives);
-  }
-
-  protected addRepresentative(): void {
-    const representatives = this.representativeRows();
-    representatives.push({ name: '', cpf: '', role: '', email: '', phone: '' });
-    this.setDraftField(
-      'additionalRepresentatives',
-      this.serializeRepresentatives(representatives, true),
-    );
-  }
-
-  protected updateRepresentative(index: number, field: RepresentativeField, event: Event): void {
-    const representatives = this.representativeRows();
-    representatives[index] = {
-      ...representatives[index],
-      [field]: (event.target as HTMLInputElement).value,
-    };
-    this.setDraftField(
-      'additionalRepresentatives',
-      this.serializeRepresentatives(representatives, true),
-    );
-  }
-
-  protected removeRepresentative(index: number): void {
-    const representatives = this.representativeRows();
-    representatives.splice(index, 1);
-    this.setDraftField(
-      'additionalRepresentatives',
-      this.serializeRepresentatives(representatives, true),
-    );
+  protected setPersonType(personType: PersonType): void {
+    setPersonType(this.form, personType);
+    this.activeTableTab.set(personType);
+    this.activePanelTab.set('person');
   }
 
   protected toggleFilters(): void {
@@ -778,7 +565,7 @@ export class ClientsPageComponent {
   }
 
   protected rowStatusClass(client: IClient): string {
-    return `clients-table__status clients-table__status--${client.status}`;
+    return `clients-table__status clients-table__status--${client.dossier.status}`;
   }
 
   protected columnClass(column: ClientColumn): string {
@@ -797,19 +584,19 @@ export class ClientsPageComponent {
   }
 
   protected openFolder(): void {
-    const folder = this.draft().folder;
+    const folder = this.form.controls.dossier.controls.folder.value;
     this.notice.set({ key: folder ? 'folderReady' : 'saveToCreateFolder', subject: folder });
     this.showMoreActions.set(false);
   }
 
   protected openFile(): void {
-    const file = this.draft().file || this.selectedFileName();
+    const file = this.form.controls.dossier.controls.file.value || this.selectedFileName();
     this.notice.set({ key: file ? 'fileReady' : 'noLinkedFile', subject: file });
     this.showMoreActions.set(false);
   }
 
   protected showLinkedProcesses(): void {
-    const name = this.clientDisplayName(this.draft());
+    const name = this.panelTitle();
     this.notice.set({
       key: name ? 'linkedProcesses' : 'selectForLinkedProcesses',
       subject: name,
@@ -836,137 +623,77 @@ export class ClientsPageComponent {
     return id.toString().padStart(6, '0');
   }
 
-  private prepareClientForSave(client: IClient): IClient | null {
+  private loadIntoForm(client: IClient): void {
+    this.entityId.set(client.id);
+    this.registeredAt.set(new Date(client.registeredAt));
+    this.favorite.set(client.favorite);
+    patchClientForm(this.form, client);
+  }
+
+  private assembleClient(): IClient {
+    return {
+      ...readClientForm(this.form),
+      id: this.entityId(),
+      registeredAt: this.registeredAt(),
+      favorite: this.favorite(),
+    };
+  }
+
+  private prepareClientForSave(client: IClient): IClient {
     const base = this.cloneClient(client);
 
-    for (const field of this.uppercaseFields) {
-      const current = base[field];
-      (base as Record<ClientStringField, string>)[field] = this.toUppercaseName(current);
-    }
-
-    base.status = base.status || 'active';
-    base.registeredBy = base.registeredBy.trim() || this.defaultUser;
-    base.internalOwner = base.internalOwner.trim() || this.defaultUser;
-    base.additionalIndividualEmails = this.cleanLines(base.additionalIndividualEmails).join('\n');
-    base.additionalIndividualPhones = this.cleanLines(base.additionalIndividualPhones).join('\n');
-    base.additionalCompanyEmails = this.cleanLines(base.additionalCompanyEmails).join('\n');
-    base.additionalCompanyPhones = this.cleanLines(base.additionalCompanyPhones).join('\n');
-    base.additionalRepresentativeEmails = this.cleanLines(base.additionalRepresentativeEmails).join(
-      '\n',
-    );
-    base.additionalRepresentativePhones = this.cleanLines(base.additionalRepresentativePhones).join(
-      '\n',
-    );
-    base.additionalRepresentatives = this.serializeRepresentatives(
-      this.parseRepresentatives(base.additionalRepresentatives),
+    base.naturalPerson.name = this.toUppercaseName(base.naturalPerson.name);
+    base.legalPerson.legalName = this.toUppercaseName(base.legalPerson.legalName);
+    base.legalPerson.tradeName = this.toUppercaseName(base.legalPerson.tradeName);
+    base.legalPerson.representatives = base.legalPerson.representatives.map(
+      (representative): ILegalRepresentative => ({
+        ...representative,
+        name: this.toUppercaseName(representative.name),
+      }),
     );
 
-    if (base.legalNature === 'individual' && !base.individualName.trim()) {
-      this.notice.set({ key: 'individualNameRequired' });
-      this.activePanelTab.set('individual');
-      return null;
+    const dossier = base.dossier;
+    dossier.status = dossier.status || 'active';
+    dossier.registeredBy = dossier.registeredBy.trim() || this.defaultUser;
+    dossier.internalOwner = dossier.internalOwner.trim() || this.defaultUser;
+
+    if (!dossier.folder.trim()) {
+      dossier.folder = this.clientFolderName(base);
     }
 
-    if (base.legalNature === 'company' && !base.companyLegalName.trim()) {
-      this.notice.set({ key: 'companyNameRequired' });
-      this.activePanelTab.set('company');
-      return null;
-    }
-
-    if (!base.folder.trim()) {
-      base.folder = this.clientFolderName(base);
-    }
-
-    const progress = base.progressEntry.trim();
+    const progress = dossier.progressEntry.trim();
     if (progress) {
       const historyLine = `${this.formatDateTime(new Date())} | ${progress}`;
-      base.progressHistory = [base.progressHistory.trim(), historyLine].filter(Boolean).join('\n');
-      base.progressEntry = '';
+      dossier.progressHistory = [dossier.progressHistory.trim(), historyLine]
+        .filter(Boolean)
+        .join('\n');
+      dossier.progressEntry = '';
     }
 
     return base;
   }
 
-  private createEmptyClient(nature: ClientNature): IClient {
+  private createEmptyClient(personType: PersonType): IClient {
     return {
       id: 0,
       registeredAt: new Date(),
-      legalNature: nature,
-      individualName: '',
-      cpf: '',
-      identityNumber: '',
-      maritalStatus: '',
-      occupation: '',
-      nationality: '',
-      individualEmail: '',
-      additionalIndividualEmails: '',
-      individualWhatsapp: '',
-      additionalIndividualPhones: '',
-      individualStreet: '',
-      individualNumber: '',
-      individualComplement: '',
-      individualDistrict: '',
-      individualState: 'CE',
-      individualCity: 'Fortaleza',
-      individualZipCode: '',
-      individualNotes: '',
-      companyLegalName: '',
-      companyTradeName: '',
-      cnpj: '',
-      stateRegistration: '',
-      municipalRegistration: '',
-      companyEmail: '',
-      additionalCompanyEmails: '',
-      companyWhatsapp: '',
-      additionalCompanyPhones: '',
-      companyStreet: '',
-      companyNumber: '',
-      companyComplement: '',
-      companyDistrict: '',
-      companyState: 'CE',
-      companyCity: 'Fortaleza',
-      companyZipCode: '',
-      legalRepresentativeName: '',
-      legalRepresentativeCpf: '',
-      legalRepresentativeRole: '',
-      legalRepresentativeEmail: '',
-      additionalRepresentativeEmails: '',
-      legalRepresentativeWhatsapp: '',
-      additionalRepresentativePhones: '',
-      additionalRepresentatives: '',
-      companyNotes: '',
-      folder: '',
-      file: '',
-      registeredBy: this.defaultUser,
-      status: 'active',
-      contractNumber: '',
-      contractDate: '',
-      hiringMode: '',
-      referredBy: '',
-      internalOwner: this.defaultUser,
-      notes: '',
-      progressEntry: '',
-      progressHistory: '',
       favorite: false,
+      personType,
+      address: emptyAddress(),
+      emails: [],
+      contacts: [],
+      naturalPerson: emptyNaturalPerson(),
+      legalPerson: emptyLegalPerson(),
+      dossier: {
+        ...emptyDossier(),
+        registeredBy: this.defaultUser,
+        internalOwner: this.defaultUser,
+      },
     };
   }
 
   private cloneClient(client: IClient): IClient {
-    return {
-      ...client,
-      registeredAt: new Date(client.registeredAt),
-    };
-  }
-
-  private setDraftField(field: ClientStringField, value: string): void {
-    this.draft.update((draft) => ({
-      ...draft,
-      [field]: value,
-    }));
-  }
-
-  private setListFieldLines(field: ClientListField, lines: string[]): void {
-    this.setDraftField(field, lines.join('\n'));
+    return structuredClone(client);
   }
 
   private parseSearchTerms(value: string): string[] {
@@ -977,22 +704,20 @@ export class ClientsPageComponent {
   private searchableClientText(client: IClient): string {
     return this.normalizeKey(
       [
-        client.legalNature,
-        client.individualName,
-        client.companyLegalName,
-        client.companyTradeName,
-        client.cpf,
-        client.cnpj,
-        client.individualEmail,
-        client.companyEmail,
-        client.individualWhatsapp,
-        client.companyWhatsapp,
-        client.status,
-        client.folder,
-        client.file,
-        client.registeredBy,
-        client.internalOwner,
-        client.hiringMode,
+        client.personType,
+        client.naturalPerson.name,
+        client.naturalPerson.cpf,
+        client.legalPerson.legalName,
+        client.legalPerson.tradeName,
+        client.legalPerson.cnpj,
+        primaryEmail(client.emails),
+        primaryContact(client.contacts),
+        client.dossier.status,
+        client.dossier.folder,
+        client.dossier.file,
+        client.dossier.registeredBy,
+        client.dossier.internalOwner,
+        client.dossier.hiringMode,
       ].join(' '),
     );
   }
@@ -1002,9 +727,9 @@ export class ClientsPageComponent {
   }
 
   private clientDisplayName(client: IClient): string {
-    return client.legalNature === 'individual'
-      ? client.individualName.trim()
-      : (client.companyLegalName || client.companyTradeName).trim();
+    return client.personType === 'NATURAL'
+      ? client.naturalPerson.name.trim()
+      : (client.legalPerson.legalName || client.legalPerson.tradeName).trim();
   }
 
   private nextClientId(): number {
@@ -1027,52 +752,6 @@ export class ClientsPageComponent {
     return value.trim().toLocaleUpperCase('pt-BR');
   }
 
-  private cleanLines(value: string): string[] {
-    return value
-      .split('\n')
-      .map((line) => line.trim())
-      .filter(Boolean);
-  }
-
-  private parseRepresentatives(value: string): RepresentativeDraft[] {
-    return value
-      .split('\n')
-      .filter((line) => line.trim())
-      .map((line) => {
-        const [name = '', cpf = '', role = '', email = '', phone = ''] = line.split('|');
-        return {
-          name: name.trim(),
-          cpf: cpf.trim(),
-          role: role.trim(),
-          email: email.trim(),
-          phone: phone.trim(),
-        };
-      });
-  }
-
-  private serializeRepresentatives(
-    representatives: RepresentativeDraft[],
-    keepEmpty = false,
-  ): string {
-    return representatives
-      .filter(
-        (representative) =>
-          keepEmpty || Object.values(representative).some((value) => value.trim()),
-      )
-      .map((representative) =>
-        [
-          representative.name,
-          representative.cpf,
-          representative.role,
-          representative.email,
-          representative.phone,
-        ]
-          .map((value) => value.trim())
-          .join(' | '),
-      )
-      .join('\n');
-  }
-
   private formatDate(date: Date): string {
     return new Intl.DateTimeFormat('pt-BR').format(date);
   }
@@ -1088,10 +767,6 @@ export class ClientsPageComponent {
   }
 
   private normalizeKey(value: string): string {
-    return value
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .toLowerCase()
-      .trim();
+    return value.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
   }
 }

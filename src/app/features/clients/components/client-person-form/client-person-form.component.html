@@ -1,0 +1,20 @@
+<div class="clients-form__section">
+  @for (row of identityRows(); track $index) {
+    <div class="clients-form__row" [class.clients-form__row--cols-3]="row.length === 3">
+      @for (field of row; track field.key) {
+        <app-client-field [config]="field" [control]="control(field.key)" />
+      }
+    </div>
+  }
+
+  <div class="clients-form__divider"><span>Endereço</span></div>
+  <app-client-address [group]="form().controls.address" />
+
+  <app-client-email-list [array]="form().controls.emails" />
+  <app-client-contact-list [array]="form().controls.contacts" />
+
+  @if (personType() === 'LEGAL') {
+    <div class="clients-form__divider"><span>Representação legal</span></div>
+    <app-client-representatives [array]="form().controls.legalPerson.controls.representatives" />
+  }
+</div>

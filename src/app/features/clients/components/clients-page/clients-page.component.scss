@@ -159,16 +159,6 @@
   overflow: auto;
 }
 
-.clients-form__row {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: $spacing-sm;
-
-  &:has(.clients-field:nth-child(3)) {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-}
-
 .clients-field,
 .clients-form__meta label,
 .clients-search label,
@@ -193,8 +183,7 @@
 .clients-search input,
 .clients-filter-panel input,
 .clients-filter-panel select,
-.clients-files input,
-.clients-representatives input {
+.clients-files input {
   width: 100%;
   min-height: 36px;
   border: 1px solid $color-border;
@@ -233,67 +222,6 @@
     padding: 0 $spacing-xs;
     font-size: $font-size-xs;
   }
-}
-
-.clients-contact-list,
-.clients-representatives {
-  display: flex;
-  flex-direction: column;
-  gap: $spacing-xs;
-  padding: $spacing-sm;
-  border: 1px solid rgba($color-border, 0.7);
-  border-radius: $border-radius-sm;
-  background-color: rgba($color-neutral-light, 0.65);
-}
-
-.clients-contact-list__title {
-  @include flex-between;
-  gap: $spacing-sm;
-  color: $color-text-secondary;
-  font-size: $font-size-xs;
-  font-weight: $font-weight-bold;
-
-  button {
-    min-height: 28px;
-    padding: 0 $spacing-sm;
-    font-size: $font-size-xs;
-  }
-}
-
-.clients-contact-list__line {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 34px;
-  gap: $spacing-xs;
-}
-
-.clients-form__divider {
-  display: flex;
-  align-items: center;
-  gap: $spacing-sm;
-  margin-top: $spacing-xs;
-  color: $color-text-secondary;
-  font-size: $font-size-xs;
-  font-weight: $font-weight-bold;
-  text-transform: uppercase;
-
-  &::after {
-    content: '';
-    flex: 1;
-    height: 1px;
-    background-color: rgba($color-border, 0.85);
-  }
-}
-
-.clients-representatives__row {
-  display: grid;
-  grid-template-columns: repeat(5, minmax(90px, 1fr)) 34px;
-  gap: $spacing-xs;
-}
-
-.clients-representatives p {
-  margin: 0;
-  color: $color-text-muted;
-  font-size: $font-size-xs;
 }
 
 .clients-panel__footer {
@@ -592,12 +520,10 @@
 
 @include respond-below($breakpoint-sm) {
   .clients-form__meta,
-  .clients-form__row,
   .clients-filter-panel,
   .clients-summary,
   .clients-search,
-  .clients-files__toolbar,
-  .clients-representatives__row {
+  .clients-files__toolbar {
     grid-template-columns: 1fr;
   }
 

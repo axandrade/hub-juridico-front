@@ -1,0 +1,38 @@
+<div class="clients-representatives">
+  <div class="clients-contact-list__title">
+    <span>Representantes legais</span>
+    <button type="button" (click)="add()">Adicionar representante</button>
+  </div>
+
+  @for (group of array().controls; track $index; let i = $index) {
+    <div class="clients-representative">
+      <div class="clients-representative__head">
+        <span>Representante {{ i + 1 }}</span>
+        <button
+          type="button"
+          class="clients-icon-button"
+          aria-label="Remover representante"
+          (click)="remove(i)"
+        >
+          <i class="fa-solid fa-trash" aria-hidden="true"></i>
+        </button>
+      </div>
+
+      @for (row of identityRows; track $index) {
+        <div class="clients-form__row" [class.clients-form__row--cols-3]="row.length === 3">
+          @for (field of row; track field.key) {
+            <app-client-field [config]="field" [control]="control(group, field.key)" />
+          }
+        </div>
+      }
+
+      <div class="clients-form__divider"><span>Endereço</span></div>
+      <app-client-address [group]="group.controls.address" />
+
+      <app-client-email-list [array]="group.controls.emails" />
+      <app-client-contact-list [array]="group.controls.contacts" />
+    </div>
+  } @empty {
+    <p class="clients-contact-list__empty">Nenhum representante cadastrado.</p>
+  }
+</div>

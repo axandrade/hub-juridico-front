@@ -1,0 +1,205 @@
+// Estilos compartilhados pelas abas de cadastro de cliente
+// (client-field, client-address, client-email-list, client-contact-list,
+// client-representatives, client-person-form, client-admin-form). Cada
+// componente faz `@use 'client-form';` — o host é `display: contents` para
+// participar direto do layout flex de `.clients-form`.
+@use 'variables' as *;
+@use 'mixins' as *;
+
+:host {
+  display: contents;
+}
+
+.clients-form__section {
+  @include thin-scrollbar;
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  flex-direction: column;
+  gap: $spacing-sm;
+  padding: $spacing-md;
+  overflow: auto;
+}
+
+.clients-form__row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: $spacing-sm;
+}
+
+.clients-form__row--cols-3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.clients-field {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: $spacing-xs;
+  color: $color-text-secondary;
+  font-size: $font-size-xs;
+  font-weight: $font-weight-medium;
+}
+
+.clients-field--full {
+  grid-column: 1 / -1;
+}
+
+.clients-field :where(input, select, textarea),
+.clients-contact-list__line :where(input, select) {
+  width: 100%;
+  min-height: 36px;
+  border: 1px solid $color-border;
+  border-radius: $border-radius-sm;
+  background-color: $color-neutral-light;
+  color: $color-text-primary;
+  font: inherit;
+  outline: none;
+  padding: $spacing-xs $spacing-sm;
+  transition:
+    border-color $transition-fast,
+    box-shadow $transition-fast;
+
+  &:focus {
+    border-color: $color-primary-light;
+    box-shadow: 0 0 0 3px rgba($rouge-light, 0.16);
+  }
+
+  &[readonly] {
+    background-color: rgba($color-primary-pale, 0.2);
+    color: $color-text-muted;
+  }
+}
+
+.clients-field textarea {
+  resize: vertical;
+}
+
+.clients-form__divider {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  margin-top: $spacing-xs;
+  color: $color-text-secondary;
+  font-size: $font-size-xs;
+  font-weight: $font-weight-bold;
+  text-transform: uppercase;
+
+  &::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background-color: rgba($color-border, 0.85);
+  }
+}
+
+.clients-contact-list,
+.clients-representatives {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-xs;
+  padding: $spacing-sm;
+  border: 1px solid rgba($color-border, 0.7);
+  border-radius: $border-radius-sm;
+  background-color: rgba($color-neutral-light, 0.65);
+}
+
+.clients-contact-list__title {
+  @include flex-between;
+  gap: $spacing-sm;
+  color: $color-text-secondary;
+  font-size: $font-size-xs;
+  font-weight: $font-weight-bold;
+
+  button {
+    min-height: 28px;
+    padding: 0 $spacing-sm;
+    border: 1px solid $color-border;
+    border-radius: $border-radius-sm;
+    background-color: $color-neutral-light;
+    color: $color-text-secondary;
+    cursor: pointer;
+    font: inherit;
+    font-size: $font-size-xs;
+    transition:
+      background-color $transition-fast,
+      border-color $transition-fast,
+      color $transition-fast;
+
+    &:hover {
+      border-color: $color-primary-light;
+      background-color: rgba($color-primary-pale, 0.55);
+      color: $color-primary;
+    }
+  }
+}
+
+.clients-contact-list__line {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) 34px;
+  gap: $spacing-xs;
+  align-items: center;
+}
+
+.clients-contact-list__line--typed {
+  grid-template-columns: 34px minmax(0, 1fr) 118px 34px;
+}
+
+.clients-contact-list__empty {
+  margin: 0;
+  color: $color-text-muted;
+  font-size: $font-size-xs;
+}
+
+.clients-representative {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-sm;
+  padding: $spacing-sm;
+  border: 1px solid rgba($color-border, 0.7);
+  border-radius: $border-radius-sm;
+  background-color: $color-surface;
+}
+
+.clients-representative__head {
+  @include flex-between;
+  gap: $spacing-sm;
+  color: $color-text-secondary;
+  font-size: $font-size-xs;
+  font-weight: $font-weight-bold;
+}
+
+.clients-icon-button,
+.clients-primary-toggle {
+  @include flex-center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 1px solid $color-border;
+  border-radius: $border-radius-sm;
+  background-color: $color-neutral-light;
+  color: $color-text-secondary;
+  cursor: pointer;
+  transition:
+    background-color $transition-fast,
+    border-color $transition-fast,
+    color $transition-fast;
+
+  &:hover {
+    border-color: $color-primary-light;
+    background-color: rgba($color-primary-pale, 0.55);
+    color: $color-primary;
+  }
+}
+
+.clients-primary-toggle.is-active {
+  border-color: $color-warning;
+  color: $color-warning;
+}
+
+@include respond-below($breakpoint-sm) {
+  .clients-form__row,
+  .clients-form__row--cols-3 {
+    grid-template-columns: 1fr;
+  }
+}

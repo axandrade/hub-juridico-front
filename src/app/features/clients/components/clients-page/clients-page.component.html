@@ -5,9 +5,9 @@
         <span>Painel</span>
         <h2>{{ panelTitle() || 'Novo cliente' }}</h2>
         <small>
-          {{ draft().legalNature === 'individual' ? 'Pessoa física' : 'Pessoa jurídica' }} |
-          {{ draft().id ? formatClientId(draft().id) : 'sem ID' }} |
-          {{ draft().folder || 'pasta será criada ao salvar' }}
+          {{ currentPersonType() === 'NATURAL' ? 'Pessoa física' : 'Pessoa jurídica' }} |
+          {{ entityId() ? formatClientId(entityId()) : 'sem ID' }} |
+          {{ form.controls.dossier.controls.folder.value || 'pasta será criada ao salvar' }}
         </small>
       </div>
 
@@ -15,7 +15,7 @@
         <button
           type="button"
           class="clients-icon-button"
-          [class.is-active]="draft().favorite"
+          [class.is-active]="favorite()"
           title="Configurar favorito"
           aria-label="Configurar favorito"
           (click)="toggleFavorite()"
@@ -55,11 +55,8 @@
             @case ('admin') {
               Administrativo
             }
-            @case ('individual') {
-              Pessoa física
-            }
-            @case ('company') {
-              Pessoa jurídica
+            @case ('person') {
+              Cadastro
             }
             @case ('records') {
               Registros
@@ -76,18 +73,18 @@
       <div class="clients-form__meta">
         <label>
           <span>ID</span>
-          <input type="text" [value]="draft().id ? draft().id : 'Novo'" readonly />
+          <input type="text" [value]="entityId() ? entityId() : 'Novo'" readonly />
         </label>
         <label>
           <span>Natureza jurídica</span>
           <div class="clients-nature" role="group" aria-label="Natureza jurídica">
-            @for (nature of natureOptions; track nature) {
+            @for (type of personTypeOptions; track type) {
               <button
                 type="button"
-                [class.is-active]="draft().legalNature === nature"
-                (click)="setNature(nature)"
+                [class.is-active]="currentPersonType() === type"
+                (click)="setPersonType(type)"
               >
-                {{ nature === 'individual' ? 'Pessoa física' : 'Pessoa jurídica' }}
+                {{ type === 'NATURAL' ? 'Pessoa física' : 'Pessoa jurídica' }}
               </button>
             }
           </div>
@@ -95,459 +92,24 @@
       </div>
 
       @switch (activePanelTab()) {
-        @case ('individual') {
-          <div class="clients-form__section">
-            @for (row of individualFields; track $index) {
-              <div class="clients-form__row">
-                @for (field of row; track field.key) {
-                  <label class="clients-field" [class.clients-field--full]="field.span === 'full'">
-                    <span>
-                      @switch (field.key) {
-                        @case ('individualName') {
-                          Nome
-                        }
-                        @case ('cpf') {
-                          CPF
-                        }
-                        @case ('identityNumber') {
-                          RG
-                        }
-                        @case ('maritalStatus') {
-                          Estado civil
-                        }
-                        @case ('occupation') {
-                          Profissão
-                        }
-                        @case ('nationality') {
-                          Nacionalidade
-                        }
-                        @case ('individualEmail') {
-                          E-mail principal
-                        }
-                        @case ('individualWhatsapp') {
-                          Telefone/WhatsApp
-                        }
-                        @case ('individualStreet') {
-                          Endereço
-                        }
-                        @case ('individualNumber') {
-                          Número
-                        }
-                        @case ('individualComplement') {
-                          Complemento
-                        }
-                        @case ('individualDistrict') {
-                          Bairro
-                        }
-                        @case ('individualState') {
-                          UF
-                        }
-                        @case ('individualCity') {
-                          Cidade
-                        }
-                        @case ('individualZipCode') {
-                          CEP
-                        }
-                        @case ('individualNotes') {
-                          Observações PF
-                        }
-                      }
-                    </span>
-
-                    @switch (field.type || 'text') {
-                      @case ('select') {
-                        <select
-                          [value]="fieldValue(field.key)"
-                          (change)="updateField(field.key, $event)"
-                        >
-                          <option value="">Selecione</option>
-                          @for (option of fieldOptions(field); track option) {
-                            <option [value]="option">
-                              @switch (option) {
-                                @case ('single') {
-                                  Solteiro(a)
-                                }
-                                @case ('married') {
-                                  Casado(a)
-                                }
-                                @case ('divorced') {
-                                  Divorciado(a)
-                                }
-                                @case ('widowed') {
-                                  Viúvo(a)
-                                }
-                                @case ('stableUnion') {
-                                  União estável
-                                }
-                                @default {
-                                  {{ option }}
-                                }
-                              }
-                            </option>
-                          }
-                        </select>
-                      }
-                      @case ('textarea') {
-                        <textarea
-                          [rows]="field.rows || 3"
-                          [value]="fieldValue(field.key)"
-                          (input)="updateField(field.key, $event)"
-                        ></textarea>
-                      }
-                      @case ('email') {
-                        <input
-                          type="email"
-                          [value]="fieldValue(field.key)"
-                          (input)="updateField(field.key, $event)"
-                        />
-                      }
-                      @case ('tel') {
-                        <input
-                          type="tel"
-                          [value]="fieldValue(field.key)"
-                          (input)="updateField(field.key, $event)"
-                        />
-                      }
-                      @default {
-                        <input
-                          type="text"
-                          [value]="fieldValue(field.key)"
-                          (input)="updateField(field.key, $event)"
-                        />
-                      }
-                    }
-                  </label>
-                }
-              </div>
-            }
-
-            @for (list of individualContactLists; track list.key) {
-              <div class="clients-contact-list">
-                <div class="clients-contact-list__title">
-                  <span>
-                    {{
-                      list.key === 'additionalIndividualEmails'
-                        ? 'E-mails adicionais'
-                        : 'Telefones adicionais'
-                    }}
-                  </span>
-                  <button type="button" (click)="addContactLine(list.key)">
-                    {{ list.inputType === 'email' ? '+ E-mail' : '+ Telefone' }}
-                  </button>
-                </div>
-                @for (line of listFieldLines(list.key); track $index; let index = $index) {
-                  <div class="clients-contact-list__line">
-                    <input
-                      [type]="list.inputType"
-                      [value]="line"
-                      [placeholder]="
-                        list.inputType === 'email' ? 'email@exemplo.com' : '(00) 00000-0000'
-                      "
-                      (input)="updateContactLine(list.key, index, $event)"
-                    />
-                    <button
-                      type="button"
-                      class="clients-icon-button"
-                      aria-label="Remover contato"
-                      (click)="removeContactLine(list.key, index)"
-                    >
-                      <i class="fa-solid fa-minus" aria-hidden="true"></i>
-                    </button>
-                  </div>
-                }
-              </div>
-            }
-          </div>
-        }
-
-        @case ('company') {
-          <div class="clients-form__section">
-            @for (row of companyFields; track $index) {
-              <div class="clients-form__row">
-                @for (field of row; track field.key) {
-                  <label class="clients-field" [class.clients-field--full]="field.span === 'full'">
-                    <span>
-                      @switch (field.key) {
-                        @case ('companyLegalName') {
-                          Razão social
-                        }
-                        @case ('companyTradeName') {
-                          Nome fantasia
-                        }
-                        @case ('cnpj') {
-                          CNPJ
-                        }
-                        @case ('stateRegistration') {
-                          Inscrição estadual
-                        }
-                        @case ('municipalRegistration') {
-                          Inscrição municipal
-                        }
-                        @case ('companyEmail') {
-                          E-mail principal
-                        }
-                        @case ('companyWhatsapp') {
-                          Telefone/WhatsApp
-                        }
-                        @case ('companyStreet') {
-                          Endereço
-                        }
-                        @case ('companyNumber') {
-                          Número
-                        }
-                        @case ('companyComplement') {
-                          Complemento
-                        }
-                        @case ('companyDistrict') {
-                          Bairro
-                        }
-                        @case ('companyState') {
-                          UF
-                        }
-                        @case ('companyCity') {
-                          Cidade
-                        }
-                        @case ('companyZipCode') {
-                          CEP
-                        }
-                        @case ('companyNotes') {
-                          Observações PJ
-                        }
-                      }
-                    </span>
-
-                    @switch (field.type || 'text') {
-                      @case ('select') {
-                        <select
-                          [value]="fieldValue(field.key)"
-                          (change)="updateField(field.key, $event)"
-                        >
-                          <option value="">Selecione</option>
-                          @for (option of fieldOptions(field); track option) {
-                            <option [value]="option">{{ option }}</option>
-                          }
-                        </select>
-                      }
-                      @case ('textarea') {
-                        <textarea
-                          [rows]="field.rows || 3"
-                          [value]="fieldValue(field.key)"
-                          (input)="updateField(field.key, $event)"
-                        ></textarea>
-                      }
-                      @case ('email') {
-                        <input
-                          type="email"
-                          [value]="fieldValue(field.key)"
-                          (input)="updateField(field.key, $event)"
-                        />
-                      }
-                      @case ('tel') {
-                        <input
-                          type="tel"
-                          [value]="fieldValue(field.key)"
-                          (input)="updateField(field.key, $event)"
-                        />
-                      }
-                      @default {
-                        <input
-                          type="text"
-                          [value]="fieldValue(field.key)"
-                          (input)="updateField(field.key, $event)"
-                        />
-                      }
-                    }
-                  </label>
-                }
-              </div>
-            }
-
-            @for (list of companyContactLists; track list.key) {
-              <div class="clients-contact-list">
-                <div class="clients-contact-list__title">
-                  <span>
-                    {{
-                      list.key === 'additionalCompanyEmails'
-                        ? 'E-mails adicionais'
-                        : 'Telefones adicionais'
-                    }}
-                  </span>
-                  <button type="button" (click)="addContactLine(list.key)">
-                    {{ list.inputType === 'email' ? '+ E-mail' : '+ Telefone' }}
-                  </button>
-                </div>
-                @for (line of listFieldLines(list.key); track $index; let index = $index) {
-                  <div class="clients-contact-list__line">
-                    <input
-                      [type]="list.inputType"
-                      [value]="line"
-                      [placeholder]="
-                        list.inputType === 'email' ? 'contato@empresa.com.br' : '(00) 00000-0000'
-                      "
-                      (input)="updateContactLine(list.key, index, $event)"
-                    />
-                    <button
-                      type="button"
-                      class="clients-icon-button"
-                      aria-label="Remover contato"
-                      (click)="removeContactLine(list.key, index)"
-                    >
-                      <i class="fa-solid fa-minus" aria-hidden="true"></i>
-                    </button>
-                  </div>
-                }
-              </div>
-            }
-
-            <div class="clients-form__divider">
-              <span>Representante legal</span>
-            </div>
-
-            @for (row of representativeFields; track $index) {
-              <div class="clients-form__row">
-                @for (field of row; track field.key) {
-                  <label class="clients-field">
-                    <span>
-                      @switch (field.key) {
-                        @case ('legalRepresentativeName') {
-                          Representante legal
-                        }
-                        @case ('legalRepresentativeCpf') {
-                          CPF do representante
-                        }
-                        @case ('legalRepresentativeRole') {
-                          Cargo
-                        }
-                        @case ('legalRepresentativeEmail') {
-                          E-mail
-                        }
-                        @case ('legalRepresentativeWhatsapp') {
-                          Telefone/WhatsApp
-                        }
-                      }
-                    </span>
-                    <input
-                      [type]="
-                        field.type === 'email' ? 'email' : field.type === 'tel' ? 'tel' : 'text'
-                      "
-                      [value]="fieldValue(field.key)"
-                      (input)="updateField(field.key, $event)"
-                    />
-                  </label>
-                }
-              </div>
-            }
-
-            @for (list of representativeContactLists; track list.key) {
-              <div class="clients-contact-list">
-                <div class="clients-contact-list__title">
-                  <span>
-                    {{
-                      list.key === 'additionalRepresentativeEmails'
-                        ? 'E-mails adicionais do representante'
-                        : 'Telefones adicionais do representante'
-                    }}
-                  </span>
-                  <button type="button" (click)="addContactLine(list.key)">
-                    {{ list.inputType === 'email' ? '+ E-mail' : '+ Telefone' }}
-                  </button>
-                </div>
-                @for (line of listFieldLines(list.key); track $index; let index = $index) {
-                  <div class="clients-contact-list__line">
-                    <input
-                      [type]="list.inputType"
-                      [value]="line"
-                      [placeholder]="
-                        list.inputType === 'email'
-                          ? 'representante@empresa.com.br'
-                          : '(00) 00000-0000'
-                      "
-                      (input)="updateContactLine(list.key, index, $event)"
-                    />
-                    <button
-                      type="button"
-                      class="clients-icon-button"
-                      aria-label="Remover contato"
-                      (click)="removeContactLine(list.key, index)"
-                    >
-                      <i class="fa-solid fa-minus" aria-hidden="true"></i>
-                    </button>
-                  </div>
-                }
-              </div>
-            }
-
-            <div class="clients-representatives">
-              <div class="clients-contact-list__title">
-                <span>Representantes adicionais</span>
-                <button type="button" (click)="addRepresentative()">Adicionar representante</button>
-              </div>
-
-              @if (representativeRows().length) {
-                @for (representative of representativeRows(); track $index; let index = $index) {
-                  <div class="clients-representatives__row">
-                    <input
-                      type="text"
-                      placeholder="Nome"
-                      [value]="representative.name"
-                      (input)="updateRepresentative(index, 'name', $event)"
-                    />
-                    <input
-                      type="text"
-                      placeholder="CPF"
-                      [value]="representative.cpf"
-                      (input)="updateRepresentative(index, 'cpf', $event)"
-                    />
-                    <input
-                      type="text"
-                      placeholder="Cargo"
-                      [value]="representative.role"
-                      (input)="updateRepresentative(index, 'role', $event)"
-                    />
-                    <input
-                      type="email"
-                      placeholder="E-mail"
-                      [value]="representative.email"
-                      (input)="updateRepresentative(index, 'email', $event)"
-                    />
-                    <input
-                      type="tel"
-                      placeholder="Telefone"
-                      [value]="representative.phone"
-                      (input)="updateRepresentative(index, 'phone', $event)"
-                    />
-                    <button
-                      type="button"
-                      class="clients-icon-button"
-                      aria-label="Remover representante"
-                      (click)="removeRepresentative(index)"
-                    >
-                      <i class="fa-solid fa-trash" aria-hidden="true"></i>
-                    </button>
-                  </div>
-                }
-              } @else {
-                <p>Nenhum representante adicional.</p>
-              }
-            </div>
-          </div>
+        @case ('person') {
+          <app-client-person-form [form]="form" [personType]="currentPersonType()" />
         }
 
         @case ('records') {
-          <div class="clients-form__section">
+          <div class="clients-form__section" [formGroup]="form.controls.dossier">
             <label class="clients-field clients-field--full">
               <span>Registro de andamento</span>
               <textarea
                 rows="4"
-                [value]="fieldValue('progressEntry')"
+                formControlName="progressEntry"
                 placeholder="Digite um novo andamento para anexar ao histórico ao salvar"
-                (input)="updateField('progressEntry', $event)"
               ></textarea>
             </label>
 
             <label class="clients-field clients-field--full">
               <span>Histórico de registro de andamento</span>
-              <textarea rows="12" [value]="fieldValue('progressHistory')" readonly></textarea>
+              <textarea rows="12" formControlName="progressHistory" readonly></textarea>
             </label>
           </div>
         }
@@ -625,121 +187,7 @@
         }
 
         @default {
-          <div class="clients-form__section">
-            @for (row of adminFields; track $index) {
-              <div class="clients-form__row">
-                @for (field of row; track field.key) {
-                  <label class="clients-field" [class.clients-field--full]="field.span === 'full'">
-                    <span>
-                      @switch (field.key) {
-                        @case ('status') {
-                          Status
-                        }
-                        @case ('hiringMode') {
-                          Modalidade de contratação
-                        }
-                        @case ('folder') {
-                          Pasta
-                        }
-                        @case ('file') {
-                          Arquivo
-                        }
-                        @case ('registeredBy') {
-                          Cadastrado por
-                        }
-                        @case ('contractNumber') {
-                          Número do contrato
-                        }
-                        @case ('contractDate') {
-                          Data do contrato
-                        }
-                        @case ('referredBy') {
-                          Indicado por
-                        }
-                        @case ('internalOwner') {
-                          Responsável interno
-                        }
-                        @case ('notes') {
-                          Observações
-                        }
-                      }
-                    </span>
-
-                    @switch (field.type || 'text') {
-                      @case ('select') {
-                        <select
-                          [value]="fieldValue(field.key)"
-                          (change)="updateField(field.key, $event)"
-                        >
-                          <option value="">Selecione</option>
-                          @for (option of fieldOptions(field); track option) {
-                            <option [value]="option">
-                              @switch (option) {
-                                @case ('active') {
-                                  Ativo
-                                }
-                                @case ('prospect') {
-                                  Prospect
-                                }
-                                @case ('inactive') {
-                                  Inativo
-                                }
-                                @case ('closed') {
-                                  Encerrado
-                                }
-                                @case ('oneOff') {
-                                  Avulso
-                                }
-                                @case ('monthly') {
-                                  Mensalista
-                                }
-                                @case ('successFee') {
-                                  Êxito
-                                }
-                                @case ('advisory') {
-                                  Consultivo
-                                }
-                                @case ('litigation') {
-                                  Contencioso
-                                }
-                                @case ('mixed') {
-                                  Misto
-                                }
-                                @default {
-                                  {{ option }}
-                                }
-                              }
-                            </option>
-                          }
-                        </select>
-                      }
-                      @case ('textarea') {
-                        <textarea
-                          [rows]="field.rows || 3"
-                          [value]="fieldValue(field.key)"
-                          (input)="updateField(field.key, $event)"
-                        ></textarea>
-                      }
-                      @case ('readonly') {
-                        <input
-                          type="text"
-                          [value]="fieldValue(field.key) || 'Será preenchido ao salvar'"
-                          readonly
-                        />
-                      }
-                      @default {
-                        <input
-                          type="text"
-                          [value]="fieldValue(field.key)"
-                          (input)="updateField(field.key, $event)"
-                        />
-                      }
-                    }
-                  </label>
-                }
-              </div>
-            }
-          </div>
+          <app-client-admin-form [group]="form.controls.dossier" />
         }
       }
 
@@ -809,11 +257,11 @@
             @case ('importReady') {
               Importação de base preparada para a futura integração.
             }
-            @case ('individualNameRequired') {
-              Informe o nome da pessoa física.
+            @case ('naturalNameRequired') {
+              Informe nome e CPF da pessoa física.
             }
-            @case ('companyNameRequired') {
-              Informe a razão social da pessoa jurídica.
+            @case ('legalNameRequired') {
+              Informe razão social e CNPJ da pessoa jurídica.
             }
             @case ('favoriteAdded') {
               {{ notice().subject }} marcado como favorito.
@@ -1009,32 +457,20 @@
             />
             <span>
               @switch (column.key) {
-                @case ('legalNature') {
-                  Natureza jurídica
+                @case ('personType') {
+                  Natureza
                 }
-                @case ('individualName') {
-                  Nome PF
+                @case ('name') {
+                  Nome / Razão
                 }
-                @case ('companyLegalName') {
-                  Razão social
+                @case ('document') {
+                  CPF / CNPJ
                 }
-                @case ('cpf') {
-                  CPF
+                @case ('email') {
+                  E-mail
                 }
-                @case ('cnpj') {
-                  CNPJ
-                }
-                @case ('individualEmail') {
-                  E-mail PF
-                }
-                @case ('companyEmail') {
-                  E-mail PJ
-                }
-                @case ('individualWhatsapp') {
-                  WhatsApp PF
-                }
-                @case ('companyWhatsapp') {
-                  WhatsApp PJ
+                @case ('phone') {
+                  Telefone
                 }
                 @case ('status') {
                   Status
@@ -1068,11 +504,11 @@
       </div>
       <div>
         <span>Pessoa física</span>
-        <strong>{{ summary().individual }}</strong>
+        <strong>{{ summary().natural }}</strong>
       </div>
       <div>
         <span>Pessoa jurídica</span>
-        <strong>{{ summary().company }}</strong>
+        <strong>{{ summary().legal }}</strong>
       </div>
       <div>
         <span>Ativos</span>
@@ -1087,7 +523,7 @@
           [class.is-active]="activeTableTab() === tab"
           (click)="setTableTab(tab)"
         >
-          {{ tab === 'individual' ? 'Pessoa física' : 'Pessoa jurídica' }}
+          {{ tab === 'NATURAL' ? 'Pessoa física' : 'Pessoa jurídica' }}
         </button>
       }
     </nav>
@@ -1101,32 +537,20 @@
               <th [style.width]="column.width" [class]="columnClass(column)">
                 <button type="button" (click)="sortBy(column.key)">
                   @switch (column.key) {
-                    @case ('legalNature') {
-                      Natureza jurídica
+                    @case ('personType') {
+                      Natureza
                     }
-                    @case ('individualName') {
-                      Nome PF
+                    @case ('name') {
+                      Nome / Razão
                     }
-                    @case ('companyLegalName') {
-                      Razão social
+                    @case ('document') {
+                      CPF / CNPJ
                     }
-                    @case ('cpf') {
-                      CPF
+                    @case ('email') {
+                      E-mail
                     }
-                    @case ('cnpj') {
-                      CNPJ
-                    }
-                    @case ('individualEmail') {
-                      E-mail PF
-                    }
-                    @case ('companyEmail') {
-                      E-mail PJ
-                    }
-                    @case ('individualWhatsapp') {
-                      WhatsApp PF
-                    }
-                    @case ('companyWhatsapp') {
-                      WhatsApp PJ
+                    @case ('phone') {
+                      Telefone
                     }
                     @case ('status') {
                       Status
@@ -1176,7 +600,7 @@
                   @switch (column.key) {
                     @case ('status') {
                       <span [class]="rowStatusClass(client)">
-                        @switch (client.status) {
+                        @switch (client.dossier.status) {
                           @case ('active') {
                             Ativo
                           }
@@ -1192,13 +616,11 @@
                         }
                       </span>
                     }
-                    @case ('legalNature') {
-                      {{
-                        client.legalNature === 'individual' ? 'Pessoa física' : 'Pessoa jurídica'
-                      }}
+                    @case ('personType') {
+                      {{ client.personType === 'NATURAL' ? 'Pessoa física' : 'Pessoa jurídica' }}
                     }
                     @case ('hiringMode') {
-                      @switch (client.hiringMode) {
+                      @switch (client.dossier.hiringMode) {
                         @case ('oneOff') {
                           Avulso
                         }

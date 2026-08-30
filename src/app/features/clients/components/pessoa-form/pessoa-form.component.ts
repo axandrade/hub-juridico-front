@@ -181,6 +181,7 @@ export class PessoaFormComponent {
           return;
         }
         this.loadIntoForm(this.createEmptyClient(novoTipo));
+        this.locked.set(false);
         this.notice.set({ key: 'idle' });
       });
     });
@@ -268,6 +269,7 @@ export class PessoaFormComponent {
   protected clearPanel(): void {
     this.loadIntoForm(this.createEmptyClient(this.novoTipo()));
     this.lastLoadedKey = `new:${this.novoTipo()}`;
+    this.locked.set(false);
     this.activePanelTab.set('person');
     this.notice.set({ key: 'panelCleared' });
     this.cleared.emit();

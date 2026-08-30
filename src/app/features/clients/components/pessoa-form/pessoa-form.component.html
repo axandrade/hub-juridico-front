@@ -24,6 +24,7 @@
         type="button"
         class="clients-icon-button"
         [class.is-active]="locked()"
+        [disabled]="!isPersisted()"
         title="Travar painel"
         aria-label="Travar painel"
         (click)="togglePanelLock()"

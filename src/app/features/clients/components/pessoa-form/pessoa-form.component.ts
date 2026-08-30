@@ -58,7 +58,10 @@ type NoticeKey =
   | 'naturalNameRequired'
   | 'legalNameRequired'
   | 'favoriteAdded'
-  | 'favoriteRemoved';
+  | 'favoriteRemoved'
+  | 'saving'
+  | 'saveError'
+  | 'deleteError';
 
 interface EditorNotice {
   key: NoticeKey;
@@ -237,12 +240,18 @@ export class PessoaFormComponent {
     }
 
     const prepared = this.prepareClientForSave(this.assembleClient());
-    this.store.salvar(prepared).subscribe((savedClient) => {
-      this.loadIntoForm(savedClient);
-      this.lastLoadedKey = `id:${savedClient.id}`;
-      this.activePanelTab.set('person');
-      this.notice.set({ key: 'saved', subject: this.clientDisplayName(savedClient) });
-      this.saved.emit(savedClient);
+    this.notice.set({ key: 'saving' });
+    this.store.salvar(prepared).subscribe({
+      next: (savedClient) => {
+        this.loadIntoForm(savedClient);
+        this.lastLoadedKey = `id:${savedClient.id}`;
+        this.activePanelTab.set('person');
+        this.notice.set({ key: 'saved', subject: this.clientDisplayName(savedClient) });
+        this.saved.emit(savedClient);
+      },
+      error: (err: unknown) => {
+        this.notice.set({ key: 'saveError', subject: this.httpErrorMessage(err) });
+      },
     });
   }
 
@@ -260,9 +269,14 @@ export class PessoaFormComponent {
       this.notice.set({ key: 'selectToDelete' });
       return;
     }
-    this.store.remover(id).subscribe(() => {
-      this.notice.set({ key: 'deleted' });
-      this.removed.emit(id);
+    this.store.remover(id).subscribe({
+      next: () => {
+        this.notice.set({ key: 'deleted' });
+        this.removed.emit(id);
+      },
+      error: (err: unknown) => {
+        this.notice.set({ key: 'deleteError', subject: this.httpErrorMessage(err) });
+      },
     });
   }
 
@@ -408,5 +422,24 @@ export class PessoaFormComponent {
 
   private normalizeKey(value: string): string {
     return value.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
+  }
+
+  /** Extrai a mensagem legível de um erro HTTP (ProblemDetail do backend). */
+  private httpErrorMessage(err: unknown): string {
+    const e = err as {
+      error?: { detail?: string; title?: string; message?: string };
+      message?: string;
+      status?: number;
+    };
+    if (e?.status === 0) {
+      return 'Sem conexão com o servidor.';
+    }
+    return (
+      e?.error?.detail ||
+      e?.error?.title ||
+      e?.error?.message ||
+      e?.message ||
+      'Erro ao comunicar com o servidor.'
+    );
   }
 }

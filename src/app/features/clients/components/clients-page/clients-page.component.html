@@ -368,6 +368,14 @@
         @case ('importReady') {
           <span>· Importação de base preparada para a futura integração.</span>
         }
+        @case ('loadError') {
+          <span>
+            · Não foi possível carregar a lista.
+            <button type="button" class="clients-link-button" (click)="reloadList()">
+              Tentar de novo
+            </button>
+          </span>
+        }
       }
     </footer>
   </section>

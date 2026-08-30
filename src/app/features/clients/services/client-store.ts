@@ -1,25 +1,33 @@
+import { HttpClient } from '@angular/common/http';
 import { Injectable, inject, signal } from '@angular/core';
-import { Observable, map, of, tap } from 'rxjs';
+import { Observable, map, tap } from 'rxjs';
 
+import { environment } from '../../../../environments/environment';
 import { IClient } from '../../../core/models';
-import { DataService } from '../../../core/services/data.service';
+import { PaginaApi, PessoaRespApi } from './pessoa-api.model';
+import {
+  clientToAtualizarRequest,
+  clientToCriarRequest,
+  pessoaRespToClient,
+} from './pessoa-mapper';
 
 /**
- * Fonte única da lista de clientes para a feature. Hoje delega ao `DataService`
- * (mock em memória); a troca por chamadas `HttpClient` contra `/api/v1/pessoas`
- * fica confinada aqui — os componentes só falam com o store.
+ * Fonte única da lista de clientes para a feature. Fala com a API
+ * `/api/v1/pessoas` (Spring); os componentes só falam com o store. O `favorite`
+ * é frontend-only (sem campo no backend).
  */
 @Injectable({ providedIn: 'root' })
 export class ClientStore {
-  private readonly data = inject(DataService);
+  private readonly http = inject(HttpClient);
+  private readonly base = `${environment.apiBaseUrl}/pessoas`;
 
   private readonly _clients = signal<IClient[]>([]);
   readonly clients = this._clients.asReadonly();
 
-  /** Carrega (ou recarrega) a lista completa. */
+  /** Carrega (ou recarrega) a lista. Paginação do backend: pego uma página grande. */
   carregarLista(): Observable<IClient[]> {
-    return this.data.getClients().pipe(
-      map((clients) => clients.map((client) => structuredClone(client))),
+    return this.http.get<PaginaApi<PessoaRespApi>>(this.base, { params: { size: 200 } }).pipe(
+      map((page) => (page.conteudo ?? []).map(pessoaRespToClient)),
       tap((clients) => this._clients.set(clients)),
     );
   }
@@ -32,27 +40,34 @@ export class ClientStore {
     return this._clients().find((client) => client.id === id) ?? null;
   }
 
-  /** Insere (id novo) ou substitui (id existente) e devolve o registro persistido. */
+  /** `POST` (id 0) ou `PUT` (id existente); devolve o registro do backend. */
   salvar(client: IClient): Observable<IClient> {
-    const existe = client.id > 0 && this._clients().some((item) => item.id === client.id);
-    const salvo: IClient = structuredClone({
-      ...client,
-      id: existe ? client.id : this.proximoId(),
-      registeredAt: existe ? client.registeredAt : new Date(),
-    });
+    const request$ =
+      client.id > 0
+        ? this.http.put<PessoaRespApi>(
+            `${this.base}/${client.id}`,
+            clientToAtualizarRequest(client),
+          )
+        : this.http.post<PessoaRespApi>(this.base, clientToCriarRequest(client));
 
-    this._clients.update((clients) =>
-      existe
-        ? clients.map((item) => (item.id === salvo.id ? structuredClone(salvo) : item))
-        : [structuredClone(salvo), ...clients],
+    return request$.pipe(
+      map(pessoaRespToClient),
+      tap((salvo) =>
+        this._clients.update((clients) =>
+          clients.some((item) => item.id === salvo.id)
+            ? clients.map((item) => (item.id === salvo.id ? salvo : item))
+            : [salvo, ...clients],
+        ),
+      ),
     );
-
-    return of(salvo);
   }
 
   remover(id: number): Observable<void> {
-    this._clients.update((clients) => clients.filter((client) => client.id !== id));
-    return of(undefined);
+    return this.http
+      .delete<void>(`${this.base}/${id}`)
+      .pipe(
+        tap(() => this._clients.update((clients) => clients.filter((client) => client.id !== id))),
+      );
   }
 
   /** Favorito é frontend-only (sem backend). */

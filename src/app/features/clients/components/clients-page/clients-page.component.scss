@@ -346,6 +346,16 @@
   font-size: $font-size-xs;
 }
 
+.clients-link-button {
+  border: 0;
+  background: none;
+  padding: 0;
+  color: $color-primary;
+  cursor: pointer;
+  font: inherit;
+  text-decoration: underline;
+}
+
 @include respond-below($breakpoint-xl) {
   .clients {
     grid-template-columns: minmax(320px, 390px) minmax(0, 1fr);

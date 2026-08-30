@@ -195,8 +195,17 @@
           @case ('loaded') {
             Ficha carregada: {{ notice().subject }}.
           }
+          @case ('saving') {
+            Salvando...
+          }
           @case ('saved') {
             Cliente salvo: {{ notice().subject }}.
+          }
+          @case ('saveError') {
+            Não foi possível salvar: {{ notice().subject }}
+          }
+          @case ('deleteError') {
+            Não foi possível apagar: {{ notice().subject }}
           }
           @case ('selectToDelete') {
             Selecione um cliente para apagar.

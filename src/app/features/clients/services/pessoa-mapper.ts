@@ -1,0 +1,220 @@
+import { onlyDigits } from '../../../core/auth/cpf';
+import {
+  EstadoCivil,
+  IClient,
+  IClientDossier,
+  IEndereco,
+  IRepresentanteLegal,
+  emptyDossier,
+  emptyEndereco,
+} from '../../../core/models';
+import {
+  AtualizarPessoaApi,
+  CriarPessoaApi,
+  DadosAdministrativosApi,
+  EnderecoApi,
+  PessoaRespApi,
+  RepresentanteApi,
+  RepresentanteRespApi,
+} from './pessoa-api.model';
+
+/**
+ * Conversão entre `IClient` (frontend) e os DTOs da API `/pessoas`.
+ *
+ * Lacunas conhecidas (sem campo no backend hoje): `pessoa.profissao`,
+ * `dossier.folder`, `favorite`, `dossier.progressEntry/progressHistory`. O
+ * `dossier.hiringMode` não é enviado porque o enum `modalidade` do backend
+ * (CLT/PJ/...) trata de vínculo trabalhista, não de honorários.
+ */
+
+// ===================== Response -> IClient =====================
+
+export function pessoaRespToClient(res: PessoaRespApi): IClient {
+  const adm = res.dados_administrativos;
+  return {
+    id: res.id,
+    registeredAt: adm?.criado_em ? new Date(adm.criado_em) : new Date(),
+    favorite: false,
+    pessoa: {
+      tipo: res.tipo,
+      endereco: enderecoFromApi(res.endereco),
+      emails: (res.emails ?? []).map((e) => ({ endereco: e.endereco, principal: e.principal })),
+      contatos: (res.contatos ?? []).map((c) => ({
+        valor: c.valor,
+        tipo: c.tipo,
+        principal: c.principal,
+      })),
+      nome: res.nome ?? '',
+      cpf: res.cpf ?? '',
+      rg: res.rg ?? '',
+      profissao: '',
+      nacionalidade: res.nacionalidade ?? '',
+      estadoCivil: (res.estado_civil ?? '') as EstadoCivil | '',
+      razaoSocial: res.razao_social ?? '',
+      nomeFantasia: res.nome_fantasia ?? '',
+      cnpj: res.cnpj ?? '',
+      inscricaoEstadual: res.inscricao_estadual ?? '',
+      inscricaoMunicipal: res.inscricao_municipal ?? '',
+      representantes: (res.representantes ?? []).map(representanteFromApi),
+    },
+    dossier: {
+      ...emptyDossier(),
+      file: adm?.caminho_arquivo ?? '',
+      status: adm?.status === 'INATIVO' ? 'inactive' : 'active',
+      hiringMode: '',
+      contractNumber: adm?.numero_contrato ?? '',
+      contractDate: adm?.data_contrato ?? '',
+      referredBy: adm?.indicado_por ?? '',
+      internalOwner: adm?.responsavel_interno ?? '',
+      registeredBy: adm?.cadastrado_por ?? '',
+      notes: adm?.observacoes ?? '',
+    },
+  };
+}
+
+function enderecoFromApi(e: EnderecoApi | null): IEndereco {
+  if (!e) {
+    return emptyEndereco();
+  }
+  return {
+    logradouro: e.logradouro ?? '',
+    numero: e.numero ?? '',
+    complemento: e.complemento ?? '',
+    bairro: e.bairro ?? '',
+    cidade: e.cidade ?? '',
+    cep: e.cep ?? '',
+    uf: e.uf ?? '',
+  };
+}
+
+function representanteFromApi(r: RepresentanteRespApi): IRepresentanteLegal {
+  return {
+    nome: r.nome ?? '',
+    cpf: r.cpf ?? '',
+    cargo: r.cargo ?? '',
+    endereco: enderecoFromApi(r.endereco),
+    emails: (r.emails ?? []).map((e) => ({ endereco: e.endereco, principal: e.principal })),
+    contatos: (r.contatos ?? []).map((c) => ({
+      valor: c.valor,
+      tipo: c.tipo,
+      principal: c.principal,
+    })),
+  };
+}
+
+// ===================== IClient -> Request =====================
+
+export function clientToCriarRequest(client: IClient): CriarPessoaApi {
+  const p = client.pessoa;
+  const comum = comumRequest(client);
+
+  if (p.tipo === 'FISICA') {
+    return {
+      tipo: 'FISICA',
+      nome: p.nome.trim(),
+      cpf: onlyDigits(p.cpf),
+      rg: nullif(p.rg),
+      estado_civil: p.estadoCivil || null,
+      nacionalidade: nullif(p.nacionalidade),
+      ...comum,
+    };
+  }
+
+  return {
+    tipo: 'JURIDICA',
+    razao_social: p.razaoSocial.trim(),
+    nome_fantasia: nullif(p.nomeFantasia),
+    cnpj: onlyDigits(p.cnpj),
+    inscricao_estadual: nullif(p.inscricaoEstadual),
+    inscricao_municipal: nullif(p.inscricaoMunicipal),
+    representantes: p.representantes.map(representanteToApi),
+    ...comum,
+  };
+}
+
+export function clientToAtualizarRequest(client: IClient): AtualizarPessoaApi {
+  const req = clientToCriarRequest(client);
+  if (req.tipo === 'FISICA') {
+    const { cpf: _cpf, ...rest } = req;
+    return rest;
+  }
+  const { cnpj: _cnpj, ...rest } = req;
+  return rest;
+}
+
+function comumRequest(client: IClient) {
+  const p = client.pessoa;
+  return {
+    endereco: enderecoToApi(p.endereco),
+    contatos: p.contatos
+      .filter((c) => c.valor.trim())
+      .map((c) => ({ valor: c.valor.trim(), tipo: c.tipo, principal: c.principal })),
+    emails: p.emails
+      .filter((e) => e.endereco.trim())
+      .map((e) => ({ endereco: e.endereco.trim(), principal: e.principal })),
+    dados_administrativos: dadosAdmFromDossier(client.dossier),
+  };
+}
+
+/** Mínimo válido: `numero_contrato` e `responsavel_interno` são `@NotBlank` no backend. */
+function dadosAdmFromDossier(d: IClientDossier): DadosAdministrativosApi {
+  return {
+    status: d.status === 'inactive' || d.status === 'closed' ? 'INATIVO' : 'ATIVO',
+    modalidade: null,
+    numero_contrato: d.contractNumber.trim() || '-',
+    data_contrato: toIsoDate(d.contractDate),
+    responsavel_interno: d.internalOwner.trim() || d.registeredBy.trim() || 'Lincoln',
+    indicado_por: nullif(d.referredBy),
+    observacoes: nullif(d.notes),
+    caminho_arquivo: nullif(d.file),
+  };
+}
+
+function enderecoToApi(e: IEndereco): EnderecoApi | null {
+  const preenchido = [e.logradouro, e.numero, e.complemento, e.bairro, e.cidade, e.cep, e.uf].some(
+    (v) => v.trim(),
+  );
+
+  if (!preenchido) {
+    return null;
+  }
+  return {
+    logradouro: nullif(e.logradouro),
+    numero: nullif(e.numero),
+    complemento: nullif(e.complemento),
+    bairro: nullif(e.bairro),
+    cidade: nullif(e.cidade),
+    cep: nullif(e.cep),
+    uf: nullif(e.uf),
+  };
+}
+
+function representanteToApi(r: IRepresentanteLegal): RepresentanteApi {
+  return {
+    nome: r.nome.trim(),
+    cpf: onlyDigits(r.cpf),
+    cargo: nullif(r.cargo),
+    endereco: enderecoToApi(r.endereco),
+    contatos: r.contatos
+      .filter((c) => c.valor.trim())
+      .map((c) => ({ valor: c.valor.trim(), tipo: c.tipo, principal: c.principal })),
+    emails: r.emails
+      .filter((e) => e.endereco.trim())
+      .map((e) => ({ endereco: e.endereco.trim(), principal: e.principal })),
+  };
+}
+
+function nullif(value: string): string | null {
+  const trimmed = (value ?? '').trim();
+  return trimmed ? trimmed : null;
+}
+
+/** Aceita `dd/MM/yyyy` ou `yyyy-MM-dd`; qualquer outra coisa vira `null`. */
+function toIsoDate(value: string): string | null {
+  const s = (value ?? '').trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) {
+    return s;
+  }
+  const br = s.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  return br ? `${br[3]}-${br[2]}-${br[1]}` : null;
+}

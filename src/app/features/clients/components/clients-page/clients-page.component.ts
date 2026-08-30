@@ -37,7 +37,7 @@ type ClientColumnKey =
   | 'hiringMode'
   | 'internalOwner';
 type SortDirection = 'asc' | 'desc';
-type PageNotice = '' | 'filtersCleared' | 'shareReady' | 'importReady';
+type PageNotice = '' | 'filtersCleared' | 'shareReady' | 'importReady' | 'loadError';
 
 interface ClientColumn {
   key: ClientColumnKey;
@@ -204,12 +204,22 @@ export class ClientsPageComponent {
   }));
 
   constructor() {
+    this.reloadList();
+  }
+
+  protected reloadList(): void {
     this.store
       .carregarLista()
       .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe((clients) => {
-        const firstOfTab = clients.find((client) => client.pessoa.tipo === this.activeTableTab());
-        this.selectedPersonId.set(firstOfTab?.id ?? clients[0]?.id ?? null);
+      .subscribe({
+        next: (clients) => {
+          const firstOfTab = clients.find((client) => client.pessoa.tipo === this.activeTableTab());
+          this.selectedPersonId.set(firstOfTab?.id ?? clients[0]?.id ?? null);
+          if (this.pageNotice() === 'loadError') {
+            this.pageNotice.set('');
+          }
+        },
+        error: () => this.pageNotice.set('loadError'),
       });
   }
 

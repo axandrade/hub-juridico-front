@@ -1,6 +1,5 @@
 import {
   CommitmentStatus,
-  IClient,
   ICommitment,
   IProcess,
   ITask,
@@ -106,8 +105,6 @@ export const MOCK_PROCESSES: IProcess[] = [
     court: 'INSS',
   },
 ];
-
-export const MOCK_CLIENTS: IClient[] = [];
 
 export const MOCK_CONTEXT = {
   contextLabel: 'Particular',

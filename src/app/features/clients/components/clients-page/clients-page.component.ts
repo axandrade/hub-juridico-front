@@ -256,6 +256,21 @@ export class ClientsPageComponent {
     this.panelVisible.set(true);
   }
 
+  /**
+   * Clique no "vazio" da área da tabela (fora de qualquer linha/botão) desmarca
+   * o cliente e limpa o painel — a não ser que o cadeado esteja travado.
+   */
+  protected onListBackgroundClick(event: MouseEvent): void {
+    const target = event.target as HTMLElement;
+    if (target.closest('tr') || target.closest('button') || target.closest('a')) {
+      return;
+    }
+    if (this.selectedPersonId() === null || this.editor()?.locked()) {
+      return;
+    }
+    this.selectedPersonId.set(null);
+  }
+
   protected onSaved(client: IClient): void {
     this.selectedPersonId.set(client.id);
     this.activeTableTab.set(client.pessoa.tipo);

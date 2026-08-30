@@ -68,7 +68,6 @@
 
           <div class="clients-form__divider"><span>Endereço</span></div>
           <app-client-address [group]="form.controls.pessoa.controls.endereco" />
-
           <app-client-email-list [array]="form.controls.pessoa.controls.emails" />
           <app-client-contact-list [array]="form.controls.pessoa.controls.contatos" />
 
@@ -98,75 +97,7 @@
       }
 
       @case ('files') {
-        <div class="clients-files">
-          <div class="clients-files__toolbar">
-            <label>
-              <span>Pesquisar arquivos</span>
-              <input
-                type="text"
-                [value]="fileSearch()"
-                placeholder="pasta, contrato, arquivo..."
-                (input)="updateFileSearch($event)"
-              />
-            </label>
-            <div>
-              <button type="button" class="clients-menu-button" (click)="openFolder()">
-                <i class="fa-solid fa-folder-open" aria-hidden="true"></i>
-                Abrir pasta
-              </button>
-              <button type="button" class="clients-menu-button" (click)="openFile()">
-                <i class="fa-solid fa-file-arrow-up" aria-hidden="true"></i>
-                Abrir arquivo
-              </button>
-            </div>
-          </div>
-
-          <div class="clients-files__table">
-            <table>
-              <thead>
-                <tr>
-                  <th>Nome</th>
-                  <th>Tipo</th>
-                  <th>Atualizado</th>
-                </tr>
-              </thead>
-              <tbody>
-                @for (file of panelFiles(); track file.name + file.kind) {
-                  <tr
-                    [class.is-selected]="selectedFileName() === file.name"
-                    (click)="selectFile(file)"
-                  >
-                    <td>
-                      @if (file.kind === 'contract') {
-                        Contrato {{ file.name }}
-                      } @else {
-                        {{ file.name }}
-                      }
-                    </td>
-                    <td>
-                      @switch (file.kind) {
-                        @case ('folder') {
-                          Pasta
-                        }
-                        @case ('mainFile') {
-                          Arquivo principal
-                        }
-                        @case ('contract') {
-                          Contrato
-                        }
-                      }
-                    </td>
-                    <td>{{ file.updatedAt }}</td>
-                  </tr>
-                } @empty {
-                  <tr>
-                    <td colspan="3">Nenhum arquivo vinculado.</td>
-                  </tr>
-                }
-              </tbody>
-            </table>
-          </div>
-        </div>
+        <app-pessoa-files [info]="filesInfo()" (notify)="onFilesNotice($event)" />
       }
 
       @default {

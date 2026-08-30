@@ -1,0 +1,120 @@
+@use 'variables' as *;
+@use 'mixins' as *;
+
+:host {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+.pessoa-files {
+  @include thin-scrollbar;
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  flex-direction: column;
+  gap: $spacing-sm;
+  padding: $spacing-md;
+  overflow: auto;
+}
+
+.pessoa-files__toolbar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: $spacing-sm;
+  align-items: end;
+
+  > div {
+    display: flex;
+    align-items: center;
+    gap: $spacing-xs;
+  }
+
+  label {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    gap: $spacing-xs;
+    color: $color-text-secondary;
+    font-size: $font-size-xs;
+    font-weight: $font-weight-medium;
+  }
+
+  input {
+    width: 100%;
+    min-height: 36px;
+    border: 1px solid $color-border;
+    border-radius: $border-radius-sm;
+    background-color: $color-neutral-light;
+    color: $color-text-primary;
+    font: inherit;
+    outline: none;
+    padding: $spacing-xs $spacing-sm;
+    transition:
+      border-color $transition-fast,
+      box-shadow $transition-fast;
+
+    &:focus {
+      border-color: $color-primary-light;
+      box-shadow: 0 0 0 3px rgba($rouge-light, 0.16);
+    }
+  }
+}
+
+.pessoa-files__action {
+  display: inline-flex;
+  min-height: 34px;
+  align-items: center;
+  gap: $spacing-xs;
+  padding: 0 $spacing-sm;
+  white-space: nowrap;
+  border: 1px solid $color-border;
+  border-radius: $border-radius-sm;
+  background-color: $color-neutral-light;
+  color: $color-text-secondary;
+  cursor: pointer;
+  font: inherit;
+  font-size: $font-size-xs;
+  font-weight: $font-weight-medium;
+  transition:
+    background-color $transition-fast,
+    border-color $transition-fast,
+    color $transition-fast;
+
+  &:hover {
+    border-color: $color-primary-light;
+    background-color: rgba($color-primary-pale, 0.55);
+    color: $color-primary;
+  }
+}
+
+.pessoa-files__table {
+  overflow: auto;
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: $font-size-xs;
+  }
+
+  th,
+  td {
+    border-bottom: 1px solid rgba($color-border, 0.65);
+    padding: $spacing-sm;
+    text-align: left;
+  }
+
+  tr {
+    cursor: pointer;
+  }
+
+  .is-selected {
+    background-color: rgba($color-primary-pale, 0.35);
+  }
+}
+
+@include respond-below($breakpoint-sm) {
+  .pessoa-files__toolbar {
+    grid-template-columns: 1fr;
+  }
+}

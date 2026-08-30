@@ -49,15 +49,13 @@
 }
 
 .clients-panel__tools,
-.clients-panel__footer > div,
-.clients-files__toolbar > div {
+.clients-panel__footer > div {
   display: flex;
   align-items: center;
   gap: $spacing-xs;
 }
 
 .clients-icon-button,
-.clients-menu-button,
 .clients-panel__tabs button {
   border: 1px solid $color-border;
   border-radius: $border-radius-sm;
@@ -90,17 +88,6 @@
   }
 }
 
-.clients-menu-button {
-  display: inline-flex;
-  min-height: 34px;
-  align-items: center;
-  gap: $spacing-xs;
-  padding: 0 $spacing-sm;
-  white-space: nowrap;
-  font-size: $font-size-xs;
-  font-weight: $font-weight-medium;
-}
-
 .clients-panel__tabs {
   display: flex;
   gap: $spacing-xs;
@@ -124,8 +111,7 @@
   flex-direction: column;
 }
 
-.clients-form__section,
-.clients-files {
+.clients-form__section {
   @include thin-scrollbar;
   display: flex;
   flex: 1;
@@ -164,8 +150,7 @@
   }
 }
 
-.clients-field,
-.clients-files__toolbar label {
+.clients-field {
   display: flex;
   min-width: 0;
   flex-direction: column;
@@ -181,8 +166,7 @@
 
 .clients-form input,
 .clients-form select,
-.clients-form textarea,
-.clients-files input {
+.clients-form textarea {
   width: 100%;
   min-height: 36px;
   border: 1px solid $color-border;
@@ -224,38 +208,6 @@
   }
 }
 
-.clients-files__toolbar {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: $spacing-sm;
-  align-items: end;
-}
-
-.clients-files__table {
-  overflow: auto;
-
-  table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: $font-size-xs;
-  }
-
-  th,
-  td {
-    border-bottom: 1px solid rgba($color-border, 0.65);
-    padding: $spacing-sm;
-    text-align: left;
-  }
-
-  tr {
-    cursor: pointer;
-  }
-
-  .is-selected {
-    background-color: rgba($color-primary-pale, 0.35);
-  }
-}
-
 @include respond-below($breakpoint-lg) {
   .clients-panel {
     max-height: none;
@@ -263,10 +215,6 @@
 }
 
 @include respond-below($breakpoint-sm) {
-  .clients-files__toolbar {
-    grid-template-columns: 1fr;
-  }
-
   .clients-form__row,
   .clients-form__row--cols-3 {
     grid-template-columns: 1fr;

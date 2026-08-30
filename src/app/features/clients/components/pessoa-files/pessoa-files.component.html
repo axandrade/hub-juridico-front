@@ -1,0 +1,66 @@
+<div class="pessoa-files">
+  <div class="pessoa-files__toolbar">
+    <label>
+      <span>Pesquisar arquivos</span>
+      <input
+        type="text"
+        [value]="search()"
+        placeholder="pasta, contrato, arquivo..."
+        (input)="updateSearch($event)"
+      />
+    </label>
+    <div>
+      <button type="button" class="pessoa-files__action" (click)="openFolder()">
+        <i class="fa-solid fa-folder-open" aria-hidden="true"></i>
+        Abrir pasta
+      </button>
+      <button type="button" class="pessoa-files__action" (click)="openFile()">
+        <i class="fa-solid fa-file-arrow-up" aria-hidden="true"></i>
+        Abrir arquivo
+      </button>
+    </div>
+  </div>
+
+  <div class="pessoa-files__table">
+    <table>
+      <thead>
+        <tr>
+          <th>Nome</th>
+          <th>Tipo</th>
+          <th>Atualizado</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (file of rows(); track file.name + file.kind) {
+          <tr [class.is-selected]="selectedName() === file.name" (click)="selectFile(file)">
+            <td>
+              @if (file.kind === 'contract') {
+                Contrato {{ file.name }}
+              } @else {
+                {{ file.name }}
+              }
+            </td>
+            <td>
+              @switch (file.kind) {
+                @case ('folder') {
+                  Pasta
+                }
+                @case ('mainFile') {
+                  Arquivo principal
+                }
+                @case ('contract') {
+                  Contrato
+                }
+              }
+            </td>
+            <td>{{ file.updatedAt }}</td>
+          </tr>
+        } @empty {
+          <tr>
+            <td colspan="3">Nenhum arquivo vinculado.</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+</div>

@@ -36,6 +36,7 @@ import { ClientContactListComponent } from '../client-contact-list/client-contac
 import { ClientEmailListComponent } from '../client-email-list/client-email-list.component';
 import { ClientFieldComponent } from '../client-field/client-field.component';
 import { ClientRepresentativesComponent } from '../client-representatives/client-representatives.component';
+import { PessoaFilesComponent, PessoaFilesNotice } from '../pessoa-files/pessoa-files.component';
 
 type PanelTab = 'person' | 'admin' | 'records' | 'files';
 
@@ -69,12 +70,6 @@ interface EditorNotice {
   subject?: string;
 }
 
-interface ClientFileRow {
-  name: string;
-  kind: 'folder' | 'mainFile' | 'contract';
-  updatedAt: string;
-}
-
 /**
  * Tela autônoma de cadastro/edição de pessoa (física ou jurídica). Dona do
  * `FormGroup` raiz; carrega a ficha por id (ou vazia para novo cadastro), valida,
@@ -93,6 +88,7 @@ interface ClientFileRow {
     ClientContactListComponent,
     ClientRepresentativesComponent,
     ClientAdminFormComponent,
+    PessoaFilesComponent,
   ],
   templateUrl: './pessoa-form.component.html',
   styleUrl: './pessoa-form.component.scss',
@@ -134,8 +130,6 @@ export class PessoaFormComponent {
   /** `registro_andamento` como veio do backend — base para detectar mudança e logar no histórico. */
   private readonly loadedProgress = signal('');
   protected readonly activePanelTab = signal<PanelTab>('person');
-  protected readonly fileSearch = signal('');
-  protected readonly selectedFileName = signal('');
   protected readonly notice = signal<EditorNotice>({ key: 'selectOrCreate' });
 
   protected readonly panelTabs: readonly PanelTab[] = ['person', 'admin', 'records', 'files'];
@@ -154,29 +148,16 @@ export class PessoaFormComponent {
       : (pessoa.razaoSocial || pessoa.nomeFantasia).trim();
   });
 
-  protected readonly panelFiles = computed<ClientFileRow[]>(() => {
+  /** Recorte do dossiê que a aba "Lista de arquivos" (`app-pessoa-files`) consome. */
+  protected readonly filesInfo = computed(() => {
     const dossier = this.formValue().dossier;
-    const registeredAt = this.registeredAt();
-    const search = this.normalizeKey(this.fileSearch());
-    const rows: ClientFileRow[] = [];
-
-    if (dossier.folder) {
-      rows.push({ name: dossier.folder, kind: 'folder', updatedAt: this.formatDate(registeredAt) });
-    }
-    if (dossier.file) {
-      rows.push({ name: dossier.file, kind: 'mainFile', updatedAt: this.formatDate(registeredAt) });
-    }
-    if (dossier.contractNumber) {
-      rows.push({
-        name: dossier.contractNumber,
-        kind: 'contract',
-        updatedAt: dossier.contractDate || this.formatDate(registeredAt),
-      });
-    }
-
-    return search
-      ? rows.filter((row) => this.normalizeKey(`${row.name} ${row.kind}`).includes(search))
-      : rows;
+    return {
+      folder: dossier.folder,
+      file: dossier.file,
+      contractNumber: dossier.contractNumber,
+      contractDate: dossier.contractDate,
+      registeredAt: this.registeredAt(),
+    };
   });
 
   /** Última ficha carregada (`id:<n>` ou `new:<tipo>`) — evita recarregar à toa. */
@@ -296,23 +277,9 @@ export class PessoaFormComponent {
     this.cleared.emit();
   }
 
-  protected updateFileSearch(event: Event): void {
-    this.fileSearch.set((event.target as HTMLInputElement).value);
-  }
-
-  protected selectFile(row: ClientFileRow): void {
-    this.selectedFileName.set(row.name);
-    this.notice.set({ key: 'fileSelected', subject: row.name });
-  }
-
-  protected openFolder(): void {
-    const folder = this.form.controls.dossier.controls.folder.value;
-    this.notice.set({ key: folder ? 'folderReady' : 'saveToCreateFolder', subject: folder });
-  }
-
-  protected openFile(): void {
-    const file = this.form.controls.dossier.controls.file.value || this.selectedFileName();
-    this.notice.set({ key: file ? 'fileReady' : 'noLinkedFile', subject: file });
+  /** Repassa os avisos da aba de arquivos para o rodapé de status do painel. */
+  protected onFilesNotice(event: PessoaFilesNotice): void {
+    this.notice.set({ key: event.key, subject: event.subject });
   }
 
   protected isPersisted(): boolean {
@@ -417,10 +384,6 @@ export class PessoaFormComponent {
     return value.trim().toLocaleUpperCase('pt-BR');
   }
 
-  private formatDate(date: Date): string {
-    return new Intl.DateTimeFormat('pt-BR').format(date);
-  }
-
   private formatDateTime(date: Date): string {
     return new Intl.DateTimeFormat('pt-BR', {
       day: '2-digit',
@@ -429,10 +392,6 @@ export class PessoaFormComponent {
       hour: '2-digit',
       minute: '2-digit',
     }).format(date);
-  }
-
-  private normalizeKey(value: string): string {
-    return value.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
   }
 
   /** Extrai a mensagem legível de um erro HTTP (ProblemDetail do backend). */

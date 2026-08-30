@@ -24,7 +24,7 @@ export interface ClientListQuery {
 /**
  * Fonte única da lista de clientes para a feature. Fala com a API
  * `/api/v1/pessoas` (Spring), que pagina de 10 em 10; os componentes só falam
- * com o store. O `favorite` é frontend-only (sem campo no backend).
+ * com o store. `favorite` é por usuário (`PATCH /pessoas/{id}/favorito`).
  */
 @Injectable({ providedIn: 'root' })
 export class ClientStore {
@@ -115,19 +115,30 @@ export class ClientStore {
       );
   }
 
-  /** Favorito é frontend-only (sem backend). */
+  /**
+   * Alterna o favorito da pessoa para o usuário logado. Atualiza a lista na hora
+   * (otimista), dispara `PATCH /pessoas/{id}/favorito` e desfaz se a API falhar.
+   * Devolve o estado desejado (pós-clique).
+   */
   alternarFavorito(id: number): boolean {
-    let favorito = false;
+    const atual = this._clients().find((client) => client.id === id);
+    if (!atual) {
+      return false;
+    }
+    const desejado = !atual.favorite;
+    this.setFavoritoLocal(id, desejado);
+
+    this.http
+      .patch<void>(`${this.base}/${id}/favorito`, { favorito: desejado })
+      .subscribe({ error: () => this.setFavoritoLocal(id, !desejado) });
+
+    return desejado;
+  }
+
+  private setFavoritoLocal(id: number, favorito: boolean): void {
     this._clients.update((clients) =>
-      clients.map((client) => {
-        if (client.id !== id) {
-          return client;
-        }
-        favorito = !client.favorite;
-        return { ...client, favorite: favorito };
-      }),
+      clients.map((client) => (client.id === id ? { ...client, favorite: favorito } : client)),
     );
-    return favorito;
   }
 
   proximoId(): number {

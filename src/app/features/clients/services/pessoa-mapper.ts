@@ -22,9 +22,11 @@ import {
  * Conversão entre `IClient` (frontend) e os DTOs da API `/pessoas`.
  *
  * Lacunas conhecidas (sem campo no backend hoje): `pessoa.profissao`,
- * `dossier.folder`, `favorite`, `dossier.progressEntry/progressHistory`. O
+ * `dossier.folder`, `dossier.progressEntry/progressHistory`. O
  * `dossier.hiringMode` não é enviado porque o enum `modalidade` do backend
  * (CLT/PJ/...) trata de vínculo trabalhista, não de honorários.
+ * `favorite` vem do `favorito` do response (por usuário) e é alterado via
+ * `PATCH /pessoas/{id}/favorito` — nunca no corpo de criar/atualizar.
  *
  * "Cadastrado por": uso `cadastrado_por_nome` do backend; se vier vazio, resolvo
  * pelo usuário logado quando o id bate, senão mostro `Usuário #<id>`.
@@ -43,7 +45,7 @@ export function pessoaRespToClient(res: PessoaRespApi, currentUser: CurrentUser 
   return {
     id: res.id,
     registeredAt: adm?.criado_em ? new Date(adm.criado_em) : new Date(),
-    favorite: false,
+    favorite: res.favorito ?? false,
     pessoa: {
       tipo: res.tipo,
       endereco: enderecoFromApi(res.endereco),

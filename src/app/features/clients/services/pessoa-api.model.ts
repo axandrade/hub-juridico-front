@@ -116,6 +116,7 @@ export interface PessoaRespApi {
   inscricao_municipal?: string;
   representantes?: RepresentanteRespApi[];
   // comum
+  favorito?: boolean;
   endereco: EnderecoApi | null;
   contatos: ContatoApi[];
   emails: EmailApi[];

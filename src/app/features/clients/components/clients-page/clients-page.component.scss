@@ -74,6 +74,12 @@
   &.is-active {
     color: $color-warning;
   }
+
+  i {
+    transition:
+      transform $transition-fast,
+      filter $transition-fast;
+  }
 }
 
 .clients-menu-button,
@@ -287,11 +293,43 @@
 
   tbody tr {
     cursor: pointer;
-    transition: background-color $transition-fast;
+    transition:
+      background-color $transition-fast,
+      box-shadow $transition-fast;
 
     &:hover,
     &.is-selected {
       background-color: rgba($color-primary-pale, 0.35);
+    }
+
+    // Cliente favorito: fundo âmbar suave, divisórias mais quentes e uma
+    // "fita" dourada na lateral esquerda (na célula da estrela).
+    &.is-favorite {
+      background-color: rgba($color-warning, 0.09);
+
+      td {
+        border-bottom-color: rgba($color-warning, 0.28);
+      }
+
+      td:first-child {
+        box-shadow: inset 3px 0 0 $color-warning;
+      }
+
+      &:hover,
+      &.is-selected {
+        background-color: rgba($color-warning, 0.16);
+      }
+
+      .clients-icon-button.is-active {
+        border-color: rgba($color-warning, 0.5);
+        background-color: rgba($color-warning, 0.16);
+        box-shadow: 0 0 0 3px rgba($color-warning, 0.14);
+
+        i {
+          transform: scale(1.08);
+          filter: drop-shadow(0 1px 2px rgba($color-warning, 0.55));
+        }
+      }
     }
   }
 }

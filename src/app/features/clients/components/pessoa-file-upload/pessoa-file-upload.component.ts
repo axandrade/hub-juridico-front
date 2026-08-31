@@ -58,6 +58,8 @@ export class PessoaFileUploadComponent {
   protected readonly rascunhoTipo = signal('');
   protected readonly erroTipo = signal<string | null>(null);
   protected readonly salvandoTipo = signal(false);
+  /** Menu "⋮" com as ações de tipo (adicionar / editar / excluir). */
+  protected readonly menuTipoAberto = signal(false);
 
   protected readonly file = signal<File | null>(null);
   protected readonly sending = signal(false);
@@ -96,13 +98,29 @@ export class PessoaFileUploadComponent {
 
   // --- ações do bloco de tipos ---
 
+  protected toggleMenuTipo(): void {
+    this.menuTipoAberto.update((v) => !v);
+  }
+
+  /**
+   * Fecha o menu "⋮" ao clicar em qualquer lugar do diálogo fora dele. O modal para
+   * a propagação do clique no card, então ouvimos no próprio conteúdo, não no document.
+   */
+  protected onClickNoDialogo(event: MouseEvent): void {
+    if (this.menuTipoAberto() && !(event.target as HTMLElement)?.closest('.file-upload__tipo-menu')) {
+      this.menuTipoAberto.set(false);
+    }
+  }
+
   protected iniciarAddTipo(): void {
+    this.menuTipoAberto.set(false);
     this.rascunhoTipo.set('');
     this.erroTipo.set(null);
     this.modoTipo.set('add');
   }
 
   protected iniciarEditTipo(): void {
+    this.menuTipoAberto.set(false);
     if (this.tipoId() === null) {
       return;
     }
@@ -112,6 +130,7 @@ export class PessoaFileUploadComponent {
   }
 
   protected iniciarDeleteTipo(): void {
+    this.menuTipoAberto.set(false);
     if (this.tipoId() === null) {
       return;
     }
@@ -219,6 +238,7 @@ export class PessoaFileUploadComponent {
     this.modoTipo.set('idle');
     this.rascunhoTipo.set('');
     this.erroTipo.set(null);
+    this.menuTipoAberto.set(false);
   }
 
   /** Erro de uma operação no catálogo de tipos (nome duplicado é o caso comum). */

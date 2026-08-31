@@ -4,7 +4,7 @@
   [dismissable]="!sending() && !salvandoTipo()"
   (closed)="close()"
 >
-  <div class="file-upload">
+  <div class="file-upload" (click)="onClickNoDialogo($event)">
     <div class="file-upload__field">
       <span>Tipo do anexo</span>
 
@@ -26,35 +26,33 @@
                 <option [value]="null">Nenhum tipo cadastrado</option>
               }
             </select>
-            <button
-              type="button"
-              class="file-upload__tipo-btn"
-              title="Adicionar"
-              aria-label="Adicionar"
-              (click)="iniciarAddTipo()"
-            >
-              <i class="fa-solid fa-plus" aria-hidden="true"></i>
-            </button>
-            <button
-              type="button"
-              class="file-upload__tipo-btn"
-              title="Editar"
-              aria-label="Editar"
-              [disabled]="tipoId() === null"
-              (click)="iniciarEditTipo()"
-            >
-              <i class="fa-solid fa-pen" aria-hidden="true"></i>
-            </button>
-            <button
-              type="button"
-              class="file-upload__tipo-btn"
-              title="Excluir"
-              aria-label="Excluir"
-              [disabled]="tipoId() === null"
-              (click)="iniciarDeleteTipo()"
-            >
-              <i class="fa-solid fa-trash" aria-hidden="true"></i>
-            </button>
+
+            <div class="file-upload__tipo-menu">
+              <button
+                type="button"
+                class="file-upload__tipo-btn"
+                title="Gerenciar tipos"
+                aria-label="Gerenciar tipos"
+                [class.is-active]="menuTipoAberto()"
+                (click)="toggleMenuTipo()"
+              >
+                <i class="fa-solid fa-ellipsis-vertical" aria-hidden="true"></i>
+              </button>
+
+              @if (menuTipoAberto()) {
+                <div class="file-upload__tipo-dropdown" role="menu">
+                  <button type="button" (click)="iniciarAddTipo()">
+                    <i class="fa-solid fa-plus" aria-hidden="true"></i> Adicionar
+                  </button>
+                  <button type="button" [disabled]="tipoId() === null" (click)="iniciarEditTipo()">
+                    <i class="fa-solid fa-pen" aria-hidden="true"></i> Editar
+                  </button>
+                  <button type="button" [disabled]="tipoId() === null" (click)="iniciarDeleteTipo()">
+                    <i class="fa-solid fa-trash" aria-hidden="true"></i> Excluir
+                  </button>
+                </div>
+              }
+            </div>
           </div>
         }
 

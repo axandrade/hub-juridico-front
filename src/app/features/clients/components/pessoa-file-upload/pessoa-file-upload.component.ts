@@ -7,18 +7,24 @@ import {
   output,
   signal,
 } from '@angular/core';
-import { toSignal } from '@angular/core/rxjs-interop';
 
 import { ButtonComponent } from '../../../../shared/components/button/button.component';
 import { ModalComponent } from '../../../../shared/components/modal/modal.component';
 import { PessoaArquivo } from '../../services/pessoa-arquivo.model';
 import { PessoaArquivoService } from '../../services/pessoa-arquivo.service';
-import { TipoAnexo, TipoAnexoService } from '../../services/tipo-anexo.service';
+import { TipoAnexoService } from '../../services/tipo-anexo.service';
+
+/** Estado do bloco "Tipo do anexo": lista, adicionando, editando ou confirmando exclusão. */
+type ModoTipo = 'idle' | 'add' | 'edit' | 'confirmDelete';
 
 /**
  * Diálogo de envio de arquivo da aba "Lista de arquivos". Dono do formulário
  * (tipo do anexo + arquivo), chama `PessoaArquivoService.enviar` e devolve o
  * metadado salvo via `uploaded` (ou a mensagem de erro via `failed`).
+ *
+ * O bloco "Tipo do anexo" também permite adicionar / editar / excluir tipos
+ * (catálogo `tipos_anexo`), inline. Editar não mexe em arquivos já salvos — o
+ * tipo escolhido é gravado no nome do arquivo no momento do upload.
  */
 @Component({
   selector: 'app-pessoa-file-upload',
@@ -39,14 +45,27 @@ export class PessoaFileUploadComponent {
   readonly failed = output<string>();
 
   /** Opções do dropdown "Tipo do anexo" — catálogo `tipos_anexo` do backend. */
-  protected readonly tipos = toSignal(this.tiposAnexo.listar(), { initialValue: [] as TipoAnexo[] });
+  protected readonly tipos = this.tiposAnexo.tipos;
   private readonly tipoEscolhido = signal<number | null>(null);
   /** Id selecionado: o que o usuário escolheu, ou o primeiro da lista por padrão. */
   protected readonly tipoId = computed(() => this.tipoEscolhido() ?? this.tipos()[0]?.id ?? null);
+  protected readonly nomeTipoSelecionado = computed(
+    () => this.tipos().find((t) => t.id === this.tipoId())?.nome ?? '',
+  );
+
+  // --- gerenciamento inline do catálogo de tipos ---
+  protected readonly modoTipo = signal<ModoTipo>('idle');
+  protected readonly rascunhoTipo = signal('');
+  protected readonly erroTipo = signal<string | null>(null);
+  protected readonly salvandoTipo = signal(false);
 
   protected readonly file = signal<File | null>(null);
   protected readonly sending = signal(false);
   protected readonly dragging = signal(false);
+
+  constructor() {
+    this.tiposAnexo.carregar();
+  }
 
   protected pickFile(event: Event): void {
     this.file.set((event.target as HTMLInputElement).files?.[0] ?? null);
@@ -75,10 +94,100 @@ export class PessoaFileUploadComponent {
     this.tipoEscolhido.set(Number((event.target as HTMLSelectElement).value));
   }
 
+  // --- ações do bloco de tipos ---
+
+  protected iniciarAddTipo(): void {
+    this.rascunhoTipo.set('');
+    this.erroTipo.set(null);
+    this.modoTipo.set('add');
+  }
+
+  protected iniciarEditTipo(): void {
+    if (this.tipoId() === null) {
+      return;
+    }
+    this.rascunhoTipo.set(this.nomeTipoSelecionado());
+    this.erroTipo.set(null);
+    this.modoTipo.set('edit');
+  }
+
+  protected iniciarDeleteTipo(): void {
+    if (this.tipoId() === null) {
+      return;
+    }
+    this.erroTipo.set(null);
+    this.modoTipo.set('confirmDelete');
+  }
+
+  protected cancelarTipo(): void {
+    if (this.salvandoTipo()) {
+      return;
+    }
+    this.modoTipo.set('idle');
+    this.rascunhoTipo.set('');
+    this.erroTipo.set(null);
+  }
+
+  protected atualizarRascunho(event: Event): void {
+    this.rascunhoTipo.set((event.target as HTMLInputElement).value);
+  }
+
+  protected confirmarTipo(): void {
+    const nome = this.rascunhoTipo().trim();
+    const modo = this.modoTipo();
+    if (!nome || this.salvandoTipo() || (modo !== 'add' && modo !== 'edit')) {
+      return;
+    }
+    this.salvandoTipo.set(true);
+    this.erroTipo.set(null);
+
+    const req$ =
+      modo === 'add'
+        ? this.tiposAnexo.criar(nome)
+        : this.tiposAnexo.alterar(this.tipoId() as number, nome);
+
+    req$.subscribe({
+      next: (tipo) => {
+        this.salvandoTipo.set(false);
+        if (modo === 'add') {
+          this.tipoEscolhido.set(tipo.id);
+        }
+        this.modoTipo.set('idle');
+        this.rascunhoTipo.set('');
+      },
+      error: (err: unknown) => {
+        this.salvandoTipo.set(false);
+        this.erroTipo.set(this.tipoErro(err));
+      },
+    });
+  }
+
+  protected confirmarDeleteTipo(): void {
+    const id = this.tipoId();
+    if (id === null || this.salvandoTipo()) {
+      return;
+    }
+    this.salvandoTipo.set(true);
+    this.erroTipo.set(null);
+    this.tiposAnexo.excluir(id).subscribe({
+      next: () => {
+        this.salvandoTipo.set(false);
+        this.tipoEscolhido.set(null);
+        this.modoTipo.set('idle');
+      },
+      error: (err: unknown) => {
+        this.salvandoTipo.set(false);
+        this.erroTipo.set(this.tipoErro(err));
+      },
+    });
+  }
+
+  // --- envio do arquivo ---
+
   protected submit(): void {
     const file = this.file();
     const tipoId = this.tipoId();
-    if (!file || tipoId === null || this.sending()) {
+    if (!file || tipoId === null || this.sending() || this.modoTipo() !== 'idle') {
       return;
     }
     this.sending.set(true);
@@ -96,7 +205,7 @@ export class PessoaFileUploadComponent {
   }
 
   protected close(): void {
-    if (this.sending()) {
+    if (this.sending() || this.salvandoTipo()) {
       return;
     }
     this.reset();
@@ -107,6 +216,17 @@ export class PessoaFileUploadComponent {
     this.file.set(null);
     this.tipoEscolhido.set(null);
     this.dragging.set(false);
+    this.modoTipo.set('idle');
+    this.rascunhoTipo.set('');
+    this.erroTipo.set(null);
+  }
+
+  /** Erro de uma operação no catálogo de tipos (nome duplicado é o caso comum). */
+  private tipoErro(err: unknown): string {
+    if ((err as { status?: number })?.status === 409) {
+      return 'Já existe um tipo com esse nome.';
+    }
+    return this.errorMessage(err);
   }
 
   /** Mensagem legível de um erro HTTP (ProblemDetail do backend). */
@@ -124,7 +244,7 @@ export class PessoaFileUploadComponent {
       e?.error?.title ||
       e?.error?.message ||
       e?.message ||
-      'Não foi possível enviar o arquivo.'
+      'Não foi possível concluir a operação.'
     );
   }
 }

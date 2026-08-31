@@ -1,23 +1,127 @@
 <app-modal
   [open]="open()"
   title="Enviar arquivo"
-  [dismissable]="!sending()"
+  [dismissable]="!sending() && !salvandoTipo()"
   (closed)="close()"
 >
   <div class="file-upload">
-    <label class="file-upload__field">
+    <div class="file-upload__field">
       <span>Tipo do anexo</span>
-      <select
-        class="file-upload__select"
-        [value]="tipoId()"
-        [disabled]="!tipos().length"
-        (change)="setTipo($event)"
-      >
-        @for (option of tipos(); track option.id) {
-          <option [value]="option.id">{{ option.nome }}</option>
+
+      @switch (modoTipo()) {
+        @case ('idle') {
+          <div class="file-upload__tipo-row">
+            <select
+              class="file-upload__select"
+              [value]="tipoId()"
+              [disabled]="!tipos().length"
+              (change)="setTipo($event)"
+            >
+              @for (option of tipos(); track option.id) {
+                <option [value]="option.id" [selected]="option.id === tipoId()">
+                  {{ option.nome }}
+                </option>
+              }
+              @empty {
+                <option [value]="null">Nenhum tipo cadastrado</option>
+              }
+            </select>
+            <button
+              type="button"
+              class="file-upload__tipo-btn"
+              title="Adicionar"
+              aria-label="Adicionar"
+              (click)="iniciarAddTipo()"
+            >
+              <i class="fa-solid fa-plus" aria-hidden="true"></i>
+            </button>
+            <button
+              type="button"
+              class="file-upload__tipo-btn"
+              title="Editar"
+              aria-label="Editar"
+              [disabled]="tipoId() === null"
+              (click)="iniciarEditTipo()"
+            >
+              <i class="fa-solid fa-pen" aria-hidden="true"></i>
+            </button>
+            <button
+              type="button"
+              class="file-upload__tipo-btn"
+              title="Excluir"
+              aria-label="Excluir"
+              [disabled]="tipoId() === null"
+              (click)="iniciarDeleteTipo()"
+            >
+              <i class="fa-solid fa-trash" aria-hidden="true"></i>
+            </button>
+          </div>
         }
-      </select>
-    </label>
+
+        @case ('confirmDelete') {
+          <div class="file-upload__tipo-row file-upload__tipo-row--confirm">
+            <span class="file-upload__tipo-confirm-text">
+              Excluir o tipo "{{ nomeTipoSelecionado() }}"?
+            </span>
+            <button
+              type="button"
+              class="file-upload__tipo-btn file-upload__tipo-btn--danger"
+              title="Confirmar exclusão"
+              [disabled]="salvandoTipo()"
+              (click)="confirmarDeleteTipo()"
+            >
+              <i class="fa-solid fa-check" aria-hidden="true"></i>
+            </button>
+            <button
+              type="button"
+              class="file-upload__tipo-btn"
+              title="Cancelar"
+              [disabled]="salvandoTipo()"
+              (click)="cancelarTipo()"
+            >
+              <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+            </button>
+          </div>
+        }
+
+        @default {
+          <div class="file-upload__tipo-row">
+            <input
+              class="file-upload__select"
+              type="text"
+              maxlength="60"
+              [value]="rascunhoTipo()"
+              [placeholder]="modoTipo() === 'add' ? 'Novo tipo...' : 'Nome do tipo'"
+              (input)="atualizarRascunho($event)"
+              (keydown.enter)="confirmarTipo()"
+              (keydown.escape)="cancelarTipo()"
+            />
+            <button
+              type="button"
+              class="file-upload__tipo-btn"
+              title="Confirmar"
+              [disabled]="!rascunhoTipo().trim() || salvandoTipo()"
+              (click)="confirmarTipo()"
+            >
+              <i class="fa-solid fa-check" aria-hidden="true"></i>
+            </button>
+            <button
+              type="button"
+              class="file-upload__tipo-btn"
+              title="Cancelar"
+              [disabled]="salvandoTipo()"
+              (click)="cancelarTipo()"
+            >
+              <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+            </button>
+          </div>
+        }
+      }
+
+      @if (erroTipo()) {
+        <span class="file-upload__tipo-erro">{{ erroTipo() }}</span>
+      }
+    </div>
 
     <div class="file-upload__field">
       <span>Arquivo</span>
@@ -45,13 +149,13 @@
     <app-button
       variant="tertiary"
       label="Cancelar"
-      [disabled]="sending()"
+      [disabled]="sending() || salvandoTipo()"
       (clicked)="close()"
     />
     <app-button
       variant="primary"
       [label]="sending() ? 'Enviando...' : 'Enviar'"
-      [disabled]="!file() || tipoId() === null || sending()"
+      [disabled]="!file() || tipoId() === null || sending() || modoTipo() !== 'idle'"
       (clicked)="submit()"
     />
   </ng-container>

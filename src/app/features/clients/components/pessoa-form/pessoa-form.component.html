@@ -124,17 +124,14 @@
           @case ('saveError') {
             Não foi possível salvar: {{ notice().subject }}
           }
-          @case ('deleteError') {
-            Não foi possível apagar: {{ notice().subject }}
+          @case ('statusError') {
+            Não foi possível alterar o status: {{ notice().subject }}
           }
-          @case ('selectToDelete') {
-            Selecione um cliente para apagar.
+          @case ('confirmInactivate') {
+            Confirme para inativar {{ notice().subject }}.
           }
-          @case ('confirmDelete') {
-            Confirme para apagar {{ notice().subject }} da base local.
-          }
-          @case ('deleted') {
-            Cliente removido da tabela.
+          @case ('statusChanged') {
+            Cliente {{ notice().subject }}.
           }
           @case ('panelCleared') {
             Painel limpo.
@@ -176,21 +173,22 @@
           label="Limpar painel"
           (clicked)="clearPanel()"
         />
-        <app-button
-          variant="secondary"
-          size="sm"
-          icon="fa-solid fa-trash"
-          label="Apagar"
-          [disabled]="!isPersisted()"
-          (clicked)="requestDelete()"
-        />
-        @if (notice().key === 'confirmDelete') {
+        @if (isPersisted()) {
+          <app-button
+            variant="secondary"
+            size="sm"
+            [icon]="isInactive() ? 'fa-solid fa-rotate-left' : 'fa-solid fa-ban'"
+            [label]="isInactive() ? 'Reativar' : 'Inativar'"
+            (clicked)="requestStatusChange()"
+          />
+        }
+        @if (notice().key === 'confirmInactivate') {
           <app-button
             variant="secondary"
             size="sm"
             icon="fa-solid fa-check"
             label="Confirmar"
-            (clicked)="confirmDelete()"
+            (clicked)="confirmInactivate()"
           />
         }
         <app-button

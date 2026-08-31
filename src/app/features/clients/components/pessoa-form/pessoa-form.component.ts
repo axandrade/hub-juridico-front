@@ -29,6 +29,7 @@ import {
   readClientForm,
 } from '../../forms/client-form.factory';
 import { PESSOA_FISICA_FIELDS, PESSOA_JURIDICA_FIELDS } from '../../models/client-form.model';
+import { StatusVinculoApi } from '../../services/pessoa-api.model';
 import { PessoaStore } from '../../services/pessoa-store';
 import { ClientAddressComponent } from '../client-address/client-address.component';
 import { ClientAdminFormComponent } from '../client-admin-form/client-admin-form.component';
@@ -45,9 +46,8 @@ type NoticeKey =
   | 'panelLockedSelection'
   | 'idle'
   | 'saved'
-  | 'selectToDelete'
-  | 'confirmDelete'
-  | 'deleted'
+  | 'confirmInactivate'
+  | 'statusChanged'
   | 'panelCleared'
   | 'saveBeforeUpload'
   | 'uploadOk'
@@ -61,7 +61,7 @@ type NoticeKey =
   | 'favoriteRemoved'
   | 'saving'
   | 'saveError'
-  | 'deleteError';
+  | 'statusError';
 
 interface EditorNotice {
   key: NoticeKey;
@@ -106,7 +106,7 @@ export class PessoaFormComponent {
   readonly novoTipo = input<TipoPessoa>('FISICA');
 
   readonly saved = output<IPessoa>();
-  readonly removed = output<number>();
+  readonly statusChanged = output<IPessoa>();
   readonly cleared = output<void>();
 
   /** Lido pela página (via `viewChild`) para travar a troca de ficha. */
@@ -133,6 +133,11 @@ export class PessoaFormComponent {
   protected readonly panelTabs: readonly PanelTab[] = ['person', 'admin', 'records', 'files'];
 
   protected readonly tipoPessoaAtual = computed<TipoPessoa>(() => this.pessoaValue().tipo);
+
+  /** `true` quando o dossiê está `inactive` (⇒ `INATIVO` no backend). */
+  protected readonly isInactive = computed(
+    () => this.formValue().dossier.status === 'inactive',
+  );
 
   /** Linhas de campos de identidade da aba "Dados pessoais" — alternam pelo tipo. */
   protected readonly identityRows = computed(() =>
@@ -230,27 +235,36 @@ export class PessoaFormComponent {
     });
   }
 
-  protected requestDelete(): void {
-    if (this.entityId() <= 0) {
-      this.notice.set({ key: 'selectToDelete' });
+  /**
+   * Ação do botão ativar/inativar (só aparece com o cliente já salvo). Inativar
+   * pede confirmação; reativar é direto — não há exclusão, só muda o status via
+   * `PATCH /pessoas/{id}/status`.
+   */
+  protected requestStatusChange(): void {
+    if (this.isInactive()) {
+      this.applyStatusChange('ATIVO');
       return;
     }
-    this.notice.set({ key: 'confirmDelete', subject: this.panelTitle() });
+    this.notice.set({ key: 'confirmInactivate', subject: this.panelTitle() });
   }
 
-  protected confirmDelete(): void {
+  protected confirmInactivate(): void {
+    this.applyStatusChange('INATIVO');
+  }
+
+  private applyStatusChange(status: StatusVinculoApi): void {
     const id = this.entityId();
-    if (id <= 0) {
-      this.notice.set({ key: 'selectToDelete' });
-      return;
-    }
-    this.store.remover(id).subscribe({
-      next: () => {
-        this.notice.set({ key: 'deleted' });
-        this.removed.emit(id);
+    this.store.alterarStatus(id, status).subscribe({
+      next: (updated) => {
+        this.loadIntoForm(updated);
+        this.notice.set({
+          key: 'statusChanged',
+          subject: status === 'ATIVO' ? 'ativado' : 'inativado',
+        });
+        this.statusChanged.emit(updated);
       },
       error: (err: unknown) => {
-        this.notice.set({ key: 'deleteError', subject: this.httpErrorMessage(err) });
+        this.notice.set({ key: 'statusError', subject: this.httpErrorMessage(err) });
       },
     });
   }

@@ -5,7 +5,7 @@ import { Observable, map, tap } from 'rxjs';
 import { environment } from '../../../../environments/environment';
 import { IPessoa, TipoPessoa } from '../../../core/models';
 import { AuthService } from '../../../core/services/auth.service';
-import { PaginaApi, PessoaRespApi } from './pessoa-api.model';
+import { PaginaApi, PessoaRespApi, StatusVinculoApi } from './pessoa-api.model';
 import {
   clientToAtualizarRequest,
   clientToCriarRequest,
@@ -13,12 +13,16 @@ import {
 } from './pessoa-mapper';
 
 /**
- * Página pedida ao backend. Hoje o único filtro do endpoint é `tipo`
- * (`GET /api/v1/pessoas?page&size&tipo`); busca/status seguem client-side.
+ * Página pedida ao backend. Filtros do endpoint:
+ * `tipo` e `incluirInativos` (`GET /api/v1/pessoas?page&size&tipo&incluirInativos`).
+ * Por padrão (`incluirInativos: false`) só vêm pessoas ativas. Busca e demais
+ * filtros seguem client-side.
  */
 export interface PessoaListQuery {
   page: number;
   tipo: TipoPessoa | null;
+  /** `true` traz também os clientes inativos; padrão é só ativos. */
+  incluirInativos: boolean;
 }
 
 /**
@@ -64,6 +68,9 @@ export class PessoaStore {
     if (query.tipo) {
       params = params.set('tipo', query.tipo);
     }
+    if (query.incluirInativos) {
+      params = params.set('incluirInativos', true);
+    }
 
     return this.http.get<PaginaApi<PessoaRespApi>>(this.base, { params }).pipe(
       tap((page) => {
@@ -107,11 +114,21 @@ export class PessoaStore {
     );
   }
 
-  remover(id: number): Observable<void> {
+  /**
+   * Ativa ou inativa a pessoa via `PATCH /pessoas/{id}/status`. Não há exclusão:
+   * o registro permanece e a resposta traz a pessoa atualizada, que substitui a
+   * versão na lista carregada.
+   */
+  alterarStatus(id: number, status: StatusVinculoApi): Observable<IPessoa> {
     return this.http
-      .delete<void>(`${this.base}/${id}`)
+      .patch<PessoaRespApi>(`${this.base}/${id}/status`, { status })
       .pipe(
-        tap(() => this._clients.update((clients) => clients.filter((client) => client.id !== id))),
+        map((res) => this.toClient(res)),
+        tap((atualizado) =>
+          this._clients.update((clients) =>
+            clients.map((client) => (client.id === atualizado.id ? atualizado : client)),
+          ),
+        ),
       );
   }
 

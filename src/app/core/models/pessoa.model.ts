@@ -2,7 +2,7 @@ export const TIPOS_PESSOA = ['FISICA', 'JURIDICA'] as const;
 /** Discriminador da hierarquia `com.hubjuridico.dominio.Pessoa` (tabelas `pessoas_fisicas` / `pessoas_juridicas`). */
 export type TipoPessoa = (typeof TIPOS_PESSOA)[number];
 
-export const STATUS_CLIENTE = ['active', 'prospect', 'inactive', 'closed'] as const;
+export const STATUS_CLIENTE = ['active', 'inactive'] as const;
 export type StatusCliente = (typeof STATUS_CLIENTE)[number];
 
 export const MODALIDADES_CLIENTE = [

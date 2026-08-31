@@ -5,6 +5,7 @@ import {
   IDossie,
   IEndereco,
   IRepresentanteLegal,
+  StatusCliente,
   emptyDossie,
   emptyEndereco,
 } from '../../../core/models';
@@ -16,7 +17,17 @@ import {
   PessoaRespApi,
   RepresentanteApi,
   RepresentanteRespApi,
+  StatusVinculoApi,
 } from './pessoa-api.model';
+
+/** Status do vínculo: `ATIVO`/`INATIVO` no backend, `active`/`inactive` no dossiê. */
+export function statusVinculoFromApi(status: StatusVinculoApi | null): StatusCliente {
+  return status === 'INATIVO' ? 'inactive' : 'active';
+}
+
+export function statusClienteToApi(status: StatusCliente): StatusVinculoApi {
+  return status === 'inactive' ? 'INATIVO' : 'ATIVO';
+}
 
 /**
  * Conversão entre `IPessoa` (frontend) e os DTOs da API `/pessoas`.
@@ -73,7 +84,7 @@ export function pessoaRespToClient(res: PessoaRespApi, currentUser: CurrentUser 
     dossier: {
       ...emptyDossie(),
       file: adm?.caminho_arquivo ?? '',
-      status: adm?.status === 'INATIVO' ? 'inactive' : 'active',
+      status: statusVinculoFromApi(adm?.status ?? null),
       hiringMode: '',
       contractNumber: adm?.numero_contrato ?? '',
       contractDate: adm?.data_contrato ?? '',
@@ -195,7 +206,7 @@ function comumRequest(client: IPessoa) {
 /** Mínimo válido: `numero_contrato` e `responsavel_interno` são `@NotBlank` no backend. */
 function dadosAdmFromDossier(d: IDossie): DadosAdministrativosApi {
   return {
-    status: d.status === 'inactive' || d.status === 'closed' ? 'INATIVO' : 'ATIVO',
+    status: statusClienteToApi(d.status),
     modalidade: null,
     numero_contrato: d.contractNumber.trim() || '-',
     data_contrato: toIsoDate(d.contractDate),

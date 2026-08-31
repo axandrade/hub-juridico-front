@@ -87,6 +87,11 @@ export class ClientsPageComponent {
   protected readonly pageIndex = signal(0);
   /** Bumpado para forçar um recarregamento com os mesmos filtros. */
   private readonly refreshTick = signal(0);
+  /**
+   * `true` pede ao backend também os clientes inativos (padrão: só ativos).
+   * Ligado automaticamente quando o filtro de status é "Inativo".
+   */
+  protected readonly incluirInativos = signal(false);
   protected readonly panelVisible = signal(true);
   protected readonly showFilters = signal(false);
   protected readonly showColumns = signal(false);
@@ -222,16 +227,21 @@ export class ClientsPageComponent {
     const query = computed(() => ({
       page: this.pageIndex(),
       tipo: this.tipoFilter(),
+      incluirInativos: this.incluirInativos(),
       tick: this.refreshTick(),
     }));
 
     toObservable(query)
       .pipe(
         distinctUntilChanged(
-          (a, b) => a.page === b.page && a.tipo === b.tipo && a.tick === b.tick,
+          (a, b) =>
+            a.page === b.page &&
+            a.tipo === b.tipo &&
+            a.incluirInativos === b.incluirInativos &&
+            a.tick === b.tick,
         ),
-        switchMap(({ page, tipo }) =>
-          this.store.carregar({ page, tipo }).pipe(
+        switchMap(({ page, tipo, incluirInativos }) =>
+          this.store.carregar({ page, tipo, incluirInativos }).pipe(
             catchError(() => {
               this.pageNotice.set('loadError');
               return EMPTY;
@@ -320,14 +330,21 @@ export class ClientsPageComponent {
     this.reloadList();
   }
 
-  protected onRemovedOrCleared(): void {
+  protected onCleared(): void {
     this.selectedPersonId.set(null);
+    this.reloadList();
+  }
+
+  /** Ativação/inativação: o registro continua existindo, então mantém a seleção. */
+  protected onStatusChanged(client: IPessoa): void {
+    this.selectedPersonId.set(client.id);
     this.reloadList();
   }
 
   protected clearSearchAndFilters(): void {
     this.searchText.set('');
     this.filters.set({ status: '', hiringMode: '', internalOwner: '' });
+    this.incluirInativos.set(false);
     this.pageIndex.set(0);
     this.pageNotice.set('filtersCleared');
     this.showMoreActions.set(false);
@@ -350,6 +367,12 @@ export class ClientsPageComponent {
 
   protected updateFilter(field: keyof FiltrosTabela, event: Event): void {
     const value = (event.target as HTMLInputElement | HTMLSelectElement).value;
+
+    if (field === 'status') {
+      // "Inativo" precisa que o backend traga os inativos; "Ativo"/"Todos" voltam ao padrão.
+      this.incluirInativos.set(value === 'inactive');
+      this.pageIndex.set(0);
+    }
 
     this.filters.update((filters) => {
       switch (field) {

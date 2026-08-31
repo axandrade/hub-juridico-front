@@ -73,9 +73,7 @@ export const CLIENT_OPTION_LABELS: Record<string, string> = {
   WHATSAPP: 'WhatsApp',
   // StatusCliente
   active: 'Ativo',
-  prospect: 'Prospect',
   inactive: 'Inativo',
-  closed: 'Encerrado',
   // ModalidadeCliente
   oneOff: 'Avulso',
   monthly: 'Mensalista',

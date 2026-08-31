@@ -357,13 +357,7 @@
   color: color.adjust($color-success, $lightness: -18%);
 }
 
-.clients-table__status--prospect {
-  background-color: rgba($color-warning, 0.18);
-  color: color.adjust($color-warning, $lightness: -20%);
-}
-
-.clients-table__status--inativo,
-.clients-table__status--encerrado {
+.clients-table__status--inativo {
   background-color: rgba($color-primary, 0.12);
   color: $color-primary;
 }

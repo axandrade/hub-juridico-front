@@ -22,6 +22,8 @@ export class ModalComponent {
   readonly title = input<string>('');
   /** Permite fechar pelo ESC / clique fora. */
   readonly dismissable = input<boolean>(true);
+  /** Card mais largo (ex.: preview de documento). */
+  readonly wide = input<boolean>(false);
 
   readonly closed = output<void>();
 

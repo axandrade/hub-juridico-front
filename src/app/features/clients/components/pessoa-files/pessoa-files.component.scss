@@ -142,6 +142,28 @@
   }
 }
 
+.pessoa-files__docx-loading {
+  margin: 0 0 $spacing-sm;
+  color: $color-text-muted;
+  font-size: $font-size-xs;
+}
+
+.pessoa-files__docx-host {
+  // O docx-preview injeta os próprios estilos e cria os elementos dinamicamente,
+  // então precisa de ::ng-deep pra ajustar o layout ao modal.
+  ::ng-deep .docx-wrapper {
+    padding: 0;
+    background: transparent;
+  }
+
+  ::ng-deep .docx {
+    width: 100% !important;
+    min-width: 0 !important;
+    padding: $spacing-md !important;
+    box-shadow: none;
+  }
+}
+
 @include respond-below($breakpoint-sm) {
   .pessoa-files__toolbar {
     grid-template-columns: 1fr;

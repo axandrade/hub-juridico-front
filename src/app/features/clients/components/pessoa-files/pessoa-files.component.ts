@@ -39,7 +39,7 @@ export interface PessoaFilesNotice {
 @Component({
   selector: 'app-pessoa-files',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [PessoaFileUploadComponent],
+  imports: [PessoaFileUploadComponent, ModalComponent],
   templateUrl: './pessoa-files.component.html',
   styleUrl: './pessoa-files.component.scss',
 })
@@ -55,6 +55,13 @@ export class PessoaFilesComponent {
   protected readonly uploadOpen = signal(false);
   protected readonly loading = signal(false);
   protected readonly items = signal<PessoaArquivo[]>([]);
+
+  // --- preview de DOCX (renderizado no navegador com docx-preview) ---
+  protected readonly docxOpen = signal(false);
+  protected readonly docxNome = signal('');
+  protected readonly docxCarregando = signal(false);
+  private readonly docxBlob = signal<Blob | null>(null);
+  private readonly docxHost = viewChild<ElementRef<HTMLElement>>('docxHost');
 
   protected readonly rows = computed<PessoaArquivo[]>(() => {
     const search = this.normalizeKey(this.search());
@@ -74,6 +81,36 @@ export class PessoaFilesComponent {
         this.selectedId.set(null);
       }
     });
+
+    // Renderiza o DOCX assim que o modal monta o container e o blob chega.
+    effect(() => {
+      const host = this.docxHost()?.nativeElement;
+      const blob = this.docxBlob();
+      if (host && blob) {
+        this.renderizarDocx(host, blob);
+      }
+    });
+  }
+
+  private async renderizarDocx(host: HTMLElement, blob: Blob): Promise<void> {
+    this.docxCarregando.set(true);
+    host.replaceChildren();
+    try {
+      const { renderAsync } = await import('docx-preview');
+      await renderAsync(blob, host, undefined, { ignoreLastRenderedPageBreak: true });
+    } catch {
+      this.notify.emit({ key: 'viewError', subject: this.docxNome() });
+      this.docxOpen.set(false);
+    } finally {
+      this.docxCarregando.set(false);
+      this.docxBlob.set(null);
+    }
+  }
+
+  protected fecharDocx(): void {
+    this.docxOpen.set(false);
+    this.docxBlob.set(null);
+    this.docxHost()?.nativeElement.replaceChildren();
   }
 
   protected updateSearch(event: Event): void {
@@ -113,8 +150,8 @@ export class PessoaFilesComponent {
     });
   }
 
-  /** MIME para visualização inline conforme a extensão — `null` = não dá pra abrir no navegador. */
-  private tipoVisualizavel(nome: string): string | null {
+  /** MIME para abrir em nova aba conforme a extensão — `null` = não é PDF nem imagem. */
+  private tipoNovaAba(nome: string): string | null {
     const n = nome.toLowerCase();
     if (n.endsWith('.pdf')) return 'application/pdf';
     if (n.endsWith('.jpg') || n.endsWith('.jpeg')) return 'image/jpeg';
@@ -124,22 +161,55 @@ export class PessoaFilesComponent {
     return null;
   }
 
-  /** Visualização inline só para o que o navegador renderiza (PDF e imagens); DOCX não. */
-  protected podeVisualizar(row: PessoaArquivo): boolean {
-    return this.tipoVisualizavel(row.nome) !== null;
+  private ehDocx(nome: string): boolean {
+    return nome.toLowerCase().endsWith('.docx');
   }
 
-  /** Abre o arquivo numa nova aba, sem baixar. */
+  /** PDF e imagens abrem em nova aba; DOCX renderiza num modal (docx-preview). */
+  protected podeVisualizar(row: PessoaArquivo): boolean {
+    return this.tipoNovaAba(row.nome) !== null || this.ehDocx(row.nome);
+  }
+
   protected visualizar(row: PessoaArquivo): void {
     const id = this.pessoaId();
     if (id <= 0) {
       return;
     }
+    if (this.ehDocx(row.nome)) {
+      this.visualizarDocx(id, row);
+      return;
+    }
+    this.visualizarNovaAba(id, row);
+  }
+
+  /** Baixa o DOCX e abre o modal de preview — o `effect` chama o docx-preview quando o container monta. */
+  private visualizarDocx(pessoaId: number, row: PessoaArquivo): void {
+    this.docxNome.set(row.nome);
+    this.docxCarregando.set(true);
+    this.docxOpen.set(true);
+    this.arquivos.baixar(pessoaId, row.id).subscribe({
+      next: (response) => {
+        if (response.body) {
+          this.docxBlob.set(response.body);
+        } else {
+          this.fecharDocx();
+        }
+      },
+      error: () => {
+        this.docxCarregando.set(false);
+        this.docxOpen.set(false);
+        this.notify.emit({ key: 'viewError', subject: row.nome });
+      },
+    });
+  }
+
+  /** Abre PDF/imagem numa nova aba, sem baixar. */
+  private visualizarNovaAba(pessoaId: number, row: PessoaArquivo): void {
     // Abre a aba já no clique (gesto do usuário) para não cair no bloqueador de pop-up;
     // a URL do blob é setada quando o download termina.
     const aba = window.open('', '_blank');
-    const mime = this.tipoVisualizavel(row.nome) ?? 'application/octet-stream';
-    this.arquivos.baixar(id, row.id).subscribe({
+    const mime = this.tipoNovaAba(row.nome) ?? 'application/octet-stream';
+    this.arquivos.baixar(pessoaId, row.id).subscribe({
       next: (response) => {
         if (!response.body) {
           aba?.close();

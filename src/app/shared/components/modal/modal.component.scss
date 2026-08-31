@@ -23,6 +23,10 @@
   border-radius: $border-radius-lg;
   background-color: $color-surface;
   box-shadow: $shadow-lg;
+
+  &--wide {
+    max-width: 900px;
+  }
 }
 
 .modal__header {

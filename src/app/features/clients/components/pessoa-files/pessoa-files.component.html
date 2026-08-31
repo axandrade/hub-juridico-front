@@ -89,3 +89,17 @@
     (failed)="onUploadFailed($event)"
   />
 }
+
+<app-modal
+  [open]="docxOpen()"
+  [wide]="true"
+  title="Visualizar documento"
+  (closed)="fecharDocx()"
+>
+  <div class="pessoa-files__docx">
+    @if (docxCarregando()) {
+      <p class="pessoa-files__docx-loading">Carregando documento...</p>
+    }
+    <div #docxHost class="pessoa-files__docx-host"></div>
+  </div>
+</app-modal>

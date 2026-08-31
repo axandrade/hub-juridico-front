@@ -2,6 +2,7 @@
   <div class="modal" (click)="onBackdrop()">
     <div
       class="modal__dialog"
+      [class.modal__dialog--wide]="wide()"
       role="dialog"
       aria-modal="true"
       [attr.aria-label]="title() || null"

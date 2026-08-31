@@ -32,9 +32,29 @@ export class PessoaFileUploadComponent {
   protected readonly tipo = signal<TipoArquivo>('PRINCIPAL');
   protected readonly file = signal<File | null>(null);
   protected readonly sending = signal(false);
+  protected readonly dragging = signal(false);
 
   protected pickFile(event: Event): void {
     this.file.set((event.target as HTMLInputElement).files?.[0] ?? null);
+  }
+
+  protected onDragOver(event: DragEvent): void {
+    event.preventDefault();
+    this.dragging.set(true);
+  }
+
+  protected onDragLeave(event: DragEvent): void {
+    event.preventDefault();
+    this.dragging.set(false);
+  }
+
+  protected onDrop(event: DragEvent): void {
+    event.preventDefault();
+    this.dragging.set(false);
+    const dropped = event.dataTransfer?.files?.[0];
+    if (dropped) {
+      this.file.set(dropped);
+    }
   }
 
   protected setTipo(tipo: TipoArquivo): void {
@@ -71,6 +91,7 @@ export class PessoaFileUploadComponent {
   private reset(): void {
     this.file.set(null);
     this.tipo.set('PRINCIPAL');
+    this.dragging.set(false);
   }
 
   /** Mensagem legível de um erro HTTP (ProblemDetail do backend). */

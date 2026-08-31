@@ -20,14 +20,26 @@
       </div>
     </div>
 
-    <label class="file-upload__field">
+    <div class="file-upload__field">
       <span>Arquivo</span>
-      <input type="file" (change)="pickFile($event)" />
-    </label>
-
-    @if (file(); as picked) {
-      <p class="file-upload__hint">Selecionado: {{ picked.name }}</p>
-    }
+      <label
+        class="file-upload__drop"
+        [class.is-dragging]="dragging()"
+        [class.has-file]="!!file()"
+        (dragover)="onDragOver($event)"
+        (dragleave)="onDragLeave($event)"
+        (drop)="onDrop($event)"
+      >
+        <input type="file" (change)="pickFile($event)" aria-label="Escolher arquivo" />
+        <i
+          [class]="file() ? 'fa-solid fa-file-lines' : 'fa-solid fa-paperclip'"
+          aria-hidden="true"
+        ></i>
+        <span class="file-upload__drop-text">
+          {{ file()?.name || 'Clique ou arraste um arquivo aqui' }}
+        </span>
+      </label>
+    </div>
   </div>
 
   <ng-container modalFooter>

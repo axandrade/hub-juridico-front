@@ -13,12 +13,56 @@
   color: $color-text-secondary;
   font-size: $font-size-xs;
   font-weight: $font-weight-medium;
+}
 
-  input[type='file'] {
-    font: inherit;
-    font-size: $font-size-xs;
-    color: $color-text-primary;
+.file-upload__drop {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  min-height: 44px;
+  padding: $spacing-sm $spacing-md;
+  border: 1px dashed $color-primary-light;
+  border-radius: $border-radius-md;
+  background-color: rgba($color-primary-pale, 0.2);
+  color: $color-text-primary;
+  cursor: pointer;
+  font-size: $font-size-xs;
+  font-weight: $font-weight-medium;
+  transition:
+    background-color $transition-fast,
+    border-color $transition-fast;
+
+  &:hover,
+  &.is-dragging {
+    border-color: $color-primary;
+    background-color: rgba($color-primary-pale, 0.45);
   }
+
+  &.has-file {
+    border-style: solid;
+  }
+
+  // Input nativo cobre a área toda, invisível: o label é a UI.
+  input[type='file'] {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    cursor: pointer;
+  }
+
+  i {
+    flex-shrink: 0;
+    color: $color-primary;
+  }
+}
+
+.file-upload__drop-text {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
 .file-upload__tipos {
@@ -51,11 +95,4 @@
       color: $color-primary;
     }
   }
-}
-
-.file-upload__hint {
-  margin: 0;
-  color: $color-text-muted;
-  font-size: $font-size-xs;
-  word-break: break-all;
 }

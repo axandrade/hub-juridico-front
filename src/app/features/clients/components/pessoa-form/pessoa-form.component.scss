@@ -101,13 +101,13 @@
 
 .clients-panel__tabs {
   display: flex;
-  gap: $spacing-xs;
-  padding: $spacing-sm $spacing-md;
+  gap: $spacing-sm;
+  padding: $spacing-md;
   border-bottom: 1px solid rgba($color-border, 0.7);
-  overflow-x: auto;
 
   button {
-    min-height: 32px;
+    flex: 1 1 auto;
+    min-height: 36px;
     white-space: nowrap;
     padding: $spacing-xs $spacing-sm;
     font-size: $font-size-xs;

@@ -1,11 +1,13 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  ElementRef,
   computed,
   inject,
   input,
   output,
   signal,
+  viewChild,
 } from '@angular/core';
 
 import { ButtonComponent } from '../../../../shared/components/button/button.component';
@@ -61,6 +63,16 @@ export class PessoaFileUploadComponent {
     () => this.tipos().find((t) => t.id === this.tipoId())?.nome ?? '',
   );
 
+  // --- combobox com busca ---
+  private readonly comboInput = viewChild<ElementRef<HTMLInputElement>>('comboInput');
+  protected readonly comboAberto = signal(false);
+  protected readonly comboFiltro = signal('');
+  protected readonly tiposFiltrados = computed(() => {
+    const q = this.normalizar(this.comboFiltro());
+    const todos = this.tipos();
+    return q ? todos.filter((t) => this.normalizar(t.nome).includes(q)) : todos;
+  });
+
   // --- gerenciamento inline do catálogo de tipos ---
   protected readonly modoTipo = signal<ModoTipo>('idle');
   protected readonly rascunhoTipo = signal('');
@@ -112,8 +124,56 @@ export class PessoaFileUploadComponent {
     this.file.set(arquivo);
   }
 
-  protected setTipo(event: Event): void {
-    this.tipoEscolhido.set(Number((event.target as HTMLSelectElement).value));
+  // --- combobox do tipo ---
+
+  protected abrirCombo(): void {
+    this.comboFiltro.set('');
+    this.comboAberto.set(true);
+    this.menuTipoAberto.set(false);
+    // Zera o campo na hora (o [value] só troca no próximo CD).
+    const el = this.comboInput()?.nativeElement;
+    if (el) {
+      el.value = '';
+    }
+  }
+
+  protected filtrarCombo(event: Event): void {
+    this.comboFiltro.set((event.target as HTMLInputElement).value);
+    this.comboAberto.set(true);
+  }
+
+  protected escolherTipo(id: number): void {
+    this.tipoEscolhido.set(id);
+    this.fecharCombo();
+  }
+
+  protected fecharCombo(): void {
+    this.comboAberto.set(false);
+    this.comboFiltro.set('');
+  }
+
+  /** Esc na busca fecha só a lista (sem deixar o modal capturar e fechar tudo). */
+  protected onComboEscape(event: Event): void {
+    if (this.comboAberto()) {
+      event.stopPropagation();
+      this.fecharCombo();
+    }
+  }
+
+  /** Enter no campo de busca seleciona a primeira opção filtrada. */
+  protected selecionarPrimeiroTipo(): void {
+    const primeiro = this.tiposFiltrados()[0];
+    if (primeiro) {
+      this.escolherTipo(primeiro.id);
+    }
+  }
+
+  private normalizar(valor: string): string {
+    return valor
+      .normalize('NFD')
+      .replace(/[̀-ͯ]/g, '')
+      .toLowerCase()
+      .trim();
   }
 
   // --- ações do bloco de tipos ---
@@ -123,12 +183,16 @@ export class PessoaFileUploadComponent {
   }
 
   /**
-   * Fecha o menu "⋮" ao clicar em qualquer lugar do diálogo fora dele. O modal para
-   * a propagação do clique no card, então ouvimos no próprio conteúdo, não no document.
+   * Fecha o menu "⋮" e a lista do combo ao clicar em qualquer lugar do diálogo fora deles.
+   * O modal para a propagação do clique no card, então ouvimos no conteúdo, não no document.
    */
   protected onClickNoDialogo(event: MouseEvent): void {
-    if (this.menuTipoAberto() && !(event.target as HTMLElement)?.closest('.file-upload__tipo-menu')) {
+    const alvo = event.target as HTMLElement | null;
+    if (this.menuTipoAberto() && !alvo?.closest('.file-upload__tipo-menu')) {
       this.menuTipoAberto.set(false);
+    }
+    if (this.comboAberto() && !alvo?.closest('.file-upload__combo')) {
+      this.fecharCombo();
     }
   }
 
@@ -260,6 +324,7 @@ export class PessoaFileUploadComponent {
     this.rascunhoTipo.set('');
     this.erroTipo.set(null);
     this.menuTipoAberto.set(false);
+    this.fecharCombo();
   }
 
   /** Erro de uma operação no catálogo de tipos (nome duplicado é o caso comum). */

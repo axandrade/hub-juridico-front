@@ -11,21 +11,41 @@
       @switch (modoTipo()) {
         @case ('idle') {
           <div class="file-upload__tipo-row">
-            <select
-              class="file-upload__select"
-              [value]="tipoId()"
-              [disabled]="!tipos().length"
-              (change)="setTipo($event)"
-            >
-              @for (option of tipos(); track option.id) {
-                <option [value]="option.id" [selected]="option.id === tipoId()">
-                  {{ option.nome }}
-                </option>
+            <div class="file-upload__combo">
+              <input
+                #comboInput
+                class="file-upload__select"
+                type="text"
+                role="combobox"
+                autocomplete="off"
+                [attr.aria-expanded]="comboAberto()"
+                [value]="comboAberto() ? comboFiltro() : nomeTipoSelecionado()"
+                [placeholder]="tipos().length ? 'Buscar tipo...' : 'Nenhum tipo cadastrado'"
+                [disabled]="!tipos().length"
+                (focus)="abrirCombo()"
+                (input)="filtrarCombo($event)"
+                (keydown.enter)="$event.preventDefault(); selecionarPrimeiroTipo()"
+                (keydown.escape)="onComboEscape($event)"
+              />
+              <i class="fa-solid fa-chevron-down file-upload__combo-caret" aria-hidden="true"></i>
+
+              @if (comboAberto()) {
+                <div class="file-upload__combo-list" role="listbox">
+                  @for (t of tiposFiltrados(); track t.id) {
+                    <button
+                      type="button"
+                      role="option"
+                      [class.is-selected]="t.id === tipoId()"
+                      (click)="escolherTipo(t.id)"
+                    >
+                      {{ t.nome }}
+                    </button>
+                  } @empty {
+                    <span class="file-upload__combo-empty">Nenhum tipo encontrado</span>
+                  }
+                </div>
               }
-              @empty {
-                <option [value]="null">Nenhum tipo cadastrado</option>
-              }
-            </select>
+            </div>
 
             <div class="file-upload__tipo-menu">
               <button
@@ -92,7 +112,7 @@
               [placeholder]="modoTipo() === 'add' ? 'Novo tipo...' : 'Nome do tipo'"
               (input)="atualizarRascunho($event)"
               (keydown.enter)="confirmarTipo()"
-              (keydown.escape)="cancelarTipo()"
+              (keydown.escape)="$event.stopPropagation(); cancelarTipo()"
             />
             <button
               type="button"

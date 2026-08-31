@@ -3,12 +3,7 @@ import { Injectable, inject } from '@angular/core';
 import { Observable, map } from 'rxjs';
 
 import { environment } from '../../../../environments/environment';
-import {
-  PessoaArquivo,
-  PessoaArquivoApi,
-  TipoArquivo,
-  pessoaArquivoFromApi,
-} from './pessoa-arquivo.model';
+import { PessoaArquivo, PessoaArquivoApi, pessoaArquivoFromApi } from './pessoa-arquivo.model';
 
 /**
  * Arquivos de uma pessoa — sub-recurso `/api/v1/pessoas/{pessoaId}/arquivos`
@@ -29,10 +24,10 @@ export class PessoaArquivoService {
       .pipe(map((lista) => lista.map(pessoaArquivoFromApi)));
   }
 
-  enviar(pessoaId: number, arquivo: File, tipo: TipoArquivo): Observable<PessoaArquivo> {
+  enviar(pessoaId: number, arquivo: File, tipoAnexoId: number): Observable<PessoaArquivo> {
     const form = new FormData();
     form.append('arquivo', arquivo);
-    form.append('tipo', tipo);
+    form.append('tipoAnexoId', String(tipoAnexoId));
     return this.http.post<PessoaArquivoApi>(this.url(pessoaId), form).pipe(map(pessoaArquivoFromApi));
   }
 

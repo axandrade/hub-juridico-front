@@ -77,12 +77,12 @@ export class PessoaFileUploadComponent {
 
   protected submit(): void {
     const file = this.file();
-    if (!file || this.sending()) {
+    const tipoId = this.tipoId();
+    if (!file || tipoId === null || this.sending()) {
       return;
     }
     this.sending.set(true);
-    // TODO: enviar o tipo do anexo escolhido (this.tipoId()) quando o backend passar a aceitá-lo.
-    this.arquivos.enviar(this.pessoaId(), file, 'PRINCIPAL').subscribe({
+    this.arquivos.enviar(this.pessoaId(), file, tipoId).subscribe({
       next: (arquivo) => {
         this.sending.set(false);
         this.reset();

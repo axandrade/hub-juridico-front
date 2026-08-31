@@ -9,7 +9,7 @@ import {
   signal,
 } from '@angular/core';
 
-import { PessoaArquivo, TIPO_ARQUIVO_LABEL } from '../../services/pessoa-arquivo.model';
+import { PessoaArquivo } from '../../services/pessoa-arquivo.model';
 import { PessoaArquivoService } from '../../services/pessoa-arquivo.service';
 import { PessoaFileUploadComponent } from '../pessoa-file-upload/pessoa-file-upload.component';
 
@@ -46,7 +46,6 @@ export class PessoaFilesComponent {
   readonly pessoaId = input<number>(0);
   readonly notify = output<PessoaFilesNotice>();
 
-  protected readonly tipoLabel = TIPO_ARQUIVO_LABEL;
   protected readonly search = signal('');
   protected readonly selectedId = signal<number | null>(null);
   protected readonly uploadOpen = signal(false);
@@ -57,9 +56,7 @@ export class PessoaFilesComponent {
     const search = this.normalizeKey(this.search());
     const items = this.items();
     return search
-      ? items.filter((item) =>
-          this.normalizeKey(`${item.nome} ${this.tipoLabel[item.tipo]}`).includes(search),
-        )
+      ? items.filter((item) => this.normalizeKey(item.nome).includes(search))
       : items;
   });
 

@@ -51,7 +51,7 @@
     <app-button
       variant="primary"
       [label]="sending() ? 'Enviando...' : 'Enviar'"
-      [disabled]="!file() || sending()"
+      [disabled]="!file() || tipoId() === null || sending()"
       (clicked)="submit()"
     />
   </ng-container>

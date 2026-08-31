@@ -343,16 +343,20 @@ export class ClientsPageComponent {
   }
 
   /**
-   * Clique em qualquer lugar do documento fora de uma linha da tabela e fora do
-   * painel desmarca o cliente e limpa a ficha — a não ser que o cadeado esteja
-   * travado (aí a ficha selecionada permanece).
+   * Clique fora fecha o menu "Mais..." e — se o cadeado não estiver travado —
+   * também desmarca o cliente (clique fora de uma linha da tabela e do painel).
    */
   @HostListener('document:click', ['$event'])
   protected onDocumentClick(event: MouseEvent): void {
+    const target = event.target as HTMLElement | null;
+
+    if (this.showMoreActions() && !target?.closest('.clients-actions__menu')) {
+      this.showMoreActions.set(false);
+    }
+
     if (this.selectedPersonId() === null || this.editor()?.locked()) {
       return;
     }
-    const target = event.target as HTMLElement | null;
     if (!target || target.closest('tr, app-pessoa-form')) {
       return;
     }

@@ -33,8 +33,6 @@ type ColunaTabelaKey =
   | 'email'
   | 'phone'
   | 'status'
-  | 'folder'
-  | 'file'
   | 'registeredBy'
   | 'hiringMode'
   | 'internalOwner';
@@ -71,8 +69,6 @@ export class ClientsPageComponent {
     'email',
     'phone',
     'status',
-    'folder',
-    'file',
     'registeredBy',
   ];
 
@@ -94,7 +90,7 @@ export class ClientsPageComponent {
   protected readonly showColumns = signal(false);
   protected readonly showMoreActions = signal(false);
   protected readonly searchText = signal('');
-  protected readonly sortColumn = signal<ColunaTabelaKey>('folder');
+  protected readonly sortColumn = signal<ColunaTabelaKey>('name');
   protected readonly sortDirection = signal<SortDirection>('asc');
   protected readonly visibleColumnKeys = signal<ReadonlySet<ColunaTabelaKey>>(
     new Set(this.defaultVisibleColumns),
@@ -163,8 +159,6 @@ export class ClientsPageComponent {
     { key: 'email', width: '230px', getter: (client) => emailPrincipal(client.pessoa.emails) },
     { key: 'phone', width: '160px', getter: (client) => contatoPrincipal(client.pessoa.contatos) },
     { key: 'status', width: '110px', align: 'center', getter: (client) => client.dossier.status },
-    { key: 'folder', width: '260px', getter: (client) => client.dossier.folder },
-    { key: 'file', width: '180px', getter: (client) => client.dossier.file },
     { key: 'registeredBy', width: '150px', getter: (client) => client.dossier.registeredBy },
     { key: 'hiringMode', width: '150px', getter: (client) => client.dossier.hiringMode },
     { key: 'internalOwner', width: '160px', getter: (client) => client.dossier.internalOwner },

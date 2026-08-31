@@ -344,6 +344,16 @@
         }
       }
     }
+
+    // Cliente inativo: texto esmaecido e uma fita cinza na lateral esquerda,
+    // para o estado ser óbvio mesmo com a coluna "Status" oculta.
+    &.is-inactive td {
+      color: $color-text-muted;
+    }
+
+    &.is-inactive:not(.is-favorite) td:first-child {
+      box-shadow: inset 3px 0 0 rgba($color-text-muted, 0.55);
+    }
   }
 }
 
@@ -356,7 +366,9 @@
 .clients-table__status {
   display: inline-flex;
   min-width: 78px;
+  align-items: center;
   justify-content: center;
+  gap: 6px;
   border-radius: 999px;
   padding: 2px $spacing-sm;
   background-color: rgba($color-text-muted, 0.12);
@@ -365,14 +377,22 @@
   font-weight: $font-weight-bold;
 }
 
-.clients-table__status--ativo {
+.clients-table__status-dot {
+  width: 7px;
+  height: 7px;
+  flex-shrink: 0;
+  border-radius: 999px;
+  background-color: currentColor;
+}
+
+.clients-table__status--active {
   background-color: rgba($color-success, 0.14);
   color: color.adjust($color-success, $lightness: -18%);
 }
 
-.clients-table__status--inativo {
-  background-color: rgba($color-primary, 0.12);
-  color: $color-primary;
+.clients-table__status--inactive {
+  background-color: rgba($color-text-muted, 0.16);
+  color: $color-text-muted;
 }
 
 .clients-table__empty {

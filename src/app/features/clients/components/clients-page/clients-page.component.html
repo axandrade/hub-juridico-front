@@ -189,12 +189,6 @@
                 @case ('status') {
                   Status
                 }
-                @case ('folder') {
-                  Pasta
-                }
-                @case ('file') {
-                  Arquivo
-                }
                 @case ('registeredBy') {
                   Cadastrado por
                 }
@@ -238,12 +232,6 @@
                     @case ('status') {
                       Status
                     }
-                    @case ('folder') {
-                      Pasta
-                    }
-                    @case ('file') {
-                      Arquivo
-                    }
                     @case ('registeredBy') {
                       Cadastrado por
                     }
@@ -265,6 +253,7 @@
             <tr
               [class.is-selected]="selectedPersonId() === client.id"
               [class.is-favorite]="client.favorite"
+              [class.is-inactive]="client.dossier.status === 'inactive'"
               (click)="selectClient(client)"
             >
               <td class="clients-table__pin">
@@ -283,6 +272,7 @@
                   @switch (column.key) {
                     @case ('status') {
                       <span [class]="rowStatusClass(client)">
+                        <span class="clients-table__status-dot" aria-hidden="true"></span>
                         @switch (client.dossier.status) {
                           @case ('active') {
                             Ativo

@@ -184,37 +184,6 @@
       </div>
     }
 
-    <div class="clients-summary" aria-label="Resumo de clientes">
-      <div>
-        <span>
-          @switch (activeTableTab()) {
-            @case ('FISICA') {
-              Pessoas físicas
-            }
-            @case ('JURIDICA') {
-              Pessoas jurídicas
-            }
-            @default {
-              Clientes cadastrados
-            }
-          }
-        </span>
-        <strong>{{ totalClients() }}</strong>
-      </div>
-      <div>
-        <span>Nesta página</span>
-        <strong>{{ displayedClients().length }}</strong>
-      </div>
-      <div>
-        <span>Página</span>
-        <strong>{{ currentPageLabel() }} / {{ pageCount() }}</strong>
-      </div>
-      <div>
-        <span>Filtros ativos</span>
-        <strong>{{ activeFilterCount() }}</strong>
-      </div>
-    </div>
-
     <nav class="clients-table-tabs" aria-label="Tipo de cliente">
       @for (tab of tableTabs; track tab) {
         <button

@@ -17,6 +17,14 @@ import { TipoAnexoService } from '../../services/tipo-anexo.service';
 /** Estado do bloco "Tipo do anexo": lista, adicionando, editando ou confirmando exclusão. */
 type ModoTipo = 'idle' | 'add' | 'edit' | 'confirmDelete';
 
+/** Só PDF e DOCX são aceitos no upload (mesma regra do backend). */
+const EXTENSOES_PERMITIDAS = ['.pdf', '.docx'] as const;
+const ACCEPT_ARQUIVO = EXTENSOES_PERMITIDAS.join(',');
+
+function extensaoPermitida(nome: string): boolean {
+  return EXTENSOES_PERMITIDAS.some((ext) => nome.toLowerCase().endsWith(ext));
+}
+
 /**
  * Diálogo de envio de arquivo da aba "Lista de arquivos". Dono do formulário
  * (tipo do anexo + arquivo), chama `PessoaArquivoService.enviar` e devolve o
@@ -62,15 +70,19 @@ export class PessoaFileUploadComponent {
   protected readonly menuTipoAberto = signal(false);
 
   protected readonly file = signal<File | null>(null);
+  protected readonly erroArquivo = signal<string | null>(null);
   protected readonly sending = signal(false);
   protected readonly dragging = signal(false);
+
+  /** Extensões aceitas, para o atributo `accept` do input. */
+  protected readonly acceptArquivo = ACCEPT_ARQUIVO;
 
   constructor() {
     this.tiposAnexo.carregar();
   }
 
   protected pickFile(event: Event): void {
-    this.file.set((event.target as HTMLInputElement).files?.[0] ?? null);
+    this.selecionarArquivo((event.target as HTMLInputElement).files?.[0] ?? null);
   }
 
   protected onDragOver(event: DragEvent): void {
@@ -86,10 +98,18 @@ export class PessoaFileUploadComponent {
   protected onDrop(event: DragEvent): void {
     event.preventDefault();
     this.dragging.set(false);
-    const dropped = event.dataTransfer?.files?.[0];
-    if (dropped) {
-      this.file.set(dropped);
+    this.selecionarArquivo(event.dataTransfer?.files?.[0] ?? null);
+  }
+
+  /** Aceita o arquivo só se for PDF/DOCX; senão registra o erro e não guarda. */
+  private selecionarArquivo(arquivo: File | null): void {
+    if (arquivo && !extensaoPermitida(arquivo.name)) {
+      this.file.set(null);
+      this.erroArquivo.set('Formato não permitido. Envie um PDF ou DOCX.');
+      return;
     }
+    this.erroArquivo.set(null);
+    this.file.set(arquivo);
   }
 
   protected setTipo(event: Event): void {
@@ -233,6 +253,7 @@ export class PessoaFileUploadComponent {
 
   private reset(): void {
     this.file.set(null);
+    this.erroArquivo.set(null);
     this.tipoEscolhido.set(null);
     this.dragging.set(false);
     this.modoTipo.set('idle');

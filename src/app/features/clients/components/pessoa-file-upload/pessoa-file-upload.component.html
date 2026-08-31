@@ -127,19 +127,28 @@
         class="file-upload__drop"
         [class.is-dragging]="dragging()"
         [class.has-file]="!!file()"
+        [class.has-error]="!!erroArquivo()"
         (dragover)="onDragOver($event)"
         (dragleave)="onDragLeave($event)"
         (drop)="onDrop($event)"
       >
-        <input type="file" (change)="pickFile($event)" aria-label="Escolher arquivo" />
+        <input
+          type="file"
+          [accept]="acceptArquivo"
+          (change)="pickFile($event)"
+          aria-label="Escolher arquivo"
+        />
         <i
           [class]="file() ? 'fa-solid fa-file-lines' : 'fa-solid fa-paperclip'"
           aria-hidden="true"
         ></i>
         <span class="file-upload__drop-text">
-          {{ file()?.name || 'Clique ou arraste um arquivo aqui' }}
+          {{ file()?.name || 'Clique ou arraste um PDF ou DOCX aqui' }}
         </span>
       </label>
+      @if (erroArquivo()) {
+        <span class="file-upload__tipo-erro">{{ erroArquivo() }}</span>
+      }
     </div>
   </div>
 

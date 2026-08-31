@@ -151,6 +151,9 @@
           @case ('downloadError') {
             Não foi possível baixar: {{ notice().subject }}
           }
+          @case ('viewError') {
+            Não foi possível abrir: {{ notice().subject }}
+          }
           @case ('naturalNameRequired') {
             Informe nome e CPF da pessoa física.
           }

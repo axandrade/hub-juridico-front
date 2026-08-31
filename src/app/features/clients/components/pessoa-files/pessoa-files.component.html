@@ -34,6 +34,16 @@
             <td>{{ formatSize(file.tamanhoBytes) }}</td>
             <td>{{ formatDate(file.dataUpload) }}</td>
             <td class="pessoa-files__row-actions">
+              @if (podeVisualizar(file)) {
+                <button
+                  type="button"
+                  title="Visualizar"
+                  aria-label="Visualizar arquivo"
+                  (click)="$event.stopPropagation(); visualizar(file)"
+                >
+                  <i class="fa-solid fa-eye" aria-hidden="true"></i>
+                </button>
+              }
               <button
                 type="button"
                 title="Baixar"

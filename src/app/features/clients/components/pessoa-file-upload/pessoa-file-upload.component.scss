@@ -43,6 +43,11 @@
     border-style: solid;
   }
 
+  &.has-error {
+    border-color: $color-error;
+    background-color: rgba($color-error, 0.08);
+  }
+
   // Input nativo cobre a área toda, invisível: o label é a UI.
   input[type='file'] {
     position: absolute;

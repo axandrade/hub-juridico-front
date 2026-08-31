@@ -1,14 +1,17 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  ElementRef,
   computed,
   effect,
   inject,
   input,
   output,
   signal,
+  viewChild,
 } from '@angular/core';
 
+import { ModalComponent } from '../../../../shared/components/modal/modal.component';
 import { PessoaArquivo } from '../../services/pessoa-arquivo.model';
 import { PessoaArquivoService } from '../../services/pessoa-arquivo.service';
 import { PessoaFileUploadComponent } from '../pessoa-file-upload/pessoa-file-upload.component';
@@ -19,7 +22,8 @@ export type PessoaFilesNoticeKey =
   | 'uploadError'
   | 'fileRemoved'
   | 'removeError'
-  | 'downloadError';
+  | 'downloadError'
+  | 'viewError';
 
 /** Aviso emitido para o rodapé de status do painel (`pessoa-form`). */
 export interface PessoaFilesNotice {
@@ -106,6 +110,53 @@ export class PessoaFilesComponent {
     this.arquivos.baixar(id, row.id).subscribe({
       next: (response) => this.saveBlob(response.body, row.nome),
       error: () => this.notify.emit({ key: 'downloadError', subject: row.nome }),
+    });
+  }
+
+  /** MIME para visualização inline conforme a extensão — `null` = não dá pra abrir no navegador. */
+  private tipoVisualizavel(nome: string): string | null {
+    const n = nome.toLowerCase();
+    if (n.endsWith('.pdf')) return 'application/pdf';
+    if (n.endsWith('.jpg') || n.endsWith('.jpeg')) return 'image/jpeg';
+    if (n.endsWith('.png')) return 'image/png';
+    if (n.endsWith('.gif')) return 'image/gif';
+    if (n.endsWith('.webp')) return 'image/webp';
+    return null;
+  }
+
+  /** Visualização inline só para o que o navegador renderiza (PDF e imagens); DOCX não. */
+  protected podeVisualizar(row: PessoaArquivo): boolean {
+    return this.tipoVisualizavel(row.nome) !== null;
+  }
+
+  /** Abre o arquivo numa nova aba, sem baixar. */
+  protected visualizar(row: PessoaArquivo): void {
+    const id = this.pessoaId();
+    if (id <= 0) {
+      return;
+    }
+    // Abre a aba já no clique (gesto do usuário) para não cair no bloqueador de pop-up;
+    // a URL do blob é setada quando o download termina.
+    const aba = window.open('', '_blank');
+    const mime = this.tipoVisualizavel(row.nome) ?? 'application/octet-stream';
+    this.arquivos.baixar(id, row.id).subscribe({
+      next: (response) => {
+        if (!response.body) {
+          aba?.close();
+          return;
+        }
+        const url = URL.createObjectURL(new Blob([response.body], { type: mime }));
+        if (aba) {
+          aba.location.href = url;
+        } else {
+          window.open(url, '_blank');
+        }
+        setTimeout(() => URL.revokeObjectURL(url), 60_000);
+      },
+      error: () => {
+        aba?.close();
+        this.notify.emit({ key: 'viewError', subject: row.nome });
+      },
     });
   }
 

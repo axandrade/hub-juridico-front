@@ -42,7 +42,6 @@
 
 .clients-menu-button,
 .clients-panel-toggle,
-.clients-table-tabs button,
 .clients-dropdown button,
 .clients-icon-button {
   border: 1px solid $color-border;
@@ -92,22 +91,6 @@
   white-space: nowrap;
   font-size: $font-size-xs;
   font-weight: $font-weight-medium;
-}
-
-.clients-table-tabs {
-  display: flex;
-  gap: $spacing-xs;
-  padding: $spacing-sm $spacing-md;
-  border-bottom: 1px solid rgba($color-border, 0.7);
-  overflow-x: auto;
-
-  button {
-    min-height: 32px;
-    white-space: nowrap;
-    padding: $spacing-xs $spacing-sm;
-    font-size: $font-size-xs;
-    font-weight: $font-weight-medium;
-  }
 }
 
 .clients-search label,
@@ -200,6 +183,36 @@
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: $spacing-sm;
   background-color: rgba($color-primary-pale, 0.18);
+}
+
+// Campo que não precisa de largura total (ex.: "Tipo Cliente") — o controle
+// acompanha o conteúdo e libera o espaço restante da coluna.
+.clients-filter-panel__compact {
+  align-items: flex-start;
+  flex: 0 0 auto;
+
+  select {
+    width: auto;
+    min-width: 0;
+    max-width: 100%;
+  }
+}
+
+// Agrupa "Tipo Cliente" + "Número do documento" numa única célula do grid,
+// para o input ficar logo ao lado do select em vez de na coluna seguinte.
+.clients-filter-panel__doc {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: $spacing-xs $spacing-sm;
+
+  label {
+    min-width: 0;
+  }
+}
+
+.clients-filter-panel__doc-number {
+  flex: 1 1 140px;
 }
 
 .clients-columns-panel {

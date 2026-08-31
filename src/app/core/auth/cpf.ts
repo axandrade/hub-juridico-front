@@ -20,6 +20,28 @@ export function maskCpf(value: string | null | undefined): string {
   return out;
 }
 
+/** Aplica a máscara `00.000.000/0000-00` progressivamente. */
+export function maskCnpj(value: string | null | undefined): string {
+  const d = onlyDigits(value).slice(0, 14);
+  const parts = [
+    d.slice(0, 2),
+    d.slice(2, 5),
+    d.slice(5, 8),
+    d.slice(8, 12),
+    d.slice(12, 14),
+  ].filter(Boolean);
+
+  if (parts.length <= 1) {
+    return parts.join('');
+  }
+  let out = parts[0];
+  if (parts[1]) out += `.${parts[1]}`;
+  if (parts[2]) out += `.${parts[2]}`;
+  if (parts[3]) out += `/${parts[3]}`;
+  if (parts[4]) out += `-${parts[4]}`;
+  return out;
+}
+
 /**
  * Valida CPF (dígitos verificadores) — porta de
  * `apps/common/validators.py::is_valid_cpf` do back-end.

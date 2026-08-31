@@ -8,9 +8,10 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
-import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
-import { EMPTY, catchError, distinctUntilChanged, switchMap } from 'rxjs';
+import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop';
+import { EMPTY, catchError, debounceTime, distinctUntilChanged, switchMap } from 'rxjs';
 
+import { maskCnpj, maskCpf, onlyDigits } from '../../../../core/auth/cpf';
 import {
   MODALIDADES_CLIENTE,
   STATUS_CLIENTE,
@@ -22,11 +23,8 @@ import {
   emailPrincipal,
 } from '../../../../core/models';
 import { ButtonComponent } from '../../../../shared/components/button/button.component';
-import { PessoaStore } from '../../services/pessoa-store';
+import { PessoaStore, TipoDocumento } from '../../services/pessoa-store';
 import { PessoaFormComponent } from '../pessoa-form/pessoa-form.component';
-
-/** Aba da tabela: 'ALL' (padrão) mostra PF e PJ juntos. */
-type TableTab = TipoPessoa | 'ALL';
 
 type ColunaTabelaKey =
   | 'personType'
@@ -82,7 +80,6 @@ export class ClientsPageComponent {
 
   protected readonly clients = this.store.clients;
   protected readonly selectedPersonId = signal<number | null>(null);
-  protected readonly activeTableTab = signal<TableTab>('ALL');
   /** Página pedida ao backend (0-based). */
   protected readonly pageIndex = signal(0);
   /** Bumpado para forçar um recarregamento com os mesmos filtros. */
@@ -109,9 +106,35 @@ export class ClientsPageComponent {
   });
   protected readonly pageNotice = signal<PageNotice>('');
 
+  /**
+   * Tipo de cliente (`FISICA` / `JURIDICA`; vazio = todos) — vai ao backend como `tipo`.
+   * Quando definido, habilita o filtro por número de documento: `docDigits` guarda só os
+   * dígitos digitados e `docDigitsDebounced` evita uma requisição por tecla.
+   */
+  protected readonly tipoCliente = signal<TipoPessoa | ''>('');
+  private readonly docDigits = signal('');
+  private readonly docDigitsDebounced = toSignal(
+    toObservable(this.docDigits).pipe(debounceTime(300)),
+    { initialValue: '' },
+  );
+  protected readonly docNumberMasked = computed(() =>
+    this.tipoCliente() === 'JURIDICA' ? maskCnpj(this.docDigits()) : maskCpf(this.docDigits()),
+  );
+  /** Documento correspondente ao tipo de cliente (para o parâmetro `tipoDocumento`). */
+  private readonly tipoDocumento = computed<TipoDocumento | null>(() => {
+    switch (this.tipoCliente()) {
+      case 'FISICA':
+        return 'CPF';
+      case 'JURIDICA':
+        return 'CNPJ';
+      default:
+        return null;
+    }
+  });
+  protected readonly tipoClienteOptions: readonly TipoPessoa[] = ['FISICA', 'JURIDICA'];
+
   protected readonly statusOptions = STATUS_CLIENTE;
   protected readonly hiringModeOptions = MODALIDADES_CLIENTE;
-  protected readonly tableTabs: readonly TableTab[] = ['ALL', 'FISICA', 'JURIDICA'];
 
   /** Total de clientes do filtro atual (base inteira quando sem filtro de tipo/busca). */
   protected readonly totalClients = this.store.totalElements;
@@ -122,17 +145,11 @@ export class ClientsPageComponent {
   protected readonly canGoPrev = computed(() => this.store.page() > 0);
   protected readonly canGoNext = computed(() => !this.store.last());
 
-  /** Tipo enviado ao backend: `null` na aba "Todos". */
-  private readonly tipoFilter = computed<TipoPessoa | null>(() => {
-    const tab = this.activeTableTab();
-    return tab === 'ALL' ? null : tab;
-  });
+  /** Tipo enviado ao backend: `null` quando o filtro está em "Todos". */
+  private readonly tipoFilter = computed<TipoPessoa | null>(() => this.tipoCliente() || null);
 
-  /** Natureza de um cadastro novo — na aba "Todos" começa como física. */
-  protected readonly novoTipoPadrao = computed<TipoPessoa>(() => {
-    const tab = this.activeTableTab();
-    return tab === 'ALL' ? 'FISICA' : tab;
-  });
+  /** Natureza de um cadastro novo — sem filtro de tipo, começa como física. */
+  protected readonly novoTipoPadrao = computed<TipoPessoa>(() => this.tipoCliente() || 'FISICA');
 
   protected readonly clientColumns: readonly ColunaTabela[] = [
     { key: 'personType', width: '138px', getter: (client) => client.pessoa.tipo },
@@ -218,16 +235,20 @@ export class ClientsPageComponent {
         this.filters().hiringMode,
         this.filters().internalOwner.trim(),
         this.searchText().trim(),
+        this.tipoCliente(),
+        this.docDigits(),
       ].filter(Boolean).length,
   );
 
   constructor() {
-    // Uma requisição por combinação de página + tipo (únicos filtros do endpoint).
+    // Uma requisição por combinação de página + filtros do endpoint (tipo, inativos, documento).
     // `refreshTick` força recarregar após salvar/apagar.
     const query = computed(() => ({
       page: this.pageIndex(),
       tipo: this.tipoFilter(),
       incluirInativos: this.incluirInativos(),
+      tipoDocumento: this.tipoDocumento(),
+      documento: this.docDigitsDebounced(),
       tick: this.refreshTick(),
     }));
 
@@ -238,10 +259,12 @@ export class ClientsPageComponent {
             a.page === b.page &&
             a.tipo === b.tipo &&
             a.incluirInativos === b.incluirInativos &&
+            a.tipoDocumento === b.tipoDocumento &&
+            a.documento === b.documento &&
             a.tick === b.tick,
         ),
-        switchMap(({ page, tipo, incluirInativos }) =>
-          this.store.carregar({ page, tipo, incluirInativos }).pipe(
+        switchMap(({ page, tipo, incluirInativos, tipoDocumento, documento }) =>
+          this.store.carregar({ page, tipo, incluirInativos, tipoDocumento, documento }).pipe(
             catchError(() => {
               this.pageNotice.set('loadError');
               return EMPTY;
@@ -261,11 +284,26 @@ export class ClientsPageComponent {
     this.refreshTick.update((tick) => tick + 1);
   }
 
-  protected setTableTab(tab: TableTab): void {
-    if (this.activeTableTab() === tab) {
-      return;
-    }
-    this.activeTableTab.set(tab);
+  /** Limite de dígitos do documento conforme o tipo de cliente (CPF 11, CNPJ 14). */
+  private docLimit(): number {
+    return this.tipoCliente() === 'JURIDICA' ? 14 : 11;
+  }
+
+  private limparTipoCliente(): void {
+    this.tipoCliente.set('');
+    this.docDigits.set('');
+  }
+
+  protected updateTipoCliente(event: Event): void {
+    const value = (event.target as HTMLSelectElement).value as TipoPessoa | '';
+    this.tipoCliente.set(value);
+    // "Todos" zera o número; troca de tipo apenas corta ao novo limite.
+    this.docDigits.update((digits) => (value ? digits.slice(0, this.docLimit()) : ''));
+    this.pageIndex.set(0);
+  }
+
+  protected updateDocNumber(event: Event): void {
+    this.docDigits.set(onlyDigits((event.target as HTMLInputElement).value).slice(0, this.docLimit()));
     this.pageIndex.set(0);
   }
 
@@ -323,8 +361,10 @@ export class ClientsPageComponent {
 
   protected onSaved(client: IPessoa): void {
     this.selectedPersonId.set(client.id);
-    if (this.activeTableTab() !== 'ALL' && this.activeTableTab() !== client.pessoa.tipo) {
-      this.activeTableTab.set(client.pessoa.tipo);
+    // Se o filtro de tipo esconderia o registro salvo, realinha para o tipo dele.
+    if (this.tipoCliente() && this.tipoCliente() !== client.pessoa.tipo) {
+      this.tipoCliente.set(client.pessoa.tipo);
+      this.docDigits.set('');
     }
     this.pageIndex.set(0);
     this.reloadList();
@@ -345,6 +385,7 @@ export class ClientsPageComponent {
     this.searchText.set('');
     this.filters.set({ status: '', hiringMode: '', internalOwner: '' });
     this.incluirInativos.set(false);
+    this.limparTipoCliente();
     this.pageIndex.set(0);
     this.pageNotice.set('filtersCleared');
     this.showMoreActions.set(false);

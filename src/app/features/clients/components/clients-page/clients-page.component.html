@@ -130,6 +130,33 @@
             (input)="updateFilter('internalOwner', $event)"
           />
         </label>
+        <div class="clients-filter-panel__doc">
+          <label class="clients-filter-panel__compact">
+            <span>Tipo Cliente</span>
+            <select [value]="tipoCliente()" (change)="updateTipoCliente($event)">
+              <option value="">Todos</option>
+              @for (tipo of tipoClienteOptions; track tipo) {
+                <option [value]="tipo">
+                  {{ tipo === 'FISICA' ? 'Pessoa física' : 'Pessoa jurídica' }}
+                </option>
+              }
+            </select>
+          </label>
+          @if (tipoCliente()) {
+            <label class="clients-filter-panel__doc-number">
+              <span>{{ tipoCliente() === 'JURIDICA' ? 'CNPJ' : 'CPF' }}</span>
+              <input
+                type="text"
+                inputmode="numeric"
+                [value]="docNumberMasked()"
+                [placeholder]="
+                  tipoCliente() === 'JURIDICA' ? '00.000.000/0000-00' : '000.000.000-00'
+                "
+                (input)="updateDocNumber($event)"
+              />
+            </label>
+          }
+        </div>
       </div>
     }
 
@@ -183,28 +210,6 @@
         }
       </div>
     }
-
-    <nav class="clients-table-tabs" aria-label="Tipo de cliente">
-      @for (tab of tableTabs; track tab) {
-        <button
-          type="button"
-          [class.is-active]="activeTableTab() === tab"
-          (click)="setTableTab(tab)"
-        >
-          @switch (tab) {
-            @case ('ALL') {
-              Todos
-            }
-            @case ('FISICA') {
-              Pessoa física
-            }
-            @case ('JURIDICA') {
-              Pessoa jurídica
-            }
-          }
-        </button>
-      }
-    </nav>
 
     <div class="clients-table-wrap">
       <table class="clients-table">
@@ -356,7 +361,7 @@
           <i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
         </button>
         <span class="clients-pagination__total">
-          {{ totalClients() }} cliente(s){{ activeTableTab() === 'ALL' ? ' cadastrado(s)' : ' no tipo' }}
+          {{ totalClients() }} cliente(s){{ tipoCliente() ? ' no tipo' : ' cadastrado(s)' }}
         </span>
       </div>
       @switch (pageNotice()) {

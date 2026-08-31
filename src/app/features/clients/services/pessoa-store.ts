@@ -3,6 +3,7 @@ import { Injectable, inject, signal } from '@angular/core';
 import { Observable, map, tap } from 'rxjs';
 
 import { environment } from '../../../../environments/environment';
+import { onlyDigits } from '../../../core/auth/cpf';
 import { IPessoa, TipoPessoa } from '../../../core/models';
 import { AuthService } from '../../../core/services/auth.service';
 import { PaginaApi, PessoaRespApi, StatusVinculoApi } from './pessoa-api.model';
@@ -12,10 +13,14 @@ import {
   pessoaRespToClient,
 } from './pessoa-mapper';
 
+/** Documento aceito no filtro por número do endpoint de pessoas. */
+export type TipoDocumento = 'CPF' | 'CNPJ';
+
 /**
  * Página pedida ao backend. Filtros do endpoint:
- * `tipo` e `incluirInativos` (`GET /api/v1/pessoas?page&size&tipo&incluirInativos`).
- * Por padrão (`incluirInativos: false`) só vêm pessoas ativas. Busca e demais
+ * `tipo`, `incluirInativos` e o par `tipoDocumento` + `documento`
+ * (`GET /api/v1/pessoas?page&size&tipo&incluirInativos&tipoDocumento&documento`).
+ * Por padrão (`incluirInativos: false`) só vêm pessoas ativas. Busca livre e demais
  * filtros seguem client-side.
  */
 export interface PessoaListQuery {
@@ -23,6 +28,10 @@ export interface PessoaListQuery {
   tipo: TipoPessoa | null;
   /** `true` traz também os clientes inativos; padrão é só ativos. */
   incluirInativos: boolean;
+  /** Tipo do documento buscado; `null` desliga o filtro por número. */
+  tipoDocumento: TipoDocumento | null;
+  /** Número (ou parte) do documento; só os dígitos são enviados. */
+  documento: string;
 }
 
 /**
@@ -70,6 +79,10 @@ export class PessoaStore {
     }
     if (query.incluirInativos) {
       params = params.set('incluirInativos', true);
+    }
+    const documento = onlyDigits(query.documento);
+    if (query.tipoDocumento && documento) {
+      params = params.set('tipoDocumento', query.tipoDocumento).set('documento', documento);
     }
 
     return this.http.get<PaginaApi<PessoaRespApi>>(this.base, { params }).pipe(

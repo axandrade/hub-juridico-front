@@ -55,6 +55,7 @@ type NoticeKey =
   | 'fileRemoved'
   | 'removeError'
   | 'downloadError'
+  | 'viewError'
   | 'naturalNameRequired'
   | 'legalNameRequired'
   | 'favoriteAdded'

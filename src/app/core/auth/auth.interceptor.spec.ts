@@ -4,11 +4,17 @@ import { TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
 
 import { environment } from '../../../environments/environment';
+import { AuthTokensResponse } from '../auth/auth.models';
 import { AuthService } from '../services/auth.service';
 import { authInterceptor } from './auth.interceptor';
 import { TokenStore } from './token-store';
 
 const API = environment.apiBaseUrl;
+
+/** Resposta de `/auth/refresh` no formato do hub-juridico-api. */
+function tokens(access: string, refresh: string): AuthTokensResponse {
+  return { access_token: access, token_type: 'Bearer', expires_in: 900, refresh_token: refresh };
+}
 
 describe('authInterceptor', () => {
   let http: HttpClient;
@@ -67,7 +73,7 @@ describe('authInterceptor', () => {
         { status: 401, statusText: 'Unauthorized' },
       );
 
-    httpMock.expectOne(`${API}/auth/refresh/`).flush({ access: 'fresh', refresh: 'ref-2' });
+    httpMock.expectOne(`${API}/auth/refresh`).flush(tokens('fresh', 'ref-2'));
 
     const retry = httpMock.expectOne(`${API}/tasks/`);
     expect(retry.request.headers.get('Authorization')).toBe('Bearer fresh');
@@ -88,7 +94,7 @@ describe('authInterceptor', () => {
 
     httpMock.expectOne(`${API}/tasks/`).flush({}, { status: 401, statusText: 'Unauthorized' });
     httpMock
-      .expectOne(`${API}/auth/refresh/`)
+      .expectOne(`${API}/auth/refresh`)
       .flush({}, { status: 401, statusText: 'Unauthorized' });
 
     await expect(result).rejects.toBeTruthy();

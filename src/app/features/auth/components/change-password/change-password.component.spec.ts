@@ -51,15 +51,15 @@ describe('ChangePasswordComponent', () => {
 
     component['form'].setValue({
       senhaAtual: 'atual',
-      novaSenha: 'Nova@Senha1',
-      confirmar: 'Nova@Senha1',
+      novaSenha: 'Nova@Senha123',
+      confirmar: 'Nova@Senha123',
     });
     expect(component['form'].valid).toBe(true);
 
     component['submit']();
 
-    const req = httpMock.expectOne(`${API}/users/me/change-password/`);
-    expect(req.request.body).toEqual({ senha_atual: 'atual', nova_senha: 'Nova@Senha1' });
+    const req = httpMock.expectOne(`${API}/auth/change-password`);
+    expect(req.request.body).toEqual({ current_password: 'atual', new_password: 'Nova@Senha123' });
     req.flush(null, { status: 204, statusText: 'No Content' });
     await Promise.resolve();
 

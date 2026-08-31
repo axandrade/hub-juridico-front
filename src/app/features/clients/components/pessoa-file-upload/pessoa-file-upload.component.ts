@@ -1,14 +1,24 @@
-import { ChangeDetectionStrategy, Component, inject, input, output, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  inject,
+  input,
+  output,
+  signal,
+} from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 
 import { ButtonComponent } from '../../../../shared/components/button/button.component';
 import { ModalComponent } from '../../../../shared/components/modal/modal.component';
-import { PessoaArquivo, TIPO_ARQUIVO_LABEL, TipoArquivo } from '../../services/pessoa-arquivo.model';
+import { PessoaArquivo } from '../../services/pessoa-arquivo.model';
 import { PessoaArquivoService } from '../../services/pessoa-arquivo.service';
+import { TipoAnexo, TipoAnexoService } from '../../services/tipo-anexo.service';
 
 /**
  * Diálogo de envio de arquivo da aba "Lista de arquivos". Dono do formulário
- * (tipo + arquivo), chama `PessoaArquivoService.enviar` e devolve o metadado
- * salvo via `uploaded` (ou a mensagem de erro via `failed`).
+ * (tipo do anexo + arquivo), chama `PessoaArquivoService.enviar` e devolve o
+ * metadado salvo via `uploaded` (ou a mensagem de erro via `failed`).
  */
 @Component({
   selector: 'app-pessoa-file-upload',
@@ -19,6 +29,7 @@ import { PessoaArquivoService } from '../../services/pessoa-arquivo.service';
 })
 export class PessoaFileUploadComponent {
   private readonly arquivos = inject(PessoaArquivoService);
+  private readonly tiposAnexo = inject(TipoAnexoService);
 
   readonly pessoaId = input.required<number>();
   readonly open = input<boolean>(false);
@@ -27,9 +38,12 @@ export class PessoaFileUploadComponent {
   readonly uploaded = output<PessoaArquivo>();
   readonly failed = output<string>();
 
-  protected readonly tipoLabel = TIPO_ARQUIVO_LABEL;
-  protected readonly tipos: readonly TipoArquivo[] = ['PRINCIPAL', 'CONTRATO'];
-  protected readonly tipo = signal<TipoArquivo>('PRINCIPAL');
+  /** Opções do dropdown "Tipo do anexo" — catálogo `tipos_anexo` do backend. */
+  protected readonly tipos = toSignal(this.tiposAnexo.listar(), { initialValue: [] as TipoAnexo[] });
+  private readonly tipoEscolhido = signal<number | null>(null);
+  /** Id selecionado: o que o usuário escolheu, ou o primeiro da lista por padrão. */
+  protected readonly tipoId = computed(() => this.tipoEscolhido() ?? this.tipos()[0]?.id ?? null);
+
   protected readonly file = signal<File | null>(null);
   protected readonly sending = signal(false);
   protected readonly dragging = signal(false);
@@ -57,8 +71,8 @@ export class PessoaFileUploadComponent {
     }
   }
 
-  protected setTipo(tipo: TipoArquivo): void {
-    this.tipo.set(tipo);
+  protected setTipo(event: Event): void {
+    this.tipoEscolhido.set(Number((event.target as HTMLSelectElement).value));
   }
 
   protected submit(): void {
@@ -67,7 +81,8 @@ export class PessoaFileUploadComponent {
       return;
     }
     this.sending.set(true);
-    this.arquivos.enviar(this.pessoaId(), file, this.tipo()).subscribe({
+    // TODO: enviar o tipo do anexo escolhido (this.tipoId()) quando o backend passar a aceitá-lo.
+    this.arquivos.enviar(this.pessoaId(), file, 'PRINCIPAL').subscribe({
       next: (arquivo) => {
         this.sending.set(false);
         this.reset();
@@ -90,7 +105,7 @@ export class PessoaFileUploadComponent {
 
   private reset(): void {
     this.file.set(null);
-    this.tipo.set('PRINCIPAL');
+    this.tipoEscolhido.set(null);
     this.dragging.set(false);
   }
 

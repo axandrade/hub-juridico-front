@@ -5,20 +5,19 @@
   (closed)="close()"
 >
   <div class="file-upload">
-    <div class="file-upload__field">
-      <span>Tipo</span>
-      <div class="file-upload__tipos">
-        @for (option of tipos; track option) {
-          <button
-            type="button"
-            [class.is-active]="tipo() === option"
-            (click)="setTipo(option)"
-          >
-            {{ tipoLabel[option] }}
-          </button>
+    <label class="file-upload__field">
+      <span>Tipo do anexo</span>
+      <select
+        class="file-upload__select"
+        [value]="tipoId()"
+        [disabled]="!tipos().length"
+        (change)="setTipo($event)"
+      >
+        @for (option of tipos(); track option.id) {
+          <option [value]="option.id">{{ option.nome }}</option>
         }
-      </div>
-    </div>
+      </select>
+    </label>
 
     <div class="file-upload__field">
       <span>Arquivo</span>

@@ -65,34 +65,27 @@
   text-overflow: ellipsis;
 }
 
-.file-upload__tipos {
-  display: flex;
-  gap: $spacing-xs;
+.file-upload__select {
+  min-height: 34px;
+  padding: 0 $spacing-sm;
+  border: 1px solid $color-border;
+  border-radius: $border-radius-sm;
+  background-color: $color-neutral-light;
+  color: $color-text-primary;
+  cursor: pointer;
+  font: inherit;
+  font-size: $font-size-xs;
+  transition:
+    border-color $transition-fast,
+    box-shadow $transition-fast;
 
-  button {
-    flex: 1;
-    min-height: 34px;
-    border: 1px solid $color-border;
-    border-radius: $border-radius-sm;
-    background-color: $color-neutral-light;
-    color: $color-text-secondary;
-    cursor: pointer;
-    font: inherit;
-    font-size: $font-size-xs;
-    font-weight: $font-weight-medium;
-    transition:
-      background-color $transition-fast,
-      border-color $transition-fast,
-      color $transition-fast;
+  &:focus {
+    border-color: $color-primary-light;
+    outline: none;
+  }
 
-    &:hover {
-      border-color: $color-primary-light;
-    }
-
-    &.is-active {
-      border-color: $color-primary;
-      background-color: rgba($color-primary-pale, 0.55);
-      color: $color-primary;
-    }
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
   }
 }

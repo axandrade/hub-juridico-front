@@ -256,11 +256,18 @@
 }
 
 .data-table-pagination {
+  // Fixa o paginador no rodapé do container que rola (mesmo padrão do `thead th` sticky),
+  // senão ele fica preso no fim da área rolável e some atrás do rodapé do pai.
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
   display: flex;
   align-items: center;
   flex-wrap: wrap;
   gap: $spacing-md;
   padding: $spacing-sm $spacing-md;
+  border-top: 1px solid $color-border;
+  background-color: $color-surface;
   font-size: $font-size-xs;
   color: $color-text-muted;
 

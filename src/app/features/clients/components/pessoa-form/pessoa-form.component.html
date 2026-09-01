@@ -131,9 +131,6 @@
           @case ('records') {
             Registros
           }
-          @case ('files') {
-            Arquivos
-          }
         }
       </button>
     }
@@ -179,10 +176,6 @@
             <textarea rows="12" formControlName="progressHistory" readonly></textarea>
           </label>
         </div>
-      }
-
-      @case ('files') {
-        <app-pessoa-files [pessoaId]="entityId()" (notify)="onFilesNotice($event)" />
       }
 
       @default {

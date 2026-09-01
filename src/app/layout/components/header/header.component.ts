@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, inject, input } from '@an
 
 import { MOCK_CONTEXT } from '../../../core/data/mock-data';
 import { AuthService } from '../../../core/services/auth.service';
+import { PastaClienteService } from '../../../features/clients/services/pasta-cliente.service';
 import { ButtonComponent } from '../../../shared/components/button/button.component';
 
 @Component({
@@ -16,10 +17,14 @@ export class HeaderComponent {
   readonly pageSubtitle = input<string>('Resumo geral');
 
   private readonly auth = inject(AuthService);
+  private readonly pastaCliente = inject(PastaClienteService);
 
   protected readonly context = MOCK_CONTEXT;
   protected readonly userName = computed(() => this.auth.user()?.name ?? '—');
   protected readonly userRole = computed(() => this.auth.user()?.role ?? '');
+
+  /** `true` quando há um cliente selecionado na tela de clientes. */
+  protected readonly temClienteSelecionado = this.pastaCliente.temCliente;
 
   protected readonly quickActions = [
     { label: 'Gerar arquivo', icon: 'fa-solid fa-file-export', variant: 'secondary' as const },
@@ -29,6 +34,9 @@ export class HeaderComponent {
       icon: 'fa-solid fa-folder-open',
       variant: 'tertiary' as const,
     },
-    { label: 'Abrir pasta do cliente', icon: 'fa-solid fa-folder', variant: 'tertiary' as const },
   ];
+
+  protected abrirPastaCliente(): void {
+    this.pastaCliente.abrir();
+  }
 }

@@ -5,6 +5,7 @@ import {
   DestroyRef,
   HostListener,
   computed,
+  effect,
   inject,
   signal,
   viewChild,
@@ -24,13 +25,16 @@ import {
   emailPrincipal,
 } from '../../../../core/models';
 import { ButtonComponent } from '../../../../shared/components/button/button.component';
+import { ModalComponent } from '../../../../shared/components/modal/modal.component';
 import {
   PAINEL_LAYOUT_PADRAO,
   PainelLayout,
   ehPainelLayout,
 } from '../../models/painel-layout';
+import { PastaClienteService } from '../../services/pasta-cliente.service';
 import { PessoaStore, TipoDocumento } from '../../services/pessoa-store';
 import { PessoaFormComponent } from '../pessoa-form/pessoa-form.component';
+import { PessoaFilesComponent, PessoaFilesNotice } from '../pessoa-files/pessoa-files.component';
 
 const LAYOUT_STORAGE_KEY = 'hub-juridico.clients.layout';
 const LARGURA_STORAGE_KEY = 'hub-juridico.clients.painelLargura';
@@ -73,7 +77,7 @@ interface FiltrosTabela {
 @Component({
   selector: 'app-clients-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ButtonComponent, PessoaFormComponent],
+  imports: [ButtonComponent, PessoaFormComponent, ModalComponent, PessoaFilesComponent],
   templateUrl: './clients-page.component.html',
   styleUrl: './clients-page.component.scss',
 })
@@ -81,6 +85,7 @@ export class ClientsPageComponent {
   private readonly store = inject(PessoaStore);
   private readonly destroyRef = inject(DestroyRef);
   private readonly document = inject(DOCUMENT);
+  protected readonly pastaCliente = inject(PastaClienteService);
   private readonly defaultVisibleColumns: readonly ColunaTabelaKey[] = [
     'personType',
     'name',
@@ -117,6 +122,8 @@ export class ClientsPageComponent {
   );
   /** `true` durante o arraste — usado para não desmarcar o cliente no clique que segue. */
   private redimensionando = false;
+  /** Aviso da pasta do cliente (upload/remoção/erro) mostrado dentro do diálogo. */
+  protected readonly pastaNotice = signal<string | null>(null);
   protected readonly showFilters = signal(false);
   protected readonly showColumns = signal(false);
   protected readonly showMoreActions = signal(false);
@@ -266,6 +273,19 @@ export class ClientsPageComponent {
   );
 
   constructor() {
+    // Publica o cliente selecionado para o header ("Abrir pasta do cliente").
+    effect(() => {
+      const id = this.selectedPersonId();
+      const cliente = id !== null ? this.store.buscar(id) : null;
+      this.pastaCliente.definirCliente(
+        cliente
+          ? { id: cliente.id, nome: this.clientDisplayName(cliente) }
+          : id !== null && id > 0
+            ? { id, nome: '' }
+            : null,
+      );
+    });
+
     // Uma requisição por combinação de página + filtros do endpoint (tipo, inativos, documento).
     // `refreshTick` força recarregar após salvar/apagar.
     const query = computed(() => ({
@@ -488,7 +508,10 @@ export class ClientsPageComponent {
     if (this.selectedPersonId() === null || this.editor()?.locked() || this.redimensionando) {
       return;
     }
-    if (!target || target.closest('tr, app-pessoa-form, .clients-resizer')) {
+    if (
+      !target ||
+      target.closest('tr, app-pessoa-form, app-pessoa-files, app-modal, app-header, .clients-resizer')
+    ) {
       return;
     }
     this.selectedPersonId.set(null);
@@ -514,6 +537,25 @@ export class ClientsPageComponent {
   protected onStatusChanged(client: IPessoa): void {
     this.selectedPersonId.set(client.id);
     this.reloadList();
+  }
+
+  protected fecharPasta(): void {
+    this.pastaCliente.fechar();
+    this.pastaNotice.set(null);
+  }
+
+  protected onPastaNotice(evento: PessoaFilesNotice): void {
+    const alvo = evento.subject ?? '';
+    const textos: Record<PessoaFilesNotice['key'], string> = {
+      saveBeforeUpload: 'Salve o cliente antes de anexar arquivos.',
+      uploadOk: `Arquivo enviado: ${alvo}`,
+      uploadError: `Não foi possível enviar: ${alvo}`,
+      fileRemoved: `Arquivo removido: ${alvo}`,
+      removeError: `Não foi possível remover: ${alvo}`,
+      downloadError: `Não foi possível baixar: ${alvo}`,
+      viewError: `Não foi possível abrir: ${alvo}`,
+    };
+    this.pastaNotice.set(textos[evento.key]);
   }
 
   protected clearSearchAndFilters(): void {

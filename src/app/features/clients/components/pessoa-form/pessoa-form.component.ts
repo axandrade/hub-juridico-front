@@ -38,9 +38,8 @@ import { ClientEmailListComponent } from '../client-email-list/client-email-list
 import { ClientFieldComponent } from '../client-field/client-field.component';
 import { ClientRepresentativesComponent } from '../client-representatives/client-representatives.component';
 import { PAINEL_LAYOUT_PADRAO, PainelLayout } from '../../models/painel-layout';
-import { PessoaFilesComponent, PessoaFilesNotice } from '../pessoa-files/pessoa-files.component';
 
-type PanelTab = 'person' | 'admin' | 'records' | 'files';
+type PanelTab = 'person' | 'admin' | 'records';
 
 type NoticeKey =
   | 'selectOrCreate'
@@ -88,7 +87,6 @@ interface EditorNotice {
     ClientContactListComponent,
     ClientRepresentativesComponent,
     ClientAdminFormComponent,
-    PessoaFilesComponent,
   ],
   templateUrl: './pessoa-form.component.html',
   styleUrl: './pessoa-form.component.scss',
@@ -138,7 +136,7 @@ export class PessoaFormComponent {
   protected readonly activePanelTab = signal<PanelTab>('person');
   protected readonly notice = signal<EditorNotice>({ key: 'selectOrCreate' });
 
-  protected readonly panelTabs: readonly PanelTab[] = ['person', 'admin', 'records', 'files'];
+  protected readonly panelTabs: readonly PanelTab[] = ['person', 'admin', 'records'];
 
   protected readonly tipoPessoaAtual = computed<TipoPessoa>(() => this.pessoaValue().tipo);
 
@@ -284,11 +282,6 @@ export class PessoaFormComponent {
     this.activePanelTab.set('person');
     this.notice.set({ key: 'panelCleared' });
     this.cleared.emit();
-  }
-
-  /** Repassa os avisos da aba de arquivos para o rodapé de status do painel. */
-  protected onFilesNotice(event: PessoaFilesNotice): void {
-    this.notice.set({ key: event.key, subject: event.subject });
   }
 
   protected isPersisted(): boolean {

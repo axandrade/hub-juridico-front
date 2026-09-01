@@ -416,3 +416,17 @@
     </footer>
   </section>
 </div>
+
+@if (pastaCliente.aberto() && selectedPersonId() !== null) {
+  <app-modal
+    [open]="true"
+    [wide]="true"
+    [title]="'Pasta — ' + (pastaCliente.cliente()?.nome || 'cliente')"
+    (closed)="fecharPasta()"
+  >
+    <app-pessoa-files [pessoaId]="selectedPersonId()!" (notify)="onPastaNotice($event)" />
+    @if (pastaNotice()) {
+      <p class="clients-pasta-notice">{{ pastaNotice() }}</p>
+    }
+  </app-modal>
+}

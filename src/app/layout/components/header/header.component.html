@@ -13,6 +13,14 @@
         [label]="action.label"
       />
     }
+    <app-button
+      variant="tertiary"
+      size="sm"
+      icon="fa-solid fa-folder"
+      label="Abrir pasta do cliente"
+      [disabled]="!temClienteSelecionado()"
+      (clicked)="abrirPastaCliente()"
+    />
   </div>
 
   <div class="header__context">

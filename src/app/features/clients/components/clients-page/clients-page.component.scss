@@ -89,6 +89,12 @@
   min-width: 0;
 }
 
+.clients-pasta-notice {
+  margin: $spacing-sm 0 0;
+  color: $color-text-secondary;
+  font-size: $font-size-xs;
+}
+
 .clients-resizer {
   position: absolute;
   z-index: 4;

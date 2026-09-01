@@ -8,16 +8,102 @@
 
 .clients {
   display: grid;
-  grid-template-columns: minmax(360px, 420px) minmax(0, 1fr);
   gap: $spacing-lg;
   min-height: calc(100vh - 160px);
+  grid-template-columns: minmax(360px, 420px) minmax(0, 1fr); // padrão = painel à esquerda
+
+  &[data-layout='right'] {
+    grid-template-columns: minmax(0, 1fr) minmax(360px, 420px);
+
+    .clients-panel-slot {
+      order: 2;
+    }
+    .clients-main {
+      order: 1;
+    }
+  }
+
+  &[data-layout='bottom'] {
+    grid-template-columns: minmax(0, 1fr);
+
+    .clients-panel-slot {
+      order: 2;
+    }
+    .clients-main {
+      order: 1;
+      max-height: 55vh;
+    }
+
+    ::ng-deep .clients-panel {
+      max-height: 45vh;
+    }
+  }
+
+  &[data-layout='dialog'] {
+    grid-template-columns: minmax(0, 1fr);
+
+    .clients-panel-slot {
+      position: fixed;
+      z-index: $z-overlay;
+      top: 50%;
+      left: 50%;
+      width: min(460px, 94vw);
+      transform: translate(-50%, -50%);
+    }
+
+    ::ng-deep .clients-panel {
+      max-height: min(88vh, calc(100vh - 72px));
+      box-shadow: $shadow-lg;
+    }
+  }
+
+  // Painel oculto — vale para todos os layouts, então precisa vencer os seletores acima.
+  &.clients--panel-hidden {
+    grid-template-columns: minmax(0, 1fr);
+
+    .clients-panel-slot,
+    app-pessoa-form {
+      display: none;
+    }
+  }
 }
 
-.clients--panel-hidden {
-  grid-template-columns: minmax(0, 1fr);
+.clients-panel-slot {
+  position: relative;
+  min-width: 0;
+}
 
-  app-pessoa-form {
-    display: none;
+.clients-panel-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: $z-overlay - 1;
+  border: 0;
+  padding: 0;
+  background-color: rgba($burgundy-deep, 0.45);
+  cursor: pointer;
+}
+
+.clients-panel-slot__close {
+  @include flex-center;
+  position: absolute;
+  top: -14px;
+  right: -14px;
+  z-index: 1;
+  width: 30px;
+  height: 30px;
+  border: 1px solid $color-border;
+  border-radius: 999px;
+  background-color: $color-surface;
+  color: $color-text-secondary;
+  cursor: pointer;
+  box-shadow: $shadow-md;
+  transition:
+    color $transition-fast,
+    border-color $transition-fast;
+
+  &:hover {
+    border-color: $color-primary-light;
+    color: $color-primary;
   }
 }
 
@@ -439,18 +525,32 @@
 }
 
 @include respond-below($breakpoint-xl) {
-  .clients {
-    grid-template-columns: minmax(320px, 390px) minmax(0, 1fr);
+  .clients:not([data-layout='dialog']):not(.clients--panel-hidden) {
+    &,
+    &[data-layout='left'] {
+      grid-template-columns: minmax(320px, 390px) minmax(0, 1fr);
+    }
+    &[data-layout='right'] {
+      grid-template-columns: minmax(0, 1fr) minmax(320px, 390px);
+    }
   }
 }
 
 @include respond-below($breakpoint-lg) {
-  .clients {
-    grid-template-columns: 1fr;
+  // Telas estreitas: qualquer layout dockeado vira coluna única (o modo diálogo continua flutuando).
+  .clients[data-layout='left'],
+  .clients[data-layout='right'],
+  .clients[data-layout='bottom'] {
+    grid-template-columns: minmax(0, 1fr);
   }
 
+  .clients[data-layout='bottom'] .clients-main,
   .clients-main {
     max-height: none;
+  }
+
+  .clients[data-layout='bottom'] ::ng-deep .clients-panel {
+    max-height: calc(100vh - 132px);
   }
 }
 

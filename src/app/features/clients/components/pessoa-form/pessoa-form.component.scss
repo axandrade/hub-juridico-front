@@ -21,9 +21,14 @@
 .clients-panel__header {
   @include flex-between;
   align-items: flex-start;
-  gap: $spacing-md;
+  gap: $spacing-sm;
   padding: $spacing-md;
   border-bottom: 1px solid rgba($color-border, 0.75);
+
+  // A área de título encolhe; as ferramentas ficam sempre numa linha só.
+  > div {
+    min-width: 0;
+  }
 
   span {
     color: $color-text-secondary;
@@ -53,6 +58,34 @@
   display: flex;
   align-items: center;
   gap: $spacing-xs;
+}
+
+.clients-panel__tools {
+  flex-wrap: nowrap;
+  flex-shrink: 0;
+  gap: 4px;
+
+  .clients-icon-button {
+    width: 28px;
+    height: 28px;
+    flex-shrink: 0;
+  }
+}
+
+.clients-panel__layout-btn {
+  // Cor de fundo que o ícone de "diálogo" usa para o quadrado da frente ocultar o de trás.
+  --layout-icon-bg: #{$color-neutral-light};
+
+  &.is-active {
+    --layout-icon-bg: #f1d4d3;
+    color: $color-primary;
+  }
+
+  svg {
+    display: block;
+    width: 15px;
+    height: 15px;
+  }
 }
 
 .clients-icon-button,

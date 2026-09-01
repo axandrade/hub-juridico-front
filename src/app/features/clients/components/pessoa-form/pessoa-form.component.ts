@@ -37,6 +37,7 @@ import { ClientContactListComponent } from '../client-contact-list/client-contac
 import { ClientEmailListComponent } from '../client-email-list/client-email-list.component';
 import { ClientFieldComponent } from '../client-field/client-field.component';
 import { ClientRepresentativesComponent } from '../client-representatives/client-representatives.component';
+import { PAINEL_LAYOUT_PADRAO, PainelLayout } from '../../models/painel-layout';
 import { PessoaFilesComponent, PessoaFilesNotice } from '../pessoa-files/pessoa-files.component';
 
 type PanelTab = 'person' | 'admin' | 'records' | 'files';
@@ -105,10 +106,16 @@ export class PessoaFormComponent {
   readonly pessoaId = input<number | null>(null);
   /** Natureza de um cadastro novo (vem da aba ativa da tabela). */
   readonly novoTipo = input<TipoPessoa>('FISICA');
+  /** Posição atual do painel na tela (a página é quem aplica). */
+  readonly layoutPainel = input<PainelLayout>(PAINEL_LAYOUT_PADRAO);
 
   readonly saved = output<IPessoa>();
   readonly statusChanged = output<IPessoa>();
   readonly cleared = output<void>();
+  readonly layoutPainelChange = output<PainelLayout>();
+
+  /** Ordem dos botões de posição no header (diálogo · esquerda · abaixo · direita). */
+  protected readonly opcoesLayout: readonly PainelLayout[] = ['dialog', 'left', 'bottom', 'right'];
 
   /** Lido pela página (via `viewChild`) para travar a troca de ficha. */
   readonly locked = signal(false);
@@ -286,6 +293,23 @@ export class PessoaFormComponent {
 
   protected isPersisted(): boolean {
     return this.entityId() > 0;
+  }
+
+  protected escolherLayout(layout: PainelLayout): void {
+    this.layoutPainelChange.emit(layout);
+  }
+
+  protected rotuloLayout(layout: PainelLayout): string {
+    switch (layout) {
+      case 'left':
+        return 'Painel à esquerda';
+      case 'right':
+        return 'Painel à direita';
+      case 'bottom':
+        return 'Painel abaixo';
+      case 'dialog':
+        return 'Painel em diálogo';
+    }
   }
 
   /** Control de string dentro do grupo `pessoa` (usado pelos campos da aba). */

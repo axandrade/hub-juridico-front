@@ -1,3 +1,4 @@
+import { DOCUMENT } from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -23,8 +24,15 @@ import {
   emailPrincipal,
 } from '../../../../core/models';
 import { ButtonComponent } from '../../../../shared/components/button/button.component';
+import {
+  PAINEL_LAYOUT_PADRAO,
+  PainelLayout,
+  ehPainelLayout,
+} from '../../models/painel-layout';
 import { PessoaStore, TipoDocumento } from '../../services/pessoa-store';
 import { PessoaFormComponent } from '../pessoa-form/pessoa-form.component';
+
+const LAYOUT_STORAGE_KEY = 'hub-juridico.clients.layout';
 
 type ColunaTabelaKey =
   | 'personType'
@@ -62,6 +70,7 @@ interface FiltrosTabela {
 export class ClientsPageComponent {
   private readonly store = inject(PessoaStore);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly document = inject(DOCUMENT);
   private readonly defaultVisibleColumns: readonly ColunaTabelaKey[] = [
     'personType',
     'name',
@@ -85,7 +94,10 @@ export class ClientsPageComponent {
    * Ligado automaticamente quando o filtro de status é "Inativo".
    */
   protected readonly incluirInativos = signal(false);
-  protected readonly panelVisible = signal(true);
+  /** Posição do painel do cliente (esquerda/direita/abaixo/diálogo) — lembrada no localStorage. */
+  protected readonly layoutPainel = signal<PainelLayout>(this.carregarLayout());
+  /** No modo diálogo o painel começa oculto (só aparece ao selecionar/criar um cliente). */
+  protected readonly panelVisible = signal(this.layoutPainel() !== 'dialog');
   protected readonly showFilters = signal(false);
   protected readonly showColumns = signal(false);
   protected readonly showMoreActions = signal(false);
@@ -311,6 +323,46 @@ export class ClientsPageComponent {
 
   protected togglePanel(): void {
     this.panelVisible.update((visible) => !visible);
+  }
+
+  protected setPanelVisible(visivel: boolean): void {
+    this.panelVisible.set(visivel);
+  }
+
+  protected setLayoutPainel(layout: PainelLayout): void {
+    this.layoutPainel.set(layout);
+    // Ao trocar de posição, mostra o painel ali (senão o usuário clica e nada muda).
+    this.panelVisible.set(true);
+    try {
+      localStorage.setItem(LAYOUT_STORAGE_KEY, layout);
+    } catch {
+      /* storage indisponível — a escolha vale só nesta sessão */
+    }
+  }
+
+  private carregarLayout(): PainelLayout {
+    try {
+      const salvo = localStorage.getItem(LAYOUT_STORAGE_KEY);
+      if (ehPainelLayout(salvo)) {
+        return salvo;
+      }
+    } catch {
+      /* ignore */
+    }
+    return PAINEL_LAYOUT_PADRAO;
+  }
+
+  /** No modo diálogo, Esc esconde o painel (mantém o cliente selecionado). */
+  @HostListener('document:keydown.escape')
+  protected onEscape(): void {
+    if (this.layoutPainel() === 'dialog' && this.panelVisible() && !this.temModalAberto()) {
+      this.panelVisible.set(false);
+    }
+  }
+
+  /** Há um `app-modal` (upload, preview de documento…) aberto dentro do painel? */
+  private temModalAberto(): boolean {
+    return !!this.document.querySelector('app-modal .modal__dialog');
   }
 
   protected toggleClientFavorite(client: IPessoa, event: MouseEvent): void {

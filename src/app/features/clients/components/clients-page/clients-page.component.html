@@ -1,11 +1,38 @@
-<div class="clients" [class.clients--panel-hidden]="!panelVisible()">
-  <app-pessoa-form
-    [pessoaId]="selectedPersonId()"
-    [novoTipo]="novoTipoPadrao()"
-    (saved)="onSaved($event)"
-    (statusChanged)="onStatusChanged($event)"
-    (cleared)="onCleared()"
-  />
+<div
+  class="clients"
+  [attr.data-layout]="layoutPainel()"
+  [class.clients--panel-hidden]="!panelVisible()"
+>
+  @if (layoutPainel() === 'dialog' && panelVisible()) {
+    <button
+      type="button"
+      class="clients-panel-backdrop"
+      aria-label="Fechar painel"
+      (click)="$event.stopPropagation(); setPanelVisible(false)"
+    ></button>
+  }
+
+  <div class="clients-panel-slot">
+    @if (layoutPainel() === 'dialog' && panelVisible()) {
+      <button
+        type="button"
+        class="clients-panel-slot__close"
+        aria-label="Fechar painel"
+        (click)="$event.stopPropagation(); setPanelVisible(false)"
+      >
+        <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+      </button>
+    }
+    <app-pessoa-form
+      [pessoaId]="selectedPersonId()"
+      [novoTipo]="novoTipoPadrao()"
+      [layoutPainel]="layoutPainel()"
+      (layoutPainelChange)="setLayoutPainel($event)"
+      (saved)="onSaved($event)"
+      (statusChanged)="onStatusChanged($event)"
+      (cleared)="onCleared()"
+    />
+  </div>
 
   <section class="clients-main" aria-label="Tabela de clientes">
     <div class="clients-actions">

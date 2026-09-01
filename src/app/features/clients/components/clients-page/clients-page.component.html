@@ -2,6 +2,8 @@
   class="clients"
   [attr.data-layout]="layoutPainel()"
   [class.clients--panel-hidden]="!panelVisible()"
+  [style.--painel-largura.px]="painelLargura()"
+  [style.--painel-altura.px]="painelAltura()"
 >
   @if (layoutPainel() === 'dialog' && panelVisible()) {
     <button
@@ -33,6 +35,17 @@
       (cleared)="onCleared()"
     />
   </div>
+
+  @if (panelVisible() && layoutPainel() !== 'dialog') {
+    <div
+      class="clients-resizer"
+      [class]="'clients-resizer--' + layoutPainel()"
+      role="separator"
+      [attr.aria-orientation]="layoutPainel() === 'bottom' ? 'horizontal' : 'vertical'"
+      aria-label="Redimensionar painel"
+      (pointerdown)="iniciarResize($event)"
+    ></div>
+  }
 
   <section class="clients-main" aria-label="Tabela de clientes">
     <div class="clients-actions">

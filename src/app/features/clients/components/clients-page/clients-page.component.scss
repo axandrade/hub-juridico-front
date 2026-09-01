@@ -7,13 +7,17 @@
 }
 
 .clients {
+  --painel-largura: 400px;
+  --painel-altura: 340px;
+
+  position: relative; // âncora do redimensionador
   display: grid;
   gap: $spacing-lg;
   min-height: calc(100vh - 160px);
-  grid-template-columns: minmax(360px, 420px) minmax(0, 1fr); // padrão = painel à esquerda
+  grid-template-columns: var(--painel-largura) minmax(0, 1fr); // padrão = painel à esquerda
 
   &[data-layout='right'] {
-    grid-template-columns: minmax(0, 1fr) minmax(360px, 420px);
+    grid-template-columns: minmax(0, 1fr) var(--painel-largura);
 
     .clients-panel-slot {
       order: 2;
@@ -24,18 +28,30 @@
   }
 
   &[data-layout='bottom'] {
+    height: calc(100vh - 160px);
     grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr) var(--painel-altura);
 
     .clients-panel-slot {
       order: 2;
+      min-height: 0;
+      overflow: hidden;
     }
     .clients-main {
       order: 1;
-      max-height: 55vh;
+      min-height: 0;
+      max-height: none;
+    }
+
+    app-pessoa-form {
+      display: block;
+      height: 100%;
+      overflow: hidden;
     }
 
     ::ng-deep .clients-panel {
-      max-height: 45vh;
+      max-height: 100%;
+      height: 100%;
     }
   }
 
@@ -71,6 +87,76 @@
 .clients-panel-slot {
   position: relative;
   min-width: 0;
+}
+
+.clients-resizer {
+  position: absolute;
+  z-index: 4;
+  touch-action: none;
+
+  &::after {
+    content: '';
+    position: absolute;
+    border-radius: 999px;
+    background-color: rgba($color-border, 0.9);
+    transition: background-color $transition-fast;
+  }
+
+  &:hover::after,
+  &:active::after {
+    background-color: $color-primary-light;
+  }
+}
+
+.clients-resizer--left {
+  top: 0;
+  bottom: 0;
+  left: var(--painel-largura);
+  width: $spacing-lg;
+  transform: translateX(-50%);
+  cursor: col-resize;
+
+  &::after {
+    top: 0;
+    bottom: 0;
+    left: 50%;
+    width: 3px;
+    transform: translateX(-50%);
+  }
+}
+
+.clients-resizer--right {
+  top: 0;
+  bottom: 0;
+  right: var(--painel-largura);
+  width: $spacing-lg;
+  transform: translateX(50%);
+  cursor: col-resize;
+
+  &::after {
+    top: 0;
+    bottom: 0;
+    left: 50%;
+    width: 3px;
+    transform: translateX(-50%);
+  }
+}
+
+.clients-resizer--bottom {
+  left: 0;
+  right: 0;
+  bottom: var(--painel-altura);
+  height: $spacing-lg;
+  transform: translateY(50%);
+  cursor: row-resize;
+
+  &::after {
+    left: 0;
+    right: 0;
+    top: 50%;
+    height: 3px;
+    transform: translateY(-50%);
+  }
 }
 
 .clients-panel-backdrop {
@@ -524,24 +610,19 @@
   text-decoration: underline;
 }
 
-@include respond-below($breakpoint-xl) {
-  .clients:not([data-layout='dialog']):not(.clients--panel-hidden) {
-    &,
-    &[data-layout='left'] {
-      grid-template-columns: minmax(320px, 390px) minmax(0, 1fr);
-    }
-    &[data-layout='right'] {
-      grid-template-columns: minmax(0, 1fr) minmax(320px, 390px);
-    }
-  }
-}
-
 @include respond-below($breakpoint-lg) {
-  // Telas estreitas: qualquer layout dockeado vira coluna única (o modo diálogo continua flutuando).
+  // Telas estreitas: qualquer layout dockeado vira coluna única e sem redimensionador
+  // (o modo diálogo continua flutuando).
   .clients[data-layout='left'],
   .clients[data-layout='right'],
   .clients[data-layout='bottom'] {
+    height: auto;
     grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: none;
+  }
+
+  .clients-resizer {
+    display: none;
   }
 
   .clients[data-layout='bottom'] .clients-main,

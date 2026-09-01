@@ -11,10 +11,8 @@ import {
 } from '@angular/core';
 import { provideRouter, withComponentInputBinding, withInMemoryScrolling } from '@angular/router';
 import { provideCharts, withDefaultRegisterables } from 'ng2-charts';
-import { providePrimeNG } from 'primeng/config';
 
 import { authInterceptor } from './core/auth/auth.interceptor';
-import { HubJuridicoPreset } from './core/constants/primeng-preset';
 import { AuthService } from './core/services/auth.service';
 import { routes } from './app.routes';
 
@@ -32,16 +30,6 @@ export const appConfig: ApplicationConfig = {
       withInMemoryScrolling({ scrollPositionRestoration: 'top' }),
     ),
     provideCharts(withDefaultRegisterables()),
-    providePrimeNG({
-      theme: {
-        preset: HubJuridicoPreset,
-        options: {
-          darkModeSelector: '.app-dark',
-          cssLayer: { name: 'primeng', order: 'primeng' },
-        },
-      },
-      ripple: true,
-    }),
     { provide: LOCALE_ID, useValue: 'pt-BR' },
   ],
 };

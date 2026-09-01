@@ -56,4 +56,15 @@ export class DomainQueryService {
         })),
       );
   }
+
+  /**
+   * "findById genérico": usa `GET /api/v1/domain/{entityName}/all` filtrando por `id eq`, que
+   * sempre devolve o objeto inteiro (sem restrição de `fields`). `null` se não existir.
+   */
+  getById<T>(entityName: string, id: number | string): Observable<T | null> {
+    const params = new HttpParams().set('filter', `id eq '${id}'`);
+    return this.http
+      .get<PaginaDominioApi<T>>(`${environment.apiBaseUrl}/domain/${entityName}/all`, { params })
+      .pipe(map((resp) => resp.conteudo[0] ?? null));
+  }
 }

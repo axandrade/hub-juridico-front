@@ -1,43 +1,22 @@
-import { HttpClient, HttpParams } from '@angular/common/http';
+import { HttpClient } from '@angular/common/http';
 import { Injectable, inject, signal } from '@angular/core';
 import { Observable, map, tap } from 'rxjs';
 
 import { environment } from '../../../../environments/environment';
-import { onlyDigits } from '../../../core/auth/cpf';
-import { IPessoa, TipoPessoa } from '../../../core/models';
+import { IPessoa } from '../../../core/models';
 import { AuthService } from '../../../core/services/auth.service';
-import { PaginaApi, ClientRespApi, StatusVinculoApi } from './client-api.model';
+import { ClientRespApi, StatusVinculoApi } from './client-api.model';
 import {
   clientToAtualizarRequest,
   clientToCriarRequest,
   clientRespToClient,
 } from './client-mapper';
 
-/** Documento aceito no filtro por número do endpoint de pessoas. */
-export type TipoDocumento = 'CPF' | 'CNPJ';
-
-/**
- * Página pedida ao backend. Filtros do endpoint:
- * `tipo`, `incluirInativos` e o par `tipoDocumento` + `documento`
- * (`GET /api/v1/pessoas?page&size&tipo&incluirInativos&tipoDocumento&documento`).
- * Por padrão (`incluirInativos: false`) só vêm pessoas ativas. Busca livre e demais
- * filtros seguem client-side.
- */
-export interface ClientListQuery {
-  page: number;
-  tipo: TipoPessoa | null;
-  /** `true` traz também os clientes inativos; padrão é só ativos. */
-  incluirInativos: boolean;
-  /** Tipo do documento buscado; `null` desliga o filtro por número. */
-  tipoDocumento: TipoDocumento | null;
-  /** Número (ou parte) do documento; só os dígitos são enviados. */
-  documento: string;
-}
-
 /**
  * Fonte única da lista de pessoas (clientes) para a feature. Fala com a API
- * `/api/v1/pessoas` (Spring), que pagina de 10 em 10; os componentes só falam
- * com o store. `favorite` é por usuário (`PATCH /pessoas/{id}/favorito`).
+ * `/api/v1/pessoas` (Spring) pra CRUD/favorito/status; a listagem em si vem do
+ * endpoint genérico (`app-domain-table`, ver {@link definirPaginaGenerica}).
+ * `favorite` é por usuário (`PATCH /pessoas/{id}/favorito`).
  */
 @Injectable({ providedIn: 'root' })
 export class ClientStore {
@@ -45,64 +24,19 @@ export class ClientStore {
   private readonly auth = inject(AuthService);
   private readonly base = `${environment.apiBaseUrl}/pessoas`;
 
-  /** Tamanho de página fixo do backend (`max-page-size: 10`). */
-  static readonly PAGE_SIZE = 10;
-
   private readonly _clients = signal<IPessoa[]>([]);
   readonly clients = this._clients.asReadonly();
 
-  private readonly _page = signal(0);
-  private readonly _totalPages = signal(1);
-  private readonly _totalElements = signal(0);
-  private readonly _last = signal(true);
-
-  /** Índice da página atual (0-based). */
-  readonly page = this._page.asReadonly();
-  /** Total de páginas do filtro atual. */
-  readonly totalPages = this._totalPages.asReadonly();
-  /** Total de clientes do filtro atual (base inteira quando sem filtro). */
-  readonly totalElements = this._totalElements.asReadonly();
-  /** `true` quando não há próxima página. */
-  readonly last = this._last.asReadonly();
-
   private toClient(res: ClientRespApi): IPessoa {
     return clientRespToClient(res, this.auth.user());
-  }
-
-  /** Carrega uma página da lista (`tipo` opcional; `FISICA`/`JURIDICA` como no backend). */
-  carregar(query: ClientListQuery): Observable<IPessoa[]> {
-    let params = new HttpParams()
-      .set('page', query.page)
-      .set('size', ClientStore.PAGE_SIZE);
-    if (query.tipo) {
-      params = params.set('tipo', query.tipo);
-    }
-    if (query.incluirInativos) {
-      params = params.set('incluirInativos', true);
-    }
-    const documento = onlyDigits(query.documento);
-    if (query.tipoDocumento && documento) {
-      params = params.set('tipoDocumento', query.tipoDocumento).set('documento', documento);
-    }
-
-    return this.http.get<PaginaApi<ClientRespApi>>(this.base, { params }).pipe(
-      tap((page) => {
-        this._page.set(page.pagina ?? 0);
-        this._totalPages.set(page.total_paginas ?? 1);
-        this._totalElements.set(page.total_elementos ?? 0);
-        this._last.set(page.ultima ?? true);
-      }),
-      map((page) => (page.conteudo ?? []).map((res) => this.toClient(res))),
-      tap((clients) => this._clients.set(clients)),
-    );
   }
 
   /**
    * Popula a lista a partir de uma página do endpoint genérico `GET /api/v1/domain/pessoa`
    * (usado pelo `app-domain-table`) — as chaves da resposta já batem com `ClientRespApi` (mesmo
    * JSON snake_case), então é só reaproveitar o mapper. Ponte pro `ClientStore` continuar sendo a
-   * fonte de verdade de `buscar`/`salvar`/`alterarStatus`/`alternarFavorito` mesmo quando quem
-   * busca a lista é a tabela genérica, não o `carregar()` deste store.
+   * fonte de verdade de `buscar`/`salvar`/`alterarStatus`/`alternarFavorito` mesmo quem busca a
+   * lista sendo a tabela genérica.
    */
   definirPaginaGenerica(registros: ClientRespApi[]): void {
     this._clients.set(registros.map((res) => this.toClient(res)));

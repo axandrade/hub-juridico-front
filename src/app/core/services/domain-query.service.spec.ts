@@ -75,4 +75,39 @@ describe('DomainQueryService', () => {
       last: true,
     });
   });
+
+  it('getById monta a URL /all com filter=id eq e devolve o primeiro item', () => {
+    let resultado: unknown;
+    service.getById('pessoa', 42).subscribe((r) => (resultado = r));
+
+    const req = http.expectOne((r) => r.url === `${BASE}/pessoa/all`);
+    expect(req.request.params.get('filter')).toBe("id eq '42'");
+    req.flush({
+      conteudo: [{ id: 42, nome: 'Maria' }],
+      pagina: 0,
+      tamanho: 10,
+      total_elementos: 1,
+      total_paginas: 1,
+      ultima: true,
+    });
+
+    expect(resultado).toEqual({ id: 42, nome: 'Maria' });
+  });
+
+  it('getById devolve null quando não encontra o registro', () => {
+    let resultado: unknown;
+    service.getById('pessoa', 999).subscribe((r) => (resultado = r));
+
+    const req = http.expectOne((r) => r.url === `${BASE}/pessoa/all`);
+    req.flush({
+      conteudo: [],
+      pagina: 0,
+      tamanho: 10,
+      total_elementos: 0,
+      total_paginas: 1,
+      ultima: true,
+    });
+
+    expect(resultado).toBeNull();
+  });
 });

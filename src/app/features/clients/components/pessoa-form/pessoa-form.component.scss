@@ -53,6 +53,37 @@
   }
 }
 
+.clients-panel__natureza {
+  display: inline-flex;
+  margin: $spacing-xs 0;
+  border: 1px solid $color-border;
+  border-radius: $border-radius-sm;
+  overflow: hidden;
+
+  button {
+    padding: 4px $spacing-sm;
+    border: 0;
+    background-color: $color-neutral-light;
+    color: $color-text-secondary;
+    cursor: pointer;
+    font: inherit;
+    font-size: $font-size-xs;
+    font-weight: $font-weight-medium;
+    transition:
+      background-color $transition-fast,
+      color $transition-fast;
+
+    & + button {
+      border-left: 1px solid $color-border;
+    }
+
+    &.is-active {
+      background-color: $color-primary;
+      color: #fff;
+    }
+  }
+}
+
 .clients-panel__tools,
 .clients-panel__footer > div {
   display: flex;

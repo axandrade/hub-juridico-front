@@ -140,6 +140,10 @@ export class PessoaFormComponent {
 
   protected readonly tipoPessoaAtual = computed<TipoPessoa>(() => this.pessoaValue().tipo);
 
+  /** Natureza escolhida na hora de criar (sobrepõe `novoTipo` até salvar/limpar). */
+  private readonly tipoNovoEscolhido = signal<TipoPessoa | null>(null);
+  private readonly tipoParaNovo = computed<TipoPessoa>(() => this.tipoNovoEscolhido() ?? this.novoTipo());
+
   /** `true` quando o dossiê está `inactive` (⇒ `INATIVO` no backend). */
   protected readonly isInactive = computed(
     () => this.formValue().dossier.status === 'inactive',
@@ -164,7 +168,7 @@ export class PessoaFormComponent {
     // Recarrega a ficha só quando a página troca o id (ou o tipo de um cadastro novo).
     effect(() => {
       const id = this.pessoaId();
-      const novoTipo = this.novoTipo();
+      const novoTipo = this.tipoParaNovo();
       const key = id !== null ? `id:${id}` : `new:${novoTipo}`;
       if (key === this.lastLoadedKey) {
         return;
@@ -173,6 +177,7 @@ export class PessoaFormComponent {
 
       untracked(() => {
         if (id !== null) {
+          this.tipoNovoEscolhido.set(null);
           const found = this.store.buscar(id);
           if (found) {
             this.loadIntoForm(found);
@@ -229,6 +234,7 @@ export class PessoaFormComponent {
     this.notice.set({ key: 'saving' });
     this.store.salvar(prepared).subscribe({
       next: (savedClient) => {
+        this.tipoNovoEscolhido.set(null);
         this.loadIntoForm(savedClient);
         this.lastLoadedKey = `id:${savedClient.id}`;
         this.activePanelTab.set('person');
@@ -276,6 +282,7 @@ export class PessoaFormComponent {
   }
 
   protected clearPanel(): void {
+    this.tipoNovoEscolhido.set(null);
     this.loadIntoForm(this.createEmptyClient(this.novoTipo()));
     this.lastLoadedKey = `new:${this.novoTipo()}`;
     this.locked.set(false);
@@ -286,6 +293,14 @@ export class PessoaFormComponent {
 
   protected isPersisted(): boolean {
     return this.entityId() > 0;
+  }
+
+  /** Troca a natureza de um cadastro novo (física ⇄ jurídica). Sem efeito num registro salvo. */
+  protected escolherNaturezaNova(tipo: TipoPessoa): void {
+    if (this.isPersisted() || this.tipoPessoaAtual() === tipo) {
+      return;
+    }
+    this.tipoNovoEscolhido.set(tipo);
   }
 
   protected escolherLayout(layout: PainelLayout): void {

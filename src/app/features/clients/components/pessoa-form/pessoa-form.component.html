@@ -3,10 +3,34 @@
     <div>
       <span>Painel</span>
       <h2>{{ panelTitle() || 'Novo cliente' }}</h2>
-      <small>
-        {{ tipoPessoaAtual() === 'FISICA' ? 'Pessoa física' : 'Pessoa jurídica' }} |
-        {{ form.controls.dossier.controls.folder.value || 'pasta será criada ao salvar' }}
-      </small>
+
+      @if (!isPersisted()) {
+        <div class="clients-panel__natureza" role="group" aria-label="Natureza do cliente">
+          <button
+            type="button"
+            [class.is-active]="tipoPessoaAtual() === 'FISICA'"
+            (click)="escolherNaturezaNova('FISICA')"
+          >
+            Pessoa física
+          </button>
+          <button
+            type="button"
+            [class.is-active]="tipoPessoaAtual() === 'JURIDICA'"
+            (click)="escolherNaturezaNova('JURIDICA')"
+          >
+            Pessoa jurídica
+          </button>
+        </div>
+      }
+
+      @if (isPersisted()) {
+        <small>
+          {{ tipoPessoaAtual() === 'FISICA' ? 'Pessoa física' : 'Pessoa jurídica' }}
+          @if (form.controls.dossier.controls.folder.value) {
+            | {{ form.controls.dossier.controls.folder.value }}
+          }
+        </small>
+      }
     </div>
 
     <div class="clients-panel__tools" aria-label="Ferramentas do painel">

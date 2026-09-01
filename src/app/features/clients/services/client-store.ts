@@ -6,12 +6,12 @@ import { environment } from '../../../../environments/environment';
 import { onlyDigits } from '../../../core/auth/cpf';
 import { IPessoa, TipoPessoa } from '../../../core/models';
 import { AuthService } from '../../../core/services/auth.service';
-import { PaginaApi, PessoaRespApi, StatusVinculoApi } from './pessoa-api.model';
+import { PaginaApi, ClientRespApi, StatusVinculoApi } from './client-api.model';
 import {
   clientToAtualizarRequest,
   clientToCriarRequest,
-  pessoaRespToClient,
-} from './pessoa-mapper';
+  clientRespToClient,
+} from './client-mapper';
 
 /** Documento aceito no filtro por número do endpoint de pessoas. */
 export type TipoDocumento = 'CPF' | 'CNPJ';
@@ -23,7 +23,7 @@ export type TipoDocumento = 'CPF' | 'CNPJ';
  * Por padrão (`incluirInativos: false`) só vêm pessoas ativas. Busca livre e demais
  * filtros seguem client-side.
  */
-export interface PessoaListQuery {
+export interface ClientListQuery {
   page: number;
   tipo: TipoPessoa | null;
   /** `true` traz também os clientes inativos; padrão é só ativos. */
@@ -40,7 +40,7 @@ export interface PessoaListQuery {
  * com o store. `favorite` é por usuário (`PATCH /pessoas/{id}/favorito`).
  */
 @Injectable({ providedIn: 'root' })
-export class PessoaStore {
+export class ClientStore {
   private readonly http = inject(HttpClient);
   private readonly auth = inject(AuthService);
   private readonly base = `${environment.apiBaseUrl}/pessoas`;
@@ -65,15 +65,15 @@ export class PessoaStore {
   /** `true` quando não há próxima página. */
   readonly last = this._last.asReadonly();
 
-  private toClient(res: PessoaRespApi): IPessoa {
-    return pessoaRespToClient(res, this.auth.user());
+  private toClient(res: ClientRespApi): IPessoa {
+    return clientRespToClient(res, this.auth.user());
   }
 
   /** Carrega uma página da lista (`tipo` opcional; `FISICA`/`JURIDICA` como no backend). */
-  carregar(query: PessoaListQuery): Observable<IPessoa[]> {
+  carregar(query: ClientListQuery): Observable<IPessoa[]> {
     let params = new HttpParams()
       .set('page', query.page)
-      .set('size', PessoaStore.PAGE_SIZE);
+      .set('size', ClientStore.PAGE_SIZE);
     if (query.tipo) {
       params = params.set('tipo', query.tipo);
     }
@@ -85,7 +85,7 @@ export class PessoaStore {
       params = params.set('tipoDocumento', query.tipoDocumento).set('documento', documento);
     }
 
-    return this.http.get<PaginaApi<PessoaRespApi>>(this.base, { params }).pipe(
+    return this.http.get<PaginaApi<ClientRespApi>>(this.base, { params }).pipe(
       tap((page) => {
         this._page.set(page.pagina ?? 0);
         this._totalPages.set(page.total_paginas ?? 1);
@@ -109,11 +109,11 @@ export class PessoaStore {
   salvar(client: IPessoa): Observable<IPessoa> {
     const request$ =
       client.id > 0
-        ? this.http.put<PessoaRespApi>(
+        ? this.http.put<ClientRespApi>(
             `${this.base}/${client.id}`,
             clientToAtualizarRequest(client),
           )
-        : this.http.post<PessoaRespApi>(this.base, clientToCriarRequest(client));
+        : this.http.post<ClientRespApi>(this.base, clientToCriarRequest(client));
 
     return request$.pipe(
       map((res) => this.toClient(res)),
@@ -134,7 +134,7 @@ export class PessoaStore {
    */
   alterarStatus(id: number, status: StatusVinculoApi): Observable<IPessoa> {
     return this.http
-      .patch<PessoaRespApi>(`${this.base}/${id}/status`, { status })
+      .patch<ClientRespApi>(`${this.base}/${id}/status`, { status })
       .pipe(
         map((res) => this.toClient(res)),
         tap((atualizado) =>

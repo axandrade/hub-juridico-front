@@ -3,7 +3,7 @@ import { Injectable, inject } from '@angular/core';
 import { Observable, map } from 'rxjs';
 
 import { environment } from '../../../../environments/environment';
-import { PessoaArquivo, PessoaArquivoApi, pessoaArquivoFromApi } from './pessoa-arquivo.model';
+import { ClientArquivo, ClientArquivoApi, clientArquivoFromApi } from './client-arquivo.model';
 
 /**
  * Arquivos de uma pessoa — sub-recurso `/api/v1/pessoas/{pessoaId}/arquivos`
@@ -11,24 +11,24 @@ import { PessoaArquivo, PessoaArquivoApi, pessoaArquivoFromApi } from './pessoa-
  * download. Relação 1:N; a listagem vem com o mais recente primeiro.
  */
 @Injectable({ providedIn: 'root' })
-export class PessoaArquivoService {
+export class ClientArquivoService {
   private readonly http = inject(HttpClient);
 
   private url(pessoaId: number): string {
     return `${environment.apiBaseUrl}/pessoas/${pessoaId}/arquivos`;
   }
 
-  listar(pessoaId: number): Observable<PessoaArquivo[]> {
+  listar(pessoaId: number): Observable<ClientArquivo[]> {
     return this.http
-      .get<PessoaArquivoApi[]>(this.url(pessoaId))
-      .pipe(map((lista) => lista.map(pessoaArquivoFromApi)));
+      .get<ClientArquivoApi[]>(this.url(pessoaId))
+      .pipe(map((lista) => lista.map(clientArquivoFromApi)));
   }
 
-  enviar(pessoaId: number, arquivo: File, tipoAnexoId: number): Observable<PessoaArquivo> {
+  enviar(pessoaId: number, arquivo: File, tipoAnexoId: number): Observable<ClientArquivo> {
     const form = new FormData();
     form.append('arquivo', arquivo);
     form.append('tipoAnexoId', String(tipoAnexoId));
-    return this.http.post<PessoaArquivoApi>(this.url(pessoaId), form).pipe(map(pessoaArquivoFromApi));
+    return this.http.post<ClientArquivoApi>(this.url(pessoaId), form).pipe(map(clientArquivoFromApi));
   }
 
   baixar(pessoaId: number, arquivoId: number): Observable<HttpResponse<Blob>> {

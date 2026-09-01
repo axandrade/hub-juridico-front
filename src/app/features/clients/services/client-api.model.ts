@@ -3,7 +3,7 @@ import { EstadoCivil, TipoContato, TipoPessoa } from '../../../core/models';
 /**
  * DTOs da API `/api/v1/pessoas` (Spring). O JSON do backend é **snake_case**
  * (ver `JacksonConfig`), então os nomes aqui são snake_case de propósito — a
- * conversão para/de `IPessoa` fica em `pessoa-mapper.ts`.
+ * conversão para/de `IPessoa` fica em `client-mapper.ts`.
  */
 
 // ---------- blocos comuns ----------
@@ -49,21 +49,21 @@ export interface DadosAdministrativosApi {
   indicado_por: string | null;
   observacoes: string | null;
   caminho_arquivo: string | null;
-  // Só na requisição: no `PessoaResponse` os andamentos vêm na raiz (ver `PessoaRespApi`).
+  // Só na requisição: no `PessoaResponse` os andamentos vêm na raiz (ver `ClientRespApi`).
   registro_andamento: string | null;
   historico_andamentos: string | null;
 }
 
 // ---------- requisição (POST / PUT) ----------
 
-interface PessoaRequestComum {
+interface ClientRequestComum {
   endereco: EnderecoApi | null;
   contatos: ContatoApi[];
   emails: EmailApi[];
   dados_administrativos: DadosAdministrativosApi;
 }
 
-export interface CriarPessoaFisicaApi extends PessoaRequestComum {
+export interface CriarClientFisicaApi extends ClientRequestComum {
   tipo: 'FISICA';
   nome: string;
   cpf: string;
@@ -72,7 +72,7 @@ export interface CriarPessoaFisicaApi extends PessoaRequestComum {
   nacionalidade: string | null;
 }
 
-export interface CriarPessoaJuridicaApi extends PessoaRequestComum {
+export interface CriarClientJuridicaApi extends ClientRequestComum {
   tipo: 'JURIDICA';
   razao_social: string;
   nome_fantasia: string | null;
@@ -82,11 +82,11 @@ export interface CriarPessoaJuridicaApi extends PessoaRequestComum {
   representantes: RepresentanteApi[];
 }
 
-export type CriarPessoaApi = CriarPessoaFisicaApi | CriarPessoaJuridicaApi;
+export type CriarClientApi = CriarClientFisicaApi | CriarClientJuridicaApi;
 
 /** Atualização (PUT) — o backend não aceita alterar cpf/cnpj. */
-export type AtualizarPessoaApi =
-  Omit<CriarPessoaFisicaApi, 'cpf'> | Omit<CriarPessoaJuridicaApi, 'cnpj'>;
+export type AtualizarClientApi =
+  Omit<CriarClientFisicaApi, 'cpf'> | Omit<CriarClientJuridicaApi, 'cnpj'>;
 
 // ---------- resposta ----------
 
@@ -103,7 +103,7 @@ export interface DadosAdministrativosRespApi
 }
 
 /** `PessoaResponse` polimórfico (discriminado por `tipo`). */
-export interface PessoaRespApi {
+export interface ClientRespApi {
   tipo: TipoPessoa;
   id: number;
   // PessoaFisica

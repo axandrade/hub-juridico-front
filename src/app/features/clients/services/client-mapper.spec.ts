@@ -1,7 +1,7 @@
-import { PessoaRespApi } from './pessoa-api.model';
-import { pessoaRespToClient } from './pessoa-mapper';
+import { ClientRespApi } from './client-api.model';
+import { clientRespToClient } from './client-mapper';
 
-function resp(over: Partial<PessoaRespApi> = {}): PessoaRespApi {
+function resp(over: Partial<ClientRespApi> = {}): ClientRespApi {
   return {
     tipo: 'FISICA',
     id: 1,
@@ -29,9 +29,9 @@ function resp(over: Partial<PessoaRespApi> = {}): PessoaRespApi {
   };
 }
 
-describe('pessoaRespToClient — principal no topo', () => {
+describe('clientRespToClient — principal no topo', () => {
   it('põe o e-mail principal em primeiro, preservando a ordem dos demais', () => {
-    const client = pessoaRespToClient(
+    const client = clientRespToClient(
       resp({
         emails: [
           { endereco: 'a@x.com', principal: false },
@@ -51,7 +51,7 @@ describe('pessoaRespToClient — principal no topo', () => {
   });
 
   it('põe o contato principal em primeiro', () => {
-    const client = pessoaRespToClient(
+    const client = clientRespToClient(
       resp({
         contatos: [
           { valor: '1111', tipo: 'TELEFONE', principal: false },
@@ -66,7 +66,7 @@ describe('pessoaRespToClient — principal no topo', () => {
   });
 
   it('sem principal, mantém a ordem original', () => {
-    const client = pessoaRespToClient(
+    const client = clientRespToClient(
       resp({
         emails: [
           { endereco: 'a@x.com', principal: false },
@@ -80,7 +80,7 @@ describe('pessoaRespToClient — principal no topo', () => {
   });
 
   it('ordena também as listas dos representantes legais', () => {
-    const client = pessoaRespToClient(
+    const client = clientRespToClient(
       resp({
         tipo: 'JURIDICA',
         razao_social: 'ACME',

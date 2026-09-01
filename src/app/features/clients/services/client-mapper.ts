@@ -10,15 +10,15 @@ import {
   emptyEndereco,
 } from '../../../core/models';
 import {
-  AtualizarPessoaApi,
-  CriarPessoaApi,
+  AtualizarClientApi,
+  CriarClientApi,
   DadosAdministrativosApi,
   EnderecoApi,
-  PessoaRespApi,
+  ClientRespApi,
   RepresentanteApi,
   RepresentanteRespApi,
   StatusVinculoApi,
-} from './pessoa-api.model';
+} from './client-api.model';
 
 /** Status do vínculo: `ATIVO`/`INATIVO` no backend, `active`/`inactive` no dossiê. */
 export function statusVinculoFromApi(status: StatusVinculoApi | null): StatusCliente {
@@ -53,7 +53,7 @@ export interface CurrentUser {
 
 // ===================== Response -> IPessoa =====================
 
-export function pessoaRespToClient(res: PessoaRespApi, currentUser: CurrentUser | null): IPessoa {
+export function clientRespToClient(res: ClientRespApi, currentUser: CurrentUser | null): IPessoa {
   const adm = res.dados_administrativos;
   return {
     id: res.id,
@@ -151,7 +151,7 @@ function principalPrimeiro<T extends { principal: boolean }>(items: T[]): T[] {
 
 // ===================== IPessoa -> Request =====================
 
-export function clientToCriarRequest(client: IPessoa): CriarPessoaApi {
+export function clientToCriarRequest(client: IPessoa): CriarClientApi {
   const p = client.pessoa;
   const comum = comumRequest(client);
 
@@ -179,7 +179,7 @@ export function clientToCriarRequest(client: IPessoa): CriarPessoaApi {
   };
 }
 
-export function clientToAtualizarRequest(client: IPessoa): AtualizarPessoaApi {
+export function clientToAtualizarRequest(client: IPessoa): AtualizarClientApi {
   const req = clientToCriarRequest(client);
   if (req.tipo === 'FISICA') {
     const { cpf: _cpf, ...rest } = req;

@@ -1,5 +1,5 @@
 /** `PessoaArquivoResponse` do backend — JSON snake_case (ver `JacksonConfig`). */
-export interface PessoaArquivoApi {
+export interface ClientArquivoApi {
   id: number;
   nome_arquivo: string;
   content_type: string | null;
@@ -8,7 +8,7 @@ export interface PessoaArquivoApi {
 }
 
 /** Metadados de um arquivo de pessoa no frontend. */
-export interface PessoaArquivo {
+export interface ClientArquivo {
   id: number;
   nome: string;
   contentType: string;
@@ -16,7 +16,7 @@ export interface PessoaArquivo {
   dataUpload: Date;
 }
 
-export function pessoaArquivoFromApi(api: PessoaArquivoApi): PessoaArquivo {
+export function clientArquivoFromApi(api: ClientArquivoApi): ClientArquivo {
   return {
     id: api.id,
     nome: api.nome_arquivo,

@@ -32,7 +32,7 @@ import {
   ehPainelLayout,
 } from './models/painel-layout';
 import { PastaClienteService } from './services/pasta-cliente.service';
-import { PessoaStore, TipoDocumento } from './services/pessoa-store';
+import { ClientStore, TipoDocumento } from './services/client-store';
 import { ClientFormComponent } from './components/client-form/client-form.component';
 import { ClientFilesComponent, ClientFilesNotice } from './components/client-files/client-files.component';
 
@@ -82,7 +82,7 @@ interface FiltrosTabela {
   styleUrl: './clients.component.scss',
 })
 export class ClientsComponent {
-  private readonly store = inject(PessoaStore);
+  private readonly store = inject(ClientStore);
   private readonly destroyRef = inject(DestroyRef);
   private readonly document = inject(DOCUMENT);
   protected readonly pastaCliente = inject(PastaClienteService);

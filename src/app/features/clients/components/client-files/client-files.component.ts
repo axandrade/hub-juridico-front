@@ -12,8 +12,8 @@ import {
 } from '@angular/core';
 
 import { ModalComponent } from '../../../../shared/components/modal/modal.component';
-import { PessoaArquivo } from '../../services/pessoa-arquivo.model';
-import { PessoaArquivoService } from '../../services/pessoa-arquivo.service';
+import { ClientArquivo } from '../../services/client-arquivo.model';
+import { ClientArquivoService } from '../../services/client-arquivo.service';
 import { ClientFileUploadComponent } from '../client-file-upload/client-file-upload.component';
 
 export type ClientFilesNoticeKey =
@@ -44,7 +44,7 @@ export interface ClientFilesNotice {
   styleUrl: './client-files.component.scss',
 })
 export class ClientFilesComponent {
-  private readonly arquivos = inject(PessoaArquivoService);
+  private readonly arquivos = inject(ClientArquivoService);
 
   /** Id da pessoa persistida; `0` = ficha nova (ainda sem arquivos). */
   readonly pessoaId = input<number>(0);
@@ -54,7 +54,7 @@ export class ClientFilesComponent {
   protected readonly selectedId = signal<number | null>(null);
   protected readonly uploadOpen = signal(false);
   protected readonly loading = signal(false);
-  protected readonly items = signal<PessoaArquivo[]>([]);
+  protected readonly items = signal<ClientArquivo[]>([]);
 
   // --- preview de DOCX (renderizado no navegador com docx-preview) ---
   protected readonly docxOpen = signal(false);
@@ -63,7 +63,7 @@ export class ClientFilesComponent {
   private readonly docxBlob = signal<Blob | null>(null);
   private readonly docxHost = viewChild<ElementRef<HTMLElement>>('docxHost');
 
-  protected readonly rows = computed<PessoaArquivo[]>(() => {
+  protected readonly rows = computed<ClientArquivo[]>(() => {
     const search = this.normalizeKey(this.search());
     const items = this.items();
     return search
@@ -117,7 +117,7 @@ export class ClientFilesComponent {
     this.search.set((event.target as HTMLInputElement).value);
   }
 
-  protected selectFile(row: PessoaArquivo): void {
+  protected selectFile(row: ClientArquivo): void {
     this.selectedId.set(row.id);
   }
 
@@ -129,7 +129,7 @@ export class ClientFilesComponent {
     this.uploadOpen.set(true);
   }
 
-  protected onUploaded(arquivo: PessoaArquivo): void {
+  protected onUploaded(arquivo: ClientArquivo): void {
     this.uploadOpen.set(false);
     this.items.update((list) => [arquivo, ...list.filter((item) => item.id !== arquivo.id)]);
     this.notify.emit({ key: 'uploadOk', subject: arquivo.nome });
@@ -139,7 +139,7 @@ export class ClientFilesComponent {
     this.notify.emit({ key: 'uploadError', subject: message });
   }
 
-  protected download(row: PessoaArquivo): void {
+  protected download(row: ClientArquivo): void {
     const id = this.pessoaId();
     if (id <= 0) {
       return;
@@ -166,11 +166,11 @@ export class ClientFilesComponent {
   }
 
   /** PDF e imagens abrem em nova aba; DOCX renderiza num modal (docx-preview). */
-  protected podeVisualizar(row: PessoaArquivo): boolean {
+  protected podeVisualizar(row: ClientArquivo): boolean {
     return this.tipoNovaAba(row.nome) !== null || this.ehDocx(row.nome);
   }
 
-  protected visualizar(row: PessoaArquivo): void {
+  protected visualizar(row: ClientArquivo): void {
     const id = this.pessoaId();
     if (id <= 0) {
       return;
@@ -183,7 +183,7 @@ export class ClientFilesComponent {
   }
 
   /** Baixa o DOCX e abre o modal de preview — o `effect` chama o docx-preview quando o container monta. */
-  private visualizarDocx(pessoaId: number, row: PessoaArquivo): void {
+  private visualizarDocx(pessoaId: number, row: ClientArquivo): void {
     this.docxNome.set(row.nome);
     this.docxCarregando.set(true);
     this.docxOpen.set(true);
@@ -204,7 +204,7 @@ export class ClientFilesComponent {
   }
 
   /** Abre PDF/imagem numa nova aba, sem baixar. */
-  private visualizarNovaAba(pessoaId: number, row: PessoaArquivo): void {
+  private visualizarNovaAba(pessoaId: number, row: ClientArquivo): void {
     // Abre a aba já no clique (gesto do usuário) para não cair no bloqueador de pop-up;
     // a URL do blob é setada quando o download termina.
     const aba = window.open('', '_blank');
@@ -230,7 +230,7 @@ export class ClientFilesComponent {
     });
   }
 
-  protected remove(row: PessoaArquivo): void {
+  protected remove(row: ClientArquivo): void {
     const id = this.pessoaId();
     if (id <= 0) {
       return;

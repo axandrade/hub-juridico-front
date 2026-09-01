@@ -12,8 +12,8 @@ import {
 
 import { ButtonComponent } from '../../../../shared/components/button/button.component';
 import { ModalComponent } from '../../../../shared/components/modal/modal.component';
-import { PessoaArquivo } from '../../services/pessoa-arquivo.model';
-import { PessoaArquivoService } from '../../services/pessoa-arquivo.service';
+import { ClientArquivo } from '../../services/client-arquivo.model';
+import { ClientArquivoService } from '../../services/client-arquivo.service';
 import { TipoAnexoService } from '../../services/tipo-anexo.service';
 
 /** Estado do bloco "Tipo do anexo": lista, adicionando, editando ou confirmando exclusão. */
@@ -29,7 +29,7 @@ function extensaoPermitida(nome: string): boolean {
 
 /**
  * Diálogo de envio de arquivo da aba "Lista de arquivos". Dono do formulário
- * (tipo do anexo + arquivo), chama `PessoaArquivoService.enviar` e devolve o
+ * (tipo do anexo + arquivo), chama `ClientArquivoService.enviar` e devolve o
  * metadado salvo via `uploaded` (ou a mensagem de erro via `failed`).
  *
  * O bloco "Tipo do anexo" também permite adicionar / editar / excluir tipos
@@ -44,14 +44,14 @@ function extensaoPermitida(nome: string): boolean {
   styleUrl: './client-file-upload.component.scss',
 })
 export class ClientFileUploadComponent {
-  private readonly arquivos = inject(PessoaArquivoService);
+  private readonly arquivos = inject(ClientArquivoService);
   private readonly tiposAnexo = inject(TipoAnexoService);
 
   readonly pessoaId = input.required<number>();
   readonly open = input<boolean>(false);
 
   readonly closed = output<void>();
-  readonly uploaded = output<PessoaArquivo>();
+  readonly uploaded = output<ClientArquivo>();
   readonly failed = output<string>();
 
   /** Opções do dropdown "Tipo do anexo" — catálogo `tipos_anexo` do backend. */

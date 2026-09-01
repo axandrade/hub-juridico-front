@@ -29,8 +29,8 @@ import {
   readClientForm,
 } from '../../forms/client-form.factory';
 import { PESSOA_FISICA_FIELDS, PESSOA_JURIDICA_FIELDS } from '../../models/client-form.model';
-import { StatusVinculoApi } from '../../services/pessoa-api.model';
-import { PessoaStore } from '../../services/pessoa-store';
+import { StatusVinculoApi } from '../../services/client-api.model';
+import { ClientStore } from '../../services/client-store';
 import { ClientAddressComponent } from '../client-address/client-address.component';
 import { ClientAdminFormComponent } from '../client-admin-form/client-admin-form.component';
 import { ClientContactListComponent } from '../client-contact-list/client-contact-list.component';
@@ -72,7 +72,7 @@ interface EditorNotice {
 /**
  * Tela autônoma de cadastro/edição de pessoa (física ou jurídica). Dona do
  * `FormGroup` raiz; carrega a ficha por id (ou vazia para novo cadastro), valida,
- * e persiste via `PessoaStore`. O `clients` só decide qual `pessoaId` mostrar
+ * e persiste via `ClientStore`. O `clients` só decide qual `pessoaId` mostrar
  * e reage aos outputs.
  */
 @Component({
@@ -92,7 +92,7 @@ interface EditorNotice {
   styleUrl: './client-form.component.scss',
 })
 export class ClientFormComponent {
-  private readonly store = inject(PessoaStore);
+  private readonly store = inject(ClientStore);
   private readonly auth = inject(AuthService);
 
   /** Nome do usuário logado — preenche "Cadastrado por" (campo do sistema). */

@@ -4,8 +4,8 @@ import { TestBed } from '@angular/core/testing';
 
 import { environment } from '../../../../environments/environment';
 import { AuthService } from '../../../core/services/auth.service';
-import { PaginaApi } from './pessoa-api.model';
-import { PessoaListQuery, PessoaStore } from './pessoa-store';
+import { PaginaApi } from './client-api.model';
+import { ClientListQuery, ClientStore } from './client-store';
 
 const BASE = `${environment.apiBaseUrl}/pessoas`;
 
@@ -18,12 +18,12 @@ const PAGINA_VAZIA: PaginaApi<never> = {
   ultima: true,
 };
 
-function baseQuery(over: Partial<PessoaListQuery> = {}): PessoaListQuery {
+function baseQuery(over: Partial<ClientListQuery> = {}): ClientListQuery {
   return { page: 0, tipo: null, incluirInativos: false, tipoDocumento: null, documento: '', ...over };
 }
 
-describe('PessoaStore — parâmetros do filtro por documento', () => {
-  let store: PessoaStore;
+describe('ClientStore — parâmetros do filtro por documento', () => {
+  let store: ClientStore;
   let http: HttpTestingController;
 
   beforeEach(() => {
@@ -31,11 +31,11 @@ describe('PessoaStore — parâmetros do filtro por documento', () => {
       providers: [
         provideHttpClient(),
         provideHttpClientTesting(),
-        PessoaStore,
+        ClientStore,
         { provide: AuthService, useValue: { user: () => null } },
       ],
     });
-    store = TestBed.inject(PessoaStore);
+    store = TestBed.inject(ClientStore);
     http = TestBed.inject(HttpTestingController);
   });
 

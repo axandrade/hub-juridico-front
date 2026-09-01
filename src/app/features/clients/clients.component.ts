@@ -13,7 +13,7 @@ import {
 import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { EMPTY, catchError, debounceTime, distinctUntilChanged, switchMap } from 'rxjs';
 
-import { maskCnpj, maskCpf, onlyDigits } from '../../../../core/auth/cpf';
+import { maskCnpj, maskCpf, onlyDigits } from '../../core/auth/cpf';
 import {
   MODALIDADES_CLIENTE,
   STATUS_CLIENTE,
@@ -23,18 +23,18 @@ import {
   TipoPessoa,
   contatoPrincipal,
   emailPrincipal,
-} from '../../../../core/models';
-import { ButtonComponent } from '../../../../shared/components/button/button.component';
-import { ModalComponent } from '../../../../shared/components/modal/modal.component';
+} from '../../core/models';
+import { ButtonComponent } from '../../shared/components/button/button.component';
+import { ModalComponent } from '../../shared/components/modal/modal.component';
 import {
   PAINEL_LAYOUT_PADRAO,
   PainelLayout,
   ehPainelLayout,
-} from '../../models/painel-layout';
-import { PastaClienteService } from '../../services/pasta-cliente.service';
-import { PessoaStore, TipoDocumento } from '../../services/pessoa-store';
-import { ClientFormComponent } from '../client-form/client-form.component';
-import { ClientFilesComponent, ClientFilesNotice } from '../client-files/client-files.component';
+} from './models/painel-layout';
+import { PastaClienteService } from './services/pasta-cliente.service';
+import { PessoaStore, TipoDocumento } from './services/pessoa-store';
+import { ClientFormComponent } from './components/client-form/client-form.component';
+import { ClientFilesComponent, ClientFilesNotice } from './components/client-files/client-files.component';
 
 const LAYOUT_STORAGE_KEY = 'hub-juridico.clients.layout';
 const LARGURA_STORAGE_KEY = 'hub-juridico.clients.painelLargura';
@@ -75,13 +75,13 @@ interface FiltrosTabela {
 }
 
 @Component({
-  selector: 'app-clients-page',
+  selector: 'app-clients',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [ButtonComponent, ClientFormComponent, ModalComponent, ClientFilesComponent],
-  templateUrl: './clients-page.component.html',
-  styleUrl: './clients-page.component.scss',
+  templateUrl: './clients.component.html',
+  styleUrl: './clients.component.scss',
 })
-export class ClientsPageComponent {
+export class ClientsComponent {
   private readonly store = inject(PessoaStore);
   private readonly destroyRef = inject(DestroyRef);
   private readonly document = inject(DOCUMENT);

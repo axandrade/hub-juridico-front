@@ -72,7 +72,7 @@ interface EditorNotice {
 /**
  * Tela autônoma de cadastro/edição de pessoa (física ou jurídica). Dona do
  * `FormGroup` raiz; carrega a ficha por id (ou vazia para novo cadastro), valida,
- * e persiste via `PessoaStore`. O `clients-page` só decide qual `pessoaId` mostrar
+ * e persiste via `PessoaStore`. O `clients` só decide qual `pessoaId` mostrar
  * e reage aos outputs.
  */
 @Component({

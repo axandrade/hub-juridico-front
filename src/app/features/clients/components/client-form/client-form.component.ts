@@ -178,11 +178,13 @@ export class ClientFormComponent {
       untracked(() => {
         if (id !== null) {
           this.tipoNovoEscolhido.set(null);
-          const found = this.store.buscar(id);
-          if (found) {
-            this.loadIntoForm(found);
-            this.notice.set({ key: 'idle' });
-          }
+          // Ficha completa à parte — a lista da tabela só carrega os campos que ela exibe.
+          this.store.buscarCompleto(id).subscribe((found) => {
+            if (found) {
+              this.loadIntoForm(found);
+              this.notice.set({ key: 'idle' });
+            }
+          });
           return;
         }
         this.loadIntoForm(this.createEmptyClient(novoTipo));

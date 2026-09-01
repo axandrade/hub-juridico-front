@@ -5,6 +5,7 @@ import { Observable, map, tap } from 'rxjs';
 import { environment } from '../../../../environments/environment';
 import { IPessoa } from '../../../core/models';
 import { AuthService } from '../../../core/services/auth.service';
+import { DomainQueryService } from '../../../core/services/domain-query.service';
 import { ClientRespApi, StatusVinculoApi } from './client-api.model';
 import {
   clientToAtualizarRequest,
@@ -22,6 +23,7 @@ import {
 export class ClientStore {
   private readonly http = inject(HttpClient);
   private readonly auth = inject(AuthService);
+  private readonly domainQuery = inject(DomainQueryService);
   private readonly base = `${environment.apiBaseUrl}/pessoas`;
 
   private readonly _clients = signal<IPessoa[]>([]);
@@ -42,12 +44,25 @@ export class ClientStore {
     this._clients.set(registros.map((res) => this.toClient(res)));
   }
 
-  /** Cliente já carregado, por id (ou `null`). */
+  /** Cliente já carregado, por id (ou `null`) — só os campos que a tabela pediu (ver `fields`). */
   buscar(id: number | null): IPessoa | null {
     if (id === null) {
       return null;
     }
     return this._clients().find((client) => client.id === id) ?? null;
+  }
+
+  /**
+   * Ficha completa por id, direto do backend (`GET /api/v1/domain/pessoa/all`, via
+   * {@link DomainQueryService#getById}) — a lista mantida por `definirPaginaGenerica` só tem os
+   * campos que a tabela exibe, então quem for editar a ficha (`ClientFormComponent`) precisa desse
+   * fetch à parte pra não sobrescrever com vazio os campos não mostrados na tabela (RG, endereço,
+   * representantes etc.) ao salvar.
+   */
+  buscarCompleto(id: number): Observable<IPessoa | null> {
+    return this.domainQuery
+      .getById<ClientRespApi>('pessoa', id)
+      .pipe(map((res) => (res ? this.toClient(res) : null)));
   }
 
   /** `POST` (id 0) ou `PUT` (id existente); devolve o registro do backend. */

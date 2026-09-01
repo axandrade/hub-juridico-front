@@ -2,9 +2,12 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 
+import { environment } from '../../../../environments/environment';
 import { AuthService } from '../../../core/services/auth.service';
 import { ClientRespApi } from './client-api.model';
 import { ClientStore } from './client-store';
+
+const DOMAIN_BASE = `${environment.apiBaseUrl}/domain`;
 
 describe('ClientStore — ponte com o app-domain-table', () => {
   let store: ClientStore;
@@ -58,5 +61,40 @@ describe('ClientStore — ponte com o app-domain-table', () => {
     expect(cliente?.pessoa.nome).toBe('Maria');
     expect(cliente?.favorite).toBe(true);
     expect(cliente?.dossier.status).toBe('active');
+  });
+
+  it('buscarCompleto busca a ficha inteira no endpoint genérico (não depende da página carregada)', () => {
+    let resultado: unknown;
+    store.buscarCompleto(42).subscribe((r) => (resultado = r));
+
+    const req = http.expectOne((r) => r.url === `${DOMAIN_BASE}/pessoa/all`);
+    expect(req.request.params.get('filter')).toBe("id eq '42'");
+    req.flush({
+      conteudo: [{ tipo: 'FISICA', id: 42, nome: 'Maria', cpf: '11144477735', favorito: true }],
+      pagina: 0,
+      tamanho: 10,
+      total_elementos: 1,
+      total_paginas: 1,
+      ultima: true,
+    });
+
+    expect((resultado as { pessoa: { nome: string } } | null)?.pessoa.nome).toBe('Maria');
+  });
+
+  it('buscarCompleto devolve null quando o backend não acha o registro', () => {
+    let resultado: unknown;
+    store.buscarCompleto(999).subscribe((r) => (resultado = r));
+
+    const req = http.expectOne((r) => r.url === `${DOMAIN_BASE}/pessoa/all`);
+    req.flush({
+      conteudo: [],
+      pagina: 0,
+      tamanho: 10,
+      total_elementos: 0,
+      total_paginas: 1,
+      ultima: true,
+    });
+
+    expect(resultado).toBeNull();
   });
 });

@@ -1,6 +1,7 @@
 import { ComponentRef } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
+import { of } from 'rxjs';
 
 import { IPessoa, emptyDadosPessoa, emptyDossie } from '../../../../core/models';
 import { AuthService } from '../../../../core/services/auth.service';
@@ -28,7 +29,7 @@ describe('ClientFormComponent — carregar ficha ao trocar pessoaId', () => {
   let fixture: ComponentFixture<ClientFormComponent>;
   let ref: ComponentRef<ClientFormComponent>;
   const store = {
-    buscar: (id: number | null) => (id === 7 ? makePessoa() : null),
+    buscarCompleto: (id: number) => of(id === 7 ? makePessoa() : null),
   };
 
   beforeEach(() => {

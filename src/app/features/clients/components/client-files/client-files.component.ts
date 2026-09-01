@@ -14,9 +14,9 @@ import {
 import { ModalComponent } from '../../../../shared/components/modal/modal.component';
 import { PessoaArquivo } from '../../services/pessoa-arquivo.model';
 import { PessoaArquivoService } from '../../services/pessoa-arquivo.service';
-import { PessoaFileUploadComponent } from '../pessoa-file-upload/pessoa-file-upload.component';
+import { ClientFileUploadComponent } from '../client-file-upload/client-file-upload.component';
 
-export type PessoaFilesNoticeKey =
+export type ClientFilesNoticeKey =
   | 'saveBeforeUpload'
   | 'uploadOk'
   | 'uploadError'
@@ -26,29 +26,29 @@ export type PessoaFilesNoticeKey =
   | 'viewError';
 
 /** Aviso emitido para o rodapé de status do painel (`client-form`). */
-export interface PessoaFilesNotice {
-  key: PessoaFilesNoticeKey;
+export interface ClientFilesNotice {
+  key: ClientFilesNoticeKey;
   subject?: string;
 }
 
 /**
  * Aba "Lista de arquivos" do painel de pessoa. Lista os arquivos reais da API
  * (`/api/v1/pessoas/{pessoaId}/arquivos`), baixa e remove; o envio abre o
- * `app-pessoa-file-upload`. Só funciona com a pessoa já persistida (`pessoaId > 0`).
+ * `app-client-file-upload`. Só funciona com o cliente já persistido (`pessoaId > 0`).
  */
 @Component({
-  selector: 'app-pessoa-files',
+  selector: 'app-client-files',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [PessoaFileUploadComponent, ModalComponent],
-  templateUrl: './pessoa-files.component.html',
-  styleUrl: './pessoa-files.component.scss',
+  imports: [ClientFileUploadComponent, ModalComponent],
+  templateUrl: './client-files.component.html',
+  styleUrl: './client-files.component.scss',
 })
-export class PessoaFilesComponent {
+export class ClientFilesComponent {
   private readonly arquivos = inject(PessoaArquivoService);
 
   /** Id da pessoa persistida; `0` = ficha nova (ainda sem arquivos). */
   readonly pessoaId = input<number>(0);
-  readonly notify = output<PessoaFilesNotice>();
+  readonly notify = output<ClientFilesNotice>();
 
   protected readonly search = signal('');
   protected readonly selectedId = signal<number | null>(null);

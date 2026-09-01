@@ -1,5 +1,5 @@
-<div class="pessoa-files">
-  <div class="pessoa-files__toolbar">
+<div class="client-files">
+  <div class="client-files__toolbar">
     <label>
       <span>Pesquisar arquivos</span>
       <input
@@ -10,14 +10,14 @@
       />
     </label>
     <div>
-      <button type="button" class="pessoa-files__action" (click)="openUpload()">
+      <button type="button" class="client-files__action" (click)="openUpload()">
         <i class="fa-solid fa-file-arrow-up" aria-hidden="true"></i>
         Enviar arquivo
       </button>
     </div>
   </div>
 
-  <div class="pessoa-files__table">
+  <div class="client-files__table">
     <table>
       <thead>
         <tr>
@@ -33,7 +33,7 @@
             <td>{{ file.nome }}</td>
             <td>{{ formatSize(file.tamanhoBytes) }}</td>
             <td>{{ formatDate(file.dataUpload) }}</td>
-            <td class="pessoa-files__row-actions">
+            <td class="client-files__row-actions">
               @if (podeVisualizar(file)) {
                 <button
                   type="button"
@@ -81,7 +81,7 @@
 </div>
 
 @if (pessoaId() > 0) {
-  <app-pessoa-file-upload
+  <app-client-file-upload
     [pessoaId]="pessoaId()"
     [open]="uploadOpen()"
     (closed)="uploadOpen.set(false)"
@@ -96,10 +96,10 @@
   title="Visualizar documento"
   (closed)="fecharDocx()"
 >
-  <div class="pessoa-files__docx">
+  <div class="client-files__docx">
     @if (docxCarregando()) {
-      <p class="pessoa-files__docx-loading">Carregando documento...</p>
+      <p class="client-files__docx-loading">Carregando documento...</p>
     }
-    <div #docxHost class="pessoa-files__docx-host"></div>
+    <div #docxHost class="client-files__docx-host"></div>
   </div>
 </app-modal>

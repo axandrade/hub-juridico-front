@@ -7,7 +7,7 @@
   min-height: 0;
 }
 
-.pessoa-files {
+.client-files {
   @include thin-scrollbar;
   display: flex;
   flex: 1;
@@ -18,7 +18,7 @@
   overflow: auto;
 }
 
-.pessoa-files__toolbar {
+.client-files__toolbar {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   gap: $spacing-sm;
@@ -61,7 +61,7 @@
   }
 }
 
-.pessoa-files__action {
+.client-files__action {
   display: inline-flex;
   min-height: 34px;
   align-items: center;
@@ -88,7 +88,7 @@
   }
 }
 
-.pessoa-files__table {
+.client-files__table {
   overflow: auto;
 
   table {
@@ -113,7 +113,7 @@
   }
 }
 
-.pessoa-files__row-actions {
+.client-files__row-actions {
   display: flex;
   gap: $spacing-xs;
   white-space: nowrap;
@@ -142,13 +142,13 @@
   }
 }
 
-.pessoa-files__docx-loading {
+.client-files__docx-loading {
   margin: 0 0 $spacing-sm;
   color: $color-text-muted;
   font-size: $font-size-xs;
 }
 
-.pessoa-files__docx-host {
+.client-files__docx-host {
   // O docx-preview injeta os próprios estilos e cria os elementos dinamicamente,
   // então precisa de ::ng-deep pra ajustar o layout ao modal.
   ::ng-deep .docx-wrapper {
@@ -165,7 +165,7 @@
 }
 
 @include respond-below($breakpoint-sm) {
-  .pessoa-files__toolbar {
+  .client-files__toolbar {
     grid-template-columns: 1fr;
   }
 }

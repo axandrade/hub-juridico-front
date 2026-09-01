@@ -37,13 +37,13 @@ function extensaoPermitida(nome: string): boolean {
  * tipo escolhido é gravado no nome do arquivo no momento do upload.
  */
 @Component({
-  selector: 'app-pessoa-file-upload',
+  selector: 'app-client-file-upload',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [ModalComponent, ButtonComponent],
-  templateUrl: './pessoa-file-upload.component.html',
-  styleUrl: './pessoa-file-upload.component.scss',
+  templateUrl: './client-file-upload.component.html',
+  styleUrl: './client-file-upload.component.scss',
 })
-export class PessoaFileUploadComponent {
+export class ClientFileUploadComponent {
   private readonly arquivos = inject(PessoaArquivoService);
   private readonly tiposAnexo = inject(TipoAnexoService);
 

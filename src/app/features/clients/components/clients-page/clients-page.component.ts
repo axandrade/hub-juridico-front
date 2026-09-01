@@ -34,7 +34,7 @@ import {
 import { PastaClienteService } from '../../services/pasta-cliente.service';
 import { PessoaStore, TipoDocumento } from '../../services/pessoa-store';
 import { ClientFormComponent } from '../client-form/client-form.component';
-import { PessoaFilesComponent, PessoaFilesNotice } from '../pessoa-files/pessoa-files.component';
+import { ClientFilesComponent, ClientFilesNotice } from '../client-files/client-files.component';
 
 const LAYOUT_STORAGE_KEY = 'hub-juridico.clients.layout';
 const LARGURA_STORAGE_KEY = 'hub-juridico.clients.painelLargura';
@@ -77,7 +77,7 @@ interface FiltrosTabela {
 @Component({
   selector: 'app-clients-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ButtonComponent, ClientFormComponent, ModalComponent, PessoaFilesComponent],
+  imports: [ButtonComponent, ClientFormComponent, ModalComponent, ClientFilesComponent],
   templateUrl: './clients-page.component.html',
   styleUrl: './clients-page.component.scss',
 })
@@ -510,7 +510,7 @@ export class ClientsPageComponent {
     }
     if (
       !target ||
-      target.closest('tr, app-client-form, app-pessoa-files, app-modal, app-header, .clients-resizer')
+      target.closest('tr, app-client-form, app-client-files, app-modal, app-header, .clients-resizer')
     ) {
       return;
     }
@@ -544,9 +544,9 @@ export class ClientsPageComponent {
     this.pastaNotice.set(null);
   }
 
-  protected onPastaNotice(evento: PessoaFilesNotice): void {
+  protected onPastaNotice(evento: ClientFilesNotice): void {
     const alvo = evento.subject ?? '';
-    const textos: Record<PessoaFilesNotice['key'], string> = {
+    const textos: Record<ClientFilesNotice['key'], string> = {
       saveBeforeUpload: 'Salve o cliente antes de anexar arquivos.',
       uploadOk: `Arquivo enviado: ${alvo}`,
       uploadError: `Não foi possível enviar: ${alvo}`,

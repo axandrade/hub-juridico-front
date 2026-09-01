@@ -25,7 +25,7 @@ export type PessoaFilesNoticeKey =
   | 'downloadError'
   | 'viewError';
 
-/** Aviso emitido para o rodapé de status do painel (`pessoa-form`). */
+/** Aviso emitido para o rodapé de status do painel (`client-form`). */
 export interface PessoaFilesNotice {
   key: PessoaFilesNoticeKey;
   subject?: string;

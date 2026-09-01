@@ -33,7 +33,7 @@ import {
 } from '../../models/painel-layout';
 import { PastaClienteService } from '../../services/pasta-cliente.service';
 import { PessoaStore, TipoDocumento } from '../../services/pessoa-store';
-import { PessoaFormComponent } from '../pessoa-form/pessoa-form.component';
+import { ClientFormComponent } from '../client-form/client-form.component';
 import { PessoaFilesComponent, PessoaFilesNotice } from '../pessoa-files/pessoa-files.component';
 
 const LAYOUT_STORAGE_KEY = 'hub-juridico.clients.layout';
@@ -77,7 +77,7 @@ interface FiltrosTabela {
 @Component({
   selector: 'app-clients-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ButtonComponent, PessoaFormComponent, ModalComponent, PessoaFilesComponent],
+  imports: [ButtonComponent, ClientFormComponent, ModalComponent, PessoaFilesComponent],
   templateUrl: './clients-page.component.html',
   styleUrl: './clients-page.component.scss',
 })
@@ -96,7 +96,7 @@ export class ClientsPageComponent {
     'registeredBy',
   ];
 
-  private readonly editor = viewChild(PessoaFormComponent);
+  private readonly editor = viewChild(ClientFormComponent);
 
   protected readonly clients = this.store.clients;
   protected readonly selectedPersonId = signal<number | null>(null);
@@ -510,7 +510,7 @@ export class ClientsPageComponent {
     }
     if (
       !target ||
-      target.closest('tr, app-pessoa-form, app-pessoa-files, app-modal, app-header, .clients-resizer')
+      target.closest('tr, app-client-form, app-pessoa-files, app-modal, app-header, .clients-resizer')
     ) {
       return;
     }

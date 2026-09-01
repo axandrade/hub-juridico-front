@@ -43,7 +43,7 @@
       max-height: none;
     }
 
-    app-pessoa-form {
+    app-client-form {
       display: block;
       height: 100%;
       overflow: hidden;
@@ -78,7 +78,7 @@
     grid-template-columns: minmax(0, 1fr);
 
     .clients-panel-slot,
-    app-pessoa-form {
+    app-client-form {
       display: none;
     }
   }

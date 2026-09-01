@@ -5,7 +5,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { IPessoa, emptyDadosPessoa, emptyDossie } from '../../../../core/models';
 import { AuthService } from '../../../../core/services/auth.service';
 import { PessoaStore } from '../../services/pessoa-store';
-import { PessoaFormComponent } from './pessoa-form.component';
+import { ClientFormComponent } from './client-form.component';
 
 function makePessoa(over: Partial<IPessoa> = {}): IPessoa {
   return {
@@ -24,23 +24,23 @@ function makePessoa(over: Partial<IPessoa> = {}): IPessoa {
   };
 }
 
-describe('PessoaFormComponent — carregar ficha ao trocar pessoaId', () => {
-  let fixture: ComponentFixture<PessoaFormComponent>;
-  let ref: ComponentRef<PessoaFormComponent>;
+describe('ClientFormComponent — carregar ficha ao trocar pessoaId', () => {
+  let fixture: ComponentFixture<ClientFormComponent>;
+  let ref: ComponentRef<ClientFormComponent>;
   const store = {
     buscar: (id: number | null) => (id === 7 ? makePessoa() : null),
   };
 
   beforeEach(() => {
     TestBed.configureTestingModule({
-      imports: [PessoaFormComponent],
+      imports: [ClientFormComponent],
       providers: [
         provideHttpClient(),
         { provide: PessoaStore, useValue: store },
         { provide: AuthService, useValue: { user: () => ({ id: 1, name: 'Tester', role: 'admin' }) } },
       ],
     });
-    fixture = TestBed.createComponent(PessoaFormComponent);
+    fixture = TestBed.createComponent(ClientFormComponent);
     ref = fixture.componentRef;
     ref.setInput('pessoaId', null);
     fixture.detectChanges();
@@ -50,7 +50,7 @@ describe('PessoaFormComponent — carregar ficha ao trocar pessoaId', () => {
     ref.setInput('pessoaId', 7);
     fixture.detectChanges();
 
-    const raw = (fixture.componentInstance as unknown as { form: PessoaFormComponent['form'] }).form.getRawValue();
+    const raw = (fixture.componentInstance as unknown as { form: ClientFormComponent['form'] }).form.getRawValue();
     expect(raw.pessoa.nome).toBe('MARIA SOUZA');
     expect(raw.pessoa.emails).toEqual([{ endereco: 'maria@x.com', principal: true }]);
     expect(raw.dossier.folder).toBe('Pasta - 000007 - MARIA SOUZA');

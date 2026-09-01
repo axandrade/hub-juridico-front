@@ -76,7 +76,7 @@ interface EditorNotice {
  * e reage aos outputs.
  */
 @Component({
-  selector: 'app-pessoa-form',
+  selector: 'app-client-form',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     ButtonComponent,
@@ -88,10 +88,10 @@ interface EditorNotice {
     ClientRepresentativesComponent,
     ClientAdminFormComponent,
   ],
-  templateUrl: './pessoa-form.component.html',
-  styleUrl: './pessoa-form.component.scss',
+  templateUrl: './client-form.component.html',
+  styleUrl: './client-form.component.scss',
 })
-export class PessoaFormComponent {
+export class ClientFormComponent {
   private readonly store = inject(PessoaStore);
   private readonly auth = inject(AuthService);
 

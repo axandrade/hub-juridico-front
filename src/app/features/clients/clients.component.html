@@ -27,7 +27,7 @@
     }
     <app-client-form
       [pessoaId]="selectedPersonId()"
-      [novoTipo]="novoTipoPadrao()"
+      novoTipo="FISICA"
       [layoutPainel]="layoutPainel()"
       (layoutPainelChange)="setLayoutPainel($event)"
       (saved)="onSaved($event)"
@@ -57,21 +57,6 @@
           label="Novo"
           (clicked)="newRecord()"
         />
-        <app-button
-          variant="secondary"
-          size="sm"
-          icon="fa-solid fa-filter"
-          label="Filtros"
-          (clicked)="toggleFilters()"
-        />
-        <app-button
-          variant="secondary"
-          size="sm"
-          icon="fa-solid fa-table-columns"
-          label="Colunas"
-          (clicked)="toggleColumns()"
-        />
-
         <div class="clients-actions__menu">
           <button type="button" class="clients-menu-button" (click)="toggleMoreActions()">
             <i class="fa-solid fa-ellipsis" aria-hidden="true"></i>
@@ -82,7 +67,6 @@
             <div class="clients-dropdown" role="menu">
               <button type="button" (click)="shareBase()">Compartilhar base de dados</button>
               <button type="button" (click)="importBase()">Importar base de dados</button>
-              <button type="button" (click)="clearSearchAndFilters()">Limpar busca</button>
             </div>
           }
         </div>
@@ -99,305 +83,35 @@
       </button>
     </div>
 
-    <div class="clients-search">
-      <label>
-        <span>Pesquisar</span>
-        <input
-          type="search"
-          [value]="searchText()"
-          placeholder='nesta página: nome, CPF, CNPJ ou "termo exato"'
-          (input)="updateSearch($event)"
-        />
-      </label>
-      <span>{{ activeFilterCount() }} filtro(s)</span>
-    </div>
-
-    @if (showFilters()) {
-      <div class="clients-filter-panel">
-        <label>
-          <span>Status</span>
-          <select [value]="filters().status" (change)="updateFilter('status', $event)">
-            <option value="">Todos</option>
-            @for (status of statusOptions; track status) {
-              <option [value]="status">
-                @switch (status) {
-                  @case ('active') {
-                    Ativo
-                  }
-                  @case ('inactive') {
-                    Inativo
-                  }
-                }
-              </option>
-            }
-          </select>
-        </label>
-        <label>
-          <span>Modalidade</span>
-          <select [value]="filters().hiringMode" (change)="updateFilter('hiringMode', $event)">
-            <option value="">Todas</option>
-            @for (mode of hiringModeOptions; track mode) {
-              <option [value]="mode">
-                @switch (mode) {
-                  @case ('oneOff') {
-                    Avulso
-                  }
-                  @case ('monthly') {
-                    Mensalista
-                  }
-                  @case ('successFee') {
-                    Êxito
-                  }
-                  @case ('advisory') {
-                    Consultivo
-                  }
-                  @case ('litigation') {
-                    Contencioso
-                  }
-                  @case ('mixed') {
-                    Misto
-                  }
-                }
-              </option>
-            }
-          </select>
-        </label>
-        <label>
-          <span>Responsável interno</span>
-          <input
-            type="text"
-            [value]="filters().internalOwner"
-            (input)="updateFilter('internalOwner', $event)"
-          />
-        </label>
-        <div class="clients-filter-panel__doc">
-          <label class="clients-filter-panel__compact">
-            <span>Tipo Cliente</span>
-            <select [value]="tipoCliente()" (change)="updateTipoCliente($event)">
-              <option value="">Todos</option>
-              @for (tipo of tipoClienteOptions; track tipo) {
-                <option [value]="tipo">
-                  {{ tipo === 'FISICA' ? 'Pessoa física' : 'Pessoa jurídica' }}
-                </option>
-              }
-            </select>
-          </label>
-          @if (tipoCliente()) {
-            <label class="clients-filter-panel__doc-number">
-              <span>{{ tipoCliente() === 'JURIDICA' ? 'CNPJ' : 'CPF' }}</span>
-              <input
-                type="text"
-                inputmode="numeric"
-                [value]="docNumberMasked()"
-                [placeholder]="
-                  tipoCliente() === 'JURIDICA' ? '00.000.000/0000-00' : '000.000.000-00'
-                "
-                (input)="updateDocNumber($event)"
-              />
-            </label>
-          }
-        </div>
-      </div>
-    }
-
-    @if (showColumns()) {
-      <div class="clients-columns-panel">
-        @for (column of clientColumns; track column.key) {
-          <label>
-            <input
-              type="checkbox"
-              [checked]="isColumnVisible(column.key)"
-              (change)="toggleColumn(column.key)"
-            />
-            <span>
-              @switch (column.key) {
-                @case ('personType') {
-                  Natureza
-                }
-                @case ('name') {
-                  Nome / Razão
-                }
-                @case ('document') {
-                  CPF / CNPJ
-                }
-                @case ('email') {
-                  E-mail
-                }
-                @case ('phone') {
-                  Telefone
-                }
-                @case ('status') {
-                  Status
-                }
-                @case ('registeredBy') {
-                  Cadastrado por
-                }
-                @case ('hiringMode') {
-                  Modalidade
-                }
-                @case ('internalOwner') {
-                  Responsável
-                }
-              }
-            </span>
-          </label>
-        }
-      </div>
-    }
-
     <div class="clients-table-wrap">
-      <table class="clients-table">
-        <thead>
-          <tr>
-            <th class="clients-table__pin"></th>
-            @for (column of displayedColumns(); track column.key) {
-              <th [style.width]="column.width" [class]="columnClass(column)">
-                <button type="button" (click)="sortBy(column.key)">
-                  @switch (column.key) {
-                    @case ('personType') {
-                      Natureza
-                    }
-                    @case ('name') {
-                      Nome / Razão
-                    }
-                    @case ('document') {
-                      CPF / CNPJ
-                    }
-                    @case ('email') {
-                      E-mail
-                    }
-                    @case ('phone') {
-                      Telefone
-                    }
-                    @case ('status') {
-                      Status
-                    }
-                    @case ('registeredBy') {
-                      Cadastrado por
-                    }
-                    @case ('hiringMode') {
-                      Modalidade
-                    }
-                    @case ('internalOwner') {
-                      Responsável
-                    }
-                  }
-                  <i [class]="sortIcon(column.key)" aria-hidden="true"></i>
-                </button>
-              </th>
-            }
-          </tr>
-        </thead>
-        <tbody>
-          @for (client of displayedClients(); track client.id) {
-            <tr
-              [class.is-selected]="selectedPersonId() === client.id"
-              [class.is-favorite]="client.favorite"
-              [class.is-inactive]="client.dossier.status === 'inactive'"
-              (click)="selectClient(client)"
-            >
-              <td class="clients-table__pin">
-                <button
-                  type="button"
-                  class="clients-icon-button"
-                  [class.is-active]="client.favorite"
-                  aria-label="Favoritar cliente"
-                  (click)="toggleClientFavorite(client, $event)"
-                >
-                  <i class="fa-solid fa-star" aria-hidden="true"></i>
-                </button>
-              </td>
-              @for (column of displayedColumns(); track column.key) {
-                <td [class]="columnClass(column)">
-                  @switch (column.key) {
-                    @case ('status') {
-                      <span [class]="rowStatusClass(client)">
-                        <span class="clients-table__status-dot" aria-hidden="true"></span>
-                        @switch (client.dossier.status) {
-                          @case ('active') {
-                            Ativo
-                          }
-                          @case ('inactive') {
-                            Inativo
-                          }
-                        }
-                      </span>
-                    }
-                    @case ('personType') {
-                      {{ client.pessoa.tipo === 'FISICA' ? 'Pessoa física' : 'Pessoa jurídica' }}
-                    }
-                    @case ('hiringMode') {
-                      @switch (client.dossier.hiringMode) {
-                        @case ('oneOff') {
-                          Avulso
-                        }
-                        @case ('monthly') {
-                          Mensalista
-                        }
-                        @case ('successFee') {
-                          Êxito
-                        }
-                        @case ('advisory') {
-                          Consultivo
-                        }
-                        @case ('litigation') {
-                          Contencioso
-                        }
-                        @case ('mixed') {
-                          Misto
-                        }
-                        @default {
-                          -
-                        }
-                      }
-                    }
-                    @default {
-                      {{ displayCellValue(client, column) }}
-                    }
-                  }
-                </td>
-              }
-            </tr>
-          } @empty {
-            <tr>
-              <td class="clients-table__empty" [attr.colspan]="displayedColumns().length + 1">
-                Nenhum cliente encontrado.
-              </td>
-            </tr>
-          }
-        </tbody>
-      </table>
+      <app-domain-table
+        #dtClient
+        entityName="pessoa"
+        fields="tipo,id,favorito,nome,cpf,rg,estadoCivil,nacionalidade,razaoSocial,nomeFantasia,cnpj,inscricaoEstadual,inscricaoMunicipal,endereco,contatos,emails,representantes,dadosAdministrativos,registroAndamento,historicoAndamentos,status,modalidade,numeroContrato,dataContrato,indicadoPor,responsavelInterno,observacoes,caminhoArquivo,cadastradoPorId,cadastradoPorNome,criadoEm,atualizadoEm"
+        columnFields="tipo,nome,cpf,emails,contatos,status,cadastradoPorNome,modalidade,responsavelInterno"
+        [columnOverrides]="clientColumnOverrides"
+        trackKey="id"
+        emptyMessage="Nenhum cliente encontrado."
+        [sortable]="true"
+        [initialSort]="{ key: 'nome', direction: 'asc' }"
+        [columnVisibility]="true"
+        [defaultVisibleColumns]="['tipo','nome','cpf','emails','contatos','status','cadastrado_por_nome']"
+        [pinFirst]="clientPinFirst"
+        [rowClass]="clientRowClass"
+        [pinAction]="clientPinAction"
+        (pageLoaded)="onPageLoaded($event)"
+        (loadError)="onLoadError()"
+        (rowClick)="selectClient($event)"
+      />
     </div>
 
     <footer class="clients-main__footer">
-      <div class="clients-pagination">
-        <button
-          type="button"
-          class="clients-menu-button"
-          [disabled]="!canGoPrev()"
-          (click)="goToPage(-1)"
-        >
-          <i class="fa-solid fa-chevron-left" aria-hidden="true"></i>
-          Anterior
-        </button>
-        <span>Página {{ currentPageLabel() }} de {{ pageCount() }}</span>
-        <button
-          type="button"
-          class="clients-menu-button"
-          [disabled]="!canGoNext()"
-          (click)="goToPage(1)"
-        >
-          Próxima
-          <i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
-        </button>
-        <span class="clients-pagination__total">
-          {{ totalClients() }} cliente(s){{ tipoCliente() ? ' no tipo' : ' cadastrado(s)' }}
+      <div class="clients-summary-line">
+        <span>
+          {{ totalClients() }} cliente(s) cadastrado(s)
         </span>
       </div>
       @switch (pageNotice()) {
-        @case ('filtersCleared') {
-          <span>· Busca e filtros limpos.</span>
-        }
         @case ('shareReady') {
           <span>· Compartilhamento de base preparado para a futura integração.</span>
         }

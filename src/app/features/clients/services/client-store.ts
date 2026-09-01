@@ -97,6 +97,17 @@ export class ClientStore {
     );
   }
 
+  /**
+   * Popula a lista a partir de uma página do endpoint genérico `GET /api/v1/domain/pessoa`
+   * (usado pelo `app-domain-table`) — as chaves da resposta já batem com `ClientRespApi` (mesmo
+   * JSON snake_case), então é só reaproveitar o mapper. Ponte pro `ClientStore` continuar sendo a
+   * fonte de verdade de `buscar`/`salvar`/`alterarStatus`/`alternarFavorito` mesmo quando quem
+   * busca a lista é a tabela genérica, não o `carregar()` deste store.
+   */
+  definirPaginaGenerica(registros: ClientRespApi[]): void {
+    this._clients.set(registros.map((res) => this.toClient(res)));
+  }
+
   /** Cliente já carregado, por id (ou `null`). */
   buscar(id: number | null): IPessoa | null {
     if (id === null) {

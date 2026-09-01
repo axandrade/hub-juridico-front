@@ -1,4 +1,4 @@
-import { maskCpf, onlyDigits } from '../../../core/auth/cpf';
+import { maskCnpj, maskCpf, onlyDigits } from '../../../core/auth/cpf';
 import {
   EstadoCivil,
   IPessoa,
@@ -76,7 +76,7 @@ export function clientRespToClient(res: ClientRespApi, currentUser: CurrentUser 
       estadoCivil: (res.estado_civil ?? '') as EstadoCivil | '',
       razaoSocial: res.razao_social ?? '',
       nomeFantasia: res.nome_fantasia ?? '',
-      cnpj: res.cnpj ?? '',
+      cnpj: maskCnpj(res.cnpj ?? ''),
       inscricaoEstadual: res.inscricao_estadual ?? '',
       inscricaoMunicipal: res.inscricao_municipal ?? '',
       representantes: (res.representantes ?? []).map(representanteFromApi),

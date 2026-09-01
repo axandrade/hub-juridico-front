@@ -12,7 +12,16 @@
   border-collapse: collapse;
   font-size: $font-size-base;
 
+  th,
+  td {
+    @include truncate;
+    max-width: 320px;
+  }
+
   thead th {
+    position: sticky;
+    z-index: 2;
+    top: 0;
     text-align: left;
     padding: $spacing-sm $spacing-md;
     background-color: $color-primary-pale;
@@ -30,15 +39,58 @@
   }
 
   tbody tr {
-    transition: background-color $transition-fast;
+    transition:
+      background-color $transition-fast,
+      box-shadow $transition-fast;
 
-    &:hover {
+    &:hover,
+    &.is-selected {
       background-color: rgba($pink-pale, 0.35);
       cursor: pointer;
     }
 
     &:last-child td {
       border-bottom: none;
+    }
+
+    // Linha fixada (ex.: favorito): fundo âmbar suave, divisórias mais quentes e
+    // uma "fita" dourada na lateral esquerda (na primeira célula).
+    &.is-favorite {
+      background-color: rgba($color-warning, 0.09);
+
+      td {
+        border-bottom-color: rgba($color-warning, 0.28);
+      }
+
+      td:first-child {
+        box-shadow: inset 3px 0 0 $color-warning;
+      }
+
+      &:hover,
+      &.is-selected {
+        background-color: rgba($color-warning, 0.16);
+      }
+
+      .data-table__pin-button.is-active {
+        border-color: rgba($color-warning, 0.5);
+        background-color: rgba($color-warning, 0.16);
+        box-shadow: 0 0 0 3px rgba($color-warning, 0.14);
+
+        i {
+          transform: scale(1.08);
+          filter: drop-shadow(0 1px 2px rgba($color-warning, 0.55));
+        }
+      }
+    }
+
+    // Linha inativa: texto esmaecido e uma fita cinza na lateral esquerda, para o
+    // estado ficar óbvio mesmo com a coluna de status oculta.
+    &.is-inactive td {
+      color: $color-text-muted;
+    }
+
+    &.is-inactive:not(.is-favorite) td:first-child {
+      box-shadow: inset 3px 0 0 rgba($color-text-muted, 0.55);
     }
   }
 
@@ -53,6 +105,83 @@
     }
   }
 
+  &__pin {
+    width: 44px;
+    max-width: 44px;
+    text-align: center;
+  }
+
+  &__pin-button {
+    @include flex-center;
+    width: 34px;
+    height: 34px;
+    padding: 0;
+    border: 1px solid $color-border;
+    border-radius: $border-radius-sm;
+    background-color: $color-neutral-light;
+    color: $color-text-secondary;
+    cursor: pointer;
+    transition:
+      background-color $transition-fast,
+      border-color $transition-fast,
+      color $transition-fast,
+      box-shadow $transition-fast;
+
+    &:hover,
+    &.is-active {
+      border-color: $color-primary-light;
+      background-color: rgba($color-primary-pale, 0.55);
+      color: $color-primary;
+    }
+
+    &.is-active {
+      color: $color-warning;
+    }
+
+    i {
+      transition:
+        transform $transition-fast,
+        filter $transition-fast;
+    }
+  }
+
+  &__sort {
+    display: inline-flex;
+    width: 100%;
+    align-items: center;
+    justify-content: space-between;
+    gap: $spacing-xs;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
+    font: inherit;
+    font-weight: inherit;
+    padding: 0;
+  }
+
+  &__filter-row th {
+    // Não gruda no topo igual o cabeçalho — evita sobrepor a primeira linha ao rolar.
+    position: static;
+    padding: $spacing-xs $spacing-md;
+    background-color: $color-surface;
+    border-bottom: 1px solid $color-border;
+
+    input,
+    select {
+      width: 100%;
+      min-height: 30px;
+      padding: 0 $spacing-xs;
+      border: 1px solid $color-border;
+      border-radius: $border-radius-sm;
+      background-color: $color-neutral-light;
+      color: $color-text-primary;
+      font: inherit;
+      font-size: $font-size-xs;
+      font-weight: $font-weight-regular;
+    }
+  }
+
   .align-left {
     text-align: left;
   }
@@ -61,5 +190,101 @@
   }
   .align-right {
     text-align: right;
+  }
+}
+
+.data-table-toolbar {
+  display: flex;
+  padding: $spacing-sm 0;
+}
+
+.data-table-columns {
+  position: relative;
+
+  &__toggle {
+    display: inline-flex;
+    min-height: 34px;
+    align-items: center;
+    gap: $spacing-xs;
+    padding: 0 $spacing-sm;
+    border: 1px solid $color-border;
+    border-radius: $border-radius-sm;
+    background-color: $color-neutral-light;
+    color: $color-text-secondary;
+    cursor: pointer;
+    font: inherit;
+    font-size: $font-size-xs;
+    font-weight: $font-weight-medium;
+    white-space: nowrap;
+    transition:
+      background-color $transition-fast,
+      border-color $transition-fast,
+      color $transition-fast;
+
+    &:hover {
+      border-color: $color-primary-light;
+      background-color: rgba($color-primary-pale, 0.55);
+      color: $color-primary;
+    }
+  }
+
+  &__menu {
+    position: absolute;
+    z-index: 5;
+    top: calc(100% + #{$spacing-xs});
+    left: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    width: max-content;
+    max-width: 420px;
+    gap: $spacing-xs $spacing-sm;
+    padding: $spacing-sm;
+    border: 1px solid $color-border;
+    border-radius: $border-radius-md;
+    background-color: $color-surface;
+    box-shadow: $shadow-md;
+
+    label {
+      display: flex;
+      align-items: center;
+      gap: $spacing-xs;
+      color: $color-text-secondary;
+      font-size: $font-size-xs;
+      white-space: nowrap;
+    }
+  }
+}
+
+.data-table-pagination {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: $spacing-md;
+  padding: $spacing-sm $spacing-md;
+  font-size: $font-size-xs;
+  color: $color-text-muted;
+
+  &__button {
+    display: inline-flex;
+    align-items: center;
+    gap: $spacing-xs;
+    min-height: 34px;
+    padding: 0 $spacing-sm;
+    border: 1px solid $color-border;
+    border-radius: $border-radius-sm;
+    background-color: $color-surface;
+    color: $color-text-primary;
+    cursor: pointer;
+    font: inherit;
+    transition: background-color $transition-fast;
+
+    &:hover:not(:disabled) {
+      background-color: $color-primary-pale;
+    }
+
+    &:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
   }
 }

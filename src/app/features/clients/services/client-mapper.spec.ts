@@ -106,3 +106,18 @@ describe('clientRespToClient — principal no topo', () => {
     expect(client.pessoa.representantes[0].emails[0].endereco).toBe('chefe@x.com');
   });
 });
+
+describe('clientRespToClient — máscara de documento', () => {
+  it('mascara o CPF', () => {
+    const client = clientRespToClient(resp({ cpf: '11144477735' }), null);
+    expect(client.pessoa.cpf).toBe('111.444.777-35');
+  });
+
+  it('mascara o CNPJ', () => {
+    const client = clientRespToClient(
+      resp({ tipo: 'JURIDICA', razao_social: 'ACME', cnpj: '11222333000181' }),
+      null,
+    );
+    expect(client.pessoa.cnpj).toBe('11.222.333/0001-81');
+  });
+});

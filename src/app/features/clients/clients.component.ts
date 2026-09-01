@@ -2,7 +2,6 @@ import { DOCUMENT } from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
-  DestroyRef,
   HostListener,
   computed,
   effect,
@@ -10,20 +9,8 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
-import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop';
-import { EMPTY, catchError, debounceTime, distinctUntilChanged, switchMap } from 'rxjs';
 
-import { maskCnpj, maskCpf, onlyDigits } from '../../core/auth/cpf';
-import {
-  MODALIDADES_CLIENTE,
-  STATUS_CLIENTE,
-  ModalidadeCliente,
-  StatusCliente,
-  IPessoa,
-  TipoPessoa,
-  contatoPrincipal,
-  emailPrincipal,
-} from '../../core/models';
+import { ModalidadeCliente, IPessoa } from '../../core/models';
 import { ButtonComponent } from '../../shared/components/button/button.component';
 import { ModalComponent } from '../../shared/components/modal/modal.component';
 import {
@@ -32,9 +19,14 @@ import {
   ehPainelLayout,
 } from './models/painel-layout';
 import { PastaClienteService } from './services/pasta-cliente.service';
-import { ClientStore, TipoDocumento } from './services/client-store';
+import { ClientStore } from './services/client-store';
 import { ClientFormComponent } from './components/client-form/client-form.component';
 import { ClientFilesComponent, ClientFilesNotice } from './components/client-files/client-files.component';
+import { ClientRespApi } from './services/client-api.model';
+import { emailPrincipal, contatoPrincipal } from '../../core/models';
+import { DomainTableComponent, DomainRow } from '../../shared/components/domain-table/domain-table.component';
+import { TableColumn } from '../../shared/components/table/table-column.model';
+import { TablePinAction } from '../../shared/components/table/table.model';
 
 const LAYOUT_STORAGE_KEY = 'hub-juridico.clients.layout';
 const LARGURA_STORAGE_KEY = 'hub-juridico.clients.painelLargura';
@@ -48,67 +40,30 @@ const PAINEL_ALTURA_MIN = 220;
 const PAINEL_ALTURA_MAX = 640;
 const PAINEL_ALTURA_PADRAO = 340;
 
-type ColunaTabelaKey =
-  | 'personType'
-  | 'name'
-  | 'document'
-  | 'email'
-  | 'phone'
-  | 'status'
-  | 'registeredBy'
-  | 'hiringMode'
-  | 'internalOwner';
-type SortDirection = 'asc' | 'desc';
-type PageNotice = '' | 'filtersCleared' | 'shareReady' | 'importReady' | 'loadError';
-
-interface ColunaTabela {
-  key: ColunaTabelaKey;
-  width: string;
-  align?: 'center';
-  getter: (client: IPessoa) => string;
-}
-
-interface FiltrosTabela {
-  status: StatusCliente | '';
-  hiringMode: ModalidadeCliente | '';
-  internalOwner: string;
-}
+type PageNotice = '' | 'shareReady' | 'importReady' | 'loadError';
 
 @Component({
   selector: 'app-clients',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ButtonComponent, ClientFormComponent, ModalComponent, ClientFilesComponent],
+  imports: [
+    ButtonComponent,
+    ClientFormComponent,
+    ModalComponent,
+    ClientFilesComponent,
+    DomainTableComponent,
+  ],
   templateUrl: './clients.component.html',
   styleUrl: './clients.component.scss',
 })
 export class ClientsComponent {
   private readonly store = inject(ClientStore);
-  private readonly destroyRef = inject(DestroyRef);
   private readonly document = inject(DOCUMENT);
   protected readonly pastaCliente = inject(PastaClienteService);
-  private readonly defaultVisibleColumns: readonly ColunaTabelaKey[] = [
-    'personType',
-    'name',
-    'document',
-    'email',
-    'phone',
-    'status',
-    'registeredBy',
-  ];
 
   private readonly editor = viewChild(ClientFormComponent);
+  private readonly dtClient = viewChild<DomainTableComponent>('dtClient');
 
-  protected readonly clients = this.store.clients;
   protected readonly selectedPersonId = signal<number | null>(null);
-  /** Página pedida ao backend (0-based). */
-  protected readonly pageIndex = signal(0);
-  /** Bumpado para forçar um recarregamento com os mesmos filtros. */
-  private readonly refreshTick = signal(0);
-  /**
-   * `true` pede ao backend também os clientes inativos (padrão: só ativos).
-   * Ligado automaticamente quando o filtro de status é "Inativo".
-   */
-  protected readonly incluirInativos = signal(false);
   /** Posição do painel do cliente (esquerda/direita/abaixo/diálogo) — lembrada no localStorage. */
   protected readonly layoutPainel = signal<PainelLayout>(this.carregarLayout());
   /** No modo diálogo o painel começa oculto (só aparece ao selecionar/criar um cliente). */
@@ -124,153 +79,120 @@ export class ClientsComponent {
   private redimensionando = false;
   /** Aviso da pasta do cliente (upload/remoção/erro) mostrado dentro do diálogo. */
   protected readonly pastaNotice = signal<string | null>(null);
-  protected readonly showFilters = signal(false);
-  protected readonly showColumns = signal(false);
   protected readonly showMoreActions = signal(false);
-  protected readonly searchText = signal('');
-  protected readonly sortColumn = signal<ColunaTabelaKey>('name');
-  protected readonly sortDirection = signal<SortDirection>('asc');
-  protected readonly visibleColumnKeys = signal<ReadonlySet<ColunaTabelaKey>>(
-    new Set(this.defaultVisibleColumns),
-  );
-  protected readonly filters = signal<FiltrosTabela>({
-    status: '',
-    hiringMode: '',
-    internalOwner: '',
-  });
   protected readonly pageNotice = signal<PageNotice>('');
 
+  /** Total de clientes da página atual carregada pelo `app-domain-table`. */
+  protected readonly totalClients = computed(() => this.dtClient()?.currentPagination()?.totalElements ?? 0);
+
   /**
-   * Tipo de cliente (`FISICA` / `JURIDICA`; vazio = todos) — vai ao backend como `tipo`.
-   * Quando definido, habilita o filtro por número de documento: `docDigits` guarda só os
-   * dígitos digitados e `docDigitsDebounced` evita uma requisição por tecla.
+   * Ajustes por coluna (chave em snake_case, casando com o JSON) — reaproveita o `IPessoa` já
+   * resolvido pelo `ClientStore` (via `clientFor`) em vez de reconstruir a formatação a partir do
+   * JSON cru, então herda de graça a mesma máscara de CPF/CNPJ, o "Cadastrado por" com fallback
+   * pro usuário logado etc. que `clientRespToClient` já calcula.
    */
-  protected readonly tipoCliente = signal<TipoPessoa | ''>('');
-  private readonly docDigits = signal('');
-  private readonly docDigitsDebounced = toSignal(
-    toObservable(this.docDigits).pipe(debounceTime(300)),
-    { initialValue: '' },
-  );
-  protected readonly docNumberMasked = computed(() =>
-    this.tipoCliente() === 'JURIDICA' ? maskCnpj(this.docDigits()) : maskCpf(this.docDigits()),
-  );
-  /** Documento correspondente ao tipo de cliente (para o parâmetro `tipoDocumento`). */
-  private readonly tipoDocumento = computed<TipoDocumento | null>(() => {
-    switch (this.tipoCliente()) {
-      case 'FISICA':
-        return 'CPF';
-      case 'JURIDICA':
-        return 'CNPJ';
-      default:
-        return null;
-    }
-  });
-  protected readonly tipoClienteOptions: readonly TipoPessoa[] = ['FISICA', 'JURIDICA'];
-
-  protected readonly statusOptions = STATUS_CLIENTE;
-  protected readonly hiringModeOptions = MODALIDADES_CLIENTE;
-
-  /** Total de clientes do filtro atual (base inteira quando sem filtro de tipo/busca). */
-  protected readonly totalClients = this.store.totalElements;
-  /** Página atual exibida (1-based, para leitura humana). */
-  protected readonly currentPageLabel = computed(() => this.store.page() + 1);
-  /** Quantidade de páginas do filtro atual (mínimo 1). */
-  protected readonly pageCount = computed(() => Math.max(this.store.totalPages(), 1));
-  protected readonly canGoPrev = computed(() => this.store.page() > 0);
-  protected readonly canGoNext = computed(() => !this.store.last());
-
-  /** Tipo enviado ao backend: `null` quando o filtro está em "Todos". */
-  private readonly tipoFilter = computed<TipoPessoa | null>(() => this.tipoCliente() || null);
-
-  /** Natureza de um cadastro novo — sem filtro de tipo, começa como física. */
-  protected readonly novoTipoPadrao = computed<TipoPessoa>(() => this.tipoCliente() || 'FISICA');
-
-  protected readonly clientColumns: readonly ColunaTabela[] = [
-    { key: 'personType', width: '138px', getter: (client) => client.pessoa.tipo },
-    { key: 'name', width: '240px', getter: (client) => this.clientDisplayName(client) },
-    {
-      key: 'document',
-      width: '170px',
-      getter: (client) =>
-        client.pessoa.tipo === 'FISICA' ? client.pessoa.cpf : client.pessoa.cnpj,
+  protected readonly clientColumnOverrides: Record<string, Partial<TableColumn<DomainRow>>> = {
+    tipo: {
+      header: 'Natureza',
+      width: '138px',
+      formatter: (_value, row) =>
+        this.clientFor(row)?.pessoa.tipo === 'FISICA' ? 'Pessoa física' : 'Pessoa jurídica',
+      filter: {
+        type: 'select',
+        options: [
+          { value: '', label: 'Todos' },
+          { value: 'FISICA', label: 'Pessoa física' },
+          { value: 'JURIDICA', label: 'Pessoa jurídica' },
+        ],
+      },
     },
-    { key: 'email', width: '230px', getter: (client) => emailPrincipal(client.pessoa.emails) },
-    { key: 'phone', width: '160px', getter: (client) => contatoPrincipal(client.pessoa.contatos) },
-    { key: 'status', width: '110px', align: 'center', getter: (client) => client.dossier.status },
-    { key: 'registeredBy', width: '150px', getter: (client) => client.dossier.registeredBy },
-    { key: 'hiringMode', width: '150px', getter: (client) => client.dossier.hiringMode },
-    { key: 'internalOwner', width: '160px', getter: (client) => client.dossier.internalOwner },
-  ];
+    nome: {
+      header: 'Nome / Razão',
+      width: '240px',
+      formatter: (_value, row) => {
+        const client = this.clientFor(row);
+        return client ? this.clientDisplayName(client) || '-' : '-';
+      },
+      filter: { type: 'text' },
+    },
+    cpf: {
+      header: 'CPF / CNPJ',
+      width: '170px',
+      formatter: (_value, row) => {
+        const client = this.clientFor(row);
+        if (!client) {
+          return '-';
+        }
+        return (client.pessoa.tipo === 'FISICA' ? client.pessoa.cpf : client.pessoa.cnpj) || '-';
+      },
+      // Campo próprio (`cpf_cnpj`) porque a coluna mescla dois campos do backend (cpf OU cnpj,
+      // conforme o tipo) — column.key sozinho não dá pra buscar nos dois ao mesmo tempo.
+      filter: { type: 'text', field: 'cpf_cnpj' },
+    },
+    emails: {
+      header: 'E-mail',
+      width: '230px',
+      formatter: (_value, row) => emailPrincipal(this.clientFor(row)?.pessoa.emails ?? []) || '-',
+      // Campo próprio (`email`, singular) porque a coluna mostra só o principal, mas o filtro no
+      // backend busca em qualquer e-mail da lista, não só o principal.
+      filter: { type: 'text', field: 'email' },
+    },
+    contatos: {
+      header: 'Telefone',
+      width: '160px',
+      formatter: (_value, row) => contatoPrincipal(this.clientFor(row)?.pessoa.contatos ?? []) || '-',
+    },
+    status: {
+      header: 'Status',
+      width: '110px',
+      align: 'center',
+      format: 'badge',
+      badgeDot: true,
+      formatter: (_value, row) => (this.clientFor(row)?.dossier.status === 'active' ? 'Ativo' : 'Inativo'),
+      badgeTone: (_value, row) => (this.clientFor(row)?.dossier.status === 'active' ? 'success' : 'neutral'),
+      // Valores batendo com o enum StatusVinculo do backend (eq exato, não ilike).
+      filter: {
+        type: 'select',
+        options: [
+          { value: '', label: 'Todos' },
+          { value: 'ATIVO', label: 'Ativo' },
+          { value: 'INATIVO', label: 'Inativo' },
+        ],
+      },
+    },
+    cadastrado_por_nome: {
+      header: 'Cadastrado por',
+      width: '150px',
+      formatter: (_value, row) => this.clientFor(row)?.dossier.registeredBy || '-',
+    },
+    modalidade: {
+      header: 'Modalidade',
+      width: '150px',
+      formatter: (_value, row) => this.hiringModeLabel(this.clientFor(row)?.dossier.hiringMode ?? ''),
+    },
+    responsavel_interno: {
+      header: 'Responsável',
+      width: '160px',
+      formatter: (_value, row) => this.clientFor(row)?.dossier.internalOwner || '-',
+    },
+  };
 
-  protected readonly displayedColumns = computed(() => {
-    const visible = this.visibleColumnKeys();
-    return this.clientColumns.filter((column) => visible.has(column.key));
-  });
+  protected readonly clientPinFirst = (row: DomainRow): boolean => this.clientFor(row)?.favorite ?? false;
 
-  /**
-   * Só `tipo` é resolvido no backend. Busca, status, modalidade e responsável
-   * refinam localmente a página carregada (10 linhas) — o endpoint ainda não
-   * tem esses filtros.
-   */
-  protected readonly filteredClients = computed(() => {
-    const filters = this.filters();
-    const searchTerms = this.parseSearchTerms(this.searchText());
+  protected readonly clientRowClass = (row: DomainRow): Record<string, boolean> => {
+    const client = this.clientFor(row);
+    return {
+      'is-selected': this.selectedPersonId() === Number(row['id']),
+      'is-favorite': client?.favorite ?? false,
+      'is-inactive': client?.dossier.status === 'inactive',
+    };
+  };
 
-    return this.clients().filter((client) => {
-      if (filters.status && client.dossier.status !== filters.status) {
-        return false;
-      }
-
-      if (filters.hiringMode && client.dossier.hiringMode !== filters.hiringMode) {
-        return false;
-      }
-
-      if (
-        filters.internalOwner.trim() &&
-        !this.normalizeKey(client.dossier.internalOwner).includes(
-          this.normalizeKey(filters.internalOwner),
-        )
-      ) {
-        return false;
-      }
-
-      if (!searchTerms.length) {
-        return true;
-      }
-
-      const searchable = this.searchableClientText(client);
-      return searchTerms.every((term) => searchable.includes(this.normalizeKey(term)));
-    });
-  });
-
-  protected readonly displayedClients = computed(() => {
-    const column = this.clientColumns.find((item) => item.key === this.sortColumn());
-    const direction = this.sortDirection() === 'asc' ? 1 : -1;
-
-    return [...this.filteredClients()].sort((a, b) => {
-      if (a.favorite !== b.favorite) {
-        return a.favorite ? -1 : 1;
-      }
-
-      if (!column) {
-        return this.clientDisplayName(a).localeCompare(this.clientDisplayName(b), 'pt-BR');
-      }
-
-      return this.compareColumnValues(column.getter(a), column.getter(b)) * direction;
-    });
-  });
-
-  protected readonly activeFilterCount = computed(
-    () =>
-      [
-        this.filters().status,
-        this.filters().hiringMode,
-        this.filters().internalOwner.trim(),
-        this.searchText().trim(),
-        this.tipoCliente(),
-        this.docDigits(),
-      ].filter(Boolean).length,
-  );
+  protected readonly clientPinAction: TablePinAction<DomainRow> = {
+    isActive: (row) => this.clientFor(row)?.favorite ?? false,
+    onToggle: (row, event) => this.toggleClientFavorite(row, event),
+    ariaLabel: 'Favoritar cliente',
+  };
 
   constructor() {
     // Publica o cliente selecionado para o header ("Abrir pasta do cliente").
@@ -285,79 +207,25 @@ export class ClientsComponent {
             : null,
       );
     });
+  }
 
-    // Uma requisição por combinação de página + filtros do endpoint (tipo, inativos, documento).
-    // `refreshTick` força recarregar após salvar/apagar.
-    const query = computed(() => ({
-      page: this.pageIndex(),
-      tipo: this.tipoFilter(),
-      incluirInativos: this.incluirInativos(),
-      tipoDocumento: this.tipoDocumento(),
-      documento: this.docDigitsDebounced(),
-      tick: this.refreshTick(),
-    }));
+  /** Cliente já resolvido (máscara, fallback de "cadastrado por" etc.) pelo `ClientStore`. */
+  private clientFor(row: DomainRow): IPessoa | null {
+    const id = Number(row['id']);
+    return Number.isFinite(id) ? this.store.buscar(id) : null;
+  }
 
-    toObservable(query)
-      .pipe(
-        distinctUntilChanged(
-          (a, b) =>
-            a.page === b.page &&
-            a.tipo === b.tipo &&
-            a.incluirInativos === b.incluirInativos &&
-            a.tipoDocumento === b.tipoDocumento &&
-            a.documento === b.documento &&
-            a.tick === b.tick,
-        ),
-        switchMap(({ page, tipo, incluirInativos, tipoDocumento, documento }) =>
-          this.store.carregar({ page, tipo, incluirInativos, tipoDocumento, documento }).pipe(
-            catchError(() => {
-              this.pageNotice.set('loadError');
-              return EMPTY;
-            }),
-          ),
-        ),
-        takeUntilDestroyed(this.destroyRef),
-      )
-      .subscribe(() => {
-        if (this.pageNotice() === 'loadError') {
-          this.pageNotice.set('');
-        }
-      });
+  /** Alimenta o `ClientStore` a cada página que o `app-domain-table` busca sozinho. */
+  protected onPageLoaded(rows: DomainRow[]): void {
+    this.store.definirPaginaGenerica(rows as unknown as ClientRespApi[]);
+  }
+
+  protected onLoadError(): void {
+    this.pageNotice.set('loadError');
   }
 
   protected reloadList(): void {
-    this.refreshTick.update((tick) => tick + 1);
-  }
-
-  /** Limite de dígitos do documento conforme o tipo de cliente (CPF 11, CNPJ 14). */
-  private docLimit(): number {
-    return this.tipoCliente() === 'JURIDICA' ? 14 : 11;
-  }
-
-  private limparTipoCliente(): void {
-    this.tipoCliente.set('');
-    this.docDigits.set('');
-  }
-
-  protected updateTipoCliente(event: Event): void {
-    const value = (event.target as HTMLSelectElement).value as TipoPessoa | '';
-    this.tipoCliente.set(value);
-    // "Todos" zera o número; troca de tipo apenas corta ao novo limite.
-    this.docDigits.update((digits) => (value ? digits.slice(0, this.docLimit()) : ''));
-    this.pageIndex.set(0);
-  }
-
-  protected updateDocNumber(event: Event): void {
-    this.docDigits.set(onlyDigits((event.target as HTMLInputElement).value).slice(0, this.docLimit()));
-    this.pageIndex.set(0);
-  }
-
-  protected goToPage(delta: number): void {
-    const next = this.pageIndex() + delta;
-    if (next < 0 || next >= this.pageCount()) {
-      return;
-    }
-    this.pageIndex.set(next);
+    this.dtClient()?.refresh();
   }
 
   protected togglePanel(): void {
@@ -470,9 +338,12 @@ export class ClientsComponent {
     return !!this.document.querySelector('app-modal .modal__dialog');
   }
 
-  protected toggleClientFavorite(client: IPessoa, event: MouseEvent): void {
+  protected toggleClientFavorite(row: DomainRow, event: MouseEvent): void {
     event.stopPropagation();
-    this.store.alternarFavorito(client.id);
+    const id = Number(row['id']);
+    if (Number.isFinite(id)) {
+      this.store.alternarFavorito(id);
+    }
   }
 
   protected newRecord(): void {
@@ -480,8 +351,8 @@ export class ClientsComponent {
     this.panelVisible.set(true);
   }
 
-  protected selectClient(client: IPessoa | null): void {
-    const id = client?.id ?? null;
+  protected selectClient(row: DomainRow | null): void {
+    const id = row ? Number(row['id']) : null;
 
     const editor = this.editor();
     if (editor?.locked() && this.selectedPersonId() !== id) {
@@ -519,24 +390,19 @@ export class ClientsComponent {
 
   protected onSaved(client: IPessoa): void {
     this.selectedPersonId.set(client.id);
-    // Se o filtro de tipo esconderia o registro salvo, realinha para o tipo dele.
-    if (this.tipoCliente() && this.tipoCliente() !== client.pessoa.tipo) {
-      this.tipoCliente.set(client.pessoa.tipo);
-      this.docDigits.set('');
-    }
-    this.pageIndex.set(0);
-    this.reloadList();
+    this.dtClient()?.goToFirstPage();
+    this.dtClient()?.refresh();
   }
 
   protected onCleared(): void {
     this.selectedPersonId.set(null);
-    this.reloadList();
+    this.dtClient()?.refresh();
   }
 
   /** Ativação/inativação: o registro continua existindo, então mantém a seleção. */
   protected onStatusChanged(client: IPessoa): void {
     this.selectedPersonId.set(client.id);
-    this.reloadList();
+    this.dtClient()?.refresh();
   }
 
   protected fecharPasta(): void {
@@ -558,16 +424,6 @@ export class ClientsComponent {
     this.pastaNotice.set(textos[evento.key]);
   }
 
-  protected clearSearchAndFilters(): void {
-    this.searchText.set('');
-    this.filters.set({ status: '', hiringMode: '', internalOwner: '' });
-    this.incluirInativos.set(false);
-    this.limparTipoCliente();
-    this.pageIndex.set(0);
-    this.pageNotice.set('filtersCleared');
-    this.showMoreActions.set(false);
-  }
-
   protected shareBase(): void {
     this.pageNotice.set('shareReady');
     this.showMoreActions.set(false);
@@ -578,134 +434,32 @@ export class ClientsComponent {
     this.showMoreActions.set(false);
   }
 
-  protected updateSearch(event: Event): void {
-    // Busca é client-side (só a página carregada) — não reinicia a paginação.
-    this.searchText.set((event.target as HTMLInputElement).value);
-  }
-
-  protected updateFilter(field: keyof FiltrosTabela, event: Event): void {
-    const value = (event.target as HTMLInputElement | HTMLSelectElement).value;
-
-    if (field === 'status') {
-      // "Inativo" precisa que o backend traga os inativos; "Ativo"/"Todos" voltam ao padrão.
-      this.incluirInativos.set(value === 'inactive');
-      this.pageIndex.set(0);
-    }
-
-    this.filters.update((filters) => {
-      switch (field) {
-        case 'status':
-          return { ...filters, status: value as StatusCliente | '' };
-        case 'hiringMode':
-          return { ...filters, hiringMode: value as ModalidadeCliente | '' };
-        case 'internalOwner':
-          return { ...filters, internalOwner: value };
-      }
-    });
-  }
-
-  protected toggleFilters(): void {
-    this.showFilters.update((visible) => !visible);
-    this.showColumns.set(false);
-    this.showMoreActions.set(false);
-  }
-
-  protected toggleColumns(): void {
-    this.showColumns.update((visible) => !visible);
-    this.showFilters.set(false);
-    this.showMoreActions.set(false);
-  }
-
   protected toggleMoreActions(): void {
     this.showMoreActions.update((visible) => !visible);
-    this.showColumns.set(false);
-    this.showFilters.set(false);
   }
 
-  protected toggleColumn(column: ColunaTabelaKey): void {
-    const next = new Set(this.visibleColumnKeys());
-
-    if (next.has(column) && next.size > 1) {
-      next.delete(column);
-    } else {
-      next.add(column);
+  private hiringModeLabel(mode: ModalidadeCliente | ''): string {
+    switch (mode) {
+      case 'oneOff':
+        return 'Avulso';
+      case 'monthly':
+        return 'Mensalista';
+      case 'successFee':
+        return 'Êxito';
+      case 'advisory':
+        return 'Consultivo';
+      case 'litigation':
+        return 'Contencioso';
+      case 'mixed':
+        return 'Misto';
+      default:
+        return '-';
     }
-
-    this.visibleColumnKeys.set(next);
-  }
-
-  protected isColumnVisible(column: ColunaTabelaKey): boolean {
-    return this.visibleColumnKeys().has(column);
-  }
-
-  protected sortBy(column: ColunaTabelaKey): void {
-    if (this.sortColumn() === column) {
-      this.sortDirection.update((direction) => (direction === 'asc' ? 'desc' : 'asc'));
-      return;
-    }
-
-    this.sortColumn.set(column);
-    this.sortDirection.set('asc');
-  }
-
-  protected sortIcon(column: ColunaTabelaKey): string {
-    if (this.sortColumn() !== column) {
-      return 'fa-solid fa-sort';
-    }
-
-    return this.sortDirection() === 'asc' ? 'fa-solid fa-sort-up' : 'fa-solid fa-sort-down';
-  }
-
-  protected displayCellValue(client: IPessoa, column: ColunaTabela): string {
-    const value = column.getter(client);
-    return value || '-';
-  }
-
-  protected rowStatusClass(client: IPessoa): string {
-    return `clients-table__status clients-table__status--${client.dossier.status}`;
-  }
-
-  protected columnClass(column: ColunaTabela): string {
-    return column.align === 'center' ? 'is-center' : '';
-  }
-
-  private parseSearchTerms(value: string): string[] {
-    const matches = value.match(/"[^"]+"|\S+/g) ?? [];
-    return matches.map((term) => term.replace(/^"|"$/g, '')).filter(Boolean);
-  }
-
-  private searchableClientText(client: IPessoa): string {
-    return this.normalizeKey(
-      [
-        client.pessoa.tipo,
-        client.pessoa.nome,
-        client.pessoa.cpf,
-        client.pessoa.razaoSocial,
-        client.pessoa.nomeFantasia,
-        client.pessoa.cnpj,
-        emailPrincipal(client.pessoa.emails),
-        contatoPrincipal(client.pessoa.contatos),
-        client.dossier.status,
-        client.dossier.folder,
-        client.dossier.file,
-        client.dossier.registeredBy,
-        client.dossier.internalOwner,
-        client.dossier.hiringMode,
-      ].join(' '),
-    );
-  }
-
-  private compareColumnValues(left: string, right: string): number {
-    return left.localeCompare(right, 'pt-BR', { numeric: true, sensitivity: 'base' });
   }
 
   private clientDisplayName(client: IPessoa): string {
     return client.pessoa.tipo === 'FISICA'
       ? client.pessoa.nome.trim()
       : (client.pessoa.razaoSocial || client.pessoa.nomeFantasia).trim();
-  }
-
-  private normalizeKey(value: string): string {
-    return value.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
   }
 }

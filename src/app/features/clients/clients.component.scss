@@ -1,4 +1,3 @@
-@use 'sass:color';
 @use 'variables' as *;
 @use 'mixins' as *;
 
@@ -220,8 +219,7 @@
 
 .clients-menu-button,
 .clients-panel-toggle,
-.clients-dropdown button,
-.clients-icon-button {
+.clients-dropdown button {
   border: 1px solid $color-border;
   border-radius: $border-radius-sm;
   background-color: $color-neutral-light;
@@ -242,23 +240,6 @@
   }
 }
 
-.clients-icon-button {
-  @include flex-center;
-  width: 34px;
-  height: 34px;
-  padding: 0;
-
-  &.is-active {
-    color: $color-warning;
-  }
-
-  i {
-    transition:
-      transform $transition-fast,
-      filter $transition-fast;
-  }
-}
-
 .clients-menu-button,
 .clients-panel-toggle {
   display: inline-flex;
@@ -271,43 +252,8 @@
   font-weight: $font-weight-medium;
 }
 
-.clients-search label,
-.clients-filter-panel label {
-  display: flex;
-  min-width: 0;
-  flex-direction: column;
-  gap: $spacing-xs;
-  color: $color-text-secondary;
-  font-size: $font-size-xs;
-  font-weight: $font-weight-medium;
-}
-
-.clients-search input,
-.clients-filter-panel input,
-.clients-filter-panel select {
-  width: 100%;
-  min-height: 36px;
-  border: 1px solid $color-border;
-  border-radius: $border-radius-sm;
-  background-color: $color-neutral-light;
-  color: $color-text-primary;
-  font: inherit;
-  outline: none;
-  padding: $spacing-xs $spacing-sm;
-  transition:
-    border-color $transition-fast,
-    box-shadow $transition-fast;
-
-  &:focus {
-    border-color: $color-primary-light;
-    box-shadow: 0 0 0 3px rgba($rouge-light, 0.16);
-  }
-}
-
 .clients-actions,
 .clients-search,
-.clients-filter-panel,
-.clients-columns-panel,
 .clients-summary,
 .clients-main__footer {
   padding: $spacing-sm $spacing-md;
@@ -345,65 +291,8 @@
 }
 
 .clients-search {
-  display: grid;
-  grid-template-columns: minmax(260px, 1fr) auto;
-  align-items: end;
-  gap: $spacing-md;
-
   > span {
     color: $color-text-muted;
-    font-size: $font-size-xs;
-  }
-}
-
-.clients-filter-panel {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: $spacing-sm;
-  background-color: rgba($color-primary-pale, 0.18);
-}
-
-// Campo que não precisa de largura total (ex.: "Tipo Cliente") — o controle
-// acompanha o conteúdo e libera o espaço restante da coluna.
-.clients-filter-panel__compact {
-  align-items: flex-start;
-  flex: 0 0 auto;
-
-  select {
-    width: auto;
-    min-width: 0;
-    max-width: 100%;
-  }
-}
-
-// Agrupa "Tipo Cliente" + "Número do documento" numa única célula do grid,
-// para o input ficar logo ao lado do select em vez de na coluna seguinte.
-.clients-filter-panel__doc {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-start;
-  gap: $spacing-xs $spacing-sm;
-
-  label {
-    min-width: 0;
-  }
-}
-
-.clients-filter-panel__doc-number {
-  flex: 1 1 140px;
-}
-
-.clients-columns-panel {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
-  gap: $spacing-xs $spacing-sm;
-  background-color: rgba($color-primary-pale, 0.18);
-
-  label {
-    display: flex;
-    align-items: center;
-    gap: $spacing-xs;
-    color: $color-text-secondary;
     font-size: $font-size-xs;
   }
 }
@@ -440,170 +329,15 @@
   overflow: auto;
 }
 
-.clients-table {
-  width: max-content;
-  min-width: 100%;
-  border-collapse: separate;
-  border-spacing: 0;
-  color: $color-text-primary;
-  font-size: $font-size-xs;
-
-  th,
-  td {
-    max-width: 280px;
-    border-bottom: 1px solid rgba($color-border, 0.55);
-    padding: $spacing-sm;
-    text-align: left;
-    vertical-align: middle;
-    @include truncate;
-  }
-
-  th {
-    position: sticky;
-    z-index: 2;
-    top: 0;
-    background-color: color.adjust($color-surface, $lightness: -2%);
-    color: $color-text-secondary;
-    font-weight: $font-weight-bold;
-  }
-
-  th button {
-    display: inline-flex;
-    width: 100%;
-    align-items: center;
-    justify-content: space-between;
-    gap: $spacing-xs;
-    border: 0;
-    background: transparent;
-    color: inherit;
-    cursor: pointer;
-    font: inherit;
-    font-weight: inherit;
-    padding: 0;
-  }
-
-  tbody tr {
-    cursor: pointer;
-    transition:
-      background-color $transition-fast,
-      box-shadow $transition-fast;
-
-    &:hover,
-    &.is-selected {
-      background-color: rgba($color-primary-pale, 0.35);
-    }
-
-    // Cliente favorito: fundo âmbar suave, divisórias mais quentes e uma
-    // "fita" dourada na lateral esquerda (na célula da estrela).
-    &.is-favorite {
-      background-color: rgba($color-warning, 0.09);
-
-      td {
-        border-bottom-color: rgba($color-warning, 0.28);
-      }
-
-      td:first-child {
-        box-shadow: inset 3px 0 0 $color-warning;
-      }
-
-      &:hover,
-      &.is-selected {
-        background-color: rgba($color-warning, 0.16);
-      }
-
-      .clients-icon-button.is-active {
-        border-color: rgba($color-warning, 0.5);
-        background-color: rgba($color-warning, 0.16);
-        box-shadow: 0 0 0 3px rgba($color-warning, 0.14);
-
-        i {
-          transform: scale(1.08);
-          filter: drop-shadow(0 1px 2px rgba($color-warning, 0.55));
-        }
-      }
-    }
-
-    // Cliente inativo: texto esmaecido e uma fita cinza na lateral esquerda,
-    // para o estado ser óbvio mesmo com a coluna "Status" oculta.
-    &.is-inactive td {
-      color: $color-text-muted;
-    }
-
-    &.is-inactive:not(.is-favorite) td:first-child {
-      box-shadow: inset 3px 0 0 rgba($color-text-muted, 0.55);
-    }
-  }
-}
-
-.clients-table__pin {
-  width: 44px;
-  max-width: 44px;
-  text-align: center;
-}
-
-.clients-table__status {
-  display: inline-flex;
-  min-width: 78px;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  border-radius: 999px;
-  padding: 2px $spacing-sm;
-  background-color: rgba($color-text-muted, 0.12);
-  color: $color-text-secondary;
-  font-size: 11px;
-  font-weight: $font-weight-bold;
-}
-
-.clients-table__status-dot {
-  width: 7px;
-  height: 7px;
-  flex-shrink: 0;
-  border-radius: 999px;
-  background-color: currentColor;
-}
-
-.clients-table__status--active {
-  background-color: rgba($color-success, 0.14);
-  color: color.adjust($color-success, $lightness: -18%);
-}
-
-.clients-table__status--inactive {
-  background-color: rgba($color-text-muted, 0.16);
-  color: $color-text-muted;
-}
-
-.clients-table__empty {
-  height: 120px;
-  color: $color-text-muted;
-  text-align: center;
-}
-
-.is-center {
-  text-align: center;
-}
-
 .clients-main__footer {
   border-bottom: 0;
   color: $color-text-muted;
   font-size: $font-size-xs;
 }
 
-.clients-pagination {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: $spacing-sm;
-
-  button[disabled] {
-    cursor: not-allowed;
-    opacity: 0.45;
-  }
-
-  &__total {
-    margin-left: auto;
-    font-weight: $font-weight-medium;
-  }
+.clients-summary-line {
+  padding-bottom: $spacing-xs;
+  font-weight: $font-weight-medium;
 }
 
 .clients-link-button {
@@ -642,9 +376,7 @@
 }
 
 @include respond-below($breakpoint-sm) {
-  .clients-filter-panel,
-  .clients-summary,
-  .clients-search {
+  .clients-summary {
     grid-template-columns: 1fr;
   }
 

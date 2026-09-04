@@ -1,3 +1,333 @@
+@use 'variables' as *;
+@use 'mixins' as *;
+
 :host {
   display: block;
+}
+
+.advogados {
+  --painel-largura: 380px;
+  --painel-altura: 340px;
+
+  position: relative; // âncora do redimensionador
+  display: grid;
+  gap: $spacing-lg;
+  min-height: calc(100vh - 160px);
+  grid-template-columns: var(--painel-largura) minmax(0, 1fr); // padrão = painel à esquerda
+
+  &[data-layout='right'] {
+    grid-template-columns: minmax(0, 1fr) var(--painel-largura);
+
+    .advogados-panel-slot {
+      order: 2;
+    }
+    .advogados-main {
+      order: 1;
+    }
+  }
+
+  &[data-layout='bottom'] {
+    height: calc(100vh - 160px);
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr) var(--painel-altura);
+
+    .advogados-panel-slot {
+      order: 2;
+      min-height: 0;
+      overflow: auto;
+    }
+    .advogados-main {
+      order: 1;
+      min-height: 0;
+      max-height: none;
+    }
+  }
+
+  &[data-layout='dialog'] {
+    grid-template-columns: minmax(0, 1fr);
+
+    .advogados-panel-slot {
+      position: fixed;
+      z-index: $z-overlay;
+      top: 50%;
+      left: 50%;
+      width: min(460px, 94vw);
+      max-height: min(88vh, calc(100vh - 72px));
+      overflow: auto;
+      transform: translate(-50%, -50%);
+      box-shadow: $shadow-lg;
+      border-radius: $border-radius-lg;
+    }
+  }
+
+  // Painel oculto — vale para todos os layouts, então precisa vencer os seletores acima.
+  &.advogados--panel-hidden {
+    grid-template-columns: minmax(0, 1fr);
+
+    .advogados-panel-slot {
+      display: none;
+    }
+  }
+}
+
+.advogados-main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  max-height: calc(100vh - 132px);
+  overflow: hidden;
+  border: 1px solid $color-border;
+  border-radius: $border-radius-md;
+  background-color: $color-surface;
+  box-shadow: $shadow-sm;
+}
+
+.advogados-header,
+.advogados-main__footer {
+  padding: $spacing-sm $spacing-md;
+  border-bottom: 1px solid rgba($color-border, 0.7);
+}
+
+.advogados-header {
+  @include flex-between;
+  gap: $spacing-md;
+
+  h1 {
+    margin: 0;
+    color: $color-text-primary;
+    font-size: $font-size-lg;
+    font-weight: $font-weight-bold;
+  }
+}
+
+.advogados-panel-toggle {
+  display: inline-flex;
+  min-height: 34px;
+  align-items: center;
+  gap: $spacing-xs;
+  padding: 0 $spacing-sm;
+  white-space: nowrap;
+  border: 1px solid $color-border;
+  border-radius: $border-radius-sm;
+  background-color: $color-neutral-light;
+  color: $color-text-secondary;
+  cursor: pointer;
+  font: inherit;
+  font-size: $font-size-xs;
+  font-weight: $font-weight-medium;
+  transition:
+    background-color $transition-fast,
+    border-color $transition-fast,
+    color $transition-fast;
+
+  &:hover,
+  &.is-active {
+    border-color: $color-primary-light;
+    background-color: rgba($color-primary-pale, 0.55);
+    color: $color-primary;
+  }
+}
+
+.advogados-main__footer {
+  border-top: 1px solid rgba($color-border, 0.7);
+  border-bottom: 0;
+  color: $color-text-secondary;
+  font-size: $font-size-xs;
+}
+
+.advogados-link-button {
+  border: 0;
+  padding: 0;
+  background: none;
+  color: $color-primary;
+  cursor: pointer;
+  font: inherit;
+  text-decoration: underline;
+}
+
+.advogados-table-wrap {
+  @include thin-scrollbar;
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+
+.advogados-panel-slot {
+  position: relative;
+  min-width: 0;
+}
+
+.advogados-panel-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: $z-overlay - 1;
+  border: 0;
+  padding: 0;
+  background-color: rgba($burgundy-deep, 0.45);
+  cursor: pointer;
+}
+
+.advogados-resizer {
+  position: absolute;
+  z-index: 4;
+  touch-action: none;
+
+  &::after {
+    content: '';
+    position: absolute;
+    border-radius: 999px;
+    background-color: rgba($color-border, 0.9);
+    transition: background-color $transition-fast;
+  }
+
+  &:hover::after,
+  &:active::after {
+    background-color: $color-primary-light;
+  }
+}
+
+.advogados-resizer--left {
+  top: 0;
+  bottom: 0;
+  left: var(--painel-largura);
+  width: $spacing-lg;
+  transform: translateX(-50%);
+  cursor: col-resize;
+
+  &::after {
+    top: 0;
+    bottom: 0;
+    left: 50%;
+    width: 3px;
+    transform: translateX(-50%);
+  }
+}
+
+.advogados-resizer--right {
+  top: 0;
+  bottom: 0;
+  right: var(--painel-largura);
+  width: $spacing-lg;
+  transform: translateX(50%);
+  cursor: col-resize;
+
+  &::after {
+    top: 0;
+    bottom: 0;
+    left: 50%;
+    width: 3px;
+    transform: translateX(-50%);
+  }
+}
+
+.advogados-resizer--bottom {
+  left: 0;
+  right: 0;
+  bottom: var(--painel-altura);
+  height: $spacing-lg;
+  transform: translateY(50%);
+  cursor: row-resize;
+
+  &::after {
+    left: 0;
+    right: 0;
+    top: 50%;
+    height: 3px;
+    transform: translateY(-50%);
+  }
+}
+
+.advogados-card-actions {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+}
+
+.advogados-lock-btn {
+  @include flex-center;
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  border: 1px solid $color-border;
+  border-radius: $border-radius-sm;
+  background-color: $color-neutral-light;
+  color: $color-text-secondary;
+  cursor: pointer;
+  transition:
+    background-color $transition-fast,
+    border-color $transition-fast,
+    color $transition-fast;
+
+  &:hover:not(:disabled) {
+    border-color: $color-primary-light;
+    background-color: rgba($color-primary-pale, 0.55);
+    color: $color-primary;
+  }
+
+  &.is-active {
+    border-color: $color-warning;
+    background-color: rgba($color-warning, 0.15);
+    color: $color-warning;
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.4;
+  }
+}
+
+.advogado-details {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: $spacing-md;
+  margin: 0;
+}
+
+.advogado-details__item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+
+  dt {
+    color: $color-text-muted;
+    font-size: $font-size-xs;
+    font-weight: $font-weight-medium;
+  }
+
+  dd {
+    margin: 0;
+    color: $color-text-primary;
+    font-size: $font-size-base;
+    word-break: break-word;
+  }
+}
+
+.advogado-details__item--full {
+  grid-column: 1 / -1;
+}
+
+.advogado-details__empty {
+  margin: 0;
+  color: $color-text-muted;
+  font-size: $font-size-base;
+}
+
+@include respond-below($breakpoint-lg) {
+  // Telas estreitas: qualquer layout dockeado vira coluna única e sem redimensionador
+  // (o modo diálogo continua flutuando).
+  .advogados[data-layout='left'],
+  .advogados[data-layout='right'],
+  .advogados[data-layout='bottom'] {
+    height: auto;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: none;
+  }
+
+  .advogados-resizer {
+    display: none;
+  }
+
+  .advogados-main {
+    max-height: none;
+  }
 }

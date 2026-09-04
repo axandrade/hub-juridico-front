@@ -1,1 +1,163 @@
-<h1>TELA DE ADVOGADOS</h1>
+<div
+  class="advogados"
+  [attr.data-layout]="panelShell.layoutPainel()"
+  [class.advogados--panel-hidden]="!panelShell.panelVisible()"
+  [style.--painel-largura.px]="panelShell.painelLargura()"
+  [style.--painel-altura.px]="panelShell.painelAltura()"
+>
+  @if (panelShell.layoutPainel() === 'dialog' && panelShell.panelVisible()) {
+    <button
+      type="button"
+      class="advogados-panel-backdrop"
+      aria-label="Fechar painel"
+      (click)="panelShell.setPanelVisible(false)"
+    ></button>
+  }
+
+  <div class="advogados-panel-slot">
+    <app-card title="Detalhes do advogado" [showEdit]="false" [showClose]="true" (close)="clearSelection()">
+      <div card-actions class="advogados-card-actions">
+        <button
+          type="button"
+          class="advogados-lock-btn"
+          [class.is-active]="locked()"
+          [disabled]="!selected()"
+          title="Travar painel no advogado selecionado"
+          aria-label="Travar painel no advogado selecionado"
+          [attr.aria-pressed]="locked()"
+          (click)="togglePanelLock()"
+        >
+          <i class="fa-solid fa-lock" aria-hidden="true"></i>
+        </button>
+        <app-panel-layout-switcher
+          [layoutPainel]="panelShell.layoutPainel()"
+          (layoutPainelChange)="panelShell.setLayoutPainel($event)"
+        />
+      </div>
+
+      @if (selected(); as advogado) {
+        <dl class="advogado-details">
+          <div class="advogado-details__item">
+            <dt>Nome</dt>
+            <dd>{{ advogado['nome'] || '-' }}</dd>
+          </div>
+          <div class="advogado-details__item">
+            <dt>Status</dt>
+            <dd>
+              <app-badge [tone]="advogado['ativo'] ? 'success' : 'neutral'" [dot]="true">
+                {{ advogado['ativo'] ? 'Ativo' : 'Inativo' }}
+              </app-badge>
+            </dd>
+          </div>
+          <div class="advogado-details__item">
+            <dt>OAB</dt>
+            <dd>{{ advogado['oab'] || '-' }}</dd>
+          </div>
+          <div class="advogado-details__item">
+            <dt>CPF</dt>
+            <dd>{{ cpfLabel(advogado['cpf']) }}</dd>
+          </div>
+          <div class="advogado-details__item">
+            <dt>RG</dt>
+            <dd>{{ advogado['rg'] || '-' }}</dd>
+          </div>
+          <div class="advogado-details__item">
+            <dt>Nacionalidade</dt>
+            <dd>{{ advogado['nacionalidade'] || '-' }}</dd>
+          </div>
+          <div class="advogado-details__item">
+            <dt>Estado civil</dt>
+            <dd>{{ estadoCivilLabel(advogado['estado_civil']) }}</dd>
+          </div>
+          <div class="advogado-details__item">
+            <dt>Profissão</dt>
+            <dd>{{ advogado['profissao'] || '-' }}</dd>
+          </div>
+          <div class="advogado-details__item">
+            <dt>E-mail</dt>
+            <dd>{{ advogado['email'] || '-' }}</dd>
+          </div>
+          <div class="advogado-details__item">
+            <dt>Telefone/WhatsApp</dt>
+            <dd>{{ advogado['telefone_whatsapp'] || '-' }}</dd>
+          </div>
+          <div class="advogado-details__item">
+            <dt>Cidade</dt>
+            <dd>{{ advogado['cidade_profissional'] || '-' }}</dd>
+          </div>
+          <div class="advogado-details__item">
+            <dt>CEP</dt>
+            <dd>{{ advogado['cep_profissional'] || '-' }}</dd>
+          </div>
+          <div class="advogado-details__item advogado-details__item--full">
+            <dt>Endereço profissional</dt>
+            <dd>{{ advogado['endereco_profissional'] || '-' }}</dd>
+          </div>
+          <div class="advogado-details__item advogado-details__item--full">
+            <dt>Observações</dt>
+            <dd>{{ advogado['observacoes'] || '-' }}</dd>
+          </div>
+        </dl>
+      } @else {
+        <p class="advogado-details__empty">Selecione um advogado na tabela para ver os detalhes.</p>
+      }
+    </app-card>
+  </div>
+
+  @if (panelShell.panelVisible() && panelShell.layoutPainel() !== 'dialog') {
+    <div
+      class="advogados-resizer"
+      [class]="'advogados-resizer--' + panelShell.layoutPainel()"
+      role="separator"
+      [attr.aria-orientation]="panelShell.layoutPainel() === 'bottom' ? 'horizontal' : 'vertical'"
+      aria-label="Redimensionar painel"
+      (pointerdown)="panelShell.iniciarResize($event)"
+    ></div>
+  }
+
+  <section class="advogados-main" aria-label="Tabela de advogados">
+    <div class="advogados-header">
+      <h1>Advogados</h1>
+      <button
+        type="button"
+        class="advogados-panel-toggle"
+        [class.is-active]="panelShell.panelVisible()"
+        (click)="panelShell.togglePanel()"
+      >
+        <i class="fa-solid fa-table-columns" aria-hidden="true"></i>
+        {{ panelShell.panelVisible() ? 'Ocultar painel' : 'Mostrar painel' }}
+      </button>
+    </div>
+
+    <div class="advogados-table-wrap">
+      <app-domain-table
+        #dtAdvogado
+        entityName="advogado"
+        fields="id,favorito,nome,nacionalidade,estadoCivil,profissao,oab,cpf,rg,email,telefoneWhatsapp,enderecoProfissional,cepProfissional,cidadeProfissional,ativo,observacoes"
+        columnFields="nome,oab,cpf,email,cidadeProfissional,ativo"
+        [columnOverrides]="advogadoColumnOverrides"
+        trackKey="id"
+        emptyMessage="Nenhum advogado encontrado."
+        [sortable]="true"
+        [initialSort]="{ key: 'nome', direction: 'asc' }"
+        [rowClass]="advogadoRowClass"
+        [pinFirst]="advogadoPinFirst"
+        [pinAction]="advogadoPinAction"
+        (loadError)="onLoadError()"
+        (rowClick)="selectAdvogado($event)"
+      />
+    </div>
+
+    <footer class="advogados-main__footer">
+      <span>{{ totalAdvogados() }} advogado(s) cadastrado(s)</span>
+      @if (loadError()) {
+        <span>
+          · Não foi possível carregar a lista.
+          <button type="button" class="advogados-link-button" (click)="reloadList()">
+            Tentar de novo
+          </button>
+        </span>
+      }
+    </footer>
+  </section>
+</div>

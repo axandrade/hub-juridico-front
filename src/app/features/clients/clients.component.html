@@ -1,26 +1,26 @@
 <div
   class="clients"
-  [attr.data-layout]="layoutPainel()"
-  [class.clients--panel-hidden]="!panelVisible()"
-  [style.--painel-largura.px]="painelLargura()"
-  [style.--painel-altura.px]="painelAltura()"
+  [attr.data-layout]="panelShell.layoutPainel()"
+  [class.clients--panel-hidden]="!panelShell.panelVisible()"
+  [style.--painel-largura.px]="panelShell.painelLargura()"
+  [style.--painel-altura.px]="panelShell.painelAltura()"
 >
-  @if (layoutPainel() === 'dialog' && panelVisible()) {
+  @if (panelShell.layoutPainel() === 'dialog' && panelShell.panelVisible()) {
     <button
       type="button"
       class="clients-panel-backdrop"
       aria-label="Fechar painel"
-      (click)="$event.stopPropagation(); setPanelVisible(false)"
+      (click)="$event.stopPropagation(); panelShell.setPanelVisible(false)"
     ></button>
   }
 
   <div class="clients-panel-slot">
-    @if (layoutPainel() === 'dialog' && panelVisible()) {
+    @if (panelShell.layoutPainel() === 'dialog' && panelShell.panelVisible()) {
       <button
         type="button"
         class="clients-panel-slot__close"
         aria-label="Fechar painel"
-        (click)="$event.stopPropagation(); setPanelVisible(false)"
+        (click)="$event.stopPropagation(); panelShell.setPanelVisible(false)"
       >
         <i class="fa-solid fa-xmark" aria-hidden="true"></i>
       </button>
@@ -28,22 +28,22 @@
     <app-client-form
       [pessoaId]="selectedPersonId()"
       novoTipo="FISICA"
-      [layoutPainel]="layoutPainel()"
-      (layoutPainelChange)="setLayoutPainel($event)"
+      [layoutPainel]="panelShell.layoutPainel()"
+      (layoutPainelChange)="panelShell.setLayoutPainel($event)"
       (saved)="onSaved($event)"
       (statusChanged)="onStatusChanged($event)"
       (cleared)="onCleared()"
     />
   </div>
 
-  @if (panelVisible() && layoutPainel() !== 'dialog') {
+  @if (panelShell.panelVisible() && panelShell.layoutPainel() !== 'dialog') {
     <div
       class="clients-resizer"
-      [class]="'clients-resizer--' + layoutPainel()"
+      [class]="'clients-resizer--' + panelShell.layoutPainel()"
       role="separator"
-      [attr.aria-orientation]="layoutPainel() === 'bottom' ? 'horizontal' : 'vertical'"
+      [attr.aria-orientation]="panelShell.layoutPainel() === 'bottom' ? 'horizontal' : 'vertical'"
       aria-label="Redimensionar painel"
-      (pointerdown)="iniciarResize($event)"
+      (pointerdown)="panelShell.iniciarResize($event)"
     ></div>
   }
 
@@ -75,11 +75,11 @@
       <button
         type="button"
         class="clients-panel-toggle"
-        [class.is-active]="panelVisible()"
-        (click)="togglePanel()"
+        [class.is-active]="panelShell.panelVisible()"
+        (click)="panelShell.togglePanel()"
       >
         <i class="fa-solid fa-table-columns" aria-hidden="true"></i>
-        {{ panelVisible() ? 'Ocultar painel' : 'Mostrar painel' }}
+        {{ panelShell.panelVisible() ? 'Ocultar painel' : 'Mostrar painel' }}
       </button>
     </div>
 

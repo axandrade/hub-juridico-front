@@ -13,11 +13,7 @@ import {
 import { ModalidadeCliente, IPessoa } from '../../core/models';
 import { ButtonComponent } from '../../shared/components/button/button.component';
 import { ModalComponent } from '../../shared/components/modal/modal.component';
-import {
-  PAINEL_LAYOUT_PADRAO,
-  PainelLayout,
-  ehPainelLayout,
-} from './models/painel-layout';
+import { PanelShellController } from '../../shared/panel-shell/panel-shell.controller';
 import { PastaClienteService } from './services/pasta-cliente.service';
 import { ClientStore } from './services/client-store';
 import { ClientFormComponent } from './components/client-form/client-form.component';
@@ -27,18 +23,6 @@ import { emailPrincipal, contatoPrincipal } from '../../core/models';
 import { DomainTableComponent, DomainRow } from '../../shared/components/domain-table/domain-table.component';
 import { TableColumn } from '../../shared/components/table/table-column.model';
 import { TablePinAction } from '../../shared/components/table/table.model';
-
-const LAYOUT_STORAGE_KEY = 'hub-juridico.clients.layout';
-const LARGURA_STORAGE_KEY = 'hub-juridico.clients.painelLargura';
-const ALTURA_STORAGE_KEY = 'hub-juridico.clients.painelAltura';
-
-/** Limites (px) do redimensionamento do painel. */
-const PAINEL_LARGURA_MIN = 300;
-const PAINEL_LARGURA_MAX = 680;
-const PAINEL_LARGURA_PADRAO = 400;
-const PAINEL_ALTURA_MIN = 220;
-const PAINEL_ALTURA_MAX = 640;
-const PAINEL_ALTURA_PADRAO = 340;
 
 type PageNotice = '' | 'shareReady' | 'importReady' | 'loadError';
 
@@ -64,19 +48,10 @@ export class ClientsComponent {
   private readonly dtClient = viewChild<DomainTableComponent>('dtClient');
 
   protected readonly selectedPersonId = signal<number | null>(null);
-  /** Posição do painel do cliente (esquerda/direita/abaixo/diálogo) — lembrada no localStorage. */
-  protected readonly layoutPainel = signal<PainelLayout>(this.carregarLayout());
-  /** No modo diálogo o painel começa oculto (só aparece ao selecionar/criar um cliente). */
-  protected readonly panelVisible = signal(this.layoutPainel() !== 'dialog');
-  /** Tamanho do painel (px) — largura nos modos esquerda/direita, altura no modo abaixo. */
-  protected readonly painelLargura = signal(
-    this.carregarTamanho(LARGURA_STORAGE_KEY, PAINEL_LARGURA_PADRAO, PAINEL_LARGURA_MIN, PAINEL_LARGURA_MAX),
-  );
-  protected readonly painelAltura = signal(
-    this.carregarTamanho(ALTURA_STORAGE_KEY, PAINEL_ALTURA_PADRAO, PAINEL_ALTURA_MIN, PAINEL_ALTURA_MAX),
-  );
-  /** `true` durante o arraste — usado para não desmarcar o cliente no clique que segue. */
-  private redimensionando = false;
+  /** Posição/tamanho/visibilidade do painel — ver `PanelShellController`. */
+  protected readonly panelShell = new PanelShellController(this.document, {
+    storagePrefix: 'hub-juridico.clients',
+  });
   /** Aviso da pasta do cliente (upload/remoção/erro) mostrado dentro do diálogo. */
   protected readonly pastaNotice = signal<string | null>(null);
   protected readonly showMoreActions = signal(false);
@@ -228,108 +203,15 @@ export class ClientsComponent {
     this.dtClient()?.refresh();
   }
 
-  protected togglePanel(): void {
-    this.panelVisible.update((visible) => !visible);
-  }
-
-  protected setPanelVisible(visivel: boolean): void {
-    this.panelVisible.set(visivel);
-  }
-
-  protected setLayoutPainel(layout: PainelLayout): void {
-    this.layoutPainel.set(layout);
-    // Ao trocar de posição, mostra o painel ali (senão o usuário clica e nada muda).
-    this.panelVisible.set(true);
-    try {
-      localStorage.setItem(LAYOUT_STORAGE_KEY, layout);
-    } catch {
-      /* storage indisponível — a escolha vale só nesta sessão */
-    }
-  }
-
-  private carregarLayout(): PainelLayout {
-    try {
-      const salvo = localStorage.getItem(LAYOUT_STORAGE_KEY);
-      if (ehPainelLayout(salvo)) {
-        return salvo;
-      }
-    } catch {
-      /* ignore */
-    }
-    return PAINEL_LAYOUT_PADRAO;
-  }
-
-  // --- redimensionamento do painel ---
-
-  private carregarTamanho(chave: string, padrao: number, min: number, max: number): number {
-    try {
-      const salvo = Number(localStorage.getItem(chave));
-      if (Number.isFinite(salvo) && salvo > 0) {
-        return this.limitar(salvo, min, max);
-      }
-    } catch {
-      /* ignore */
-    }
-    return padrao;
-  }
-
-  private limitar(valor: number, min: number, max: number): number {
-    return Math.min(Math.max(valor, min), max);
-  }
-
-  /** Começa a arrastar a divisória painel/tabela. */
-  protected iniciarResize(event: PointerEvent): void {
-    event.preventDefault();
-    const layout = this.layoutPainel();
-    const vertical = layout === 'bottom';
-    const inicioPonteiro = vertical ? event.clientY : event.clientX;
-    const tamanhoInicial = vertical ? this.painelAltura() : this.painelLargura();
-    // esquerda: arrastar p/ direita alarga; direita/abaixo: arrastar p/ o lado oposto alarga.
-    const sinal = layout === 'left' ? 1 : -1;
-
-    const mover = (e: PointerEvent) => {
-      this.redimensionando = true;
-      const atual = vertical ? e.clientY : e.clientX;
-      const delta = (atual - inicioPonteiro) * sinal;
-      if (vertical) {
-        this.painelAltura.set(this.limitar(tamanhoInicial + delta, PAINEL_ALTURA_MIN, PAINEL_ALTURA_MAX));
-      } else {
-        this.painelLargura.set(
-          this.limitar(tamanhoInicial + delta, PAINEL_LARGURA_MIN, PAINEL_LARGURA_MAX),
-        );
-      }
-    };
-
-    const encerrar = () => {
-      this.document.removeEventListener('pointermove', mover);
-      this.document.removeEventListener('pointerup', encerrar);
-      this.document.body.style.userSelect = '';
-      this.document.body.style.cursor = '';
-      this.persistirTamanho(vertical ? ALTURA_STORAGE_KEY : LARGURA_STORAGE_KEY,
-        vertical ? this.painelAltura() : this.painelLargura());
-      // Limpa a flag depois do clique sintético que fecha o arraste.
-      setTimeout(() => (this.redimensionando = false));
-    };
-
-    this.document.addEventListener('pointermove', mover);
-    this.document.addEventListener('pointerup', encerrar);
-    this.document.body.style.userSelect = 'none';
-    this.document.body.style.cursor = vertical ? 'row-resize' : 'col-resize';
-  }
-
-  private persistirTamanho(chave: string, valor: number): void {
-    try {
-      localStorage.setItem(chave, String(Math.round(valor)));
-    } catch {
-      /* ignore */
-    }
-  }
-
   /** No modo diálogo, Esc esconde o painel (mantém o cliente selecionado). */
   @HostListener('document:keydown.escape')
   protected onEscape(): void {
-    if (this.layoutPainel() === 'dialog' && this.panelVisible() && !this.temModalAberto()) {
-      this.panelVisible.set(false);
+    if (
+      this.panelShell.layoutPainel() === 'dialog' &&
+      this.panelShell.panelVisible() &&
+      !this.temModalAberto()
+    ) {
+      this.panelShell.setPanelVisible(false);
     }
   }
 
@@ -348,7 +230,7 @@ export class ClientsComponent {
 
   protected newRecord(): void {
     this.selectedPersonId.set(null);
-    this.panelVisible.set(true);
+    this.panelShell.setPanelVisible(true);
   }
 
   protected selectClient(row: DomainRow | null): void {
@@ -361,7 +243,7 @@ export class ClientsComponent {
     }
 
     this.selectedPersonId.set(id);
-    this.panelVisible.set(true);
+    this.panelShell.setPanelVisible(true);
   }
 
   /**
@@ -376,7 +258,7 @@ export class ClientsComponent {
       this.showMoreActions.set(false);
     }
 
-    if (this.selectedPersonId() === null || this.editor()?.locked() || this.redimensionando) {
+    if (this.selectedPersonId() === null || this.editor()?.locked() || this.panelShell.redimensionando) {
       return;
     }
     if (

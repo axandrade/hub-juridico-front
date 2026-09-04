@@ -37,7 +37,8 @@ import { ClientContactListComponent } from '../client-contact-list/client-contac
 import { ClientEmailListComponent } from '../client-email-list/client-email-list.component';
 import { ClientFieldComponent } from '../client-field/client-field.component';
 import { ClientRepresentativesComponent } from '../client-representatives/client-representatives.component';
-import { PAINEL_LAYOUT_PADRAO, PainelLayout } from '../../models/painel-layout';
+import { PanelLayoutSwitcherComponent } from '../../../../shared/components/panel-layout-switcher/panel-layout-switcher.component';
+import { PAINEL_LAYOUT_PADRAO, PainelLayout } from '../../../../shared/models/panel-layout';
 
 type PanelTab = 'person' | 'admin' | 'records';
 
@@ -87,6 +88,7 @@ interface EditorNotice {
     ClientContactListComponent,
     ClientRepresentativesComponent,
     ClientAdminFormComponent,
+    PanelLayoutSwitcherComponent,
   ],
   templateUrl: './client-form.component.html',
   styleUrl: './client-form.component.scss',
@@ -111,9 +113,6 @@ export class ClientFormComponent {
   readonly statusChanged = output<IPessoa>();
   readonly cleared = output<void>();
   readonly layoutPainelChange = output<PainelLayout>();
-
-  /** Ordem dos botões de posição no header (diálogo · esquerda · abaixo · direita). */
-  protected readonly opcoesLayout: readonly PainelLayout[] = ['dialog', 'left', 'bottom', 'right'];
 
   /** Lido pela página (via `viewChild`) para travar a troca de ficha. */
   readonly locked = signal(false);
@@ -307,19 +306,6 @@ export class ClientFormComponent {
 
   protected escolherLayout(layout: PainelLayout): void {
     this.layoutPainelChange.emit(layout);
-  }
-
-  protected rotuloLayout(layout: PainelLayout): string {
-    switch (layout) {
-      case 'left':
-        return 'Painel à esquerda';
-      case 'right':
-        return 'Painel à direita';
-      case 'bottom':
-        return 'Painel abaixo';
-      case 'dialog':
-        return 'Painel em diálogo';
-    }
   }
 
   /** Control de string dentro do grupo `pessoa` (usado pelos campos da aba). */

@@ -1,0 +1,85 @@
+<div class="layout-switcher" role="group" aria-label="Posição do painel">
+  @for (layout of opcoes; track layout) {
+    <button
+      type="button"
+      class="layout-switcher__btn"
+      [class.is-active]="layoutPainel() === layout"
+      [title]="rotulo(layout)"
+      [attr.aria-label]="rotulo(layout)"
+      [attr.aria-pressed]="layoutPainel() === layout"
+      (click)="escolher(layout)"
+    >
+      @switch (layout) {
+        @case ('dialog') {
+          <svg viewBox="0 0 16 16" aria-hidden="true">
+            <rect
+              x="1.75"
+              y="2.5"
+              width="9"
+              height="9"
+              rx="1.75"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.4"
+            />
+            <rect
+              x="5.25"
+              y="5"
+              width="9"
+              height="9"
+              rx="1.75"
+              fill="var(--layout-icon-bg)"
+              stroke="currentColor"
+              stroke-width="1.4"
+            />
+          </svg>
+        }
+        @case ('left') {
+          <svg viewBox="0 0 16 16" aria-hidden="true">
+            <rect
+              x="1.75"
+              y="2.75"
+              width="12.5"
+              height="10.5"
+              rx="1.75"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.4"
+            />
+            <rect x="2.75" y="3.75" width="3.25" height="8.5" rx="0.75" fill="currentColor" />
+          </svg>
+        }
+        @case ('right') {
+          <svg viewBox="0 0 16 16" aria-hidden="true">
+            <rect
+              x="1.75"
+              y="2.75"
+              width="12.5"
+              height="10.5"
+              rx="1.75"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.4"
+            />
+            <rect x="10" y="3.75" width="3.25" height="8.5" rx="0.75" fill="currentColor" />
+          </svg>
+        }
+        @case ('bottom') {
+          <svg viewBox="0 0 16 16" aria-hidden="true">
+            <rect
+              x="1.75"
+              y="2.75"
+              width="12.5"
+              height="10.5"
+              rx="1.75"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.4"
+            />
+            <rect x="3.75" y="9" width="8.5" height="3.25" rx="0.75" fill="currentColor" />
+          </svg>
+        }
+      }
+    </button>
+  }
+</div>

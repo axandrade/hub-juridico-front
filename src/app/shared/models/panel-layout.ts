@@ -1,4 +1,4 @@
-/** Posição do painel do cliente na tela de clientes. */
+/** Posição de um painel lateral de detalhes/edição na tela (tabela + painel). */
 export const PAINEL_LAYOUTS = ['left', 'right', 'bottom', 'dialog'] as const;
 
 export type PainelLayout = (typeof PAINEL_LAYOUTS)[number];

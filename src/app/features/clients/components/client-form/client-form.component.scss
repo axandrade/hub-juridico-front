@@ -103,22 +103,6 @@
   }
 }
 
-.clients-panel__layout-btn {
-  // Cor de fundo que o ícone de "diálogo" usa para o quadrado da frente ocultar o de trás.
-  --layout-icon-bg: #{$color-neutral-light};
-
-  &.is-active {
-    --layout-icon-bg: #f1d4d3;
-    color: $color-primary;
-  }
-
-  svg {
-    display: block;
-    width: 15px;
-    height: 15px;
-  }
-}
-
 .clients-icon-button,
 .clients-panel__tabs button {
   border: 1px solid $color-border;

@@ -55,6 +55,7 @@
 
 .clients-panel__natureza {
   display: inline-flex;
+  flex-shrink: 0;
   margin: $spacing-xs 0;
   border: 1px solid $color-border;
   border-radius: $border-radius-sm;
@@ -69,6 +70,7 @@
     font: inherit;
     font-size: $font-size-xs;
     font-weight: $font-weight-medium;
+    white-space: nowrap;
     transition:
       background-color $transition-fast,
       color $transition-fast;

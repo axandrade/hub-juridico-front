@@ -1,7 +1,7 @@
 @for (row of rows; track $index) {
   <div class="clients-form__row" [class.clients-form__row--cols-3]="row.length === 3">
     @for (field of row; track field.key) {
-      <app-client-field [config]="field" [control]="control(field.key)" />
+      <app-client-field [config]="field" [control]="control(field.key)" (blurred)="onFieldBlur($event)" />
     }
   </div>
 }

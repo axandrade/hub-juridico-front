@@ -1,6 +1,7 @@
-import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 
+import { CepMaskDirective } from '../../../../shared/directives/cep-mask.directive';
 import { CpfMaskDirective } from '../../../../shared/directives/cpf-mask.directive';
 import {
   CLIENT_FIELD_LABELS,
@@ -16,14 +17,14 @@ import {
 @Component({
   selector: 'app-client-field',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ReactiveFormsModule, CpfMaskDirective],
+  imports: [ReactiveFormsModule, CpfMaskDirective, CepMaskDirective],
   template: `
     <label class="clients-field" [class.clients-field--full]="config().span === 'full'">
       <span>{{ label() }}</span>
 
       @switch (kind()) {
         @case ('select') {
-          <select [formControl]="control()">
+          <select [formControl]="control()" (blur)="blurred.emit(config().key)">
             <option value="">Selecione</option>
             @for (option of config().options ?? []; track option) {
               <option [value]="option">{{ optionLabel(option) }}</option>
@@ -31,7 +32,7 @@ import {
           </select>
         }
         @case ('textarea') {
-          <textarea [formControl]="control()" [rows]="config().rows ?? 3"></textarea>
+          <textarea [formControl]="control()" [rows]="config().rows ?? 3" (blur)="blurred.emit(config().key)"></textarea>
         }
         @case ('readonly') {
           <input
@@ -42,10 +43,13 @@ import {
           />
         }
         @case ('cpf') {
-          <input type="text" appCpfMask [formControl]="control()" />
+          <input type="text" appCpfMask [formControl]="control()" (blur)="blurred.emit(config().key)" />
+        }
+        @case ('cep') {
+          <input type="text" appCepMask [formControl]="control()" (blur)="blurred.emit(config().key)" />
         }
         @default {
-          <input [type]="kind()" [formControl]="control()" />
+          <input [type]="kind()" [formControl]="control()" (blur)="blurred.emit(config().key)" />
         }
       }
     </label>
@@ -55,13 +59,17 @@ import {
 export class ClientFieldComponent {
   readonly config = input.required<ClientFieldConfig>();
   readonly control = input.required<FormControl<string>>();
+  /** Emite a `key` do campo quando ele perde o foco. */
+  readonly blurred = output<string>();
 
   protected readonly label = computed(
     () => CLIENT_FIELD_LABELS[this.config().key] ?? this.config().key,
   );
-  protected readonly kind = computed<ClientInputKind | 'cpf'>(() =>
-    this.config().mask === 'cpf' ? 'cpf' : (this.config().type ?? 'text'),
-  );
+  protected readonly kind = computed<ClientInputKind | 'cpf' | 'cep'>(() => {
+    if (this.config().mask === 'cpf') return 'cpf';
+    if (this.config().mask === 'cep') return 'cep';
+    return this.config().type ?? 'text';
+  });
 
   protected optionLabel(option: string): string {
     return CLIENT_OPTION_LABELS[option] ?? option;

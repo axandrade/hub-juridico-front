@@ -148,7 +148,7 @@
     [title]="'Pasta — ' + (pastaCliente.cliente()?.nome || 'cliente')"
     (closed)="fecharPasta()"
   >
-    <app-client-files [pessoaId]="selectedPersonId()!" (notify)="onPastaNotice($event)" />
+    <app-document-explorer [pessoaId]="selectedPersonId()!" (notify)="onPastaNotice($event)" />
     @if (pastaNotice()) {
       <p class="clients-pasta-notice">{{ pastaNotice() }}</p>
     }

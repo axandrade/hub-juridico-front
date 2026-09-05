@@ -1,0 +1,257 @@
+<div class="doc-explorer" (click)="onClickNoExplorador($event)">
+  <div class="doc-explorer__toolbar">
+    <nav class="doc-explorer__breadcrumb" aria-label="Caminho da pasta">
+      <button
+        type="button"
+        class="doc-explorer__crumb"
+        [class.is-current]="pastaAtualId() === null"
+        [class.is-drop-target]="estaSobAlvo('')"
+        (click)="irParaBreadcrumb(null)"
+        (dragover)="onDragOverAlvo($event, '')"
+        (dragleave)="onDragLeaveAlvo('')"
+        (drop)="onDropNoBreadcrumb($event, null)"
+      >
+        <i class="fa-solid fa-house" aria-hidden="true"></i>
+        Raiz
+      </button>
+      @for (item of breadcrumb(); track item.id; let last = $last) {
+        <i class="fa-solid fa-angle-right doc-explorer__crumb-sep" aria-hidden="true"></i>
+        <button
+          type="button"
+          class="doc-explorer__crumb"
+          [class.is-current]="last"
+          [class.is-drop-target]="estaSobAlvo(item.id)"
+          [disabled]="last"
+          (click)="irParaBreadcrumb(item)"
+          (dragover)="onDragOverAlvo($event, item.id)"
+          (dragleave)="onDragLeaveAlvo(item.id)"
+          (drop)="onDropNoBreadcrumb($event, item)"
+        >
+          {{ item.nome }}
+        </button>
+      }
+    </nav>
+
+    <div class="doc-explorer__actions">
+      <button type="button" class="doc-explorer__action" (click)="criarPastaInline()">
+        <i class="fa-solid fa-folder-plus" aria-hidden="true"></i>
+        Nova pasta
+      </button>
+      <button type="button" class="doc-explorer__action" (click)="abrirSeletorArquivo()">
+        <i class="fa-solid fa-file-arrow-up" aria-hidden="true"></i>
+        Enviar arquivo
+      </button>
+      <button type="button" class="doc-explorer__action" title="Atualizar" aria-label="Atualizar" (click)="recarregar()">
+        <i class="fa-solid fa-rotate" aria-hidden="true"></i>
+      </button>
+    </div>
+  </div>
+
+  @if (enviandoQtd() > 0) {
+    <p class="doc-explorer__uploading">
+      <i class="fa-solid fa-spinner fa-spin" aria-hidden="true"></i>
+      Enviando {{ enviandoQtd() }} arquivo(s)...
+    </p>
+  }
+
+  <div
+    class="doc-explorer__list"
+    [class.is-drop-target]="dragOverFundo()"
+    (dragover)="onDragOverFundo($event)"
+    (dragleave)="onDragLeaveFundo()"
+    (drop)="onDropFundo($event)"
+    (scroll)="fecharMenu()"
+  >
+    <table>
+      <thead>
+        <tr>
+          <th>Nome</th>
+          <th>Tamanho</th>
+          <th>Data</th>
+          <th aria-label="Ações"></th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (pasta of subpastas(); track pasta.id) {
+          <tr
+            draggable="true"
+            class="doc-explorer__row"
+            [class.is-drop-target]="estaSobAlvo(pasta.id)"
+            (dragstart)="onDragStartPasta($event, pasta)"
+            (dragend)="onDragEnd()"
+            (dragover)="onDragOverAlvo($event, pasta.id)"
+            (dragleave)="onDragLeaveAlvo(pasta.id)"
+            (drop)="onDropNaPasta($event, pasta)"
+            (dblclick)="abrirPasta(pasta)"
+          >
+            <td class="doc-explorer__name-cell">
+              @if (estaEditando('pasta', pasta.id)) {
+                <input
+                  type="text"
+                  appAutoFocusSelect
+                  class="doc-explorer__inline-edit"
+                  [value]="pasta.nome"
+                  (click)="$event.stopPropagation()"
+                  (blur)="confirmarEdicaoInline('pasta', pasta.id, $event)"
+                  (keydown.enter)="$event.preventDefault(); confirmarEdicaoInline('pasta', pasta.id, $event)"
+                  (keydown.escape)="cancelarEdicaoInline()"
+                />
+              } @else {
+                <button type="button" draggable="false" class="doc-explorer__name-btn" (click)="abrirPasta(pasta)">
+                  <i class="fa-solid fa-folder" aria-hidden="true"></i>
+                  {{ pasta.nome }}
+                </button>
+              }
+            </td>
+            <td>-</td>
+            <td>{{ formatarData(pasta.atualizadoEm) }}</td>
+            <td class="doc-explorer__row-menu">
+              <button
+                type="button"
+                draggable="false"
+                title="Mais ações"
+                aria-label="Mais ações da pasta"
+                (click)="toggleMenu('pasta:' + pasta.id, $event)"
+              >
+                <i class="fa-solid fa-ellipsis-vertical" aria-hidden="true"></i>
+              </button>
+              @if (menuAberto() === 'pasta:' + pasta.id) {
+                <div
+                  class="doc-explorer__menu"
+                  draggable="false"
+                  role="menu"
+                  [style.top.px]="menuPos()?.top"
+                  [style.bottom.px]="menuPos()?.bottom"
+                  [style.right.px]="menuPos()?.right"
+                >
+                  <button type="button" (click)="abrirPasta(pasta)">
+                    <i class="fa-solid fa-folder-open" aria-hidden="true"></i>
+                    Abrir
+                  </button>
+                  <button type="button" (click)="iniciarEdicaoInline('pasta', pasta.id)">
+                    <i class="fa-solid fa-pen" aria-hidden="true"></i>
+                    Renomear
+                  </button>
+                  @if (pastaAtualId() !== null) {
+                    <button type="button" (click)="moverParaPastaPai('pasta', pasta.id)">
+                      <i class="fa-solid fa-turn-up" aria-hidden="true"></i>
+                      Mover para pasta anterior
+                    </button>
+                  }
+                  <button type="button" (click)="abrirExclusao('pasta', pasta.id, pasta.nome)">
+                    <i class="fa-solid fa-trash" aria-hidden="true"></i>
+                    Excluir
+                  </button>
+                </div>
+              }
+            </td>
+          </tr>
+        }
+        @for (documento of documentos(); track documento.id) {
+          <tr
+            draggable="true"
+            class="doc-explorer__row"
+            (dragstart)="onDragStartDocumento($event, documento)"
+            (dragend)="onDragEnd()"
+          >
+            <td class="doc-explorer__name-cell">
+              @if (estaEditando('documento', documento.id)) {
+                <input
+                  type="text"
+                  appAutoFocusSelect
+                  class="doc-explorer__inline-edit"
+                  [value]="documento.nome"
+                  (click)="$event.stopPropagation()"
+                  (blur)="confirmarEdicaoInline('documento', documento.id, $event)"
+                  (keydown.enter)="$event.preventDefault(); confirmarEdicaoInline('documento', documento.id, $event)"
+                  (keydown.escape)="cancelarEdicaoInline()"
+                />
+              } @else {
+                <i [class]="iconeDocumento(documento)" aria-hidden="true"></i>
+                {{ documento.nome }}
+              }
+            </td>
+            <td>{{ formatarTamanho(documento.tamanhoBytes) }}</td>
+            <td>{{ formatarData(documento.enviadoEm) }}</td>
+            <td class="doc-explorer__row-menu">
+              <button
+                type="button"
+                draggable="false"
+                title="Mais ações"
+                aria-label="Mais ações do documento"
+                (click)="toggleMenu('doc:' + documento.id, $event)"
+              >
+                <i class="fa-solid fa-ellipsis-vertical" aria-hidden="true"></i>
+              </button>
+              @if (menuAberto() === 'doc:' + documento.id) {
+                <div
+                  class="doc-explorer__menu"
+                  draggable="false"
+                  role="menu"
+                  [style.top.px]="menuPos()?.top"
+                  [style.bottom.px]="menuPos()?.bottom"
+                  [style.right.px]="menuPos()?.right"
+                >
+                  <button type="button" (click)="baixar(documento)">
+                    <i class="fa-solid fa-download" aria-hidden="true"></i>
+                    Baixar
+                  </button>
+                  <button type="button" (click)="iniciarEdicaoInline('documento', documento.id)">
+                    <i class="fa-solid fa-pen" aria-hidden="true"></i>
+                    Renomear
+                  </button>
+                  @if (pastaAtualId() !== null) {
+                    <button type="button" (click)="moverParaPastaPai('documento', documento.id)">
+                      <i class="fa-solid fa-turn-up" aria-hidden="true"></i>
+                      Mover para pasta anterior
+                    </button>
+                  }
+                  <button type="button" (click)="abrirExclusao('documento', documento.id, documento.nome)">
+                    <i class="fa-solid fa-trash" aria-hidden="true"></i>
+                    Excluir
+                  </button>
+                </div>
+              }
+            </td>
+          </tr>
+        }
+        @if (vazio()) {
+          <tr class="doc-explorer__empty-row">
+            <td colspan="4">
+              @if (loading()) {
+                Carregando...
+              } @else {
+                Pasta vazia. Arraste arquivos aqui ou use "Enviar arquivo".
+              }
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<input
+  #fileInput
+  type="file"
+  multiple
+  hidden
+  [accept]="'.pdf,.png,.jpg,.jpeg'"
+  (change)="onArquivoEscolhido($event)"
+/>
+
+<app-modal [open]="exclusaoAlvo() !== null" title="Excluir" (closed)="cancelarExclusao()">
+  <p>
+    Excluir
+    @if (exclusaoAlvo()?.tipo === 'pasta') {
+      a pasta
+    } @else {
+      o documento
+    }
+    "{{ exclusaoAlvo()?.nome }}"?
+  </p>
+  <div modalFooter class="doc-explorer__modal-footer">
+    <app-button variant="tertiary" label="Cancelar" (clicked)="cancelarExclusao()" />
+    <app-button variant="primary" label="Excluir" [disabled]="exclusaoSalvando()" (clicked)="confirmarExclusao()" />
+  </div>
+</app-modal>

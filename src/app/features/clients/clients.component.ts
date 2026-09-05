@@ -21,7 +21,11 @@ import { PanelShellController } from '../../shared/panel-shell/panel-shell.contr
 import { PastaClienteService } from './services/pasta-cliente.service';
 import { ClientStore, ClientListQuery } from './services/client-store';
 import { ClientFormComponent } from './components/client-form/client-form.component';
-import { ClientFilesComponent, ClientFilesNotice } from './components/client-files/client-files.component';
+import {
+  DocumentExplorerComponent,
+  DocumentExplorerNotice,
+  DocumentExplorerNoticeKey,
+} from '../documents/components/document-explorer/document-explorer.component';
 import { emailPrincipal, contatoPrincipal } from '../../core/models';
 import { DataTableComponent } from '../../shared/components/table/data-table.component';
 import { TableColumn } from '../../shared/components/table/table-column.model';
@@ -36,7 +40,7 @@ type PageNotice = '' | 'shareReady' | 'importReady' | 'loadError';
     ButtonComponent,
     ClientFormComponent,
     ModalComponent,
-    ClientFilesComponent,
+    DocumentExplorerComponent,
     DataTableComponent,
   ],
   templateUrl: './clients.component.html',
@@ -330,7 +334,7 @@ export class ClientsComponent {
     }
     if (
       !target ||
-      target.closest('tr, app-client-form, app-client-files, app-modal, app-header, .clients-resizer')
+      target.closest('tr, app-client-form, app-document-explorer, app-modal, app-header, .clients-resizer')
     ) {
       return;
     }
@@ -358,16 +362,20 @@ export class ClientsComponent {
     this.pastaNotice.set(null);
   }
 
-  protected onPastaNotice(evento: ClientFilesNotice): void {
+  protected onPastaNotice(evento: DocumentExplorerNotice): void {
     const alvo = evento.subject ?? '';
-    const textos: Record<ClientFilesNotice['key'], string> = {
-      saveBeforeUpload: 'Salve o cliente antes de anexar arquivos.',
+    const textos: Record<DocumentExplorerNoticeKey, string> = {
+      pastaCriada: `Pasta criada: ${alvo}`,
+      pastaCriadaErro: `Não foi possível criar a pasta: ${alvo}`,
+      renomeado: `Renomeado: ${alvo}`,
+      renomeadoErro: `Não foi possível renomear: ${alvo}`,
+      movidoErro: `Não foi possível mover: ${alvo}`,
+      excluido: `Excluído: ${alvo}`,
+      excluidoErro: `Não foi possível excluir: ${alvo}`,
+      pastaNaoVazia: `A pasta "${alvo}" não está vazia.`,
       uploadOk: `Arquivo enviado: ${alvo}`,
-      uploadError: `Não foi possível enviar: ${alvo}`,
-      fileRemoved: `Arquivo removido: ${alvo}`,
-      removeError: `Não foi possível remover: ${alvo}`,
-      downloadError: `Não foi possível baixar: ${alvo}`,
-      viewError: `Não foi possível abrir: ${alvo}`,
+      uploadErro: `Não foi possível enviar: ${alvo}`,
+      downloadErro: `Não foi possível baixar: ${alvo}`,
     };
     this.pastaNotice.set(textos[evento.key]);
   }

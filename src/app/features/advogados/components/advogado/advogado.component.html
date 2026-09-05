@@ -117,7 +117,19 @@
 
   <section class="advogados-main" aria-label="Tabela de advogados">
     <div class="advogados-header">
-      <h1>Advogados</h1>
+      <div class="advogados-header__title">
+        <h1>Advogados</h1>
+
+        <label class="advogados-toggle-inativos">
+          <input
+            type="checkbox"
+            [checked]="incluirInativos()"
+            (change)="onToggleIncluirInativos($event)"
+          />
+          Mostrar inativos
+        </label>
+      </div>
+
       <button
         type="button"
         class="advogados-panel-toggle"
@@ -130,12 +142,10 @@
     </div>
 
     <div class="advogados-table-wrap">
-      <app-domain-table
-        #dtAdvogado
-        entityName="advogado"
-        fields="id,favorito,nome,nacionalidade,estadoCivil,profissao,oab,cpf,rg,email,telefoneWhatsapp,enderecoProfissional,cepProfissional,cidadeProfissional,ativo,observacoes"
-        columnFields="nome,oab,cpf,email,cidadeProfissional,ativo"
-        [columnOverrides]="advogadoColumnOverrides"
+      <app-data-table
+        [columns]="advogadoColumns"
+        [data]="advogados()"
+        [loading]="loading()"
         trackKey="id"
         emptyMessage="Nenhum advogado encontrado."
         [sortable]="true"
@@ -143,7 +153,10 @@
         [rowClass]="advogadoRowClass"
         [pinFirst]="advogadoPinFirst"
         [pinAction]="advogadoPinAction"
-        (loadError)="onLoadError()"
+        [columnFilterValues]="columnFilterValues()"
+        [pagination]="pagination()"
+        (columnFilterChange)="onColumnFilterChange($event)"
+        (pageChange)="onPageChange($event)"
         (rowClick)="selectAdvogado($event)"
       />
     </div>

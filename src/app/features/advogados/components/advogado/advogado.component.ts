@@ -2,25 +2,25 @@ import { DOCUMENT } from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
+  DestroyRef,
   HostListener,
   computed,
   inject,
   signal,
-  viewChild,
 } from '@angular/core';
+import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
+import { EMPTY, catchError, switchMap } from 'rxjs';
 
 import { BadgeComponent } from '../../../../shared/components/badge/badge.component';
 import { CardComponent } from '../../../../shared/components/card/card.component';
-import {
-  DomainRow,
-  DomainTableComponent,
-} from '../../../../shared/components/domain-table/domain-table.component';
 import { PanelLayoutSwitcherComponent } from '../../../../shared/components/panel-layout-switcher/panel-layout-switcher.component';
+import { DataTableComponent } from '../../../../shared/components/table/data-table.component';
 import { TableColumn } from '../../../../shared/components/table/table-column.model';
-import { TablePinAction } from '../../../../shared/components/table/table.model';
+import { TablePagination, TablePinAction } from '../../../../shared/components/table/table.model';
 import { PanelShellController } from '../../../../shared/panel-shell/panel-shell.controller';
-import { FavoritoService } from '../../../../shared/services/favorito.service';
 import { maskCpf } from '../../../../core/auth/cpf';
+import { AdvogadoApi } from '../../services/advogado-api.model';
+import { AdvogadoListQuery, AdvogadoStore } from '../../services/advogado-store';
 
 const ESTADO_CIVIL_LABELS: Record<string, string> = {
   SOLTEIRO: 'Solteiro(a)',
@@ -32,53 +32,64 @@ const ESTADO_CIVIL_LABELS: Record<string, string> = {
 
 /**
  * Tela de Advogados — mesmo conceito de "Clientes" (tabela + painel lateral posicionável), mas
- * só leitura: o cadastro de advogado não tem controller/service de escrita (ver decisão em
- * `advogado-entity` — CRUD básico usa o mecanismo genérico `/api/v1/domain/advogado`). Por isso
- * não há `app-client-form` equivalente aqui, só um painel de detalhes — mas a posição do painel
+ * só leitura por enquanto (o backend já suporta CRUD completo — ver `AdvogadoController` — mas
+ * o front ainda não tem formulário de criar/editar). Por isso não há `app-client-form`
+ * equivalente aqui, só um painel de detalhes — mas a posição do painel
  * (esquerda/direita/abaixo/diálogo), o redimensionamento e o mostrar/ocultar são os mesmos de
  * Clientes, via `PanelShellController` (ver o JSDoc dele).
  */
 @Component({
   selector: 'app-advogado',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [DomainTableComponent, CardComponent, BadgeComponent, PanelLayoutSwitcherComponent],
+  imports: [DataTableComponent, CardComponent, BadgeComponent, PanelLayoutSwitcherComponent],
   templateUrl: './advogado.component.html',
   styleUrl: './advogado.component.scss',
 })
 export class AdvogadoComponent {
   private readonly document = inject(DOCUMENT);
-  private readonly favoritoService = inject(FavoritoService);
-  private readonly dtAdvogado = viewChild<DomainTableComponent>('dtAdvogado');
-
-  /** Sobrepõe o `favorito` vindo do backend enquanto a tabela não recarrega a página (otimista). */
-  private readonly favoritosOverride = signal<Map<number, boolean>>(new Map());
+  private readonly destroyRef = inject(DestroyRef);
+  private readonly store = inject(AdvogadoStore);
 
   protected readonly panelShell = new PanelShellController(this.document, {
     storagePrefix: 'hub-juridico.advogados',
     larguraPadrao: 380,
   });
 
-  protected readonly selected = signal<DomainRow | null>(null);
+  protected readonly selected = signal<AdvogadoApi | null>(null);
+  protected readonly loading = signal(false);
   protected readonly loadError = signal(false);
   /** Trava o painel no advogado atual — clicar noutra linha não troca (mesmo padrão de Clientes). */
   protected readonly locked = signal(false);
 
-  protected readonly totalAdvogados = computed(
-    () => this.dtAdvogado()?.currentPagination()?.totalElements ?? 0,
-  );
+  private readonly page = signal(0);
+  private readonly reloadTick = signal(0);
+  /** `true` traz também advogados inativos — reflete o `incluirInativos` real do backend. */
+  protected readonly incluirInativos = signal(false);
+  protected readonly columnFilterValues = signal<Record<string, string>>({});
 
-  protected readonly advogadoColumnOverrides: Record<string, Partial<TableColumn<DomainRow>>> = {
-    nome: { header: 'Nome', width: '220px', filter: { type: 'text' } },
-    oab: { header: 'OAB', width: '150px', filter: { type: 'text' } },
-    cpf: {
+  protected readonly advogados = this.store.advogados;
+  protected readonly totalAdvogados = this.store.totalElements;
+  protected readonly pagination = computed<TablePagination>(() => ({
+    page: this.store.page(),
+    totalPages: this.store.totalPages(),
+    totalElements: this.store.totalElements(),
+    last: this.store.last(),
+  }));
+
+  protected readonly advogadoColumns: TableColumn<AdvogadoApi>[] = [
+    { key: 'nome', header: 'Nome', width: '220px', filter: { type: 'text' } },
+    { key: 'oab', header: 'OAB', width: '150px', filter: { type: 'text' } },
+    {
+      key: 'cpf',
       header: 'CPF',
       width: '140px',
       formatter: (value) => (value ? maskCpf(String(value)) : '-'),
       filter: { type: 'text' },
     },
-    email: { header: 'E-mail', width: '220px', filter: { type: 'text' } },
-    cidade_profissional: { header: 'Cidade', width: '160px', filter: { type: 'text' } },
-    ativo: {
+    { key: 'email', header: 'E-mail', width: '220px', filter: { type: 'text' } },
+    { key: 'cidade_profissional', header: 'Cidade', width: '160px', filter: { type: 'text' } },
+    {
+      key: 'ativo',
       header: 'Status',
       width: '110px',
       align: 'center',
@@ -86,54 +97,84 @@ export class AdvogadoComponent {
       badgeDot: true,
       formatter: (value) => (value ? 'Ativo' : 'Inativo'),
       badgeTone: (value) => (value ? 'success' : 'neutral'),
-      filter: {
-        type: 'select',
-        options: [
-          { value: '', label: 'Todos' },
-          { value: 'true', label: 'Ativo' },
-          { value: 'false', label: 'Inativo' },
-        ],
-      },
     },
-  };
+  ];
 
-  protected readonly advogadoRowClass = (row: DomainRow): Record<string, boolean> => ({
-    'is-selected': this.selected() !== null && Number(this.selected()?.['id']) === Number(row['id']),
-    'is-favorite': this.favoritoDe(row),
-    'is-inactive': !row['ativo'],
+  protected readonly advogadoRowClass = (row: AdvogadoApi): Record<string, boolean> => ({
+    'is-selected': this.selected()?.id === row.id,
+    'is-favorite': row.favorito,
+    'is-inactive': !row.ativo,
   });
 
-  protected readonly advogadoPinFirst = (row: DomainRow): boolean => this.favoritoDe(row);
+  protected readonly advogadoPinFirst = (row: AdvogadoApi): boolean => row.favorito;
 
-  protected readonly advogadoPinAction: TablePinAction<DomainRow> = {
-    isActive: (row) => this.favoritoDe(row),
+  protected readonly advogadoPinAction: TablePinAction<AdvogadoApi> = {
+    isActive: (row) => row.favorito,
     onToggle: (row, event) => this.toggleFavorito(row, event),
     ariaLabel: 'Favoritar advogado',
   };
 
-  private favoritoDe(row: DomainRow): boolean {
-    const id = Number(row['id']);
-    const sobreposto = this.favoritosOverride().get(id);
-    return sobreposto ?? Boolean(row['favorito']);
+  constructor() {
+    const query = computed<AdvogadoListQuery & { tick: number }>(() => {
+      const filtros = this.columnFilterValues();
+      return {
+        page: this.page(),
+        nome: filtros['nome'],
+        oab: filtros['oab'],
+        cpf: filtros['cpf'],
+        email: filtros['email'],
+        cidadeProfissional: filtros['cidade_profissional'],
+        incluirInativos: this.incluirInativos(),
+        tick: this.reloadTick(),
+      };
+    });
+
+    toObservable(query)
+      .pipe(
+        switchMap((q) => {
+          this.loading.set(true);
+          return this.store.carregar(q).pipe(
+            catchError(() => {
+              this.loading.set(false);
+              this.loadError.set(true);
+              return EMPTY;
+            }),
+          );
+        }),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe(() => {
+        this.loading.set(false);
+        this.loadError.set(false);
+      });
   }
 
-  protected toggleFavorito(row: DomainRow, event: MouseEvent): void {
-    event.stopPropagation();
-    const id = Number(row['id']);
-    if (!Number.isFinite(id)) {
-      return;
-    }
-    const desejado = !this.favoritoDe(row);
-    this.favoritosOverride.update((atual) => new Map(atual).set(id, desejado));
+  protected onPageChange(page: number): void {
+    this.page.set(page);
+  }
 
-    const atualSelecionado = this.selected();
-    if (atualSelecionado !== null && Number(atualSelecionado['id']) === id) {
-      this.selected.set({ ...atualSelecionado, favorito: desejado });
-    }
-
-    this.favoritoService.alternar('advogado', id, desejado).subscribe({
-      error: () => this.favoritosOverride.update((atual) => new Map(atual).set(id, !desejado)),
+  protected onColumnFilterChange({ key, value }: { key: string; value: string }): void {
+    this.columnFilterValues.update((atual) => {
+      if (!value.trim()) {
+        const { [key]: _removido, ...resto } = atual;
+        return resto;
+      }
+      return { ...atual, [key]: value };
     });
+    this.page.set(0);
+  }
+
+  protected onToggleIncluirInativos(event: Event): void {
+    this.incluirInativos.set((event.target as HTMLInputElement).checked);
+    this.page.set(0);
+  }
+
+  protected toggleFavorito(row: AdvogadoApi, event: MouseEvent): void {
+    event.stopPropagation();
+    const desejado = this.store.alternarFavorito(row.id);
+    if (desejado !== null && this.selected()?.id === row.id) {
+      this.selected.set({ ...row, favorito: desejado });
+    }
   }
 
   protected estadoCivilLabel(valor: unknown): string {
@@ -144,18 +185,14 @@ export class AdvogadoComponent {
     return valor ? maskCpf(String(valor)) : '-';
   }
 
-  protected onLoadError(): void {
-    this.loadError.set(true);
-  }
-
   protected reloadList(): void {
     this.loadError.set(false);
-    this.dtAdvogado()?.refresh();
+    this.reloadTick.update((tick) => tick + 1);
   }
 
-  protected selectAdvogado(row: DomainRow): void {
+  protected selectAdvogado(row: AdvogadoApi): void {
     const atual = this.selected();
-    if (this.locked() && atual !== null && Number(atual['id']) !== Number(row['id'])) {
+    if (this.locked() && atual !== null && atual.id !== row.id) {
       return;
     }
     this.selected.set(row);

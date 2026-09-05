@@ -1,13 +1,12 @@
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject, signal } from '@angular/core';
-import { Observable, map, tap } from 'rxjs';
+import { Observable, catchError, map, of, tap } from 'rxjs';
 
 import { environment } from '../../../../environments/environment';
-import { IPessoa } from '../../../core/models';
+import { IPessoa, TipoPessoa } from '../../../core/models';
 import { AuthService } from '../../../core/services/auth.service';
-import { DomainQueryService } from '../../../core/services/domain-query.service';
 import { FavoritoService } from '../../../shared/services/favorito.service';
-import { ClientRespApi, StatusVinculoApi } from './client-api.model';
+import { PaginaApi, ClientRespApi, StatusVinculoApi } from './client-api.model';
 import {
   clientToAtualizarRequest,
   clientToCriarRequest,
@@ -15,40 +14,80 @@ import {
 } from './client-mapper';
 
 /**
+ * Página pedida ao backend. Filtros do endpoint: `tipo` e `incluirInativos`
+ * (`GET /api/v1/pessoas?page&size&tipo&incluirInativos`). Por padrão
+ * (`incluirInativos: false`) só vêm pessoas ativas. Os demais filtros da tabela
+ * (nome, CPF/CNPJ, e-mail) são aplicados client-side pelo `app-data-table`, só
+ * sobre a página de 10 linhas já carregada — o endpoint não tem esses filtros.
+ */
+export interface ClientListQuery {
+  page: number;
+  tipo: TipoPessoa | null;
+  /** `true` traz também os clientes inativos; padrão é só ativos. */
+  incluirInativos: boolean;
+}
+
+/**
  * Fonte única da lista de pessoas (clientes) para a feature. Fala com a API
- * `/api/v1/pessoas` (Spring) pra CRUD/status; a listagem em si vem do endpoint genérico
- * (`app-domain-table`, ver {@link definirPaginaGenerica}). `favorite` é por usuário — genérico
- * pra qualquer agregado (`PATCH /api/v1/domain/pessoa/{id}` com corpo `{favorito}`, ver
- * `FavoritoService` no shared e `DomainQueryController` no backend), não um endpoint dedicado de
- * Pessoa.
+ * `/api/v1/pessoas` (Spring), que pagina de 10 em 10; os componentes só falam
+ * com o store. `favorite` é por usuário (`PATCH /pessoas/{id}/favorito`).
  */
 @Injectable({ providedIn: 'root' })
 export class ClientStore {
   private readonly http = inject(HttpClient);
   private readonly auth = inject(AuthService);
-  private readonly domainQuery = inject(DomainQueryService);
   private readonly favoritoService = inject(FavoritoService);
   private readonly base = `${environment.apiBaseUrl}/pessoas`;
 
+  /** Tamanho de página fixo do backend (`max-page-size: 10`). */
+  static readonly PAGE_SIZE = 10;
+
   private readonly _clients = signal<IPessoa[]>([]);
   readonly clients = this._clients.asReadonly();
+
+  private readonly _page = signal(0);
+  private readonly _totalPages = signal(1);
+  private readonly _totalElements = signal(0);
+  private readonly _last = signal(true);
+
+  /** Índice da página atual (0-based). */
+  readonly page = this._page.asReadonly();
+  /** Total de páginas do filtro atual. */
+  readonly totalPages = this._totalPages.asReadonly();
+  /** Total de clientes do filtro atual (base inteira quando sem filtro). */
+  readonly totalElements = this._totalElements.asReadonly();
+  /** `true` quando não há próxima página. */
+  readonly last = this._last.asReadonly();
 
   private toClient(res: ClientRespApi): IPessoa {
     return clientRespToClient(res, this.auth.user());
   }
 
-  /**
-   * Popula a lista a partir de uma página do endpoint genérico `GET /api/v1/domain/pessoa`
-   * (usado pelo `app-domain-table`) — as chaves da resposta já batem com `ClientRespApi` (mesmo
-   * JSON snake_case), então é só reaproveitar o mapper. Ponte pro `ClientStore` continuar sendo a
-   * fonte de verdade de `buscar`/`salvar`/`alterarStatus`/`alternarFavorito` mesmo quem busca a
-   * lista sendo a tabela genérica.
-   */
-  definirPaginaGenerica(registros: ClientRespApi[]): void {
-    this._clients.set(registros.map((res) => this.toClient(res)));
+  /** Carrega uma página da lista (`tipo` opcional; `FISICA`/`JURIDICA` como no backend). */
+  carregar(query: ClientListQuery): Observable<IPessoa[]> {
+    let params = new HttpParams()
+      .set('page', query.page)
+      .set('size', ClientStore.PAGE_SIZE);
+    if (query.tipo) {
+      params = params.set('tipo', query.tipo);
+    }
+    if (query.incluirInativos) {
+      params = params.set('incluirInativos', true);
+    }
+
+    return this.http.get<PaginaApi<ClientRespApi>>(this.base, { params }).pipe(
+      tap((page) => {
+        this._page.set(page.pagina ?? 0);
+        this._totalPages.set(page.total_paginas ?? 1);
+        this._totalElements.set(page.total_elementos ?? 0);
+        this._last.set(page.ultima ?? true);
+      }),
+      map((page) => (page.conteudo ?? []).map((res) => this.toClient(res))),
+      tap((clients) => this._clients.set(clients)),
+    );
   }
 
-  /** Cliente já carregado, por id (ou `null`) — só os campos que a tabela pediu (ver `fields`). */
+  /** Cliente já carregado, por id (ou `null`). */
   buscar(id: number | null): IPessoa | null {
     if (id === null) {
       return null;
@@ -57,16 +96,15 @@ export class ClientStore {
   }
 
   /**
-   * Ficha completa por id, direto do backend (`GET /api/v1/domain/pessoa/all`, via
-   * {@link DomainQueryService#getById}) — a lista mantida por `definirPaginaGenerica` só tem os
-   * campos que a tabela exibe, então quem for editar a ficha (`ClientFormComponent`) precisa desse
-   * fetch à parte pra não sobrescrever com vazio os campos não mostrados na tabela (RG, endereço,
-   * representantes etc.) ao salvar.
+   * Ficha completa por id, direto do backend (`GET /api/v1/pessoas/{id}`) — a lista mantida por
+   * `carregar` só tem a página atual, então quem for editar a ficha (`ClientFormComponent`)
+   * precisa desse fetch à parte pra não depender do cliente estar na página carregada.
    */
   buscarCompleto(id: number): Observable<IPessoa | null> {
-    return this.domainQuery
-      .getById<ClientRespApi>('pessoa', id)
-      .pipe(map((res) => (res ? this.toClient(res) : null)));
+    return this.http.get<ClientRespApi>(`${this.base}/${id}`).pipe(
+      map((res) => this.toClient(res)),
+      catchError(() => of(null)),
+    );
   }
 
   /** `POST` (id 0) ou `PUT` (id existente); devolve o registro do backend. */
@@ -92,13 +130,13 @@ export class ClientStore {
   }
 
   /**
-   * Ativa ou inativa a pessoa via `PATCH /pessoas/{id}/status`. Não há exclusão:
-   * o registro permanece e a resposta traz a pessoa atualizada, que substitui a
-   * versão na lista carregada.
+   * Ativa ou inativa a pessoa via `PATCH /pessoas/{id}/status` (corpo `{"ativo": true|false}`
+   * no backend). Não há exclusão: o registro permanece e a resposta traz a pessoa atualizada,
+   * que substitui a versão na lista carregada.
    */
   alterarStatus(id: number, status: StatusVinculoApi): Observable<IPessoa> {
     return this.http
-      .patch<ClientRespApi>(`${this.base}/${id}/status`, { status })
+      .patch<ClientRespApi>(`${this.base}/${id}/status`, { ativo: status === 'ATIVO' })
       .pipe(
         map((res) => this.toClient(res)),
         tap((atualizado) =>
@@ -111,7 +149,7 @@ export class ClientStore {
 
   /**
    * Alterna o favorito da pessoa para o usuário logado. Atualiza a lista na hora
-   * (otimista), dispara `PATCH /api/v1/domain/pessoa/{id}` e desfaz se a API falhar.
+   * (otimista), dispara `PATCH /pessoas/{id}/favorito` e desfaz se a API falhar.
    * Devolve o estado desejado (pós-clique).
    */
   alternarFavorito(id: number): boolean {
@@ -123,7 +161,7 @@ export class ClientStore {
     this.setFavoritoLocal(id, desejado);
 
     this.favoritoService
-      .alternar('pessoa', id, desejado)
+      .alternar('pessoas', id, desejado)
       .subscribe({ error: () => this.setFavoritoLocal(id, !desejado) });
 
     return desejado;

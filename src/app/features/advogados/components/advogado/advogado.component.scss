@@ -100,6 +100,22 @@
   }
 }
 
+.advogados-header__title {
+  display: flex;
+  align-items: center;
+  gap: $spacing-md;
+}
+
+.advogados-toggle-inativos {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+  color: $color-text-secondary;
+  cursor: pointer;
+  user-select: none;
+}
+
 .advogados-panel-toggle {
   display: inline-flex;
   min-height: 34px;

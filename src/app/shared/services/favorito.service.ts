@@ -5,21 +5,18 @@ import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 
 /**
- * Favoritar é sempre a mesma operação (usuário + entidade + id) pra qualquer agregado exposto no
- * mecanismo genérico de domínio. Não é mais um sub-recurso próprio (`/favorito`) — é só mais um
- * campo do PATCH parcial genérico (`PATCH /api/v1/domain/{tipoEntidade}/{id}`, corpo
- * `{"favorito": true|false}`), que o `DomainQueryController` trata à parte (não é uma coluna de
- * verdade, então não passa pelo `DomainPatch`/reflection). Usado por `ClientStore`
- * (`tipoEntidade: 'pessoa'`) e `AdvogadoComponent` (`'advogado'`); qualquer tela nova com favorito
- * usa isso também, em vez de um serviço próprio por agregado.
+ * Favoritar é sempre a mesma operação (usuário + recurso + id) — `PATCH /api/v1/{recurso}/{id}/favorito`,
+ * corpo `{"favorito": true|false}`, disponível em qualquer controller que precisar disso
+ * (`PessoaController`, `AdvogadoController`). `recurso` é o segmento de URL já no plural
+ * (`'pessoas'`, `'advogados'`), não o nome singular do agregado.
  */
 @Injectable({ providedIn: 'root' })
 export class FavoritoService {
   private readonly http = inject(HttpClient);
 
-  alternar(tipoEntidade: string, id: number, favorito: boolean): Observable<void> {
+  alternar(recurso: string, id: number, favorito: boolean): Observable<void> {
     return this.http.patch<void>(
-      `${environment.apiBaseUrl}/domain/${tipoEntidade}/${id}`,
+      `${environment.apiBaseUrl}/${recurso}/${id}/favorito`,
       { favorito },
     );
   }

@@ -70,6 +70,15 @@
             </div>
           }
         </div>
+
+        <label class="clients-toggle-inativos">
+          <input
+            type="checkbox"
+            [checked]="incluirInativos()"
+            (change)="onToggleIncluirInativos($event)"
+          />
+          Mostrar inativos
+        </label>
       </div>
 
       <button
@@ -84,23 +93,24 @@
     </div>
 
     <div class="clients-table-wrap">
-      <app-domain-table
-        #dtClient
-        entityName="pessoa"
-        fields="tipo,id,favorito,nome,cpf,razaoSocial,nomeFantasia,cnpj,emails,contatos,dadosAdministrativos,status,modalidade,responsavelInterno,cadastradoPorId,cadastradoPorNome"
-        columnFields="tipo,nome,cpf,emails,contatos,status,cadastradoPorNome,modalidade,responsavelInterno"
-        [columnOverrides]="clientColumnOverrides"
+      <app-data-table
+        [columns]="clientColumns"
+        [data]="clients()"
+        [loading]="loading()"
         trackKey="id"
         emptyMessage="Nenhum cliente encontrado."
         [sortable]="true"
         [initialSort]="{ key: 'nome', direction: 'asc' }"
         [columnVisibility]="true"
-        [defaultVisibleColumns]="['tipo','nome','cpf','emails','contatos','status','cadastrado_por_nome']"
+        [defaultVisibleColumns]="['tipo','nome','cpf_cnpj','email','telefone','status','cadastrado_por_nome']"
+        [filterPredicate]="clientFilterPredicate()"
         [pinFirst]="clientPinFirst"
         [rowClass]="clientRowClass"
         [pinAction]="clientPinAction"
-        (pageLoaded)="onPageLoaded($event)"
-        (loadError)="onLoadError()"
+        [columnFilterValues]="columnFilterValues()"
+        [pagination]="pagination()"
+        (columnFilterChange)="onColumnFilterChange($event)"
+        (pageChange)="onPageChange($event)"
         (rowClick)="selectClient($event)"
       />
     </div>

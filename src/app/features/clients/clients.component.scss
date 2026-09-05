@@ -217,6 +217,16 @@
   flex-wrap: wrap;
 }
 
+.clients-toggle-inativos {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+  color: $color-text-secondary;
+  cursor: pointer;
+  user-select: none;
+}
+
 .clients-menu-button,
 .clients-panel-toggle,
 .clients-dropdown button {

@@ -2,6 +2,7 @@ import { DOCUMENT } from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
+  DestroyRef,
   HostListener,
   computed,
   effect,
@@ -9,20 +10,22 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
+import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
+import { EMPTY, catchError, switchMap } from 'rxjs';
 
-import { ModalidadeCliente, IPessoa } from '../../core/models';
+import { onlyDigits } from '../../core/auth/cpf';
+import { ModalidadeCliente, IPessoa, TipoPessoa } from '../../core/models';
 import { ButtonComponent } from '../../shared/components/button/button.component';
 import { ModalComponent } from '../../shared/components/modal/modal.component';
 import { PanelShellController } from '../../shared/panel-shell/panel-shell.controller';
 import { PastaClienteService } from './services/pasta-cliente.service';
-import { ClientStore } from './services/client-store';
+import { ClientStore, ClientListQuery } from './services/client-store';
 import { ClientFormComponent } from './components/client-form/client-form.component';
 import { ClientFilesComponent, ClientFilesNotice } from './components/client-files/client-files.component';
-import { ClientRespApi } from './services/client-api.model';
 import { emailPrincipal, contatoPrincipal } from '../../core/models';
-import { DomainTableComponent, DomainRow } from '../../shared/components/domain-table/domain-table.component';
+import { DataTableComponent } from '../../shared/components/table/data-table.component';
 import { TableColumn } from '../../shared/components/table/table-column.model';
-import { TablePinAction } from '../../shared/components/table/table.model';
+import { TablePagination, TablePinAction } from '../../shared/components/table/table.model';
 
 type PageNotice = '' | 'shareReady' | 'importReady' | 'loadError';
 
@@ -34,7 +37,7 @@ type PageNotice = '' | 'shareReady' | 'importReady' | 'loadError';
     ClientFormComponent,
     ModalComponent,
     ClientFilesComponent,
-    DomainTableComponent,
+    DataTableComponent,
   ],
   templateUrl: './clients.component.html',
   styleUrl: './clients.component.scss',
@@ -42,10 +45,10 @@ type PageNotice = '' | 'shareReady' | 'importReady' | 'loadError';
 export class ClientsComponent {
   private readonly store = inject(ClientStore);
   private readonly document = inject(DOCUMENT);
+  private readonly destroyRef = inject(DestroyRef);
   protected readonly pastaCliente = inject(PastaClienteService);
 
   private readonly editor = viewChild(ClientFormComponent);
-  private readonly dtClient = viewChild<DomainTableComponent>('dtClient');
 
   protected readonly selectedPersonId = signal<number | null>(null);
   /** Posição/tamanho/visibilidade do painel — ver `PanelShellController`. */
@@ -56,22 +59,57 @@ export class ClientsComponent {
   protected readonly pastaNotice = signal<string | null>(null);
   protected readonly showMoreActions = signal(false);
   protected readonly pageNotice = signal<PageNotice>('');
+  protected readonly loading = signal(false);
 
-  /** Total de clientes da página atual carregada pelo `app-domain-table`. */
-  protected readonly totalClients = computed(() => this.dtClient()?.currentPagination()?.totalElements ?? 0);
+  /** Página pedida ao backend (0-based) e gatilho de recarregamento manual. */
+  private readonly page = signal(0);
+  private readonly reloadTick = signal(0);
+  /** `true` traz também clientes inativos — reflete exatamente o `incluirInativos` do backend. */
+  protected readonly incluirInativos = signal(false);
+  /** Valor atual de cada filtro de coluna (server: `tipo`; client-side: `nome`/`cpf_cnpj`/`email`). */
+  protected readonly columnFilterValues = signal<Record<string, string>>({});
 
-  /**
-   * Ajustes por coluna (chave em snake_case, casando com o JSON) — reaproveita o `IPessoa` já
-   * resolvido pelo `ClientStore` (via `clientFor`) em vez de reconstruir a formatação a partir do
-   * JSON cru, então herda de graça a mesma máscara de CPF/CNPJ, o "Cadastrado por" com fallback
-   * pro usuário logado etc. que `clientRespToClient` já calcula.
-   */
-  protected readonly clientColumnOverrides: Record<string, Partial<TableColumn<DomainRow>>> = {
-    tipo: {
+  protected readonly clients = this.store.clients;
+  protected readonly totalClients = this.store.totalElements;
+  protected readonly pagination = computed<TablePagination>(() => ({
+    page: this.store.page(),
+    totalPages: this.store.totalPages(),
+    totalElements: this.store.totalElements(),
+    last: this.store.last(),
+  }));
+
+  /** Filtro client-side (nome/CPF-CNPJ/e-mail) sobre a página de 10 linhas já carregada. */
+  protected readonly clientFilterPredicate = computed<((row: IPessoa) => boolean) | null>(() => {
+    const filtros = this.columnFilterValues();
+    const nome = filtros['nome']?.trim().toLowerCase() ?? '';
+    const documento = onlyDigits(filtros['cpf_cnpj'] ?? '');
+    const email = filtros['email']?.trim().toLowerCase() ?? '';
+    if (!nome && !documento && !email) {
+      return null;
+    }
+    return (row: IPessoa): boolean => {
+      if (nome && !this.clientDisplayName(row).toLowerCase().includes(nome)) {
+        return false;
+      }
+      if (documento) {
+        const doc = onlyDigits(row.pessoa.tipo === 'FISICA' ? row.pessoa.cpf : row.pessoa.cnpj);
+        if (!doc.includes(documento)) {
+          return false;
+        }
+      }
+      if (email && !row.pessoa.emails.some((e) => e.endereco.toLowerCase().includes(email))) {
+        return false;
+      }
+      return true;
+    };
+  });
+
+  protected readonly clientColumns: TableColumn<IPessoa>[] = [
+    {
+      key: 'tipo',
       header: 'Natureza',
       width: '138px',
-      formatter: (_value, row) =>
-        this.clientFor(row)?.pessoa.tipo === 'FISICA' ? 'Pessoa física' : 'Pessoa jurídica',
+      formatter: (_value, row) => (row.pessoa.tipo === 'FISICA' ? 'Pessoa física' : 'Pessoa jurídica'),
       filter: {
         type: 'select',
         options: [
@@ -81,95 +119,106 @@ export class ClientsComponent {
         ],
       },
     },
-    nome: {
+    {
+      key: 'nome',
       header: 'Nome / Razão',
       width: '240px',
-      formatter: (_value, row) => {
-        const client = this.clientFor(row);
-        return client ? this.clientDisplayName(client) || '-' : '-';
-      },
+      formatter: (_value, row) => this.clientDisplayName(row) || '-',
       filter: { type: 'text' },
     },
-    cpf: {
+    {
+      key: 'cpf_cnpj',
       header: 'CPF / CNPJ',
       width: '170px',
-      formatter: (_value, row) => {
-        const client = this.clientFor(row);
-        if (!client) {
-          return '-';
-        }
-        return (client.pessoa.tipo === 'FISICA' ? client.pessoa.cpf : client.pessoa.cnpj) || '-';
-      },
-      // Campo próprio (`cpf_cnpj`) porque a coluna mescla dois campos do backend (cpf OU cnpj,
-      // conforme o tipo) — column.key sozinho não dá pra buscar nos dois ao mesmo tempo.
-      filter: { type: 'text', field: 'cpf_cnpj' },
+      formatter: (_value, row) => (row.pessoa.tipo === 'FISICA' ? row.pessoa.cpf : row.pessoa.cnpj) || '-',
+      filter: { type: 'text' },
     },
-    emails: {
+    {
+      key: 'email',
       header: 'E-mail',
       width: '230px',
-      formatter: (_value, row) => emailPrincipal(this.clientFor(row)?.pessoa.emails ?? []) || '-',
-      // Campo próprio (`email`, singular) porque a coluna mostra só o principal, mas o filtro no
-      // backend busca em qualquer e-mail da lista, não só o principal.
-      filter: { type: 'text', field: 'email' },
+      formatter: (_value, row) => emailPrincipal(row.pessoa.emails) || '-',
+      filter: { type: 'text' },
     },
-    contatos: {
+    {
+      key: 'telefone',
       header: 'Telefone',
       width: '160px',
-      formatter: (_value, row) => contatoPrincipal(this.clientFor(row)?.pessoa.contatos ?? []) || '-',
+      formatter: (_value, row) => contatoPrincipal(row.pessoa.contatos) || '-',
     },
-    status: {
+    {
+      key: 'status',
       header: 'Status',
       width: '110px',
       align: 'center',
       format: 'badge',
       badgeDot: true,
-      formatter: (_value, row) => (this.clientFor(row)?.dossier.status === 'active' ? 'Ativo' : 'Inativo'),
-      badgeTone: (_value, row) => (this.clientFor(row)?.dossier.status === 'active' ? 'success' : 'neutral'),
-      // Valores batendo com o enum StatusVinculo do backend (eq exato, não ilike).
-      filter: {
-        type: 'select',
-        options: [
-          { value: '', label: 'Todos' },
-          { value: 'ATIVO', label: 'Ativo' },
-          { value: 'INATIVO', label: 'Inativo' },
-        ],
-      },
+      formatter: (_value, row) => (row.dossier.status === 'active' ? 'Ativo' : 'Inativo'),
+      badgeTone: (_value, row) => (row.dossier.status === 'active' ? 'success' : 'neutral'),
     },
-    cadastrado_por_nome: {
+    {
+      key: 'cadastrado_por_nome',
       header: 'Cadastrado por',
       width: '150px',
-      formatter: (_value, row) => this.clientFor(row)?.dossier.registeredBy || '-',
+      formatter: (_value, row) => row.dossier.registeredBy || '-',
     },
-    modalidade: {
+    {
+      key: 'modalidade',
       header: 'Modalidade',
       width: '150px',
-      formatter: (_value, row) => this.hiringModeLabel(this.clientFor(row)?.dossier.hiringMode ?? ''),
+      formatter: (_value, row) => this.hiringModeLabel(row.dossier.hiringMode),
     },
-    responsavel_interno: {
+    {
+      key: 'responsavel_interno',
       header: 'Responsável',
       width: '160px',
-      formatter: (_value, row) => this.clientFor(row)?.dossier.internalOwner || '-',
+      formatter: (_value, row) => row.dossier.internalOwner || '-',
     },
-  };
+  ];
 
-  protected readonly clientPinFirst = (row: DomainRow): boolean => this.clientFor(row)?.favorite ?? false;
+  protected readonly clientPinFirst = (row: IPessoa): boolean => row.favorite;
 
-  protected readonly clientRowClass = (row: DomainRow): Record<string, boolean> => {
-    const client = this.clientFor(row);
-    return {
-      'is-selected': this.selectedPersonId() === Number(row['id']),
-      'is-favorite': client?.favorite ?? false,
-      'is-inactive': client?.dossier.status === 'inactive',
-    };
-  };
+  protected readonly clientRowClass = (row: IPessoa): Record<string, boolean> => ({
+    'is-selected': this.selectedPersonId() === row.id,
+    'is-favorite': row.favorite,
+    'is-inactive': row.dossier.status === 'inactive',
+  });
 
-  protected readonly clientPinAction: TablePinAction<DomainRow> = {
-    isActive: (row) => this.clientFor(row)?.favorite ?? false,
+  protected readonly clientPinAction: TablePinAction<IPessoa> = {
+    isActive: (row) => row.favorite,
     onToggle: (row, event) => this.toggleClientFavorite(row, event),
     ariaLabel: 'Favoritar cliente',
   };
 
   constructor() {
+    const query = computed<ClientListQuery & { tick: number }>(() => ({
+      page: this.page(),
+      tipo: (this.columnFilterValues()['tipo'] as TipoPessoa) || null,
+      incluirInativos: this.incluirInativos(),
+      tick: this.reloadTick(),
+    }));
+
+    toObservable(query)
+      .pipe(
+        switchMap((q) => {
+          this.loading.set(true);
+          return this.store.carregar(q).pipe(
+            catchError(() => {
+              this.loading.set(false);
+              this.pageNotice.set('loadError');
+              return EMPTY;
+            }),
+          );
+        }),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe(() => {
+        this.loading.set(false);
+        if (this.pageNotice() === 'loadError') {
+          this.pageNotice.set('');
+        }
+      });
+
     // Publica o cliente selecionado para o header ("Abrir pasta do cliente").
     effect(() => {
       const id = this.selectedPersonId();
@@ -184,15 +233,36 @@ export class ClientsComponent {
     });
   }
 
-  /** Cliente já resolvido (máscara, fallback de "cadastrado por" etc.) pelo `ClientStore`. */
-  private clientFor(row: DomainRow): IPessoa | null {
-    const id = Number(row['id']);
-    return Number.isFinite(id) ? this.store.buscar(id) : null;
+  private goToFirstPage(): void {
+    this.page.set(0);
+    this.reloadTick.update((tick) => tick + 1);
   }
 
-  /** Alimenta o `ClientStore` a cada página que o `app-domain-table` busca sozinho. */
-  protected onPageLoaded(rows: DomainRow[]): void {
-    this.store.definirPaginaGenerica(rows as unknown as ClientRespApi[]);
+  private refreshList(): void {
+    this.reloadTick.update((tick) => tick + 1);
+  }
+
+  protected onPageChange(page: number): void {
+    this.page.set(page);
+  }
+
+  /** Confirma (ou limpa, se `value` vazio) o filtro de uma coluna; `tipo` recarrega no servidor. */
+  protected onColumnFilterChange({ key, value }: { key: string; value: string }): void {
+    this.columnFilterValues.update((atual) => {
+      if (!value.trim()) {
+        const { [key]: _removido, ...resto } = atual;
+        return resto;
+      }
+      return { ...atual, [key]: value };
+    });
+    if (key === 'tipo') {
+      this.page.set(0);
+    }
+  }
+
+  protected onToggleIncluirInativos(event: Event): void {
+    this.incluirInativos.set((event.target as HTMLInputElement).checked);
+    this.page.set(0);
   }
 
   protected onLoadError(): void {
@@ -200,7 +270,7 @@ export class ClientsComponent {
   }
 
   protected reloadList(): void {
-    this.dtClient()?.refresh();
+    this.refreshList();
   }
 
   /** No modo diálogo, Esc esconde o painel (mantém o cliente selecionado). */
@@ -220,12 +290,9 @@ export class ClientsComponent {
     return !!this.document.querySelector('app-modal .modal__dialog');
   }
 
-  protected toggleClientFavorite(row: DomainRow, event: MouseEvent): void {
+  protected toggleClientFavorite(row: IPessoa, event: MouseEvent): void {
     event.stopPropagation();
-    const id = Number(row['id']);
-    if (Number.isFinite(id)) {
-      this.store.alternarFavorito(id);
-    }
+    this.store.alternarFavorito(row.id);
   }
 
   protected newRecord(): void {
@@ -233,8 +300,8 @@ export class ClientsComponent {
     this.panelShell.setPanelVisible(true);
   }
 
-  protected selectClient(row: DomainRow | null): void {
-    const id = row ? Number(row['id']) : null;
+  protected selectClient(row: IPessoa | null): void {
+    const id = row ? row.id : null;
 
     const editor = this.editor();
     if (editor?.locked() && this.selectedPersonId() !== id) {
@@ -272,19 +339,18 @@ export class ClientsComponent {
 
   protected onSaved(client: IPessoa): void {
     this.selectedPersonId.set(client.id);
-    this.dtClient()?.goToFirstPage();
-    this.dtClient()?.refresh();
+    this.goToFirstPage();
   }
 
   protected onCleared(): void {
     this.selectedPersonId.set(null);
-    this.dtClient()?.refresh();
+    this.refreshList();
   }
 
   /** Ativação/inativação: o registro continua existindo, então mantém a seleção. */
   protected onStatusChanged(client: IPessoa): void {
     this.selectedPersonId.set(client.id);
-    this.dtClient()?.refresh();
+    this.refreshList();
   }
 
   protected fecharPasta(): void {

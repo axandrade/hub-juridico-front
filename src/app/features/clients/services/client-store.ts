@@ -6,6 +6,7 @@ import { environment } from '../../../../environments/environment';
 import { IPessoa } from '../../../core/models';
 import { AuthService } from '../../../core/services/auth.service';
 import { DomainQueryService } from '../../../core/services/domain-query.service';
+import { FavoritoService } from '../../../shared/services/favorito.service';
 import { ClientRespApi, StatusVinculoApi } from './client-api.model';
 import {
   clientToAtualizarRequest,
@@ -15,15 +16,18 @@ import {
 
 /**
  * Fonte única da lista de pessoas (clientes) para a feature. Fala com a API
- * `/api/v1/pessoas` (Spring) pra CRUD/favorito/status; a listagem em si vem do
- * endpoint genérico (`app-domain-table`, ver {@link definirPaginaGenerica}).
- * `favorite` é por usuário (`PATCH /pessoas/{id}/favorito`).
+ * `/api/v1/pessoas` (Spring) pra CRUD/status; a listagem em si vem do endpoint genérico
+ * (`app-domain-table`, ver {@link definirPaginaGenerica}). `favorite` é por usuário — genérico
+ * pra qualquer agregado (`PATCH /api/v1/domain/pessoa/{id}` com corpo `{favorito}`, ver
+ * `FavoritoService` no shared e `DomainQueryController` no backend), não um endpoint dedicado de
+ * Pessoa.
  */
 @Injectable({ providedIn: 'root' })
 export class ClientStore {
   private readonly http = inject(HttpClient);
   private readonly auth = inject(AuthService);
   private readonly domainQuery = inject(DomainQueryService);
+  private readonly favoritoService = inject(FavoritoService);
   private readonly base = `${environment.apiBaseUrl}/pessoas`;
 
   private readonly _clients = signal<IPessoa[]>([]);
@@ -107,7 +111,7 @@ export class ClientStore {
 
   /**
    * Alterna o favorito da pessoa para o usuário logado. Atualiza a lista na hora
-   * (otimista), dispara `PATCH /pessoas/{id}/favorito` e desfaz se a API falhar.
+   * (otimista), dispara `PATCH /api/v1/domain/pessoa/{id}` e desfaz se a API falhar.
    * Devolve o estado desejado (pós-clique).
    */
   alternarFavorito(id: number): boolean {
@@ -118,8 +122,8 @@ export class ClientStore {
     const desejado = !atual.favorite;
     this.setFavoritoLocal(id, desejado);
 
-    this.http
-      .patch<void>(`${this.base}/${id}/favorito`, { favorito: desejado })
+    this.favoritoService
+      .alternar('pessoa', id, desejado)
       .subscribe({ error: () => this.setFavoritoLocal(id, !desejado) });
 
     return desejado;

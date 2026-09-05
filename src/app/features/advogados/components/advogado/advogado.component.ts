@@ -19,8 +19,8 @@ import { PanelLayoutSwitcherComponent } from '../../../../shared/components/pane
 import { TableColumn } from '../../../../shared/components/table/table-column.model';
 import { TablePinAction } from '../../../../shared/components/table/table.model';
 import { PanelShellController } from '../../../../shared/panel-shell/panel-shell.controller';
+import { FavoritoService } from '../../../../shared/services/favorito.service';
 import { maskCpf } from '../../../../core/auth/cpf';
-import { AdvogadoFavoritoService } from '../../services/advogado-favorito.service';
 
 const ESTADO_CIVIL_LABELS: Record<string, string> = {
   SOLTEIRO: 'Solteiro(a)',
@@ -47,7 +47,7 @@ const ESTADO_CIVIL_LABELS: Record<string, string> = {
 })
 export class AdvogadoComponent {
   private readonly document = inject(DOCUMENT);
-  private readonly advogadoFavoritoService = inject(AdvogadoFavoritoService);
+  private readonly favoritoService = inject(FavoritoService);
   private readonly dtAdvogado = viewChild<DomainTableComponent>('dtAdvogado');
 
   /** Sobrepõe o `favorito` vindo do backend enquanto a tabela não recarrega a página (otimista). */
@@ -131,7 +131,7 @@ export class AdvogadoComponent {
       this.selected.set({ ...atualSelecionado, favorito: desejado });
     }
 
-    this.advogadoFavoritoService.alternar(id, desejado).subscribe({
+    this.favoritoService.alternar('advogado', id, desejado).subscribe({
       error: () => this.favoritosOverride.update((atual) => new Map(atual).set(id, !desejado)),
     });
   }

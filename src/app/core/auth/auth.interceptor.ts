@@ -9,9 +9,12 @@ import { TokenStore } from './token-store';
 /**
  * Rotas que não devem receber o header nem disparar o fluxo de refresh. `/api/v1/storage/` é o
  * PUT/GET cru da URL pré-assinada de documentos (ver `LocalStorageController` no backend) — quem
- * autoriza ali é o token da própria URL, não o JWT de autenticação.
+ * autoriza ali é o token da própria URL, não o JWT de autenticação. `graph.microsoft.com` é a
+ * mesma ideia, mas pra um host externo: a sessão de upload em blocos do OneDrive (ver
+ * `DocumentsService.enviarEmBlocos`) já vem pré-autorizada pela própria URL — mandar o nosso JWT
+ * junto só arrisca o Graph rejeitar o Authorization header que ele não espera.
  */
-const AUTH_BYPASS = ['/auth/login', '/auth/refresh', '/api/v1/storage/'];
+const AUTH_BYPASS = ['/auth/login', '/auth/refresh', '/api/v1/storage/', 'https://graph.microsoft.com/'];
 
 function isBypassed(url: string): boolean {
   return AUTH_BYPASS.some((path) => url.includes(path));

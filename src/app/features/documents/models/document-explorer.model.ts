@@ -28,11 +28,19 @@ export interface PastaConteudoApi {
   documentos: DocumentoApi[];
 }
 
+/**
+ * `chunked`/`chunk_size_bytes`: quando `true`, o provedor de armazenamento ativo exige upload em
+ * blocos (ex.: OneDrive/Graph, ver `OneDriveFileStorageAdapter` no backend) — o arquivo precisa
+ * ser fatiado e cada pedaço enviado com `Content-Range` pra mesma `upload_url`, em vez do PUT
+ * único que local/S3 usam.
+ */
 export interface UploadUrlApi {
   storage_key: string;
   upload_url: string;
   http_method: string;
   expires_in_seconds: number;
+  chunked: boolean;
+  chunk_size_bytes: number | null;
 }
 
 export interface DownloadUrlApi {

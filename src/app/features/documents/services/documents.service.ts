@@ -1,6 +1,6 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
-import { Observable, map, switchMap } from 'rxjs';
+import { Observable, firstValueFrom, from, map, switchMap } from 'rxjs';
 
 import { environment } from '../../../../environments/environment';
 import {
@@ -98,26 +98,52 @@ export class DocumentsService {
       })
       .pipe(
         switchMap((alvo) =>
-          this.http
-            .request(alvo.http_method, alvo.upload_url, {
-              body: arquivo,
-              headers: { 'Content-Type': arquivo.type },
-              responseType: 'text',
-            })
-            .pipe(
-              switchMap(() =>
-                this.http.post<DocumentoApi>(`${this.base}/documentos/confirmar`, {
-                  pessoa_id: pessoaId,
-                  pasta_id: pastaId,
-                  storage_key: alvo.storage_key,
-                  nome_original: arquivo.name,
-                  content_type: arquivo.type,
-                  tamanho_bytes: arquivo.size,
-                }),
-              ),
+          (alvo.chunked ? this.enviarEmBlocos(alvo, arquivo) : this.enviarUnico(alvo, arquivo)).pipe(
+            switchMap(() =>
+              this.http.post<DocumentoApi>(`${this.base}/documentos/confirmar`, {
+                pessoa_id: pessoaId,
+                pasta_id: pastaId,
+                storage_key: alvo.storage_key,
+                nome_original: arquivo.name,
+                content_type: arquivo.type,
+                tamanho_bytes: arquivo.size,
+              }),
             ),
+          ),
         ),
         map(documentoFromApi),
       );
+  }
+
+  /** PUT único do arquivo inteiro — local/S3. */
+  private enviarUnico(alvo: UploadUrlApi, arquivo: File): Observable<unknown> {
+    return this.http.request(alvo.http_method, alvo.upload_url, {
+      body: arquivo,
+      headers: { 'Content-Type': arquivo.type },
+      responseType: 'text',
+    });
+  }
+
+  /**
+   * Sessão de upload em blocos (OneDrive/Graph, ver `UploadUrlApi.chunked`): a mesma `upload_url`
+   * recebe vários PUTs sequenciais, cada um com `Content-Range` marcando o pedaço enviado. Precisa
+   * ser sequencial (o Graph exige os blocos em ordem) — por isso `async/await` em vez de RxJS puro.
+   */
+  private enviarEmBlocos(alvo: UploadUrlApi, arquivo: File): Observable<unknown> {
+    return from(this.enviarBlocosSequencial(alvo.upload_url, arquivo, alvo.chunk_size_bytes ?? arquivo.size));
+  }
+
+  private async enviarBlocosSequencial(url: string, arquivo: File, tamanhoBloco: number): Promise<void> {
+    const total = arquivo.size;
+    for (let inicio = 0; inicio < total; inicio += tamanhoBloco) {
+      const fim = Math.min(inicio + tamanhoBloco, total);
+      const bloco = arquivo.slice(inicio, fim);
+      await firstValueFrom(
+        this.http.put(url, bloco, {
+          headers: { 'Content-Range': `bytes ${inicio}-${fim - 1}/${total}` },
+          responseType: 'text',
+        }),
+      );
+    }
   }
 }

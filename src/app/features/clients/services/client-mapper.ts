@@ -164,6 +164,7 @@ export function clientToCriarRequest(client: IPessoa): CriarClientApi {
       rg: nullif(p.rg),
       estado_civil: p.estadoCivil || null,
       nacionalidade: nullif(p.nacionalidade),
+      representantes: p.representantes.map(representanteToApi),
       representantes_financeiros: p.representantesFinanceiros.map(representanteToApi),
       ...comum,
     };
@@ -177,6 +178,7 @@ export function clientToCriarRequest(client: IPessoa): CriarClientApi {
     inscricao_estadual: nullif(p.inscricaoEstadual),
     inscricao_municipal: nullif(p.inscricaoMunicipal),
     representantes: p.representantes.map(representanteToApi),
+    representantes_financeiros: p.representantesFinanceiros.map(representanteToApi),
     ...comum,
   };
 }

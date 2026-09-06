@@ -71,6 +71,7 @@ export interface CriarClientFisicaApi extends ClientRequestComum {
   rg: string | null;
   estado_civil: EstadoCivil | null;
   nacionalidade: string | null;
+  representantes: RepresentanteApi[];
   representantes_financeiros: RepresentanteApi[];
 }
 
@@ -82,6 +83,7 @@ export interface CriarClientJuridicaApi extends ClientRequestComum {
   inscricao_estadual: string | null;
   inscricao_municipal: string | null;
   representantes: RepresentanteApi[];
+  representantes_financeiros: RepresentanteApi[];
 }
 
 export type CriarClientApi = CriarClientFisicaApi | CriarClientJuridicaApi;

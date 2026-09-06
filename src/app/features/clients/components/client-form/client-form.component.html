@@ -98,16 +98,17 @@
           <app-client-email-list [array]="form.controls.pessoa.controls.emails" />
           <app-client-contact-list [array]="form.controls.pessoa.controls.contatos" />
 
-          @if (tipoPessoaAtual() === 'JURIDICA') {
-            <div class="clients-form__divider"><span>Representação legal</span></div>
-            <app-client-representatives [array]="form.controls.pessoa.controls.representantes" />
-          } @else {
-            <div class="clients-form__divider"><span>Representação financeira</span></div>
-            <app-client-representatives
-              [array]="form.controls.pessoa.controls.representantesFinanceiros"
-              titulo="Representantes financeiros"
-            />
-          }
+          <div class="clients-form__divider"><span>Representação legal</span></div>
+          <app-client-representatives
+            [array]="form.controls.pessoa.controls.representantes"
+            titulo="Representantes legais"
+          />
+
+          <div class="clients-form__divider"><span>Representação financeira</span></div>
+          <app-client-representatives
+            [array]="form.controls.pessoa.controls.representantesFinanceiros"
+            titulo="Representantes financeiros"
+          />
         </div>
       }
 

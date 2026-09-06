@@ -376,6 +376,8 @@ export class ClientsComponent {
       uploadOk: `Arquivo enviado: ${alvo}`,
       uploadErro: `Não foi possível enviar: ${alvo}`,
       downloadErro: `Não foi possível baixar: ${alvo}`,
+      editarIndisponivel: `Edição online não disponível para: ${alvo}`,
+      editarErro: `Não foi possível abrir para edição: ${alvo}`,
     };
     this.pastaNotice.set(textos[evento.key]);
   }

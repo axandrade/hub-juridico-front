@@ -30,7 +30,9 @@ export type DocumentExplorerNoticeKey =
   | 'pastaNaoVazia'
   | 'uploadOk'
   | 'uploadErro'
-  | 'downloadErro';
+  | 'downloadErro'
+  | 'editarIndisponivel'
+  | 'editarErro';
 
 /** Aviso emitido para o rodapé de status do diálogo que hospeda o explorador (`clients.component`). */
 export interface DocumentExplorerNotice {
@@ -427,6 +429,34 @@ export class DocumentExplorerComponent {
         link.click();
       },
       error: () => this.notify.emit({ key: 'downloadErro', subject: documento.nome }),
+    });
+  }
+
+  /**
+   * Abre o documento no editor da nuvem (Word/Excel/PowerPoint Online) numa nova aba — só quando o
+   * provedor de armazenamento ativo suportar (hoje só OneDrive; local/S3 devolvem `null`).
+   */
+  protected editarOnline(documento: Documento): void {
+    this.fecharMenu();
+    // Abre a aba já no clique (gesto do usuário) pra não cair no bloqueador de pop-up.
+    const aba = window.open('', '_blank');
+    this.documentsService.editUrl(documento.id).subscribe({
+      next: (url) => {
+        if (!url) {
+          aba?.close();
+          this.notify.emit({ key: 'editarIndisponivel', subject: documento.nome });
+          return;
+        }
+        if (aba) {
+          aba.location.href = url;
+        } else {
+          window.open(url, '_blank');
+        }
+      },
+      error: () => {
+        aba?.close();
+        this.notify.emit({ key: 'editarErro', subject: documento.nome });
+      },
     });
   }
 

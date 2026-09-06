@@ -93,6 +93,17 @@ export class DocumentsService {
   }
 
   /**
+   * Link pra editar no editor da nuvem (Word/Excel/PowerPoint Online) — só quando o provedor de
+   * armazenamento ativo suportar (hoje só OneDrive). `null` quando não suportado (backend devolve
+   * 204 sem corpo).
+   */
+  editUrl(documentoId: string): Observable<string | null> {
+    return this.http
+      .get<DownloadUrlApi | null>(`${this.base}/documentos/${documentoId}/edit-url`)
+      .pipe(map((resposta) => resposta?.url ?? null));
+  }
+
+  /**
    * Busca o binário como blob — usado só pra visualizar (PDF em nova aba, DOCX renderizado no
    * navegador). A URL de download tem `Content-Disposition: attachment` (força "Salvar como"),
    * mas isso só vale pra navegação direta; buscando como blob e criando uma Object URL local a

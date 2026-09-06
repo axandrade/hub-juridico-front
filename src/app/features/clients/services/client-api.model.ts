@@ -36,6 +36,11 @@ export interface RepresentanteApi {
   endereco: EnderecoApi | null;
   contatos: ContatoApi[];
   emails: EmailApi[];
+  // Pendência backend: enviados para quando `RepresentanteLegal` suportar PJ.
+  // Hoje o backend ignora estes campos e não os devolve na resposta.
+  tipo?: 'FISICA' | 'JURIDICA';
+  cnpj?: string | null;
+  razao_social?: string | null;
 }
 
 export type StatusVinculoApi = 'ATIVO' | 'INATIVO';

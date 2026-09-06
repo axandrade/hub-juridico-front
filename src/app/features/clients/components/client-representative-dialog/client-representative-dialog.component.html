@@ -1,6 +1,15 @@
 <app-modal [open]="true" [title]="title()" (closed)="cancel()">
   <div class="representative-dialog">
-    @for (row of identityRows; track $index) {
+    <div class="representative-dialog__nature" role="group" aria-label="Natureza do representante">
+      <button type="button" [class.is-active]="tipo() === 'FISICA'" (click)="setTipo('FISICA')">
+        Pessoa física
+      </button>
+      <button type="button" [class.is-active]="tipo() === 'JURIDICA'" (click)="setTipo('JURIDICA')">
+        Pessoa jurídica
+      </button>
+    </div>
+
+    @for (row of identityRows(); track $index) {
       <div class="clients-form__row" [class.clients-form__row--cols-3]="row.length === 3">
         @for (field of row; track field.key) {
           <app-client-field [config]="field" [control]="control(field.key)" />
@@ -15,17 +24,17 @@
     <app-client-contact-list [array]="form.controls.contatos" />
 
     @if (showError() && form.invalid) {
-      <p class="representative-dialog__error">Informe pelo menos o nome e o CPF do representante.</p>
+      <p class="representative-dialog__error">
+        @if (tipo() === 'JURIDICA') {
+          Informe pelo menos a razão social e o CNPJ do representante.
+        } @else {
+          Informe pelo menos o nome e o CPF do representante.
+        }
+      </p>
     }
   </div>
 
-  <app-button
-    modalFooter
-    variant="tertiary"
-    size="sm"
-    label="Cancelar"
-    (clicked)="cancel()"
-  />
+  <app-button modalFooter variant="tertiary" size="sm" label="Cancelar" (clicked)="cancel()" />
   <app-button
     modalFooter
     variant="primary"

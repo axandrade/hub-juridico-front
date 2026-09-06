@@ -18,7 +18,7 @@ export interface ClientFieldConfig {
   mask?: 'cpf' | 'cep';
 }
 
-type FieldGroups = readonly (readonly ClientFieldConfig[])[];
+export type FieldGroups = readonly (readonly ClientFieldConfig[])[];
 
 export const CLIENT_FIELD_LABELS: Record<string, string> = {
   // PessoaFisica
@@ -93,9 +93,15 @@ export const PESSOA_JURIDICA_FIELDS: FieldGroups = [
   [{ key: 'cnpj' }, { key: 'inscricaoEstadual' }, { key: 'inscricaoMunicipal' }],
 ];
 
-export const REPRESENTANTE_FIELDS: FieldGroups = [
+export const REPRESENTANTE_FISICA_FIELDS: FieldGroups = [
   [{ key: 'nome' }, { key: 'cpf', mask: 'cpf' }],
   [{ key: 'cargo' }],
+];
+
+// Sem `cargo`: quando o representante é pessoa jurídica o campo não se aplica (e
+// não é obrigatório) — o control segue no form, só não é renderizado.
+export const REPRESENTANTE_JURIDICA_FIELDS: FieldGroups = [
+  [{ key: 'razaoSocial' }, { key: 'cnpj' }],
 ];
 
 export const ENDERECO_FIELDS: FieldGroups = [

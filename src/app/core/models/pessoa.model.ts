@@ -83,10 +83,22 @@ export interface IContato {
   principal: boolean;
 }
 
-/** Espelha `com.hubjuridico.dominio.RepresentanteLegal` (≈ mini-Pessoa). */
+/**
+ * Espelha `com.hubjuridico.dominio.RepresentanteLegal` (≈ mini-Pessoa).
+ *
+ * O representante pode ser pessoa física ou jurídica (`tipo`): quando `JURIDICA`
+ * usa `razaoSocial`/`cnpj` no lugar de `nome`/`cpf`.
+ *
+ * ⚠ Pendência backend: hoje `RepresentanteLegal` só persiste `nome`/`cpf` — os
+ * campos `tipo`/`cnpj`/`razaoSocial` são enviados para uso futuro mas ainda não
+ * voltam na resposta. Ver `docs/pendencia-backend-representante-legal.md`.
+ */
 export interface IRepresentanteLegal {
+  tipo: TipoPessoa;
   nome: string;
   cpf: string;
+  razaoSocial: string;
+  cnpj: string;
   cargo: string;
   endereco: IEndereco;
   emails: IEmail[];

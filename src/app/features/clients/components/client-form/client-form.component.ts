@@ -344,6 +344,7 @@ export class ClientFormComponent {
       (representante): IRepresentanteLegal => ({
         ...representante,
         nome: this.toUppercaseName(representante.nome),
+        razaoSocial: this.toUppercaseName(representante.razaoSocial),
       }),
     );
 

@@ -1,8 +1,11 @@
 @if (open()) {
-  <div class="modal" (click)="onBackdrop()">
+  <div class="modal" [class.modal--maximized]="maximized()" [class.modal--elevated]="elevated()" (click)="onBackdrop()">
     <div
       class="modal__dialog"
       [class.modal__dialog--wide]="wide()"
+      [class.modal__dialog--large]="large()"
+      [class.modal__dialog--flush]="flush()"
+      [class.modal__dialog--maximized]="maximized()"
       role="dialog"
       aria-modal="true"
       [attr.aria-label]="title() || null"
@@ -10,9 +13,26 @@
     >
       <header class="modal__header">
         <h2>{{ title() }}</h2>
-        <button type="button" class="modal__close" aria-label="Fechar" (click)="close()">
-          <i class="fa-solid fa-xmark" aria-hidden="true"></i>
-        </button>
+        <div class="modal__header-actions">
+          @if (maximizable()) {
+            <button
+              type="button"
+              class="modal__icon-btn"
+              [attr.aria-label]="maximized() ? 'Restaurar' : 'Maximizar'"
+              (click)="toggleMaximized()"
+            >
+              <i
+                class="fa-solid"
+                [class.fa-window-maximize]="!maximized()"
+                [class.fa-window-restore]="maximized()"
+                aria-hidden="true"
+              ></i>
+            </button>
+          }
+          <button type="button" class="modal__icon-btn" aria-label="Fechar" (click)="close()">
+            <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+          </button>
+        </div>
       </header>
 
       <div class="modal__body">

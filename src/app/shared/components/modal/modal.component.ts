@@ -1,5 +1,5 @@
 import { DOCUMENT } from '@angular/common';
-import { ChangeDetectionStrategy, Component, effect, inject, input, output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, effect, inject, input, output, signal } from '@angular/core';
 
 /**
  * Modal genérico da paleta botânica. Overlay fixo com card centralizado; fecha
@@ -24,8 +24,18 @@ export class ModalComponent {
   readonly dismissable = input<boolean>(true);
   /** Card mais largo (ex.: preview de documento). */
   readonly wide = input<boolean>(false);
+  /** Card grande: mais largo e ocupando a altura toda disponível (ex.: explorador de arquivos). */
+  readonly large = input<boolean>(false);
+  /** Sem padding no corpo e cabeçalho enxuto — pra conteúdo que ocupa a área toda (iframe, imagem). */
+  readonly flush = input<boolean>(false);
+  /** Mostra o botão maximizar/restaurar no cabeçalho (estilo janela). */
+  readonly maximizable = input<boolean>(false);
+  /** z-index acima do normal — pra ficar sobre janelas flutuantes / outros overlays. */
+  readonly elevated = input<boolean>(false);
 
   readonly closed = output<void>();
+
+  protected readonly maximized = signal(false);
 
   constructor() {
     effect((onCleanup) => {
@@ -37,6 +47,10 @@ export class ModalComponent {
         });
       }
     });
+  }
+
+  protected toggleMaximized(): void {
+    this.maximized.update((v) => !v);
   }
 
   protected onEscape(): void {

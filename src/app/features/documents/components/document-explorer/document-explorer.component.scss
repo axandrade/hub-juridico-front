@@ -1,0 +1,281 @@
+@use 'variables' as *;
+@use 'mixins' as *;
+
+:host {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+.doc-explorer {
+  @include thin-scrollbar;
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  flex-direction: column;
+  gap: $spacing-sm;
+  padding: $spacing-md;
+  overflow: auto;
+}
+
+.doc-explorer__toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $spacing-sm;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.doc-explorer__breadcrumb {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: $spacing-xs;
+  min-width: 0;
+}
+
+.doc-explorer__crumb {
+  display: inline-flex;
+  align-items: center;
+  gap: $spacing-xs;
+  border: 1px solid transparent;
+  border-radius: $border-radius-sm;
+  background: none;
+  color: $color-text-secondary;
+  cursor: pointer;
+  font: inherit;
+  font-size: $font-size-xs;
+  padding: $spacing-xs $spacing-sm;
+  transition:
+    background-color $transition-fast,
+    border-color $transition-fast,
+    color $transition-fast;
+
+  &:hover:not(:disabled) {
+    background-color: rgba($color-primary-pale, 0.55);
+    color: $color-primary;
+  }
+
+  &.is-current {
+    color: $color-text-primary;
+    font-weight: $font-weight-medium;
+    cursor: default;
+  }
+
+  &.is-drop-target {
+    border-color: $color-primary-light;
+    background-color: rgba($color-primary-pale, 0.55);
+  }
+}
+
+.doc-explorer__crumb-sep {
+  color: $color-text-muted;
+  font-size: $font-size-xs;
+}
+
+.doc-explorer__actions {
+  display: flex;
+  gap: $spacing-xs;
+}
+
+.doc-explorer__action {
+  display: inline-flex;
+  min-height: 34px;
+  align-items: center;
+  gap: $spacing-xs;
+  padding: 0 $spacing-sm;
+  white-space: nowrap;
+  border: 1px solid $color-border;
+  border-radius: $border-radius-sm;
+  background-color: $color-neutral-light;
+  color: $color-text-secondary;
+  cursor: pointer;
+  font: inherit;
+  font-size: $font-size-xs;
+  font-weight: $font-weight-medium;
+  transition:
+    background-color $transition-fast,
+    border-color $transition-fast,
+    color $transition-fast;
+
+  &:hover {
+    border-color: $color-primary-light;
+    background-color: rgba($color-primary-pale, 0.55);
+    color: $color-primary;
+  }
+}
+
+.doc-explorer__uploading {
+  margin: 0;
+  color: $color-text-muted;
+  font-size: $font-size-xs;
+}
+
+.doc-explorer__list {
+  overflow: auto;
+  border-radius: $border-radius-sm;
+  transition: background-color $transition-fast;
+
+  &.is-drop-target {
+    background-color: rgba($color-primary-pale, 0.35);
+    outline: 2px dashed $color-primary-light;
+    outline-offset: -2px;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: $font-size-xs;
+  }
+
+  th,
+  td {
+    border-bottom: 1px solid rgba($color-border, 0.65);
+    padding: $spacing-sm;
+    text-align: left;
+  }
+}
+
+.doc-explorer__row {
+  cursor: default;
+
+  &.is-drop-target {
+    background-color: rgba($color-primary-pale, 0.45);
+    outline: 2px dashed $color-primary-light;
+    outline-offset: -2px;
+  }
+}
+
+.doc-explorer__name-cell {
+  display: table-cell;
+
+  i {
+    width: 1.1em;
+    text-align: center;
+    color: $color-text-muted;
+    margin-right: $spacing-xs;
+  }
+}
+
+.doc-explorer__name-btn {
+  display: inline-flex;
+  align-items: center;
+  border: none;
+  background: none;
+  color: $color-text-primary;
+  cursor: pointer;
+  font: inherit;
+  padding: 0;
+
+  i {
+    margin-right: $spacing-xs;
+  }
+
+  &:hover {
+    color: $color-primary;
+    text-decoration: underline;
+  }
+}
+
+.doc-explorer__inline-edit {
+  width: 100%;
+  min-width: 120px;
+  border: 1px solid $color-primary-light;
+  border-radius: $border-radius-sm;
+  background-color: $color-surface;
+  color: $color-text-primary;
+  font: inherit;
+  outline: none;
+  padding: 2px $spacing-xs;
+  box-shadow: 0 0 0 3px rgba($rouge-light, 0.16);
+}
+
+.doc-explorer__row-menu {
+  position: relative;
+  text-align: right;
+  white-space: nowrap;
+
+  > button {
+    display: inline-flex;
+    width: 28px;
+    height: 28px;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid $color-border;
+    border-radius: $border-radius-sm;
+    background-color: $color-neutral-light;
+    color: $color-text-secondary;
+    cursor: pointer;
+    transition:
+      background-color $transition-fast,
+      border-color $transition-fast,
+      color $transition-fast;
+
+    &:hover {
+      border-color: $color-primary-light;
+      background-color: rgba($color-primary-pale, 0.55);
+      color: $color-primary;
+    }
+  }
+}
+
+.doc-explorer__menu {
+  // `fixed` (não `absolute`) de propósito: a posição vem de `top`/`bottom`/`right` inline (ver
+  // `toggleMenu` no componente), calculada relativa à viewport — assim o menu nunca fica cortado
+  // pelo `overflow: auto` da lista ou do corpo do modal, e pode abrir pra cima quando não há
+  // espaço embaixo do botão.
+  position: fixed;
+  z-index: 5;
+  display: flex;
+  min-width: 190px;
+  flex-direction: column;
+  border: 1px solid $color-border;
+  border-radius: $border-radius-sm;
+  background-color: $color-surface;
+  box-shadow: $shadow-md;
+  overflow: hidden;
+
+  button {
+    display: flex;
+    align-items: center;
+    gap: $spacing-xs;
+    border: none;
+    background: none;
+    color: $color-text-primary;
+    cursor: pointer;
+    font: inherit;
+    font-size: $font-size-xs;
+    padding: $spacing-sm;
+    text-align: left;
+    white-space: nowrap;
+
+    i {
+      width: 1.1em;
+      color: $color-text-muted;
+    }
+
+    &:hover {
+      background-color: rgba($color-primary-pale, 0.55);
+    }
+  }
+}
+
+.doc-explorer__empty-row td {
+  color: $color-text-muted;
+  text-align: center;
+  padding: $spacing-lg;
+}
+
+
+.doc-explorer__modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: $spacing-sm;
+}
+
+@include respond-below($breakpoint-sm) {
+  .doc-explorer__toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}

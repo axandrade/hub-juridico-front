@@ -1,0 +1,156 @@
+<div
+  class="clients"
+  [attr.data-layout]="panelShell.layoutPainel()"
+  [class.clients--panel-hidden]="!panelShell.panelVisible()"
+  [style.--painel-largura.px]="panelShell.painelLargura()"
+  [style.--painel-altura.px]="panelShell.painelAltura()"
+>
+  @if (panelShell.layoutPainel() === 'dialog' && panelShell.panelVisible()) {
+    <button
+      type="button"
+      class="clients-panel-backdrop"
+      aria-label="Fechar painel"
+      (click)="$event.stopPropagation(); panelShell.setPanelVisible(false)"
+    ></button>
+  }
+
+  <div class="clients-panel-slot">
+    @if (panelShell.layoutPainel() === 'dialog' && panelShell.panelVisible()) {
+      <button
+        type="button"
+        class="clients-panel-slot__close"
+        aria-label="Fechar painel"
+        (click)="$event.stopPropagation(); panelShell.setPanelVisible(false)"
+      >
+        <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+      </button>
+    }
+    <app-client-form
+      [pessoaId]="selectedPersonId()"
+      novoTipo="FISICA"
+      [layoutPainel]="panelShell.layoutPainel()"
+      (layoutPainelChange)="panelShell.setLayoutPainel($event)"
+      (saved)="onSaved($event)"
+      (statusChanged)="onStatusChanged($event)"
+      (cleared)="onCleared()"
+    />
+  </div>
+
+  @if (panelShell.panelVisible() && panelShell.layoutPainel() !== 'dialog') {
+    <div
+      class="clients-resizer"
+      [class]="'clients-resizer--' + panelShell.layoutPainel()"
+      role="separator"
+      [attr.aria-orientation]="panelShell.layoutPainel() === 'bottom' ? 'horizontal' : 'vertical'"
+      aria-label="Redimensionar painel"
+      (pointerdown)="panelShell.iniciarResize($event)"
+    ></div>
+  }
+
+  <section class="clients-main" aria-label="Tabela de clientes">
+    <div class="clients-actions">
+      <div class="clients-actions__buttons">
+        <app-button
+          variant="primary"
+          size="sm"
+          icon="fa-solid fa-user-plus"
+          label="Novo"
+          (clicked)="newRecord()"
+        />
+        <div class="clients-actions__menu">
+          <button type="button" class="clients-menu-button" (click)="toggleMoreActions()">
+            <i class="fa-solid fa-ellipsis" aria-hidden="true"></i>
+            Mais...
+          </button>
+
+          @if (showMoreActions()) {
+            <div class="clients-dropdown" role="menu">
+              <button type="button" (click)="shareBase()">Compartilhar base de dados</button>
+              <button type="button" (click)="importBase()">Importar base de dados</button>
+            </div>
+          }
+        </div>
+
+        <label class="clients-toggle-inativos">
+          <input
+            type="checkbox"
+            [checked]="incluirInativos()"
+            (change)="onToggleIncluirInativos($event)"
+          />
+          Mostrar inativos
+        </label>
+      </div>
+
+      <button
+        type="button"
+        class="clients-panel-toggle"
+        [class.is-active]="panelShell.panelVisible()"
+        (click)="panelShell.togglePanel()"
+      >
+        <i class="fa-solid fa-table-columns" aria-hidden="true"></i>
+        {{ panelShell.panelVisible() ? 'Ocultar painel' : 'Mostrar painel' }}
+      </button>
+    </div>
+
+    <div class="clients-table-wrap">
+      <app-data-table
+        [columns]="clientColumns"
+        [data]="clients()"
+        [loading]="loading()"
+        trackKey="id"
+        emptyMessage="Nenhum cliente encontrado."
+        [sortable]="true"
+        [initialSort]="{ key: 'nome', direction: 'asc' }"
+        [columnVisibility]="true"
+        [defaultVisibleColumns]="['tipo','nome','cpf_cnpj','email','telefone','status','cadastrado_por_nome']"
+        [filterPredicate]="clientFilterPredicate()"
+        [pinFirst]="clientPinFirst"
+        [rowClass]="clientRowClass"
+        [pinAction]="clientPinAction"
+        [columnFilterValues]="columnFilterValues()"
+        [pagination]="pagination()"
+        (columnFilterChange)="onColumnFilterChange($event)"
+        (pageChange)="onPageChange($event)"
+        (rowClick)="selectClient($event)"
+      />
+    </div>
+
+    <footer class="clients-main__footer">
+      <div class="clients-summary-line">
+        <span>
+          {{ totalClients() }} cliente(s) cadastrado(s)
+        </span>
+      </div>
+      @switch (pageNotice()) {
+        @case ('shareReady') {
+          <span>· Compartilhamento de base preparado para a futura integração.</span>
+        }
+        @case ('importReady') {
+          <span>· Importação de base preparada para a futura integração.</span>
+        }
+        @case ('loadError') {
+          <span>
+            · Não foi possível carregar a lista.
+            <button type="button" class="clients-link-button" (click)="reloadList()">
+              Tentar de novo
+            </button>
+          </span>
+        }
+      }
+    </footer>
+  </section>
+</div>
+
+@if (pastaCliente.aberto() && selectedPersonId() !== null) {
+  <app-modal
+    [open]="true"
+    [wide]="true"
+    [title]="'Pasta — ' + (pastaCliente.cliente()?.nome || 'cliente')"
+    (closed)="fecharPasta()"
+  >
+    <app-document-explorer [pessoaId]="selectedPersonId()!" (notify)="onPastaNotice($event)" />
+    @if (pastaNotice()) {
+      <p class="clients-pasta-notice">{{ pastaNotice() }}</p>
+    }
+  </app-modal>
+}

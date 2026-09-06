@@ -1,0 +1,397 @@
+@use 'variables' as *;
+@use 'mixins' as *;
+
+:host {
+  display: block;
+}
+
+.clients {
+  --painel-largura: 400px;
+  --painel-altura: 340px;
+
+  position: relative; // âncora do redimensionador
+  display: grid;
+  gap: $spacing-lg;
+  min-height: calc(100vh - 160px);
+  grid-template-columns: var(--painel-largura) minmax(0, 1fr); // padrão = painel à esquerda
+
+  &[data-layout='right'] {
+    grid-template-columns: minmax(0, 1fr) var(--painel-largura);
+
+    .clients-panel-slot {
+      order: 2;
+    }
+    .clients-main {
+      order: 1;
+    }
+  }
+
+  &[data-layout='bottom'] {
+    height: calc(100vh - 160px);
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr) var(--painel-altura);
+
+    .clients-panel-slot {
+      order: 2;
+      min-height: 0;
+      overflow: hidden;
+    }
+    .clients-main {
+      order: 1;
+      min-height: 0;
+      max-height: none;
+    }
+
+    app-client-form {
+      display: block;
+      height: 100%;
+      overflow: hidden;
+    }
+
+    ::ng-deep .clients-panel {
+      max-height: 100%;
+      height: 100%;
+    }
+  }
+
+  &[data-layout='dialog'] {
+    grid-template-columns: minmax(0, 1fr);
+
+    .clients-panel-slot {
+      position: fixed;
+      z-index: $z-overlay;
+      top: 50%;
+      left: 50%;
+      width: min(460px, 94vw);
+      transform: translate(-50%, -50%);
+    }
+
+    ::ng-deep .clients-panel {
+      max-height: min(88vh, calc(100vh - 72px));
+      box-shadow: $shadow-lg;
+    }
+  }
+
+  // Painel oculto — vale para todos os layouts, então precisa vencer os seletores acima.
+  &.clients--panel-hidden {
+    grid-template-columns: minmax(0, 1fr);
+
+    .clients-panel-slot,
+    app-client-form {
+      display: none;
+    }
+  }
+}
+
+.clients-panel-slot {
+  position: relative;
+  min-width: 0;
+}
+
+.clients-pasta-notice {
+  margin: $spacing-sm 0 0;
+  color: $color-text-secondary;
+  font-size: $font-size-xs;
+}
+
+.clients-resizer {
+  position: absolute;
+  z-index: 4;
+  touch-action: none;
+
+  &::after {
+    content: '';
+    position: absolute;
+    border-radius: 999px;
+    background-color: rgba($color-border, 0.9);
+    transition: background-color $transition-fast;
+  }
+
+  &:hover::after,
+  &:active::after {
+    background-color: $color-primary-light;
+  }
+}
+
+.clients-resizer--left {
+  top: 0;
+  bottom: 0;
+  left: var(--painel-largura);
+  width: $spacing-lg;
+  transform: translateX(-50%);
+  cursor: col-resize;
+
+  &::after {
+    top: 0;
+    bottom: 0;
+    left: 50%;
+    width: 3px;
+    transform: translateX(-50%);
+  }
+}
+
+.clients-resizer--right {
+  top: 0;
+  bottom: 0;
+  right: var(--painel-largura);
+  width: $spacing-lg;
+  transform: translateX(50%);
+  cursor: col-resize;
+
+  &::after {
+    top: 0;
+    bottom: 0;
+    left: 50%;
+    width: 3px;
+    transform: translateX(-50%);
+  }
+}
+
+.clients-resizer--bottom {
+  left: 0;
+  right: 0;
+  bottom: var(--painel-altura);
+  height: $spacing-lg;
+  transform: translateY(50%);
+  cursor: row-resize;
+
+  &::after {
+    left: 0;
+    right: 0;
+    top: 50%;
+    height: 3px;
+    transform: translateY(-50%);
+  }
+}
+
+.clients-panel-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: $z-overlay - 1;
+  border: 0;
+  padding: 0;
+  background-color: rgba($burgundy-deep, 0.45);
+  cursor: pointer;
+}
+
+.clients-panel-slot__close {
+  @include flex-center;
+  position: absolute;
+  top: -14px;
+  right: -14px;
+  z-index: 1;
+  width: 30px;
+  height: 30px;
+  border: 1px solid $color-border;
+  border-radius: 999px;
+  background-color: $color-surface;
+  color: $color-text-secondary;
+  cursor: pointer;
+  box-shadow: $shadow-md;
+  transition:
+    color $transition-fast,
+    border-color $transition-fast;
+
+  &:hover {
+    border-color: $color-primary-light;
+    color: $color-primary;
+  }
+}
+
+.clients-main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  max-height: calc(100vh - 132px);
+  overflow: hidden;
+  border: 1px solid $color-border;
+  border-radius: $border-radius-md;
+  background-color: $color-surface;
+  box-shadow: $shadow-sm;
+}
+
+.clients-actions__buttons {
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+  flex-wrap: wrap;
+}
+
+.clients-toggle-inativos {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+  color: $color-text-secondary;
+  cursor: pointer;
+  user-select: none;
+}
+
+.clients-menu-button,
+.clients-panel-toggle,
+.clients-dropdown button {
+  border: 1px solid $color-border;
+  border-radius: $border-radius-sm;
+  background-color: $color-neutral-light;
+  color: $color-text-secondary;
+  cursor: pointer;
+  font: inherit;
+  transition:
+    background-color $transition-fast,
+    border-color $transition-fast,
+    color $transition-fast,
+    box-shadow $transition-fast;
+
+  &:hover,
+  &.is-active {
+    border-color: $color-primary-light;
+    background-color: rgba($color-primary-pale, 0.55);
+    color: $color-primary;
+  }
+}
+
+.clients-menu-button,
+.clients-panel-toggle {
+  display: inline-flex;
+  min-height: 34px;
+  align-items: center;
+  gap: $spacing-xs;
+  padding: 0 $spacing-sm;
+  white-space: nowrap;
+  font-size: $font-size-xs;
+  font-weight: $font-weight-medium;
+}
+
+.clients-actions,
+.clients-search,
+.clients-summary,
+.clients-main__footer {
+  padding: $spacing-sm $spacing-md;
+  border-bottom: 1px solid rgba($color-border, 0.7);
+}
+
+.clients-actions {
+  @include flex-between;
+  gap: $spacing-md;
+}
+
+.clients-actions__menu {
+  position: relative;
+}
+
+.clients-dropdown {
+  position: absolute;
+  z-index: 5;
+  top: calc(100% + #{$spacing-xs});
+  left: 0;
+  display: grid;
+  width: 230px;
+  gap: $spacing-xs;
+  padding: $spacing-sm;
+  border: 1px solid $color-border;
+  border-radius: $border-radius-md;
+  background-color: $color-surface;
+  box-shadow: $shadow-md;
+
+  button {
+    min-height: 32px;
+    padding: 0 $spacing-sm;
+    text-align: left;
+  }
+}
+
+.clients-search {
+  > span {
+    color: $color-text-muted;
+    font-size: $font-size-xs;
+  }
+}
+
+.clients-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: $spacing-sm;
+
+  div {
+    min-width: 0;
+    border-left: 3px solid $color-primary-light;
+    padding-left: $spacing-sm;
+  }
+
+  span {
+    display: block;
+    color: $color-text-muted;
+    font-size: $font-size-xs;
+  }
+
+  strong {
+    color: $color-text-primary;
+    font-family: $font-family-heading;
+    font-size: $font-size-xl;
+    font-weight: $font-weight-medium;
+  }
+}
+
+.clients-table-wrap {
+  @include thin-scrollbar;
+  flex: 1;
+  min-height: 360px;
+  overflow: auto;
+}
+
+.clients-main__footer {
+  border-bottom: 0;
+  color: $color-text-muted;
+  font-size: $font-size-xs;
+}
+
+.clients-summary-line {
+  padding-bottom: $spacing-xs;
+  font-weight: $font-weight-medium;
+}
+
+.clients-link-button {
+  border: 0;
+  background: none;
+  padding: 0;
+  color: $color-primary;
+  cursor: pointer;
+  font: inherit;
+  text-decoration: underline;
+}
+
+@include respond-below($breakpoint-lg) {
+  // Telas estreitas: qualquer layout dockeado vira coluna única e sem redimensionador
+  // (o modo diálogo continua flutuando).
+  .clients[data-layout='left'],
+  .clients[data-layout='right'],
+  .clients[data-layout='bottom'] {
+    height: auto;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: none;
+  }
+
+  .clients-resizer {
+    display: none;
+  }
+
+  .clients[data-layout='bottom'] .clients-main,
+  .clients-main {
+    max-height: none;
+  }
+
+  .clients[data-layout='bottom'] ::ng-deep .clients-panel {
+    max-height: calc(100vh - 132px);
+  }
+}
+
+@include respond-below($breakpoint-sm) {
+  .clients-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .clients-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}

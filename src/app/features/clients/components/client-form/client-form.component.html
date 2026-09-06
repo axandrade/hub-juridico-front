@@ -1,0 +1,229 @@
+<section class="clients-panel" aria-label="Cadastro de pessoa">
+  <header class="clients-panel__header">
+    <div>
+      <span>Painel</span>
+      <h2>{{ panelTitle() || 'Novo cliente' }}</h2>
+
+      @if (!isPersisted()) {
+        <div class="clients-panel__natureza" role="group" aria-label="Natureza do cliente">
+          <button
+            type="button"
+            [class.is-active]="tipoPessoaAtual() === 'FISICA'"
+            (click)="escolherNaturezaNova('FISICA')"
+          >
+            Pessoa física
+          </button>
+          <button
+            type="button"
+            [class.is-active]="tipoPessoaAtual() === 'JURIDICA'"
+            (click)="escolherNaturezaNova('JURIDICA')"
+          >
+            Pessoa jurídica
+          </button>
+        </div>
+      }
+
+      @if (isPersisted()) {
+        <small>
+          {{ tipoPessoaAtual() === 'FISICA' ? 'Pessoa física' : 'Pessoa jurídica' }}
+          @if (form.controls.dossier.controls.folder.value) {
+            | {{ form.controls.dossier.controls.folder.value }}
+          }
+        </small>
+      }
+    </div>
+
+    <div class="clients-panel__tools" aria-label="Ferramentas do painel">
+      <button
+        type="button"
+        class="clients-icon-button"
+        [class.is-active]="favorite()"
+        title="Configurar favorito"
+        aria-label="Configurar favorito"
+        (click)="toggleFavorite()"
+      >
+        <i class="fa-solid fa-star" aria-hidden="true"></i>
+      </button>
+      <button
+        type="button"
+        class="clients-icon-button"
+        [class.is-active]="locked()"
+        [disabled]="!isPersisted()"
+        title="Travar painel"
+        aria-label="Travar painel"
+        (click)="togglePanelLock()"
+      >
+        <i class="fa-solid fa-lock" aria-hidden="true"></i>
+      </button>
+
+      <app-panel-layout-switcher
+        [layoutPainel]="layoutPainel()"
+        (layoutPainelChange)="escolherLayout($event)"
+      />
+    </div>
+  </header>
+
+  <nav class="clients-panel__tabs" aria-label="Abas do painel">
+    @for (tab of panelTabs; track tab) {
+      <button type="button" [class.is-active]="activePanelTab() === tab" (click)="setPanelTab(tab)">
+        @switch (tab) {
+          @case ('person') {
+            Dados pessoais
+          }
+          @case ('admin') {
+            Administrativo
+          }
+          @case ('records') {
+            Registros
+          }
+        }
+      </button>
+    }
+  </nav>
+
+  <form class="clients-form" (submit)="save($event)">
+    @switch (activePanelTab()) {
+      @case ('person') {
+        <div class="clients-form__section">
+          @for (row of identityRows(); track $index) {
+            <div class="clients-form__row" [class.clients-form__row--cols-3]="row.length === 3">
+              @for (field of row; track field.key) {
+                <app-client-field [config]="field" [control]="pessoaControl(field.key)" />
+              }
+            </div>
+          }
+
+          <div class="clients-form__divider"><span>Endereço</span></div>
+          <app-client-address [group]="form.controls.pessoa.controls.endereco" />
+          <app-client-email-list [array]="form.controls.pessoa.controls.emails" />
+          <app-client-contact-list [array]="form.controls.pessoa.controls.contatos" />
+
+          @if (tipoPessoaAtual() === 'JURIDICA') {
+            <div class="clients-form__divider"><span>Representação legal</span></div>
+            <app-client-representatives [array]="form.controls.pessoa.controls.representantes" />
+          }
+        </div>
+      }
+
+      @case ('records') {
+        <div class="clients-form__section" [formGroup]="form.controls.dossier">
+          <label class="clients-field clients-field--full">
+            <span>Andamento atual</span>
+            <textarea
+              rows="4"
+              formControlName="progressEntry"
+              placeholder="Situação atual do caso — cada alteração vira uma linha datada no histórico ao salvar"
+            ></textarea>
+          </label>
+
+          <label class="clients-field clients-field--full">
+            <span>Histórico de andamentos</span>
+            <textarea rows="12" formControlName="progressHistory" readonly></textarea>
+          </label>
+        </div>
+      }
+
+      @default {
+        <app-client-admin-form [group]="form.controls.dossier" />
+      }
+    }
+
+    <footer class="clients-panel__footer">
+      <span>
+        @switch (notice().key) {
+          @case ('selectOrCreate') {
+            Selecione um cliente na tabela ou cadastre um novo.
+          }
+          @case ('panelLockedSelection') {
+            Painel travado: destrave para carregar outro cliente.
+          }
+          @case ('saving') {
+            Salvando...
+          }
+          @case ('saved') {
+            Cliente salvo: {{ notice().subject }}.
+          }
+          @case ('saveError') {
+            Não foi possível salvar: {{ notice().subject }}
+          }
+          @case ('statusError') {
+            Não foi possível alterar o status: {{ notice().subject }}
+          }
+          @case ('confirmInactivate') {
+            Confirme para inativar {{ notice().subject }}.
+          }
+          @case ('statusChanged') {
+            Cliente {{ notice().subject }}.
+          }
+          @case ('panelCleared') {
+            Painel limpo.
+          }
+          @case ('saveBeforeUpload') {
+            Salve o cliente antes de anexar arquivos.
+          }
+          @case ('uploadError') {
+            Não foi possível enviar: {{ notice().subject }}
+          }
+          @case ('fileRemoved') {
+            Arquivo removido: {{ notice().subject }}.
+          }
+          @case ('removeError') {
+            Não foi possível remover: {{ notice().subject }}
+          }
+          @case ('downloadError') {
+            Não foi possível baixar: {{ notice().subject }}
+          }
+          @case ('viewError') {
+            Não foi possível abrir: {{ notice().subject }}
+          }
+          @case ('naturalNameRequired') {
+            Informe nome e CPF da pessoa física.
+          }
+          @case ('legalNameRequired') {
+            Informe razão social e CNPJ da pessoa jurídica.
+          }
+          @case ('favoriteAdded') {
+            {{ notice().subject }} marcado como favorito.
+          }
+          @case ('favoriteRemoved') {
+            {{ notice().subject }} removido dos favoritos.
+          }
+        }
+      </span>
+      <div>
+        <app-button
+          variant="tertiary"
+          size="sm"
+          icon="fa-solid fa-eraser"
+          label="Limpar painel"
+          (clicked)="clearPanel()"
+        />
+        @if (isPersisted()) {
+          <app-button
+            variant="secondary"
+            size="sm"
+            [icon]="isInactive() ? 'fa-solid fa-rotate-left' : 'fa-solid fa-ban'"
+            [label]="isInactive() ? 'Reativar' : 'Inativar'"
+            (clicked)="requestStatusChange()"
+          />
+        }
+        @if (notice().key === 'confirmInactivate') {
+          <app-button
+            variant="secondary"
+            size="sm"
+            icon="fa-solid fa-check"
+            label="Confirmar"
+            (clicked)="confirmInactivate()"
+          />
+        }
+        <app-button
+          nativeType="submit"
+          variant="primary"
+          size="sm"
+          icon="fa-solid fa-floppy-disk"
+          label="Salvar"
+        />
+      </div>
+    </footer>
+  </form>
+</section>

@@ -1,6 +1,5 @@
 import {
   BRAZILIAN_STATES,
-  CIDADES_CLIENTE,
   MODALIDADES_CLIENTE,
   STATUS_CLIENTE,
   ESTADOS_CIVIS,
@@ -16,7 +15,7 @@ export interface ClientFieldConfig {
   rows?: number;
   span?: 'full';
   /** Máscara de digitação aplicada ao input. */
-  mask?: 'cpf';
+  mask?: 'cpf' | 'cep';
 }
 
 type FieldGroups = readonly (readonly ClientFieldConfig[])[];
@@ -100,13 +99,10 @@ export const REPRESENTANTE_FIELDS: FieldGroups = [
 ];
 
 export const ENDERECO_FIELDS: FieldGroups = [
+  [{ key: 'cep', mask: 'cep' }],
   [{ key: 'logradouro' }, { key: 'numero' }],
   [{ key: 'complemento' }, { key: 'bairro' }],
-  [
-    { key: 'uf', type: 'select', options: BRAZILIAN_STATES },
-    { key: 'cidade', type: 'select', options: CIDADES_CLIENTE },
-    { key: 'cep' },
-  ],
+  [{ key: 'cidade' }, { key: 'uf', type: 'select', options: BRAZILIAN_STATES }],
 ];
 
 export const DOSSIER_FIELDS: FieldGroups = [

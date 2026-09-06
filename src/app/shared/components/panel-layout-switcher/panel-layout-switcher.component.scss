@@ -1,0 +1,49 @@
+@use 'variables' as *;
+@use 'mixins' as *;
+
+:host {
+  display: block;
+}
+
+.layout-switcher {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.layout-switcher__btn {
+  @include flex-center;
+  --layout-icon-bg: #{$color-neutral-light};
+
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  border: 1px solid $color-border;
+  border-radius: $border-radius-sm;
+  background-color: $color-neutral-light;
+  color: $color-text-secondary;
+  cursor: pointer;
+  transition:
+    background-color $transition-fast,
+    border-color $transition-fast,
+    color $transition-fast;
+
+  &:hover {
+    border-color: $color-primary-light;
+    background-color: rgba($color-primary-pale, 0.55);
+    color: $color-primary;
+  }
+
+  &.is-active {
+    --layout-icon-bg: #f1d4d3;
+    border-color: $color-primary-light;
+    background-color: rgba($color-primary-pale, 0.55);
+    color: $color-primary;
+  }
+
+  svg {
+    display: block;
+    width: 15px;
+    height: 15px;
+  }
+}

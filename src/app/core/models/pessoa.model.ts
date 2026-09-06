@@ -59,8 +59,6 @@ export const BRAZILIAN_STATES = [
   'TO',
 ] as const;
 
-export const CIDADES_CLIENTE = ['Fortaleza', 'Juazeiro do Norte', 'Sobral'] as const;
-
 /** Espelha `com.hubjuridico.dominio.Endereco` (embeddable, único por pessoa). */
 export interface IEndereco {
   logradouro: string;

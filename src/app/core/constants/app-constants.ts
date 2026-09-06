@@ -9,6 +9,7 @@ export const APP_INFO = {
 export const ROUTES = {
   DASHBOARD: 'dashboard',
   CLIENTS: 'clientes',
+  ADVOGADOS: 'advogados',
   LOGIN: 'login',
   CHANGE_PASSWORD: 'trocar-senha',
 } as const;
@@ -44,7 +45,12 @@ export const SIDEBAR_NAV: readonly NavItem[] = [
   { label: 'Teses', icon: 'fa-solid fa-lightbulb', emphasis: 'neutral' },
   { label: 'Gestão de Decisões', icon: 'fa-solid fa-scale-balanced', emphasis: 'neutral' },
   { label: 'Análise Preditiva', icon: 'fa-solid fa-chart-column', emphasis: 'neutral' },
-  { label: 'Advogados', icon: 'fa-solid fa-users', emphasis: 'neutral' },
+  {
+    label: 'Advogados',
+    icon: 'fa-solid fa-users',
+    route: `/${ROUTES.ADVOGADOS}`,
+    emphasis: 'neutral',
+  },
   { label: 'Ferramentas', icon: 'fa-solid fa-screwdriver-wrench', emphasis: 'accent' },
   {
     label: 'Dashboard Jurídico',

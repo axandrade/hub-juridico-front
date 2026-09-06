@@ -6,8 +6,12 @@ import { catchError, switchMap, throwError } from 'rxjs';
 import { AuthService } from '../services/auth.service';
 import { TokenStore } from './token-store';
 
-/** Rotas que não devem receber o header nem disparar o fluxo de refresh. */
-const AUTH_BYPASS = ['/auth/login', '/auth/refresh'];
+/**
+ * Rotas que não devem receber o header nem disparar o fluxo de refresh. `/api/v1/storage/` é o
+ * PUT/GET cru da URL pré-assinada de documentos (ver `LocalStorageController` no backend) — quem
+ * autoriza ali é o token da própria URL, não o JWT de autenticação.
+ */
+const AUTH_BYPASS = ['/auth/login', '/auth/refresh', '/api/v1/storage/'];
 
 function isBypassed(url: string): boolean {
   return AUTH_BYPASS.some((path) => url.includes(path));

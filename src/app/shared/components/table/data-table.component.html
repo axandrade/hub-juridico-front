@@ -1,33 +1,108 @@
+@if (columnVisibility()) {
+  <div class="data-table-toolbar">
+    <div class="data-table-columns">
+      <button type="button" class="data-table-columns__toggle" (click)="toggleColumnsMenu()">
+        <i class="fa-solid fa-table-columns" aria-hidden="true"></i>
+        Colunas
+      </button>
+      @if (columnsMenuOpen()) {
+        <div class="data-table-columns__menu" role="menu">
+          @for (column of columns(); track column.key) {
+            <label>
+              <input
+                type="checkbox"
+                [checked]="isColumnVisible(column.key)"
+                (change)="toggleColumnVisibility(column.key)"
+              />
+              <span>{{ column.header }}</span>
+            </label>
+          }
+        </div>
+      }
+    </div>
+  </div>
+}
+
 <div class="table-wrap">
   <table class="data-table">
     <thead>
       <tr>
-        @for (column of columns(); track column.key) {
+        @if (pinAction()) {
+          <th class="data-table__pin"></th>
+        }
+        @for (column of visibleColumns(); track column.key) {
           <th
             [style.width]="column.width"
             [class]="'align-' + (column.align ?? 'left')"
           >
-            {{ column.header }}
+            @if (sortable()) {
+              <button type="button" class="data-table__sort" (click)="sortBy(column.key)">
+                {{ column.header }}
+                <i [class]="sortIcon(column.key)" aria-hidden="true"></i>
+              </button>
+            } @else {
+              {{ column.header }}
+            }
           </th>
         }
       </tr>
+      @if (hasColumnFilters()) {
+        <tr class="data-table__filter-row">
+          @if (pinAction()) {
+            <th class="data-table__pin"></th>
+          }
+          @for (column of visibleColumns(); track column.key) {
+            <th>
+              @if (column.filter?.type === 'select') {
+                <select
+                  [value]="columnFilterValue(column.key)"
+                  (change)="submitColumnFilter(column.key, $any($event.target).value)"
+                >
+                  @for (opcao of column.filter!.options ?? []; track opcao.value) {
+                    <option [value]="opcao.value">{{ opcao.label }}</option>
+                  }
+                </select>
+              } @else if (column.filter) {
+                <input
+                  type="text"
+                  [value]="columnFilterValue(column.key)"
+                  (keydown.enter)="submitColumnFilter(column.key, $any($event.target).value)"
+                />
+              }
+            </th>
+          }
+        </tr>
+      }
     </thead>
 
     <tbody>
       @if (loading()) {
         <tr class="data-table__state">
-          <td [attr.colspan]="columns().length">
+          <td [attr.colspan]="colspan()">
             <i class="fa-solid fa-seedling fa-spin" aria-hidden="true"></i> Carregando…
           </td>
         </tr>
-      } @else if (data().length === 0) {
+      } @else if (rows().length === 0) {
         <tr class="data-table__state">
-          <td [attr.colspan]="columns().length">{{ emptyMessage() }}</td>
+          <td [attr.colspan]="colspan()">{{ emptyMessage() }}</td>
         </tr>
       } @else {
-        @for (row of data(); track trackRow($index, row)) {
-          <tr (click)="rowClick.emit(row)">
-            @for (column of columns(); track column.key) {
+        @for (row of rows(); track trackRow($index, row)) {
+          <tr [class]="rowClass() ? rowClass()!(row) : null" (click)="rowClick.emit(row)">
+            @if (pinAction(); as pin) {
+              <td class="data-table__pin">
+                <button
+                  type="button"
+                  class="data-table__pin-button"
+                  [class.is-active]="pin.isActive(row)"
+                  [attr.aria-label]="pin.ariaLabel ?? null"
+                  (click)="pin.onToggle(row, $event)"
+                >
+                  <i class="fa-solid fa-star" aria-hidden="true"></i>
+                </button>
+              </td>
+            }
+            @for (column of visibleColumns(); track column.key) {
               <td [class]="'align-' + (column.align ?? 'left')">
                 @switch (column.format) {
                   @case ('date') {
@@ -37,7 +112,11 @@
                     {{ numberValue(row, column) | currencyFormat }}
                   }
                   @case ('badge') {
-                    <app-badge tone="primary" [label]="displayValue(row, column)" />
+                    <app-badge
+                      [tone]="badgeTone(row, column)"
+                      [dot]="column.badgeDot ?? false"
+                      [label]="displayValue(row, column)"
+                    />
                   }
                   @default {
                     {{ displayValue(row, column) }}
@@ -51,3 +130,27 @@
     </tbody>
   </table>
 </div>
+
+@if (pagination(); as p) {
+  <div class="data-table-pagination">
+    <button
+      type="button"
+      class="data-table-pagination__button"
+      [disabled]="p.page <= 0"
+      (click)="requestPage(-1)"
+    >
+      <i class="fa-solid fa-chevron-left" aria-hidden="true"></i>
+      Anterior
+    </button>
+    <span>Página {{ p.page + 1 }} de {{ pageCountLabel(p) }}</span>
+    <button
+      type="button"
+      class="data-table-pagination__button"
+      [disabled]="p.last"
+      (click)="requestPage(1)"
+    >
+      Próxima
+      <i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
+    </button>
+  </div>
+}

@@ -1,44 +1,63 @@
-import { ChangeDetectionStrategy, Component, input } from '@angular/core';
-import { FormArray, FormControl } from '@angular/forms';
+import { ChangeDetectionStrategy, Component, input, signal } from '@angular/core';
+import { FormArray } from '@angular/forms';
 
+import { IRepresentanteLegal } from '../../../../core/models';
 import { RepresentanteGroup, createRepresentanteGroup } from '../../forms/client-form.factory';
-import { REPRESENTANTE_FIELDS } from '../../models/client-form.model';
-import { ClientAddressComponent } from '../client-address/client-address.component';
-import { ClientContactListComponent } from '../client-contact-list/client-contact-list.component';
-import { ClientEmailListComponent } from '../client-email-list/client-email-list.component';
-import { ClientFieldComponent } from '../client-field/client-field.component';
+import { ClientRepresentativeDialogComponent } from '../client-representative-dialog/client-representative-dialog.component';
+
+/** Item em edição no dialog: `index < 0` = cadastro novo. */
+interface EditingRepresentante {
+  index: number;
+  value: IRepresentanteLegal | null;
+}
 
 /**
- * Editor dos representantes legais (`FormArray<RepresentanteGroup>`). Cada item é
- * um mini-cadastro de pessoa (identidade + endereço + e-mails + contatos),
- * espelhando `com.hubjuridico.dominio.RepresentanteLegal`.
+ * Lista enxuta dos representantes legais (`FormArray<RepresentanteGroup>`). Mostra
+ * só nome / CPF / cargo de cada um; adicionar e editar acontecem no dialog
+ * (`ClientRepresentativeDialogComponent`), que devolve o valor já validado.
  */
 @Component({
   selector: 'app-client-representatives',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [
-    ClientFieldComponent,
-    ClientAddressComponent,
-    ClientEmailListComponent,
-    ClientContactListComponent,
-  ],
+  imports: [ClientRepresentativeDialogComponent],
   templateUrl: './client-representatives.component.html',
   styleUrl: './client-representatives.component.scss',
 })
 export class ClientRepresentativesComponent {
   readonly array = input.required<FormArray<RepresentanteGroup>>();
 
-  protected readonly identityRows = REPRESENTANTE_FIELDS;
+  protected readonly editing = signal<EditingRepresentante | null>(null);
 
-  protected control(group: RepresentanteGroup, key: string): FormControl<string> {
-    return group.get(key) as FormControl<string>;
+  protected openNew(): void {
+    this.editing.set({ index: -1, value: null });
   }
 
-  protected add(): void {
-    this.array().push(createRepresentanteGroup());
+  protected openEdit(index: number): void {
+    this.editing.set({ index, value: this.array().at(index).getRawValue() });
+  }
+
+  protected closeDialog(): void {
+    this.editing.set(null);
   }
 
   protected remove(index: number): void {
     this.array().removeAt(index);
+    this.array().markAsDirty();
+  }
+
+  protected onSaved(value: IRepresentanteLegal): void {
+    const editing = this.editing();
+    if (!editing) {
+      return;
+    }
+
+    const group = createRepresentanteGroup(value);
+    if (editing.index < 0) {
+      this.array().push(group);
+    } else {
+      this.array().setControl(editing.index, group);
+    }
+    this.array().markAsDirty();
+    this.closeDialog();
   }
 }

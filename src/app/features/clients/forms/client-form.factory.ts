@@ -126,8 +126,16 @@ export function createRepresentanteGroup(
   value?: Partial<IRepresentanteLegal>,
 ): RepresentanteGroup {
   return new FormGroup({
-    nome: text(value?.nome),
-    cpf: text(value?.cpf),
+    // Nome e CPF são obrigatórios: um representante só entra no formulário depois
+    // de salvo no dialog (`ClientRepresentativeDialogComponent`), que valida antes.
+    nome: new FormControl(value?.nome ?? '', {
+      nonNullable: true,
+      validators: [Validators.required],
+    }),
+    cpf: new FormControl(value?.cpf ?? '', {
+      nonNullable: true,
+      validators: [Validators.required],
+    }),
     cargo: text(value?.cargo),
     endereco: createEnderecoGroup(value?.endereco),
     emails: new FormArray((value?.emails ?? []).map((email) => createEmailGroup(email))),

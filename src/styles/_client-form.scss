@@ -1,6 +1,7 @@
 // Estilos compartilhados pelas abas de cadastro de cliente
 // (client-field, client-address, client-email-list, client-contact-list,
-// client-representatives, client-form, client-admin-form). Cada
+// client-representatives, client-representative-dialog, client-form,
+// client-admin-form). Cada
 // componente faz `@use 'client-form';` — o host é `display: contents` para
 // participar direto do layout flex de `.clients-form`.
 @use 'variables' as *;
@@ -151,22 +152,46 @@
   font-size: $font-size-xs;
 }
 
-.clients-representative {
-  display: flex;
-  flex-direction: column;
-  gap: $spacing-sm;
-  padding: $spacing-sm;
-  border: 1px solid rgba($color-border, 0.7);
-  border-radius: $border-radius-sm;
-  background-color: $color-surface;
+.clients-representative-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 34px;
+  gap: $spacing-xs;
+  align-items: center;
 }
 
-.clients-representative__head {
-  @include flex-between;
-  gap: $spacing-sm;
-  color: $color-text-secondary;
-  font-size: $font-size-xs;
-  font-weight: $font-weight-bold;
+.clients-representative-row__info {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
+  padding: $spacing-xs $spacing-sm;
+  border: 1px solid $color-border;
+  border-radius: $border-radius-sm;
+  background-color: $color-surface;
+  cursor: pointer;
+  text-align: left;
+  transition:
+    border-color $transition-fast,
+    background-color $transition-fast;
+
+  strong {
+    overflow: hidden;
+    color: $color-text-primary;
+    font-size: $font-size-xs;
+    font-weight: $font-weight-bold;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  span {
+    color: $color-text-secondary;
+    font-size: $font-size-xs;
+  }
+
+  &:hover {
+    border-color: $color-primary-light;
+    background-color: rgba($color-primary-pale, 0.4);
+  }
 }
 
 .clients-icon-button,

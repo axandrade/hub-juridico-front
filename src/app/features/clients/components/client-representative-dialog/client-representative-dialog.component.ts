@@ -1,35 +1,32 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  DestroyRef,
   OnInit,
   computed,
+  inject,
   input,
   output,
   signal,
 } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormControl } from '@angular/forms';
 
-import { IRepresentanteLegal, TipoPessoa } from '../../../../core/models';
+import { onlyDigits } from '../../../../core/auth/cpf';
+import { IRepresentanteLegal } from '../../../../core/models';
 import { ButtonComponent } from '../../../../shared/components/button/button.component';
 import { ModalComponent } from '../../../../shared/components/modal/modal.component';
-import {
-  RepresentanteGroup,
-  createRepresentanteGroup,
-  setTipoRepresentante,
-} from '../../forms/client-form.factory';
-import {
-  REPRESENTANTE_FISICA_FIELDS,
-  REPRESENTANTE_JURIDICA_FIELDS,
-} from '../../models/client-form.model';
+import { RepresentanteGroup, createRepresentanteGroup } from '../../forms/client-form.factory';
+import { REPRESENTANTE_FIELDS } from '../../models/client-form.model';
 import { ClientAddressComponent } from '../client-address/client-address.component';
 import { ClientContactListComponent } from '../client-contact-list/client-contact-list.component';
 import { ClientEmailListComponent } from '../client-email-list/client-email-list.component';
 import { ClientFieldComponent } from '../client-field/client-field.component';
 
 /**
- * Dialog de cadastro/edição de um representante legal (mini-pessoa: identidade +
- * endereço + e-mails + contatos). O representante pode ser física ou jurídica —
- * a natureza alterna nome/CPF ↔ razão social/CNPJ, como o painel da pessoa.
+ * Dialog de cadastro/edição de um representante (legal ou financeiro — mini-pessoa:
+ * identidade + endereço + e-mails + contatos). `documento` aceita CPF ou CNPJ, sem
+ * distinção de natureza no formulário.
  *
  * Trabalha sobre uma cópia destacada: só devolve o valor (`saved`) quando o
  * usuário confirma em "Salvar"; fechar/cancelar descarta tudo.
@@ -55,17 +52,24 @@ export class ClientRepresentativeDialogComponent implements OnInit {
   readonly saved = output<IRepresentanteLegal>();
   readonly closed = output<void>();
 
+  private readonly destroyRef = inject(DestroyRef);
+
   protected form: RepresentanteGroup = createRepresentanteGroup();
 
-  /** Espelha `form.controls.tipo` para o template reagir (troca dos campos). */
-  protected readonly tipo = signal<TipoPessoa>('FISICA');
+  /** Espelha `form.controls.documento` para o template reagir (esconde "Cargo" p/ CNPJ). */
+  protected readonly documento = signal('');
+
+  /** CNPJ (14 dígitos) identifica o representante como pessoa jurídica — cargo não se aplica. */
+  protected readonly isJuridica = computed(() => onlyDigits(this.documento()).length > 11);
 
   protected readonly identityRows = computed(() =>
-    this.tipo() === 'JURIDICA' ? REPRESENTANTE_JURIDICA_FIELDS : REPRESENTANTE_FISICA_FIELDS,
+    this.isJuridica()
+      ? REPRESENTANTE_FIELDS.filter((row) => !row.some((field) => field.key === 'cargo'))
+      : REPRESENTANTE_FIELDS,
   );
 
   protected readonly title = computed(() =>
-    this.value() ? 'Editar representante legal' : 'Novo representante legal',
+    this.value() ? 'Editar representante' : 'Novo representante',
   );
 
   /** `true` depois de um "Salvar" barrado por identidade em branco. */
@@ -75,21 +79,20 @@ export class ClientRepresentativeDialogComponent implements OnInit {
     const value = this.value();
     if (value) {
       this.form = createRepresentanteGroup(value);
-      this.tipo.set(this.form.controls.tipo.value);
     }
+    this.documento.set(this.form.controls.documento.value);
+    this.form.controls.documento.valueChanges
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((value) => {
+        this.documento.set(value);
+        if (onlyDigits(value).length > 11) {
+          this.form.controls.cargo.setValue('');
+        }
+      });
   }
 
   protected control(key: string): FormControl<string> {
     return this.form.get(key) as FormControl<string>;
-  }
-
-  protected setTipo(tipo: TipoPessoa): void {
-    if (this.tipo() === tipo) {
-      return;
-    }
-    setTipoRepresentante(this.form, tipo);
-    this.tipo.set(tipo);
-    this.showError.set(false);
   }
 
   protected save(): void {

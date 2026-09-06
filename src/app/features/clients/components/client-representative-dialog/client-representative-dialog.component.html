@@ -1,14 +1,5 @@
 <app-modal [open]="true" [title]="title()" (closed)="cancel()">
   <div class="representative-dialog">
-    <div class="representative-dialog__nature" role="group" aria-label="Natureza do representante">
-      <button type="button" [class.is-active]="tipo() === 'FISICA'" (click)="setTipo('FISICA')">
-        Pessoa física
-      </button>
-      <button type="button" [class.is-active]="tipo() === 'JURIDICA'" (click)="setTipo('JURIDICA')">
-        Pessoa jurídica
-      </button>
-    </div>
-
     @for (row of identityRows(); track $index) {
       <div class="clients-form__row" [class.clients-form__row--cols-3]="row.length === 3">
         @for (field of row; track field.key) {
@@ -25,11 +16,7 @@
 
     @if (showError() && form.invalid) {
       <p class="representative-dialog__error">
-        @if (tipo() === 'JURIDICA') {
-          Informe pelo menos a razão social e o CNPJ do representante.
-        } @else {
-          Informe pelo menos o nome e o CPF do representante.
-        }
+        Informe pelo menos o nome e um CPF ou CNPJ válido do representante.
       </p>
     }
   </div>

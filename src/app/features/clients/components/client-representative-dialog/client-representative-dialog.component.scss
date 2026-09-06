@@ -7,38 +7,6 @@
   gap: $spacing-sm;
 }
 
-.representative-dialog__nature {
-  display: flex;
-  gap: $spacing-xs;
-
-  button {
-    flex: 1;
-    min-height: 32px;
-    border: 1px solid $color-border;
-    border-radius: $border-radius-sm;
-    background-color: $color-neutral-light;
-    color: $color-text-secondary;
-    cursor: pointer;
-    font: inherit;
-    font-size: $font-size-xs;
-    font-weight: $font-weight-medium;
-    transition:
-      background-color $transition-fast,
-      border-color $transition-fast,
-      color $transition-fast;
-
-    &:hover {
-      border-color: $color-primary-light;
-    }
-
-    &.is-active {
-      border-color: $color-primary;
-      background-color: rgba($color-primary-pale, 0.55);
-      color: $color-primary;
-    }
-  }
-}
-
 .representative-dialog__error {
   margin: 0;
   color: $color-error;

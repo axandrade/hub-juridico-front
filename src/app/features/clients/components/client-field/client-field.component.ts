@@ -3,6 +3,7 @@ import { FormControl, ReactiveFormsModule } from '@angular/forms';
 
 import { CepMaskDirective } from '../../../../shared/directives/cep-mask.directive';
 import { CpfMaskDirective } from '../../../../shared/directives/cpf-mask.directive';
+import { DocumentoMaskDirective } from '../../../../shared/directives/documento-mask.directive';
 import {
   CLIENT_FIELD_LABELS,
   CLIENT_OPTION_LABELS,
@@ -17,7 +18,7 @@ import {
 @Component({
   selector: 'app-client-field',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ReactiveFormsModule, CpfMaskDirective, CepMaskDirective],
+  imports: [ReactiveFormsModule, CpfMaskDirective, CepMaskDirective, DocumentoMaskDirective],
   template: `
     <label class="clients-field" [class.clients-field--full]="config().span === 'full'">
       <span>{{ label() }}</span>
@@ -48,6 +49,9 @@ import {
         @case ('cep') {
           <input type="text" appCepMask [formControl]="control()" (blur)="blurred.emit(config().key)" />
         }
+        @case ('documento') {
+          <input type="text" appDocumentoMask [formControl]="control()" (blur)="blurred.emit(config().key)" />
+        }
         @default {
           <input [type]="kind()" [formControl]="control()" (blur)="blurred.emit(config().key)" />
         }
@@ -65,9 +69,10 @@ export class ClientFieldComponent {
   protected readonly label = computed(
     () => CLIENT_FIELD_LABELS[this.config().key] ?? this.config().key,
   );
-  protected readonly kind = computed<ClientInputKind | 'cpf' | 'cep'>(() => {
+  protected readonly kind = computed<ClientInputKind | 'cpf' | 'cep' | 'documento'>(() => {
     if (this.config().mask === 'cpf') return 'cpf';
     if (this.config().mask === 'cep') return 'cep';
+    if (this.config().mask === 'documento') return 'documento';
     return this.config().type ?? 'text';
   });
 

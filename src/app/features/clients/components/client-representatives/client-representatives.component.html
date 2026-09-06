@@ -6,14 +6,13 @@
 
   @for (group of array().controls; track group) {
     @let rep = group.getRawValue();
-    @let juridica = rep.tipo === 'JURIDICA';
     <div class="clients-representative-row">
       <button type="button" class="clients-representative-row__info" (click)="openEdit($index)">
         <strong>
-          {{ (juridica ? rep.razaoSocial : rep.nome) || 'Representante sem nome' }}
+          {{ rep.nome || 'Representante sem nome' }}
         </strong>
         <span>
-          {{ (juridica ? rep.cnpj : rep.cpf) || 'Documento não informado' }}
+          {{ rep.documento || 'Documento não informado' }}
           @if (rep.cargo) {
             · {{ rep.cargo }}
           }

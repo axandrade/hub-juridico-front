@@ -31,16 +31,12 @@ export interface EmailApi {
 
 export interface RepresentanteApi {
   nome: string;
-  cpf: string;
+  /** CPF ou CNPJ, só dígitos — o backend valida os dois formatos no mesmo campo. */
+  documento: string;
   cargo: string | null;
   endereco: EnderecoApi | null;
   contatos: ContatoApi[];
   emails: EmailApi[];
-  // Pendência backend: enviados para quando `RepresentanteLegal` suportar PJ.
-  // Hoje o backend ignora estes campos e não os devolve na resposta.
-  tipo?: 'FISICA' | 'JURIDICA';
-  cnpj?: string | null;
-  razao_social?: string | null;
 }
 
 export type StatusVinculoApi = 'ATIVO' | 'INATIVO';

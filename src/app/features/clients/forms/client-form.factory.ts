@@ -1,5 +1,6 @@
 import { AbstractControl, FormArray, FormControl, FormGroup, Validators } from '@angular/forms';
 
+import { documentoValidator } from '../../../core/auth/cpf';
 import {
   ModalidadeCliente,
   StatusCliente,
@@ -35,11 +36,8 @@ export type ContatoGroup = FormGroup<{
 }>;
 
 export type RepresentanteGroup = FormGroup<{
-  tipo: FormControl<TipoPessoa>;
   nome: FormControl<string>;
-  cpf: FormControl<string>;
-  razaoSocial: FormControl<string>;
-  cnpj: FormControl<string>;
+  documento: FormControl<string>;
   cargo: FormControl<string>;
   endereco: EnderecoGroup;
   emails: FormArray<EmailGroup>;
@@ -128,36 +126,17 @@ export function createContatoGroup(value?: Partial<IContato>): ContatoGroup {
 export function createRepresentanteGroup(
   value?: Partial<IRepresentanteLegal>,
 ): RepresentanteGroup {
-  const tipo: TipoPessoa = value?.tipo ?? 'FISICA';
-  const group: RepresentanteGroup = new FormGroup({
-    tipo: new FormControl<TipoPessoa>(tipo, { nonNullable: true }),
-    nome: text(value?.nome),
-    cpf: text(value?.cpf),
-    razaoSocial: text(value?.razaoSocial),
-    cnpj: text(value?.cnpj),
+  return new FormGroup({
+    nome: new FormControl(value?.nome ?? '', { nonNullable: true, validators: [Validators.required] }),
+    documento: new FormControl(value?.documento ?? '', {
+      nonNullable: true,
+      validators: [Validators.required, documentoValidator],
+    }),
     cargo: text(value?.cargo),
     endereco: createEnderecoGroup(value?.endereco),
     emails: new FormArray((value?.emails ?? []).map((email) => createEmailGroup(email))),
     contatos: new FormArray((value?.contatos ?? []).map((contato) => createContatoGroup(contato))),
   });
-  // Só a identidade da natureza ativa é obrigatória — um representante só entra no
-  // formulário depois de validado no dialog (`ClientRepresentativeDialogComponent`).
-  setTipoRepresentante(group, tipo);
-  return group;
-}
-
-/**
- * Aplica a natureza do representante: grava `tipo` e mantém `required` apenas nos
- * campos de identidade correspondentes (`nome`/`cpf` para física,
- * `razaoSocial`/`cnpj` para jurídica).
- */
-export function setTipoRepresentante(group: RepresentanteGroup, tipo: TipoPessoa): void {
-  group.controls.tipo.setValue(tipo);
-  const fisica = tipo === 'FISICA';
-  setRequired(group.controls.nome, fisica);
-  setRequired(group.controls.cpf, fisica);
-  setRequired(group.controls.razaoSocial, !fisica);
-  setRequired(group.controls.cnpj, !fisica);
 }
 
 function createPessoaGroup(): PessoaGroup {

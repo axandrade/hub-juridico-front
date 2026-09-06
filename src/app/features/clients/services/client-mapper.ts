@@ -1,4 +1,4 @@
-import { maskCnpj, maskCpf, onlyDigits } from '../../../core/auth/cpf';
+import { maskCnpj, maskCpf, maskDocumento, onlyDigits } from '../../../core/auth/cpf';
 import {
   EstadoCivil,
   IPessoa,
@@ -6,7 +6,6 @@ import {
   IEndereco,
   IRepresentanteLegal,
   StatusCliente,
-  TipoPessoa,
   emptyDossie,
   emptyEndereco,
 } from '../../../core/models';
@@ -131,16 +130,9 @@ function enderecoFromApi(e: EnderecoApi | null): IEndereco {
 }
 
 function representanteFromApi(r: RepresentanteRespApi): IRepresentanteLegal {
-  const tipo: TipoPessoa = r.tipo === 'JURIDICA' ? 'JURIDICA' : 'FISICA';
   return {
-    tipo,
-    // Enquanto o backend não devolve `tipo`/`razao_social`, um representante PJ
-    // salvo volta com `tipo: 'FISICA'` e a razão social em `nome` — recuperável
-    // quando o backend passar a expor os campos (ver pendência).
     nome: r.nome ?? '',
-    cpf: maskCpf(r.cpf ?? ''),
-    razaoSocial: r.razao_social ?? '',
-    cnpj: maskCnpj(r.cnpj ?? ''),
+    documento: maskDocumento(r.documento ?? ''),
     cargo: r.cargo ?? '',
     endereco: enderecoFromApi(r.endereco),
     emails: principalPrimeiro(
@@ -247,17 +239,10 @@ function enderecoToApi(e: IEndereco): EnderecoApi | null {
 }
 
 function representanteToApi(r: IRepresentanteLegal): RepresentanteApi {
-  const juridica = r.tipo === 'JURIDICA';
   return {
-    // Compat com o contrato atual (só `nome`/`cpf`): quando PJ, a razão social vai
-    // em `nome` e `cpf` fica vazio; `tipo`/`cnpj`/`razao_social` vão junto para o
-    // backend futuro (ver `docs/pendencia-backend-representante-legal.md`).
-    nome: (juridica ? r.razaoSocial : r.nome).trim(),
-    cpf: juridica ? '' : onlyDigits(r.cpf),
+    nome: r.nome.trim(),
+    documento: onlyDigits(r.documento),
     cargo: nullif(r.cargo),
-    tipo: r.tipo,
-    cnpj: juridica ? onlyDigits(r.cnpj) : null,
-    razao_social: juridica ? r.razaoSocial.trim() : null,
     endereco: enderecoToApi(r.endereco),
     contatos: r.contatos
       .filter((c) => c.valor.trim())

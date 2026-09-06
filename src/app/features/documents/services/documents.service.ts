@@ -18,7 +18,12 @@ import {
 } from '../models/document-explorer.model';
 
 /** Espelha `storage.allowed-content-types` do backend (ver `application.yml`) — mantido em sync manualmente. */
-export const TIPOS_ACEITOS = ['application/pdf', 'image/png', 'image/jpeg'];
+export const TIPOS_ACEITOS = [
+  'application/pdf',
+  'image/png',
+  'image/jpeg',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+];
 
 /**
  * Pastas e documentos de uma pessoa (cliente) — `/api/v1/pastas` e `/api/v1/documentos`
@@ -85,6 +90,16 @@ export class DocumentsService {
     return this.http
       .get<DownloadUrlApi>(`${this.base}/documentos/${documentoId}/download-url`)
       .pipe(map((resposta) => resposta.url));
+  }
+
+  /**
+   * Busca o binário como blob — usado só pra visualizar (PDF em nova aba, DOCX renderizado no
+   * navegador). A URL de download tem `Content-Disposition: attachment` (força "Salvar como"),
+   * mas isso só vale pra navegação direta; buscando como blob e criando uma Object URL local a
+   * gente ignora esse header e decide como mostrar.
+   */
+  baixarBlob(documentoId: string): Observable<Blob> {
+    return this.downloadUrl(documentoId).pipe(switchMap((url) => this.http.get(url, { responseType: 'blob' })));
   }
 
   /** Fluxo completo de envio: pede a URL pré-assinada, envia o binário cru, confirma os metadados. */

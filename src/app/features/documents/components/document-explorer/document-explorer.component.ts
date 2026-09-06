@@ -41,6 +41,8 @@ export interface DocumentExplorerNotice {
 type TipoItem = 'pasta' | 'documento';
 type ItemArrastado = { tipo: TipoItem; id: string; nome: string };
 
+const TIPO_DOCX = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+
 /**
  * Explorador de arquivos (pastas + documentos) de uma pessoa (cliente) — estilo gerenciador de
  * arquivos: navegação por pastas com breadcrumb, criar/renomear/excluir pasta, enviar/renomear/
@@ -62,6 +64,13 @@ export class DocumentExplorerComponent {
   readonly notify = output<DocumentExplorerNotice>();
 
   private readonly fileInput = viewChild<ElementRef<HTMLInputElement>>('fileInput');
+
+  // --- preview de DOCX (renderizado no navegador com docx-preview; PDF abre em nova aba) ---
+  protected readonly docxOpen = signal(false);
+  protected readonly docxNome = signal('');
+  protected readonly docxCarregando = signal(false);
+  private readonly docxBlob = signal<Blob | null>(null);
+  private readonly docxHost = viewChild<ElementRef<HTMLElement>>('docxHost');
 
   protected readonly pastaAtualId = signal<string | null>(null);
   protected readonly conteudo = signal<PastaConteudo | null>(null);
@@ -101,6 +110,15 @@ export class DocumentExplorerComponent {
         this.pastaAtualId.set(null);
         this.carregar();
       });
+    });
+
+    // Renderiza o DOCX assim que o modal monta o container e o blob chega.
+    effect(() => {
+      const host = this.docxHost()?.nativeElement;
+      const blob = this.docxBlob();
+      if (host && blob) {
+        this.renderizarDocx(host, blob);
+      }
     });
   }
 
@@ -398,7 +416,7 @@ export class DocumentExplorerComponent {
     });
   }
 
-  // --- download ---
+  // --- download / visualizar ---
 
   protected baixar(documento: Documento): void {
     this.fecharMenu();
@@ -410,6 +428,77 @@ export class DocumentExplorerComponent {
       },
       error: () => this.notify.emit({ key: 'downloadErro', subject: documento.nome }),
     });
+  }
+
+  /** PDF e DOCX têm o ícone de olho na linha — o resto (imagens) só tem baixar. */
+  protected podeVisualizar(documento: Documento): boolean {
+    return documento.contentType === 'application/pdf' || documento.contentType === TIPO_DOCX;
+  }
+
+  protected visualizar(documento: Documento): void {
+    this.fecharMenu();
+    if (documento.contentType === TIPO_DOCX) {
+      this.visualizarDocx(documento);
+      return;
+    }
+    this.visualizarPdf(documento);
+  }
+
+  /** Abre a aba já no clique (gesto do usuário) pra não cair no bloqueador de pop-up; a URL do
+   * blob é setada quando o download termina. */
+  private visualizarPdf(documento: Documento): void {
+    const aba = window.open('', '_blank');
+    this.documentsService.baixarBlob(documento.id).subscribe({
+      next: (blob) => {
+        const url = URL.createObjectURL(new Blob([blob], { type: 'application/pdf' }));
+        if (aba) {
+          aba.location.href = url;
+        } else {
+          window.open(url, '_blank');
+        }
+        setTimeout(() => URL.revokeObjectURL(url), 60_000);
+      },
+      error: () => {
+        aba?.close();
+        this.notify.emit({ key: 'downloadErro', subject: documento.nome });
+      },
+    });
+  }
+
+  /** Baixa o DOCX e abre o modal de preview — o `effect` do construtor chama o docx-preview quando o container monta. */
+  private visualizarDocx(documento: Documento): void {
+    this.docxNome.set(documento.nome);
+    this.docxCarregando.set(true);
+    this.docxOpen.set(true);
+    this.documentsService.baixarBlob(documento.id).subscribe({
+      next: (blob) => this.docxBlob.set(blob),
+      error: () => {
+        this.docxCarregando.set(false);
+        this.docxOpen.set(false);
+        this.notify.emit({ key: 'downloadErro', subject: documento.nome });
+      },
+    });
+  }
+
+  private async renderizarDocx(host: HTMLElement, blob: Blob): Promise<void> {
+    this.docxCarregando.set(true);
+    host.replaceChildren();
+    try {
+      const { renderAsync } = await import('docx-preview');
+      await renderAsync(blob, host, undefined, { ignoreLastRenderedPageBreak: true });
+    } catch {
+      this.notify.emit({ key: 'downloadErro', subject: this.docxNome() });
+      this.docxOpen.set(false);
+    } finally {
+      this.docxCarregando.set(false);
+      this.docxBlob.set(null);
+    }
+  }
+
+  protected fecharDocx(): void {
+    this.docxOpen.set(false);
+    this.docxBlob.set(null);
+    this.docxHost()?.nativeElement.replaceChildren();
   }
 
   // --- arrastar e soltar ---
@@ -499,6 +588,9 @@ export class DocumentExplorerComponent {
     }
     if (tipo.startsWith('image/')) {
       return 'fa-solid fa-file-image';
+    }
+    if (tipo === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
+      return 'fa-solid fa-file-word';
     }
     return 'fa-solid fa-file';
   }

@@ -346,6 +346,12 @@ export class ClientFormComponent {
         nome: this.toUppercaseName(representante.nome),
       }),
     );
+    base.pessoa.representantesFinanceiros = base.pessoa.representantesFinanceiros.map(
+      (representante): IRepresentanteLegal => ({
+        ...representante,
+        nome: this.toUppercaseName(representante.nome),
+      }),
+    );
 
     const dossier = base.dossier;
     dossier.status = dossier.status || 'active';

@@ -12,7 +12,8 @@ interface EditingRepresentante {
 }
 
 /**
- * Lista enxuta dos representantes legais (`FormArray<RepresentanteGroup>`). Mostra
+ * Lista enxuta de representantes (`FormArray<RepresentanteGroup>`) — reusada tanto
+ * pra representantes legais (PJ) quanto financeiros (PF), só muda o `titulo`. Mostra
  * só nome / documento / cargo de cada um; adicionar e editar acontecem no dialog
  * (`ClientRepresentativeDialogComponent`), que devolve o valor já validado.
  */
@@ -25,6 +26,7 @@ interface EditingRepresentante {
 })
 export class ClientRepresentativesComponent {
   readonly array = input.required<FormArray<RepresentanteGroup>>();
+  readonly titulo = input<string>('Representantes legais');
 
   protected readonly editing = signal<EditingRepresentante | null>(null);
 

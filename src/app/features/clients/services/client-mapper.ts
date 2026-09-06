@@ -74,6 +74,7 @@ export function clientRespToClient(res: ClientRespApi, currentUser: CurrentUser 
       profissao: '',
       nacionalidade: res.nacionalidade ?? '',
       estadoCivil: (res.estado_civil ?? '') as EstadoCivil | '',
+      representantesFinanceiros: (res.representantes_financeiros ?? []).map(representanteFromApi),
       razaoSocial: res.razao_social ?? '',
       nomeFantasia: res.nome_fantasia ?? '',
       cnpj: maskCnpj(res.cnpj ?? ''),
@@ -163,6 +164,7 @@ export function clientToCriarRequest(client: IPessoa): CriarClientApi {
       rg: nullif(p.rg),
       estado_civil: p.estadoCivil || null,
       nacionalidade: nullif(p.nacionalidade),
+      representantes_financeiros: p.representantesFinanceiros.map(representanteToApi),
       ...comum,
     };
   }

@@ -55,6 +55,7 @@ export type PessoaGroup = FormGroup<{
   profissao: FormControl<string>;
   nacionalidade: FormControl<string>;
   estadoCivil: FormControl<string>;
+  representantesFinanceiros: FormArray<RepresentanteGroup>;
   razaoSocial: FormControl<string>;
   nomeFantasia: FormControl<string>;
   cnpj: FormControl<string>;
@@ -151,6 +152,7 @@ function createPessoaGroup(): PessoaGroup {
     profissao: text(),
     nacionalidade: text(),
     estadoCivil: text(),
+    representantesFinanceiros: new FormArray<RepresentanteGroup>([]),
     razaoSocial: text(),
     nomeFantasia: text(),
     cnpj: text(),
@@ -242,6 +244,10 @@ export function patchClientForm(form: ClientForm, client: IPessoa): void {
   pessoa.setControl(
     'representantes',
     new FormArray(source.representantes.map((r) => createRepresentanteGroup(r))),
+  );
+  pessoa.setControl(
+    'representantesFinanceiros',
+    new FormArray(source.representantesFinanceiros.map((r) => createRepresentanteGroup(r))),
   );
 
   setTipoPessoa(form, source.tipo);

@@ -71,6 +71,7 @@ export interface CriarClientFisicaApi extends ClientRequestComum {
   rg: string | null;
   estado_civil: EstadoCivil | null;
   nacionalidade: string | null;
+  representantes_financeiros: RepresentanteApi[];
 }
 
 export interface CriarClientJuridicaApi extends ClientRequestComum {
@@ -120,6 +121,7 @@ export interface ClientRespApi {
   inscricao_estadual?: string;
   inscricao_municipal?: string;
   representantes?: RepresentanteRespApi[];
+  representantes_financeiros?: RepresentanteRespApi[];
   // comum
   favorito?: boolean;
   // Andamentos: o backend (`PessoaFisicaResponse`/`PessoaJuridicaResponse`) manda na raiz.

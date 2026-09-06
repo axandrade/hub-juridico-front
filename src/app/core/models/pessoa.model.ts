@@ -118,6 +118,7 @@ export interface IDadosPessoa {
   profissao: string;
   nacionalidade: string;
   estadoCivil: EstadoCivil | '';
+  representantesFinanceiros: IRepresentanteLegal[];
   // PessoaJuridica
   razaoSocial: string;
   nomeFantasia: string;
@@ -183,6 +184,7 @@ export function emptyDadosPessoa(tipo: TipoPessoa = 'FISICA'): IDadosPessoa {
     profissao: '',
     nacionalidade: '',
     estadoCivil: '',
+    representantesFinanceiros: [],
     razaoSocial: '',
     nomeFantasia: '',
     cnpj: '',

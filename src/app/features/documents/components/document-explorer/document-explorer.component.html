@@ -3,16 +3,17 @@
     <nav class="doc-explorer__breadcrumb" aria-label="Caminho da pasta">
       <button
         type="button"
-        class="doc-explorer__crumb"
+        class="doc-explorer__crumb doc-explorer__crumb--raiz"
         [class.is-current]="pastaAtualId() === null"
         [class.is-drop-target]="estaSobAlvo('')"
+        [title]="'Início — ' + rotuloRaiz()"
         (click)="irParaBreadcrumb(null)"
         (dragover)="onDragOverAlvo($event, '')"
         (dragleave)="onDragLeaveAlvo('')"
         (drop)="onDropNoBreadcrumb($event, null)"
       >
-        <i class="fa-solid fa-house" aria-hidden="true"></i>
-        Raiz
+        <i class="fa-solid fa-folder-tree" aria-hidden="true"></i>
+        <span class="doc-explorer__crumb-label">{{ rotuloRaiz() }}</span>
       </button>
       @for (item of breadcrumb(); track item.id; let last = $last) {
         <i class="fa-solid fa-angle-right doc-explorer__crumb-sep" aria-hidden="true"></i>
@@ -55,8 +56,11 @@
   }
 
   <div
+    #lista
     class="doc-explorer__list"
     [class.is-drop-target]="dragOverFundo()"
+    [class.is-selecting]="retangulo() !== null"
+    (mousedown)="onMouseDownLista($event)"
     (dragover)="onDragOverFundo($event)"
     (dragleave)="onDragLeaveFundo()"
     (drop)="onDropFundo($event)"
@@ -76,7 +80,10 @@
           <tr
             draggable="true"
             class="doc-explorer__row"
+            [attr.data-chave]="chaveItem('pasta', pasta.id)"
+            [class.is-selected]="estaSelecionado('pasta', pasta.id)"
             [class.is-drop-target]="estaSobAlvo(pasta.id)"
+            (click)="onCliqueLinha('pasta', pasta.id, $event)"
             (dragstart)="onDragStartPasta($event, pasta)"
             (dragend)="onDragEnd()"
             (dragover)="onDragOverAlvo($event, pasta.id)"
@@ -97,15 +104,15 @@
                   (keydown.escape)="cancelarEdicaoInline()"
                 />
               } @else {
-                <button type="button" draggable="false" class="doc-explorer__name-btn" (click)="abrirPasta(pasta)">
+                <span class="doc-explorer__name-btn" title="Abrir (duplo clique)">
                   <i class="fa-solid fa-folder" aria-hidden="true"></i>
                   {{ pasta.nome }}
-                </button>
+                </span>
               }
             </td>
             <td>-</td>
             <td>{{ formatarData(pasta.atualizadoEm) }}</td>
-            <td class="doc-explorer__row-menu">
+            <td class="doc-explorer__row-menu" (click)="$event.stopPropagation()">
               <button
                 type="button"
                 draggable="false"
@@ -151,6 +158,10 @@
           <tr
             draggable="true"
             class="doc-explorer__row"
+            [attr.data-chave]="chaveItem('documento', documento.id)"
+            [class.is-selected]="estaSelecionado('documento', documento.id)"
+            (click)="onCliqueLinha('documento', documento.id, $event)"
+            (dblclick)="onDuploCliqueDocumento(documento)"
             (dragstart)="onDragStartDocumento($event, documento)"
             (dragend)="onDragEnd()"
           >
@@ -173,7 +184,7 @@
             </td>
             <td>{{ formatarTamanho(documento.tamanhoBytes) }}</td>
             <td>{{ formatarData(documento.enviadoEm) }}</td>
-            <td class="doc-explorer__row-menu">
+            <td class="doc-explorer__row-menu" (click)="$event.stopPropagation()">
               @if (podeVisualizar(documento)) {
                 <button
                   type="button"
@@ -250,6 +261,36 @@
       </tbody>
     </table>
   </div>
+
+  @if (qtdSelecionada() > 0) {
+    <div class="doc-explorer__selecao">
+      <span>
+        {{ qtdSelecionada() }}
+        {{ qtdSelecionada() === 1 ? 'item selecionado' : 'itens selecionados' }}
+      </span>
+      <button type="button" class="doc-explorer__selecao-limpar" (click)="limparSelecao()">Limpar</button>
+      @if (pastaAtualId() !== null) {
+        <button type="button" (click)="moverSelecaoParaPastaPai()">
+          <i class="fa-solid fa-turn-up" aria-hidden="true"></i>
+          Mover para pasta anterior
+        </button>
+      }
+      <button type="button" class="doc-explorer__selecao-excluir" (click)="abrirExclusaoLote()">
+        <i class="fa-solid fa-trash" aria-hidden="true"></i>
+        Excluir
+      </button>
+    </div>
+  }
+
+  @if (retangulo(); as r) {
+    <div
+      class="doc-explorer__rubber"
+      [style.left.px]="r.x"
+      [style.top.px]="r.y"
+      [style.width.px]="r.w"
+      [style.height.px]="r.h"
+    ></div>
+  }
 </div>
 
 <input
@@ -257,19 +298,24 @@
   type="file"
   multiple
   hidden
-  [accept]="'.pdf,.png,.jpg,.jpeg,.docx'"
+  [accept]="'.docx,.pdf,.jpeg,.jpg,.doc,.odt,.xls,.xlsx'"
   (change)="onArquivoEscolhido($event)"
 />
 
-<app-modal [open]="exclusaoAlvo() !== null" title="Excluir" (closed)="cancelarExclusao()">
+<app-modal
+  [open]="exclusaoAlvo() !== null || exclusaoLote() !== null"
+  [elevated]="true"
+  title="Excluir"
+  (closed)="cancelarExclusao()"
+>
   <p>
-    Excluir
-    @if (exclusaoAlvo()?.tipo === 'pasta') {
-      a pasta
+    @if (exclusaoLote(); as lote) {
+      Excluir os {{ lote.length }} itens selecionados?
+    } @else if (exclusaoAlvo()?.tipo === 'pasta') {
+      Excluir a pasta "{{ exclusaoAlvo()?.nome }}"?
     } @else {
-      o documento
+      Excluir o documento "{{ exclusaoAlvo()?.nome }}"?
     }
-    "{{ exclusaoAlvo()?.nome }}"?
   </p>
   <div modalFooter class="doc-explorer__modal-footer">
     <app-button variant="tertiary" label="Cancelar" (clicked)="cancelarExclusao()" />
@@ -277,11 +323,78 @@
   </div>
 </app-modal>
 
-<app-modal [open]="docxOpen()" [wide]="true" title="Visualizar documento" (closed)="fecharDocx()">
-  <div class="doc-explorer__docx">
-    @if (docxCarregando()) {
-      <p class="doc-explorer__docx-loading">Carregando documento...</p>
+@for (j of janelas(); track j.id) {
+  <div
+    class="floating-win"
+    [class.floating-win--minimizada]="j.estado === 'minimizada'"
+    [class.floating-win--maximizada]="j.estado === 'maximizada'"
+    [style.z-index]="j.z"
+    [style.--min-i]="minIndex(j)"
+    [style.left.px]="j.estado === 'normal' ? j.pos.x : null"
+    [style.top.px]="j.estado === 'normal' ? j.pos.y : null"
+    [style.width.px]="j.estado === 'normal' ? j.tam.w : null"
+    [style.height.px]="j.estado === 'normal' ? j.tam.h : null"
+    (mousedown)="focar(j)"
+  >
+    <header
+      class="floating-win__bar"
+      (mousedown)="onJanelaDragStart($event, j)"
+      (click)="onJanelaBarClick($event, j)"
+      (dblclick)="janelaMaxRestaurar(j)"
+    >
+      <span class="floating-win__title" [title]="j.nome">{{ j.nome }}</span>
+      <div class="floating-win__controls">
+        @if (j.estado !== 'minimizada') {
+          <button type="button" aria-label="Minimizar" (click)="j.estado = 'minimizada'; bump()">
+            <i class="fa-solid fa-window-minimize" aria-hidden="true"></i>
+          </button>
+        }
+        <button
+          type="button"
+          [attr.aria-label]="j.estado === 'maximizada' ? 'Restaurar' : 'Maximizar'"
+          (click)="janelaMaxRestaurar(j)"
+        >
+          <i
+            class="fa-solid"
+            [class.fa-window-maximize]="j.estado !== 'maximizada'"
+            [class.fa-window-restore]="j.estado === 'maximizada'"
+            aria-hidden="true"
+          ></i>
+        </button>
+        <button type="button" class="floating-win__close" aria-label="Fechar" (click)="fechar(j)">
+          <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+        </button>
+      </div>
+    </header>
+
+    <div class="floating-win__body" [hidden]="j.estado === 'minimizada'">
+      @if (j.carregando) {
+        <p class="doc-explorer__preview-loading">Carregando documento...</p>
+      }
+      @switch (j.modo) {
+        @case ('pdf') {
+          @if (j.urlSafe) {
+            <iframe class="doc-explorer__preview-frame" [src]="j.urlSafe" [title]="j.nome"></iframe>
+          }
+        }
+        @case ('imagem') {
+          @if (j.url) {
+            <img class="doc-explorer__preview-img" [src]="j.url" [alt]="j.nome" />
+          }
+        }
+        @default {
+          <div
+            class="doc-explorer__docx-host"
+            [appDocxRender]="j.docxBlob"
+            (renderizado)="j.carregando = false; bump()"
+            (falhou)="onDocxFalhou(j)"
+          ></div>
+        }
+      }
+    </div>
+
+    @if (j.estado === 'normal') {
+      <div class="floating-win__resize" (mousedown)="onJanelaResizeStart($event, j)" aria-hidden="true"></div>
     }
-    <div #docxHost class="doc-explorer__docx-host"></div>
   </div>
-</app-modal>
+}

@@ -68,6 +68,18 @@
   }
 }
 
+.doc-explorer__crumb--raiz {
+  font-weight: $font-weight-medium;
+  color: $color-text-primary;
+}
+
+.doc-explorer__crumb-label {
+  max-width: 260px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .doc-explorer__crumb-sep {
   color: $color-text-muted;
   font-size: $font-size-xs;
@@ -112,6 +124,8 @@
 }
 
 .doc-explorer__list {
+  flex: 1;
+  min-height: 0;
   overflow: auto;
   border-radius: $border-radius-sm;
   transition: background-color $transition-fast;
@@ -120,6 +134,10 @@
     background-color: rgba($color-primary-pale, 0.35);
     outline: 2px dashed $color-primary-light;
     outline-offset: -2px;
+  }
+
+  &.is-selecting {
+    user-select: none;
   }
 
   table {
@@ -134,15 +152,94 @@
     padding: $spacing-sm;
     text-align: left;
   }
+
+  thead th {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background-color: $color-surface;
+  }
 }
 
 .doc-explorer__row {
   cursor: default;
+  user-select: none; // clique/Shift+clique não deve selecionar texto da linha
+
+  &:hover:not(.is-selected) td {
+    background-color: rgba($color-border, 0.28);
+  }
+
+  &.is-selected td {
+    background-color: rgba($color-primary-pale, 0.7);
+  }
 
   &.is-drop-target {
     background-color: rgba($color-primary-pale, 0.45);
     outline: 2px dashed $color-primary-light;
     outline-offset: -2px;
+  }
+}
+
+/* Retângulo de seleção por arrasto — coordenadas de viewport (ver `retangulo` no componente). */
+.doc-explorer__rubber {
+  position: fixed;
+  z-index: 6;
+  border: 1px solid $color-primary;
+  background-color: rgba($color-primary, 0.12);
+  pointer-events: none;
+}
+
+/* Barra de ações da seleção — rodapé do explorador (ver ordem no template). */
+.doc-explorer__selecao {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: $spacing-sm;
+  margin-top: $spacing-xs;
+  padding: $spacing-sm 0 0;
+  border-top: 1px solid rgba($color-border, 0.65);
+  font-size: $font-size-xs;
+  color: $color-text-secondary;
+
+  > span {
+    font-weight: $font-weight-medium;
+    color: $color-text-primary;
+  }
+
+  button {
+    display: inline-flex;
+    align-items: center;
+    gap: $spacing-xs;
+    border: 1px solid $color-border;
+    border-radius: $border-radius-sm;
+    background-color: $color-surface;
+    color: $color-text-secondary;
+    cursor: pointer;
+    font: inherit;
+    font-size: $font-size-xs;
+    padding: $spacing-xs $spacing-sm;
+    transition:
+      background-color $transition-fast,
+      border-color $transition-fast,
+      color $transition-fast;
+
+    &:hover {
+      border-color: $color-primary-light;
+      background-color: rgba($color-primary-pale, 0.55);
+      color: $color-primary;
+    }
+
+    i {
+      color: $color-text-muted;
+    }
+  }
+
+  .doc-explorer__selecao-limpar {
+    margin-left: auto;
+  }
+
+  .doc-explorer__selecao-excluir i {
+    color: $color-primary;
   }
 }
 
@@ -268,13 +365,150 @@
   padding: $spacing-lg;
 }
 
-.doc-explorer__docx-loading {
-  margin: 0 0 $spacing-sm;
+/* Janelas flutuantes de preview (docx / pdf / imagem) — arrastáveis, redimensionáveis, min/max.
+   Podem existir várias ao mesmo tempo; a z-index vem inline (foco) e as minimizadas empilham no
+   canto inferior direito via `--min-i`. */
+.floating-win {
+  position: fixed;
+  z-index: $z-overlay;
+  display: flex;
+  min-width: 360px;
+  min-height: 220px;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid $color-border;
+  border-radius: $border-radius-md;
+  background-color: $color-surface;
+  box-shadow: $shadow-lg;
+
+  &--maximizada {
+    inset: 0;
+    min-width: 0;
+    min-height: 0;
+    border: 0;
+    border-radius: 0;
+  }
+
+  &--minimizada {
+    left: auto !important;
+    top: auto !important;
+    right: $spacing-md;
+    bottom: calc(#{$spacing-md} + var(--min-i, 0) * 32px);
+    width: 280px !important;
+    height: auto !important;
+    min-width: 0;
+    min-height: 0;
+  }
+}
+
+.floating-win__bar {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: $spacing-sm;
+  padding: 2px 2px 2px $spacing-sm;
+  border-bottom: 1px solid rgba($color-border, 0.4);
+  background-color: $color-neutral-light;
+  cursor: move;
+  user-select: none;
+
+  .floating-win--maximizada &,
+  .floating-win--minimizada & {
+    cursor: default;
+  }
+}
+
+.floating-win__title {
+  overflow: hidden;
+  color: $color-text-primary;
+  font-size: $font-size-xs;
+  font-weight: $font-weight-medium;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.floating-win__controls {
+  display: flex;
+  flex-shrink: 0;
+
+  button {
+    display: inline-flex;
+    width: 30px;
+    height: 24px;
+    align-items: center;
+    justify-content: center;
+    border: 0;
+    background: transparent;
+    color: $color-text-secondary;
+    cursor: pointer;
+    font-size: $font-size-xs;
+    transition:
+      background-color $transition-fast,
+      color $transition-fast;
+
+    &:hover {
+      background-color: rgba($color-primary-pale, 0.55);
+    }
+  }
+
+  .floating-win__close:hover {
+    background-color: $rouge-light;
+    color: #fff;
+  }
+}
+
+.floating-win__body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  flex-direction: column;
+  overflow: auto;
+
+  &[hidden] {
+    display: none;
+  }
+}
+
+.floating-win__resize {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 16px;
+  height: 16px;
+  cursor: nwse-resize;
+  background: linear-gradient(135deg, transparent 55%, rgba($color-text-muted, 0.55) 55%);
+}
+
+.doc-explorer__preview-loading {
+  margin: 0;
+  padding: $spacing-sm $spacing-md;
   color: $color-text-muted;
   font-size: $font-size-xs;
 }
 
+.doc-explorer__preview-frame {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  border: 0;
+  border-radius: $border-radius-sm;
+}
+
+.doc-explorer__preview-img {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  padding: $spacing-sm;
+  object-fit: contain;
+}
+
 .doc-explorer__docx-host {
+  @include thin-scrollbar;
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+
   // O docx-preview injeta os próprios estilos e cria os elementos dinamicamente, então precisa
   // de ::ng-deep pra ajustar o layout ao modal.
   ::ng-deep .docx-wrapper {

@@ -20,10 +20,37 @@ import {
 /** Espelha `storage.allowed-content-types` do backend (ver `application.yml`) — mantido em sync manualmente. */
 export const TIPOS_ACEITOS = [
   'application/pdf',
-  'image/png',
   'image/jpeg',
+  'application/msword',
+  'application/vnd.oasis.opendocument.text',
+  'application/vnd.ms-excel',
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
 ];
+
+/**
+ * Extensão → content-type dos formatos aceitos. Fallback quando o navegador não reporta o MIME
+ * (comum com `.doc`, `.xls`, `.odt`, onde `File.type` vem vazio) — ver `resolverTipoAceito`.
+ */
+const TIPO_POR_EXTENSAO: Record<string, string> = {
+  pdf: 'application/pdf',
+  jpg: 'image/jpeg',
+  jpeg: 'image/jpeg',
+  doc: 'application/msword',
+  docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  odt: 'application/vnd.oasis.opendocument.text',
+  xls: 'application/vnd.ms-excel',
+  xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+};
+
+/** Content-type efetivo do arquivo se for um formato aceito (pelo MIME ou pela extensão), senão `null`. */
+export function resolverTipoAceito(arquivo: File): string | null {
+  if (arquivo.type && TIPOS_ACEITOS.includes(arquivo.type)) {
+    return arquivo.type;
+  }
+  const ext = arquivo.name.split('.').pop()?.toLowerCase() ?? '';
+  return TIPO_POR_EXTENSAO[ext] ?? null;
+}
 
 /**
  * Pastas e documentos de uma pessoa (cliente) — `/api/v1/pastas` e `/api/v1/documentos`

@@ -1,4 +1,4 @@
-import { maskCnpj, maskCpf, onlyDigits } from '../../../core/auth/cpf';
+import { maskCnpj, maskCpf, maskDocumento, onlyDigits } from '../../../core/auth/cpf';
 import {
   EstadoCivil,
   IPessoa,
@@ -74,6 +74,7 @@ export function clientRespToClient(res: ClientRespApi, currentUser: CurrentUser 
       profissao: '',
       nacionalidade: res.nacionalidade ?? '',
       estadoCivil: (res.estado_civil ?? '') as EstadoCivil | '',
+      representantesFinanceiros: (res.representantes_financeiros ?? []).map(representanteFromApi),
       razaoSocial: res.razao_social ?? '',
       nomeFantasia: res.nome_fantasia ?? '',
       cnpj: maskCnpj(res.cnpj ?? ''),
@@ -132,7 +133,7 @@ function enderecoFromApi(e: EnderecoApi | null): IEndereco {
 function representanteFromApi(r: RepresentanteRespApi): IRepresentanteLegal {
   return {
     nome: r.nome ?? '',
-    cpf: maskCpf(r.cpf ?? ''),
+    documento: maskDocumento(r.documento ?? ''),
     cargo: r.cargo ?? '',
     endereco: enderecoFromApi(r.endereco),
     emails: principalPrimeiro(
@@ -163,6 +164,7 @@ export function clientToCriarRequest(client: IPessoa): CriarClientApi {
       rg: nullif(p.rg),
       estado_civil: p.estadoCivil || null,
       nacionalidade: nullif(p.nacionalidade),
+      representantes_financeiros: p.representantesFinanceiros.map(representanteToApi),
       ...comum,
     };
   }
@@ -241,7 +243,7 @@ function enderecoToApi(e: IEndereco): EnderecoApi | null {
 function representanteToApi(r: IRepresentanteLegal): RepresentanteApi {
   return {
     nome: r.nome.trim(),
-    cpf: onlyDigits(r.cpf),
+    documento: onlyDigits(r.documento),
     cargo: nullif(r.cargo),
     endereco: enderecoToApi(r.endereco),
     contatos: r.contatos

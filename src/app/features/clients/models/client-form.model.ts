@@ -15,10 +15,10 @@ export interface ClientFieldConfig {
   rows?: number;
   span?: 'full';
   /** Máscara de digitação aplicada ao input. */
-  mask?: 'cpf' | 'cep';
+  mask?: 'cpf' | 'cep' | 'documento';
 }
 
-type FieldGroups = readonly (readonly ClientFieldConfig[])[];
+export type FieldGroups = readonly (readonly ClientFieldConfig[])[];
 
 export const CLIENT_FIELD_LABELS: Record<string, string> = {
   // PessoaFisica
@@ -34,8 +34,9 @@ export const CLIENT_FIELD_LABELS: Record<string, string> = {
   cnpj: 'CNPJ',
   inscricaoEstadual: 'Inscrição estadual',
   inscricaoMunicipal: 'Inscrição municipal',
-  // RepresentanteLegal
+  // RepresentanteLegal / RepresentanteFinanceiro
   cargo: 'Cargo',
+  documento: 'CPF/CNPJ',
   // Endereco
   logradouro: 'Endereço',
   numero: 'Número',
@@ -94,7 +95,7 @@ export const PESSOA_JURIDICA_FIELDS: FieldGroups = [
 ];
 
 export const REPRESENTANTE_FIELDS: FieldGroups = [
-  [{ key: 'nome' }, { key: 'cpf', mask: 'cpf' }],
+  [{ key: 'nome' }, { key: 'documento', mask: 'documento' }],
   [{ key: 'cargo' }],
 ];
 

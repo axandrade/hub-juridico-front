@@ -1,5 +1,6 @@
 import { AbstractControl, FormArray, FormControl, FormGroup, Validators } from '@angular/forms';
 
+import { documentoValidator } from '../../../core/auth/cpf';
 import {
   ModalidadeCliente,
   StatusCliente,
@@ -36,7 +37,7 @@ export type ContatoGroup = FormGroup<{
 
 export type RepresentanteGroup = FormGroup<{
   nome: FormControl<string>;
-  cpf: FormControl<string>;
+  documento: FormControl<string>;
   cargo: FormControl<string>;
   endereco: EnderecoGroup;
   emails: FormArray<EmailGroup>;
@@ -54,6 +55,7 @@ export type PessoaGroup = FormGroup<{
   profissao: FormControl<string>;
   nacionalidade: FormControl<string>;
   estadoCivil: FormControl<string>;
+  representantesFinanceiros: FormArray<RepresentanteGroup>;
   razaoSocial: FormControl<string>;
   nomeFantasia: FormControl<string>;
   cnpj: FormControl<string>;
@@ -126,8 +128,11 @@ export function createRepresentanteGroup(
   value?: Partial<IRepresentanteLegal>,
 ): RepresentanteGroup {
   return new FormGroup({
-    nome: text(value?.nome),
-    cpf: text(value?.cpf),
+    nome: new FormControl(value?.nome ?? '', { nonNullable: true, validators: [Validators.required] }),
+    documento: new FormControl(value?.documento ?? '', {
+      nonNullable: true,
+      validators: [Validators.required, documentoValidator],
+    }),
     cargo: text(value?.cargo),
     endereco: createEnderecoGroup(value?.endereco),
     emails: new FormArray((value?.emails ?? []).map((email) => createEmailGroup(email))),
@@ -147,6 +152,7 @@ function createPessoaGroup(): PessoaGroup {
     profissao: text(),
     nacionalidade: text(),
     estadoCivil: text(),
+    representantesFinanceiros: new FormArray<RepresentanteGroup>([]),
     razaoSocial: text(),
     nomeFantasia: text(),
     cnpj: text(),
@@ -238,6 +244,10 @@ export function patchClientForm(form: ClientForm, client: IPessoa): void {
   pessoa.setControl(
     'representantes',
     new FormArray(source.representantes.map((r) => createRepresentanteGroup(r))),
+  );
+  pessoa.setControl(
+    'representantesFinanceiros',
+    new FormArray(source.representantesFinanceiros.map((r) => createRepresentanteGroup(r))),
   );
 
   setTipoPessoa(form, source.tipo);

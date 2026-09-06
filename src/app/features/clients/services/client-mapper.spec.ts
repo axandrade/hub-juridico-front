@@ -89,7 +89,7 @@ describe('clientRespToClient — principal no topo', () => {
           {
             id: 9,
             nome: 'Rep',
-            cpf: '11144477735',
+            documento: '11144477735',
             cargo: null,
             endereco: null,
             emails: [

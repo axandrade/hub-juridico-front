@@ -1,0 +1,33 @@
+<app-modal [open]="true" [title]="title()" (closed)="cancel()">
+  <div class="representative-dialog">
+    @for (row of identityRows(); track $index) {
+      <div class="clients-form__row" [class.clients-form__row--cols-3]="row.length === 3">
+        @for (field of row; track field.key) {
+          <app-client-field [config]="field" [control]="control(field.key)" />
+        }
+      </div>
+    }
+
+    <div class="clients-form__divider"><span>Endereço</span></div>
+    <app-client-address [group]="form.controls.endereco" />
+
+    <app-client-email-list [array]="form.controls.emails" />
+    <app-client-contact-list [array]="form.controls.contatos" />
+
+    @if (showError() && form.invalid) {
+      <p class="representative-dialog__error">
+        Informe pelo menos o nome e um CPF ou CNPJ válido do representante.
+      </p>
+    }
+  </div>
+
+  <app-button modalFooter variant="tertiary" size="sm" label="Cancelar" (clicked)="cancel()" />
+  <app-button
+    modalFooter
+    variant="primary"
+    size="sm"
+    icon="fa-solid fa-check"
+    label="Salvar representante"
+    (clicked)="save()"
+  />
+</app-modal>

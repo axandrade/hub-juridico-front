@@ -52,6 +52,59 @@ export function maskCep(value: string | null | undefined): string {
 }
 
 /**
+ * Máscara combinada CPF/CNPJ: enquanto tiver até 11 dígitos usa a máscara de
+ * CPF; a partir do 12º dígito passa a formatar como CNPJ. Usada no campo
+ * `documento` do representante (legal ou financeiro), que aceita os dois.
+ */
+export function maskDocumento(value: string | null | undefined): string {
+  const d = onlyDigits(value).slice(0, 14);
+  return d.length > 11 ? maskCnpj(d) : maskCpf(d);
+}
+
+/**
+ * Valida CNPJ (dígitos verificadores) — porta de
+ * `com.hubjuridico.shared.util.CnpjUtils.isValid` do back-end.
+ */
+export function isValidCnpj(value: string | null | undefined): boolean {
+  const cnpj = onlyDigits(value);
+  if (cnpj.length !== 14 || cnpj === cnpj[0].repeat(14)) {
+    return false;
+  }
+  const weights1 = [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
+  const weights2 = [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
+  const digits = cnpj.split('').map(Number);
+
+  const checkDigit = (base: number[], weights: number[]): number => {
+    const sum = base.reduce((acc, d, i) => acc + d * weights[i], 0);
+    const r = sum % 11;
+    return r < 2 ? 0 : 11 - r;
+  };
+
+  const d1 = checkDigit(digits.slice(0, 12), weights1);
+  const d2 = checkDigit(digits.slice(0, 12).concat(d1), weights2);
+  return d1 === digits[12] && d2 === digits[13];
+}
+
+/** Valida um documento como CPF (11 dígitos) ou CNPJ (14 dígitos) — espelha `@Documento` do back-end. */
+export function isValidDocumento(value: string | null | undefined): boolean {
+  const digits = onlyDigits(value);
+  if (digits.length === 11) return isValidCpf(digits);
+  if (digits.length === 14) return isValidCnpj(digits);
+  return false;
+}
+
+/** Validador de `FormControl` para documento (CPF ou CNPJ, mascarado ou só dígitos). */
+export const documentoValidator: ValidatorFn = (
+  control: AbstractControl,
+): ValidationErrors | null => {
+  const value = (control.value ?? '') as string;
+  if (!value) {
+    return null;
+  }
+  return isValidDocumento(value) ? null : { documento: true };
+};
+
+/**
  * Valida CPF (dígitos verificadores) — porta de
  * `apps/common/validators.py::is_valid_cpf` do back-end.
  */

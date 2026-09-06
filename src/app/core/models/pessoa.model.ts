@@ -83,10 +83,15 @@ export interface IContato {
   principal: boolean;
 }
 
-/** Espelha `com.hubjuridico.dominio.RepresentanteLegal` (≈ mini-Pessoa). */
+/**
+ * Espelha `com.hubjuridico.dominio.RepresentanteLegal` / `RepresentanteFinanceiro`
+ * (≈ mini-Pessoa). `documento` aceita CPF ou CNPJ — o representante pode ser
+ * pessoa física ou jurídica, sem discriminador separado: o backend só guarda
+ * `nome` + `documento` (o tamanho do documento já diz qual é qual).
+ */
 export interface IRepresentanteLegal {
   nome: string;
-  cpf: string;
+  documento: string;
   cargo: string;
   endereco: IEndereco;
   emails: IEmail[];
@@ -113,6 +118,7 @@ export interface IDadosPessoa {
   profissao: string;
   nacionalidade: string;
   estadoCivil: EstadoCivil | '';
+  representantesFinanceiros: IRepresentanteLegal[];
   // PessoaJuridica
   razaoSocial: string;
   nomeFantasia: string;
@@ -178,6 +184,7 @@ export function emptyDadosPessoa(tipo: TipoPessoa = 'FISICA'): IDadosPessoa {
     profissao: '',
     nacionalidade: '',
     estadoCivil: '',
+    representantesFinanceiros: [],
     razaoSocial: '',
     nomeFantasia: '',
     cnpj: '',

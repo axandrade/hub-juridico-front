@@ -174,6 +174,17 @@
             <td>{{ formatarTamanho(documento.tamanhoBytes) }}</td>
             <td>{{ formatarData(documento.enviadoEm) }}</td>
             <td class="doc-explorer__row-menu">
+              @if (podeVisualizar(documento)) {
+                <button
+                  type="button"
+                  draggable="false"
+                  title="Visualizar"
+                  aria-label="Visualizar documento"
+                  (click)="visualizar(documento)"
+                >
+                  <i class="fa-solid fa-eye" aria-hidden="true"></i>
+                </button>
+              }
               <button
                 type="button"
                 draggable="false"
@@ -236,7 +247,7 @@
   type="file"
   multiple
   hidden
-  [accept]="'.pdf,.png,.jpg,.jpeg'"
+  [accept]="'.pdf,.png,.jpg,.jpeg,.docx'"
   (change)="onArquivoEscolhido($event)"
 />
 
@@ -253,5 +264,14 @@
   <div modalFooter class="doc-explorer__modal-footer">
     <app-button variant="tertiary" label="Cancelar" (clicked)="cancelarExclusao()" />
     <app-button variant="primary" label="Excluir" [disabled]="exclusaoSalvando()" (clicked)="confirmarExclusao()" />
+  </div>
+</app-modal>
+
+<app-modal [open]="docxOpen()" [wide]="true" title="Visualizar documento" (closed)="fecharDocx()">
+  <div class="doc-explorer__docx">
+    @if (docxCarregando()) {
+      <p class="doc-explorer__docx-loading">Carregando documento...</p>
+    }
+    <div #docxHost class="doc-explorer__docx-host"></div>
   </div>
 </app-modal>

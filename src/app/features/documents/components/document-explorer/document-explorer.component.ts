@@ -46,6 +46,20 @@ type ItemArrastado = { tipo: TipoItem; id: string; nome: string };
 const TIPO_DOCX = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
 
 /**
+ * Protocolo de URI que os apps desktop do Office registram no SO (o mesmo que o botão "Abrir na
+ * área de trabalho" do Office Online usa por trás dos panos). Só `.docx` está nos tipos aceitos
+ * hoje (ver `TIPOS_ACEITOS`); adicionar xlsx/pptx no futuro é só estender este mapa.
+ *
+ * Usamos a forma **abreviada** (`ms-word:<url>`), não a completa (`ms-word:ofe|u|<url>`): a
+ * completa exige a URL numa zona Confiável/Intranet do Windows e recusa link do OneDrive pessoal
+ * com "conteúdo não seguro / zona Sites Restritos"; a abreviada abre em modo protegido (o usuário
+ * clica "Habilitar Edição") sem essa checagem. Ver Office URI Schemes.
+ */
+const PROTOCOLO_DESKTOP_POR_CONTENT_TYPE: Record<string, string> = {
+  [TIPO_DOCX]: 'ms-word',
+};
+
+/**
  * Explorador de arquivos (pastas + documentos) de uma pessoa (cliente) — estilo gerenciador de
  * arquivos: navegação por pastas com breadcrumb, criar/renomear/excluir pasta, enviar/renomear/
  * mover/excluir/baixar documento, arrastar-e-soltar (mover item existente sobre uma pasta/
@@ -457,6 +471,37 @@ export class DocumentExplorerComponent {
         aba?.close();
         this.notify.emit({ key: 'editarErro', subject: documento.nome });
       },
+    });
+  }
+
+  /** Só tipos com app desktop do Office registrado (hoje só `.docx`, ver `TIPOS_ACEITOS`). */
+  protected podeAbrirNoDesktop(documento: Documento): boolean {
+    return !!documento.contentType && documento.contentType in PROTOCOLO_DESKTOP_POR_CONTENT_TYPE;
+  }
+
+  /**
+   * Pula direto pro app desktop do Office, sem passar pela versão web — usa o mesmo link do Graph
+   * que `editarOnline` usa, só que endereçado ao protocolo do app instalado no SO, na forma
+   * abreviada `ms-word:<url>` (ver `PROTOCOLO_DESKTOP_POR_CONTENT_TYPE` sobre por que não a
+   * completa `ofe|u|`). O navegador mostra o próprio prompt nativo de "abrir aplicativo?"; não
+   * precisa de aba nova nem de gesto especial além do clique que já dispara isto.
+   */
+  protected editarNoDesktop(documento: Documento): void {
+    this.fecharMenu();
+    const protocolo = documento.contentType ? PROTOCOLO_DESKTOP_POR_CONTENT_TYPE[documento.contentType] : undefined;
+    if (!protocolo) {
+      return;
+    }
+    this.documentsService.editUrl(documento.id).subscribe({
+      next: (url) => {
+        if (!url) {
+          this.notify.emit({ key: 'editarIndisponivel', subject: documento.nome });
+          return;
+        }
+        // Forma abreviada: a URL vai crua (`:` e `/` não são delimitadores aqui, ver spec).
+        window.location.href = `${protocolo}:${url}`;
+      },
+      error: () => this.notify.emit({ key: 'editarErro', subject: documento.nome }),
     });
   }
 

@@ -323,16 +323,17 @@
   }
 }
 
-// Filtros da lista: controle segmentado de natureza + "Mostrar inativos" à direita.
+// Abas de natureza — formato de aba, "coladas" na borda superior da tabela.
 .clients-natureza {
   display: flex;
-  align-items: center;
-  padding: $spacing-sm $spacing-md;
-  border-bottom: 1px solid rgba($color-border, 0.7);
+  align-items: flex-end;
+  padding: $spacing-sm $spacing-md 0; // sem folga embaixo: as abas encostam na tabela
+  border-bottom: 1px solid rgba($color-border, 0.7); // "trilho" onde as abas se apoiam
 
   button {
-    padding: 5px $spacing-md;
+    padding: 6px $spacing-md;
     border: 1px solid $color-border;
+    border-bottom: 0; // aberta embaixo, em direção à tabela
     background-color: $color-neutral-light;
     color: $color-text-secondary;
     cursor: pointer;
@@ -345,30 +346,30 @@
       color $transition-fast;
 
     & + button {
-      border-left: 0; // segmentos encostados, sem borda dupla
+      border-left: 0; // abas encostadas, sem borda dupla
     }
 
-    // `of-type` (não `child`) — o rótulo do checkbox vem depois e não pode virar "o último".
     &:first-of-type {
       border-top-left-radius: $border-radius-sm;
-      border-bottom-left-radius: $border-radius-sm;
     }
 
     &:last-of-type {
       border-top-right-radius: $border-radius-sm;
-      border-bottom-right-radius: $border-radius-sm;
     }
 
     &:hover:not(.is-active):not(:disabled) {
       color: $color-primary;
     }
 
+    // Aba ativa: mesma cor do cabeçalho da tabela + filete bordô no topo. Avança 1px
+    // sobre o trilho pra emendar visualmente com a grade (efeito de aba de navegador).
     &.is-active {
       position: relative;
-      z-index: 1; // a borda bordô cobre a do vizinho
-      border-color: $color-primary;
-      background-color: $color-primary;
-      color: #fff;
+      z-index: 1;
+      margin-bottom: -1px;
+      background-color: #f1ede1; // = fundo do thead do data-table
+      color: $color-primary;
+      box-shadow: inset 0 2px 0 $color-primary;
     }
 
     &:disabled {
@@ -379,6 +380,7 @@
 
   .clients-toggle-inativos {
     margin-left: auto; // empurra pra ponta direita da faixa
+    margin-bottom: 6px; // alinha com o texto das abas, não com o trilho
 
     &:has(input:disabled) {
       cursor: progress;
@@ -471,13 +473,6 @@
     min-height: 32px;
     padding: 0 $spacing-sm;
     text-align: left;
-  }
-}
-
-.clients-search {
-  > span {
-    color: $color-text-muted;
-    font-size: $font-size-xs;
   }
 }
 

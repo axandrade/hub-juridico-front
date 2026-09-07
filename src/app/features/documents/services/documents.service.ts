@@ -134,6 +134,16 @@ export class DocumentsService {
     return this.http.delete<void>(`${this.base}/documentos/${documentoId}`);
   }
 
+  /**
+   * Converte o documento (imagem JPG ou Word) para PDF no backend e devolve o novo documento
+   * PDF, já criado na mesma pasta do original (que é mantido).
+   */
+  converterParaPdf(documentoId: string): Observable<Documento> {
+    return this.http
+      .post<DocumentoApi>(`${this.base}/documentos/${documentoId}/converter-pdf`, {})
+      .pipe(map(documentoFromApi));
+  }
+
   downloadUrl(documentoId: string): Observable<string> {
     return this.http
       .get<DownloadUrlApi>(`${this.base}/documentos/${documentoId}/download-url`)

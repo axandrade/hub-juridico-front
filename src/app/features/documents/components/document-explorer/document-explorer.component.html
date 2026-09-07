@@ -222,6 +222,12 @@
                     <i class="fa-solid fa-download" aria-hidden="true"></i>
                     Baixar
                   </button>
+                  @if (podeConverterParaPdf(documento)) {
+                    <button type="button" (click)="converterParaPdf(documento)">
+                      <i class="fa-solid fa-file-pdf" aria-hidden="true"></i>
+                      Converter para PDF
+                    </button>
+                  }
                   <button type="button" (click)="editarOnline(documento)">
                     <i class="fa-solid fa-pen-to-square" aria-hidden="true"></i>
                     Editar online

@@ -36,7 +36,9 @@ export type DocumentExplorerNoticeKey =
   | 'uploadErro'
   | 'downloadErro'
   | 'editarIndisponivel'
-  | 'editarErro';
+  | 'editarErro'
+  | 'convertidoOk'
+  | 'convertidoErro';
 
 /** Aviso emitido para o rodapé de status do diálogo que hospeda o explorador (`clients.component`). */
 export interface DocumentExplorerNotice {
@@ -603,6 +605,30 @@ export class DocumentExplorerComponent {
         window.location.href = `${protocolo}:${url}`;
       },
       error: () => this.notify.emit({ key: 'editarErro', subject: documento.nome }),
+    });
+  }
+
+  /** Imagem JPG e Word (doc/docx/odt) podem virar PDF (ver `DocumentService.converterParaPdf`). */
+  protected podeConverterParaPdf(documento: Documento): boolean {
+    const tipo = documento.contentType ?? '';
+    return (
+      tipo === 'image/jpeg' ||
+      tipo === 'application/msword' ||
+      tipo === TIPO_DOCX ||
+      tipo === 'application/vnd.oasis.opendocument.text'
+    );
+  }
+
+  /** Converte para PDF no backend e adiciona o PDF na mesma pasta (recarrega a lista). */
+  protected converterParaPdf(documento: Documento): void {
+    this.fecharMenu();
+    this.documentsService.converterParaPdf(documento.id).subscribe({
+      next: () => {
+        this.carregar();
+        this.notify.emit({ key: 'convertidoOk', subject: documento.nome });
+      },
+      error: (err: unknown) =>
+        this.notify.emit({ key: 'convertidoErro', subject: this.mensagemErro(err) }),
     });
   }
 

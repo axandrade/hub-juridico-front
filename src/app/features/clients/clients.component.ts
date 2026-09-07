@@ -423,6 +423,8 @@ export class ClientsComponent {
       downloadErro: `Não foi possível baixar: ${alvo}`,
       editarIndisponivel: `Edição online não disponível para: ${alvo}`,
       editarErro: `Não foi possível abrir para edição: ${alvo}`,
+      convertidoOk: `Convertido para PDF: ${alvo}`,
+      convertidoErro: `Não foi possível converter: ${alvo}`,
     };
     this.pastaNotice.set(textos[evento.key]);
   }

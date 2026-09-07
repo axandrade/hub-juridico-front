@@ -1,0 +1,28 @@
+@use 'variables' as *;
+
+:host {
+  display: block;
+}
+
+.clientes-com-arquivos {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-sm;
+  min-height: 0;
+
+  &__erro {
+    margin: 0;
+    color: $color-text-secondary;
+    font-size: $font-size-xs;
+
+    button {
+      border: 0;
+      background: none;
+      padding: 0;
+      color: $color-primary;
+      cursor: pointer;
+      font: inherit;
+      text-decoration: underline;
+    }
+  }
+}

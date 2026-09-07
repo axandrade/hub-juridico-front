@@ -8,6 +8,7 @@ import {
   effect,
   inject,
   signal,
+  untracked,
   viewChild,
 } from '@angular/core';
 import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
@@ -20,7 +21,9 @@ import { ModalComponent } from '../../shared/components/modal/modal.component';
 import { PanelShellController } from '../../shared/panel-shell/panel-shell.controller';
 import { PastaClienteService } from './services/pasta-cliente.service';
 import { ClientStore, ClientListQuery } from './services/client-store';
+import { ClientePastaResumo } from './services/cliente-pasta-resumo.model';
 import { ClientFormComponent } from './components/client-form/client-form.component';
+import { ClientesComArquivosComponent } from './components/clientes-com-arquivos/clientes-com-arquivos.component';
 import {
   DocumentExplorerComponent,
   DocumentExplorerNotice,
@@ -41,6 +44,7 @@ type PageNotice = '' | 'shareReady' | 'importReady' | 'loadError';
     ClientFormComponent,
     ModalComponent,
     DocumentExplorerComponent,
+    ClientesComArquivosComponent,
     DataTableComponent,
   ],
   templateUrl: './clients.component.html',
@@ -61,6 +65,14 @@ export class ClientsComponent {
   });
   /** Aviso da pasta do cliente (upload/remoção/erro) mostrado dentro do diálogo. */
   protected readonly pastaNotice = signal<string | null>(null);
+  /**
+   * Cliente aberto no explorador **dentro do modal** — desacoplado de `selectedPersonId` de
+   * propósito, pra abrir a pasta de um cliente que não está na página carregada da grade sem
+   * disparar o carregamento da ficha no painel de fundo. `null` = mostra a tabela de visão geral.
+   */
+  protected readonly pastaExplorerPessoa = signal<{ id: number; nome: string } | null>(null);
+  /** Incrementado pra forçar o recarregamento da tabela de visão geral (ex.: ao voltar do explorador). */
+  protected readonly pastaResumoTick = signal(0);
   protected readonly showMoreActions = signal(false);
   protected readonly pageNotice = signal<PageNotice>('');
   protected readonly loading = signal(false);
@@ -235,6 +247,26 @@ export class ClientsComponent {
             : null,
       );
     });
+
+    // Ao abrir o diálogo: com um cliente selecionado, vai direto pro explorador dele; sem
+    // nenhum, mostra a tabela de visão geral. Só reage à transição de `aberto()`.
+    effect(() => {
+      const aberto = this.pastaCliente.aberto();
+      untracked(() => {
+        if (!aberto) {
+          this.pastaExplorerPessoa.set(null);
+          this.pastaNotice.set(null);
+          return;
+        }
+        const cliente = this.pastaCliente.cliente();
+        if (cliente) {
+          this.pastaExplorerPessoa.set({ id: cliente.id, nome: cliente.nome });
+        } else {
+          this.pastaExplorerPessoa.set(null);
+          this.pastaResumoTick.update((tick) => tick + 1);
+        }
+      });
+    });
   }
 
   private goToFirstPage(): void {
@@ -360,6 +392,19 @@ export class ClientsComponent {
   protected fecharPasta(): void {
     this.pastaCliente.fechar();
     this.pastaNotice.set(null);
+  }
+
+  /** Clique numa linha da tabela de visão geral: abre o explorador daquele cliente no modal. */
+  protected abrirPastaDoResumo(row: ClientePastaResumo): void {
+    this.pastaNotice.set(null);
+    this.pastaExplorerPessoa.set({ id: row.pessoaId, nome: row.nome });
+  }
+
+  /** Volta do explorador para a tabela de visão geral (e a recarrega). */
+  protected voltarParaListaPastas(): void {
+    this.pastaNotice.set(null);
+    this.pastaExplorerPessoa.set(null);
+    this.pastaResumoTick.update((tick) => tick + 1);
   }
 
   protected onPastaNotice(evento: DocumentExplorerNotice): void {

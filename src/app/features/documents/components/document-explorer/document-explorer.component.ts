@@ -18,6 +18,7 @@ import { Observable } from 'rxjs';
 import { ButtonComponent } from '../../../../shared/components/button/button.component';
 import { ModalComponent } from '../../../../shared/components/modal/modal.component';
 import { AutoFocusSelectDirective } from '../../../../shared/directives/auto-focus-select.directive';
+import { formatFileSize } from '../../../../shared/utils/format-file-size';
 import { DocxRenderDirective } from '../../directives/docx-render.directive';
 import { DocumentsService, resolverTipoAceito } from '../../services/documents.service';
 import { BreadcrumbItem, Documento, Pasta, PastaConteudo } from '../../models/document-explorer.model';
@@ -1099,14 +1100,7 @@ export class DocumentExplorerComponent {
   }
 
   protected formatarTamanho(bytes: number | null): string {
-    if (bytes === null) {
-      return '-';
-    }
-    if (bytes < 1024) {
-      return `${bytes} B`;
-    }
-    const kb = bytes / 1024;
-    return kb < 1024 ? `${kb.toFixed(kb < 10 ? 1 : 0)} KB` : `${(kb / 1024).toFixed(1)} MB`;
+    return formatFileSize(bytes);
   }
 
   protected formatarData(data: Date): string {

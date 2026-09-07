@@ -10,6 +10,9 @@ export interface ClientePasta {
  * Ponte entre o header ("Abrir pasta do cliente") e a tela de clientes: guarda qual
  * cliente está selecionado e se o diálogo da pasta está aberto. A tela de clientes
  * publica o cliente selecionado; o header dispara `abrir()`.
+ *
+ * O diálogo abre sempre: com um cliente selecionado ele mostra o explorador daquele
+ * cliente; sem nenhum, mostra a tabela de visão geral (clientes que já têm arquivos).
  */
 @Injectable({ providedIn: 'root' })
 export class PastaClienteService {
@@ -29,9 +32,7 @@ export class PastaClienteService {
   }
 
   abrir(): void {
-    if (this._cliente()) {
-      this._aberto.set(true);
-    }
+    this._aberto.set(true);
   }
 
   fechar(): void {

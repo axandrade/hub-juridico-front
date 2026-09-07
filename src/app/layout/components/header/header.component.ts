@@ -23,9 +23,6 @@ export class HeaderComponent {
   protected readonly userName = computed(() => this.auth.user()?.name ?? '—');
   protected readonly userRole = computed(() => this.auth.user()?.role ?? '');
 
-  /** `true` quando há um cliente selecionado na tela de clientes. */
-  protected readonly temClienteSelecionado = this.pastaCliente.temCliente;
-
   protected readonly quickActions = [
     { label: 'Gerar arquivo', icon: 'fa-solid fa-file-export', variant: 'secondary' as const },
     { label: 'CAACE Intimações', icon: 'fa-solid fa-bell', variant: 'primary' as const },

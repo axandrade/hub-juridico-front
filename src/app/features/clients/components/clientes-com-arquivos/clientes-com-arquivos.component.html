@@ -1,0 +1,21 @@
+<div class="clientes-com-arquivos">
+  <app-data-table
+    [columns]="columns"
+    [data]="itens()"
+    [loading]="loading()"
+    trackKey="pessoaId"
+    emptyMessage="Nenhum cliente com arquivos ainda."
+    [sortable]="true"
+    [initialSort]="{ key: 'nome', direction: 'asc' }"
+    [pagination]="pagination()"
+    (pageChange)="onPageChange($event)"
+    (rowClick)="onRowClick($event)"
+  />
+
+  @if (loadError()) {
+    <p class="clientes-com-arquivos__erro">
+      Não foi possível carregar a lista.
+      <button type="button" (click)="recarregar()">Tentar de novo</button>
+    </p>
+  }
+</div>

@@ -26,7 +26,7 @@ import {
   readAdvogadoForm,
 } from '../../forms/advogado-form.factory';
 import { AdvogadoApi } from '../../services/advogado-api.model';
-import { AdvogadoStore } from '../../services/advogado-store';
+import { AdvogadoService } from '../../services/advogado-service';
 
 type NoticeKey =
   | 'idle'
@@ -57,7 +57,7 @@ export const ESTADO_CIVIL_LABELS: Record<string, string> = {
 
 /**
  * Painel de cadastro/edição de advogado — dono do `FormGroup`, carrega a ficha por id (ou vazia
- * para novo cadastro), valida e persiste via `AdvogadoStore`. A página `advogado` só decide qual
+ * para novo cadastro), valida e persiste via `AdvogadoService`. A página `advogado` só decide qual
  * `advogadoId` mostrar e reage aos outputs. Mesmo desenho do `client-form`, sem abas.
  */
 @Component({
@@ -74,7 +74,7 @@ export const ESTADO_CIVIL_LABELS: Record<string, string> = {
   styleUrl: './advogado-form.component.scss',
 })
 export class AdvogadoFormComponent {
-  private readonly store = inject(AdvogadoStore);
+  private readonly advogadoService = inject(AdvogadoService);
 
   /** Id do registro a editar; `null` = novo cadastro. */
   readonly advogadoId = input<number | null>(null);
@@ -123,7 +123,7 @@ export class AdvogadoFormComponent {
 
       untracked(() => {
         if (id !== null) {
-          this.store.buscarCompleto(id).subscribe((found) => {
+          this.advogadoService.buscarCompleto(id).subscribe((found) => {
             if (found) {
               this.loadIntoForm(found);
               this.notice.set({ key: 'idle' });
@@ -158,7 +158,7 @@ export class AdvogadoFormComponent {
   protected toggleFavorite(): void {
     const id = this.entityId();
     if (id > 0) {
-      const desejado = this.store.alternarFavorito(id);
+      const desejado = this.advogadoService.alternarFavorito(id);
       if (desejado !== null) {
         this.favorite.set(desejado);
       }
@@ -188,7 +188,7 @@ export class AdvogadoFormComponent {
     };
 
     this.notice.set({ key: 'saving' });
-    this.store.salvar(payload).subscribe({
+    this.advogadoService.salvar(payload).subscribe({
       next: (savedAdvogado) => {
         this.loadIntoForm(savedAdvogado);
         this.lastLoadedKey = `id:${savedAdvogado.id}`;
@@ -214,7 +214,7 @@ export class AdvogadoFormComponent {
   }
 
   private applyStatusChange(ativo: boolean): void {
-    this.store.alterarStatus(this.entityId(), ativo).subscribe({
+    this.advogadoService.alterarStatus(this.entityId(), ativo).subscribe({
       next: (updated) => {
         this.loadIntoForm(updated);
         this.notice.set({ key: 'statusChanged', subject: ativo ? 'ativado' : 'inativado' });

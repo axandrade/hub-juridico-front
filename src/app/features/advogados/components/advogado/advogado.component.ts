@@ -19,7 +19,7 @@ import { TablePagination, TablePinAction } from '../../../../shared/components/t
 import { PanelShellController } from '../../../../shared/panel-shell/panel-shell.controller';
 import { maskCpf } from '../../../../core/auth/cpf';
 import { AdvogadoApi } from '../../services/advogado-api.model';
-import { AdvogadoListQuery, AdvogadoStore } from '../../services/advogado-store';
+import { AdvogadoListQuery, AdvogadoService } from '../../services/advogado-service';
 import { AdvogadoFormComponent } from '../advogado-form/advogado-form.component';
 
 /**
@@ -38,7 +38,7 @@ import { AdvogadoFormComponent } from '../advogado-form/advogado-form.component'
 export class AdvogadoComponent {
   private readonly document = inject(DOCUMENT);
   private readonly destroyRef = inject(DestroyRef);
-  private readonly store = inject(AdvogadoStore);
+  private readonly advogadoService = inject(AdvogadoService);
 
   private readonly form = viewChild(AdvogadoFormComponent);
   /** A grade — o botão "Colunas" da barra de ações comanda esta instância. */
@@ -61,13 +61,13 @@ export class AdvogadoComponent {
   /** Busca livre (nome / OAB / e-mail / CPF) — resolvida no servidor, com debounce. */
   protected readonly busca = signal('');
 
-  protected readonly advogados = this.store.advogados;
-  protected readonly totalAdvogados = this.store.totalElements;
+  protected readonly advogados = this.advogadoService.advogados;
+  protected readonly totalAdvogados = this.advogadoService.totalElements;
   protected readonly pagination = computed<TablePagination>(() => ({
-    page: this.store.page(),
-    totalPages: this.store.totalPages(),
-    totalElements: this.store.totalElements(),
-    last: this.store.last(),
+    page: this.advogadoService.page(),
+    totalPages: this.advogadoService.totalPages(),
+    totalElements: this.advogadoService.totalElements(),
+    last: this.advogadoService.last(),
   }));
 
   protected readonly advogadoColumns: TableColumn<AdvogadoApi>[] = [
@@ -129,7 +129,7 @@ export class AdvogadoComponent {
       .pipe(
         switchMap((q) => {
           this.loading.set(true);
-          return this.store.carregar(q).pipe(
+          return this.advogadoService.carregar(q).pipe(
             catchError(() => {
               this.loading.set(false);
               this.loadError.set(true);
@@ -164,7 +164,7 @@ export class AdvogadoComponent {
 
   protected toggleFavorito(row: AdvogadoApi, event: MouseEvent): void {
     event.stopPropagation();
-    this.store.alternarFavorito(row.id);
+    this.advogadoService.alternarFavorito(row.id);
   }
 
   protected reloadList(): void {

@@ -5,12 +5,12 @@ import { TestBed } from '@angular/core/testing';
 import { environment } from '../../../../environments/environment';
 import { AuthService } from '../../../core/services/auth.service';
 import { ClientRespApi } from './client-api.model';
-import { ClientStore } from './client-store';
+import { ClientService } from './client-service';
 
 const BASE = `${environment.apiBaseUrl}/pessoas`;
 
-describe('ClientStore', () => {
-  let store: ClientStore;
+describe('ClientService', () => {
+  let store: ClientService;
   let http: HttpTestingController;
 
   beforeEach(() => {
@@ -18,11 +18,11 @@ describe('ClientStore', () => {
       providers: [
         provideHttpClient(),
         provideHttpClientTesting(),
-        ClientStore,
+        ClientService,
         { provide: AuthService, useValue: { user: () => null } },
       ],
     });
-    store = TestBed.inject(ClientStore);
+    store = TestBed.inject(ClientService);
     http = TestBed.inject(HttpTestingController);
   });
 

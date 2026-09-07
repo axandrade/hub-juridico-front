@@ -4,19 +4,19 @@ import { TestBed } from '@angular/core/testing';
 
 import { environment } from '../../../../environments/environment';
 import { ClientePastaResumoApi } from './cliente-pasta-resumo.model';
-import { ClientesComArquivosStore } from './clientes-com-arquivos.store';
+import { ClientesComArquivosService } from './clientes-com-arquivos.service';
 
 const URL = `${environment.apiBaseUrl}/pastas/clientes`;
 
-describe('ClientesComArquivosStore', () => {
-  let store: ClientesComArquivosStore;
+describe('ClientesComArquivosService', () => {
+  let store: ClientesComArquivosService;
   let http: HttpTestingController;
 
   beforeEach(() => {
     TestBed.configureTestingModule({
-      providers: [provideHttpClient(), provideHttpClientTesting(), ClientesComArquivosStore],
+      providers: [provideHttpClient(), provideHttpClientTesting(), ClientesComArquivosService],
     });
-    store = TestBed.inject(ClientesComArquivosStore);
+    store = TestBed.inject(ClientesComArquivosService);
     http = TestBed.inject(HttpTestingController);
   });
 

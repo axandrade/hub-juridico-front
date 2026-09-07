@@ -32,10 +32,10 @@ export interface ClientListQuery {
 /**
  * Fonte única da lista de pessoas (clientes) para a feature. Fala com a API
  * `/api/v1/pessoas` (Spring), que pagina de 10 em 10; os componentes só falam
- * com o store. `favorite` é por usuário (`PATCH /pessoas/{id}/favorito`).
+ * com este serviço. `favorite` é por usuário (`PATCH /pessoas/{id}/favorito`).
  */
 @Injectable({ providedIn: 'root' })
-export class ClientStore {
+export class ClientService {
   private readonly http = inject(HttpClient);
   private readonly auth = inject(AuthService);
   private readonly favoritoService = inject(FavoritoService);
@@ -69,7 +69,7 @@ export class ClientStore {
   carregar(query: ClientListQuery): Observable<IPessoa[]> {
     let params = new HttpParams()
       .set('page', query.page)
-      .set('size', ClientStore.PAGE_SIZE);
+      .set('size', ClientService.PAGE_SIZE);
     if (query.tipo) {
       params = params.set('tipo', query.tipo);
     }

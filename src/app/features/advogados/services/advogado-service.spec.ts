@@ -4,19 +4,19 @@ import { TestBed } from '@angular/core/testing';
 
 import { environment } from '../../../../environments/environment';
 import { AdvogadoApi } from './advogado-api.model';
-import { AdvogadoStore } from './advogado-store';
+import { AdvogadoService } from './advogado-service';
 
 const BASE = `${environment.apiBaseUrl}/advogados`;
 
-describe('AdvogadoStore', () => {
-  let store: AdvogadoStore;
+describe('AdvogadoService', () => {
+  let store: AdvogadoService;
   let http: HttpTestingController;
 
   beforeEach(() => {
     TestBed.configureTestingModule({
-      providers: [provideHttpClient(), provideHttpClientTesting(), AdvogadoStore],
+      providers: [provideHttpClient(), provideHttpClientTesting(), AdvogadoService],
     });
-    store = TestBed.inject(AdvogadoStore);
+    store = TestBed.inject(AdvogadoService);
     http = TestBed.inject(HttpTestingController);
   });
 

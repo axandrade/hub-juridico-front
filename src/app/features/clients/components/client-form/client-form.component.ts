@@ -30,7 +30,7 @@ import {
 } from '../../forms/client-form.factory';
 import { PESSOA_FISICA_FIELDS, PESSOA_JURIDICA_FIELDS } from '../../models/client-form.model';
 import { StatusVinculoApi } from '../../services/client-api.model';
-import { ClientStore } from '../../services/client-store';
+import { ClientService } from '../../services/client-service';
 import { ClientAddressComponent } from '../client-address/client-address.component';
 import { ClientAdminFormComponent } from '../client-admin-form/client-admin-form.component';
 import { ClientContactListComponent } from '../client-contact-list/client-contact-list.component';
@@ -73,7 +73,7 @@ interface EditorNotice {
 /**
  * Tela autônoma de cadastro/edição de pessoa (física ou jurídica). Dona do
  * `FormGroup` raiz; carrega a ficha por id (ou vazia para novo cadastro), valida,
- * e persiste via `ClientStore`. O `clients` só decide qual `pessoaId` mostrar
+ * e persiste via `ClientService`. O `clients` só decide qual `pessoaId` mostrar
  * e reage aos outputs.
  */
 @Component({
@@ -94,7 +94,7 @@ interface EditorNotice {
   styleUrl: './client-form.component.scss',
 })
 export class ClientFormComponent {
-  private readonly store = inject(ClientStore);
+  private readonly clientService = inject(ClientService);
   private readonly auth = inject(AuthService);
 
   /** Nome do usuário logado — preenche "Cadastrado por" (campo do sistema). */
@@ -178,7 +178,7 @@ export class ClientFormComponent {
         if (id !== null) {
           this.tipoNovoEscolhido.set(null);
           // Ficha completa à parte — a lista da tabela só carrega os campos que ela exibe.
-          this.store.buscarCompleto(id).subscribe((found) => {
+          this.clientService.buscarCompleto(id).subscribe((found) => {
             if (found) {
               this.loadIntoForm(found);
               this.notice.set({ key: 'idle' });
@@ -209,7 +209,7 @@ export class ClientFormComponent {
   protected toggleFavorite(): void {
     const id = this.entityId();
     if (id > 0) {
-      this.favorite.set(this.store.alternarFavorito(id));
+      this.favorite.set(this.clientService.alternarFavorito(id));
     } else {
       this.favorite.update((value) => !value);
     }
@@ -233,7 +233,7 @@ export class ClientFormComponent {
 
     const prepared = this.prepareClientForSave(this.assembleClient());
     this.notice.set({ key: 'saving' });
-    this.store.salvar(prepared).subscribe({
+    this.clientService.salvar(prepared).subscribe({
       next: (savedClient) => {
         this.tipoNovoEscolhido.set(null);
         this.loadIntoForm(savedClient);
@@ -267,7 +267,7 @@ export class ClientFormComponent {
 
   private applyStatusChange(status: StatusVinculoApi): void {
     const id = this.entityId();
-    this.store.alterarStatus(id, status).subscribe({
+    this.clientService.alterarStatus(id, status).subscribe({
       next: (updated) => {
         this.loadIntoForm(updated);
         this.notice.set({
@@ -398,7 +398,7 @@ export class ClientFormComponent {
 
   private clientFolderName(client: IPessoa): string {
     const name = this.sanitizeFolderName(this.clientDisplayName(client) || 'CLIENTE');
-    return `Pasta - ${this.formatClientId(client.id || this.store.proximoId())} - ${name}`;
+    return `Pasta - ${this.formatClientId(client.id || this.clientService.proximoId())} - ${name}`;
   }
 
   private sanitizeFolderName(value: string): string {

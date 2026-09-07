@@ -69,7 +69,7 @@ export interface AdvogadoEditavel {
  * `alternarFavorito`), consumido pelo `advogado-form`.
  */
 @Injectable({ providedIn: 'root' })
-export class AdvogadoStore {
+export class AdvogadoService {
   private readonly http = inject(HttpClient);
   private readonly favoritoService = inject(FavoritoService);
   private readonly base = `${environment.apiBaseUrl}/advogados`;
@@ -91,7 +91,7 @@ export class AdvogadoStore {
 
   /** Carrega uma página da lista com os filtros informados. */
   carregar(query: AdvogadoListQuery): Observable<AdvogadoApi[]> {
-    let params = new HttpParams().set('page', query.page).set('size', AdvogadoStore.PAGE_SIZE);
+    let params = new HttpParams().set('page', query.page).set('size', AdvogadoService.PAGE_SIZE);
     if (query.busca?.trim()) {
       params = params.set('busca', query.busca.trim());
     }

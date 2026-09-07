@@ -12,11 +12,11 @@ import {
 
 /**
  * Fonte da lista de clientes que já têm arquivos (`GET /api/v1/pastas/clientes`, paginado de 10
- * em 10 no backend). Só apresentação — o componente pede uma página, o store guarda o estado de
- * paginação. Mesma forma do `ClientStore`.
+ * em 10 no backend). Só apresentação — o componente pede uma página, o serviço guarda o estado de
+ * paginação. Mesma forma do `ClientService`.
  */
 @Injectable({ providedIn: 'root' })
-export class ClientesComArquivosStore {
+export class ClientesComArquivosService {
   private readonly http = inject(HttpClient);
   private readonly url = `${environment.apiBaseUrl}/pastas/clientes`;
 

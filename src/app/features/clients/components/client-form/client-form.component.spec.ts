@@ -5,7 +5,7 @@ import { of } from 'rxjs';
 
 import { IPessoa, emptyDadosPessoa, emptyDossie } from '../../../../core/models';
 import { AuthService } from '../../../../core/services/auth.service';
-import { ClientStore } from '../../services/client-store';
+import { ClientService } from '../../services/client-service';
 import { ClientFormComponent } from './client-form.component';
 
 function makePessoa(over: Partial<IPessoa> = {}): IPessoa {
@@ -37,7 +37,7 @@ describe('ClientFormComponent — carregar ficha ao trocar pessoaId', () => {
       imports: [ClientFormComponent],
       providers: [
         provideHttpClient(),
-        { provide: ClientStore, useValue: store },
+        { provide: ClientService, useValue: store },
         { provide: AuthService, useValue: { user: () => ({ id: 1, name: 'Tester', role: 'admin' }) } },
       ],
     });

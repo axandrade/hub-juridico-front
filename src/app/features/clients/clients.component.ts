@@ -19,7 +19,7 @@ import { ButtonComponent } from '../../shared/components/button/button.component
 import { ModalComponent } from '../../shared/components/modal/modal.component';
 import { PanelShellController } from '../../shared/panel-shell/panel-shell.controller';
 import { PastaClienteService } from './services/pasta-cliente.service';
-import { ClientStore, ClientListQuery } from './services/client-store';
+import { ClientService, ClientListQuery } from './services/client-service';
 import { ClientePastaResumo } from './services/cliente-pasta-resumo.model';
 import { ClientFormComponent } from './components/client-form/client-form.component';
 import { ClientesComArquivosComponent } from './components/clientes-com-arquivos/clientes-com-arquivos.component';
@@ -50,7 +50,7 @@ type PageNotice = '' | 'loadError';
   styleUrl: './clients.component.scss',
 })
 export class ClientsComponent {
-  private readonly store = inject(ClientStore);
+  private readonly clientService = inject(ClientService);
   private readonly document = inject(DOCUMENT);
   private readonly destroyRef = inject(DestroyRef);
   protected readonly pastaCliente = inject(PastaClienteService);
@@ -87,13 +87,13 @@ export class ClientsComponent {
   /** Filtro de natureza (chips) — `''` = todos. Resolvido no servidor. */
   protected readonly tipoFiltro = signal<TipoPessoa | ''>('');
 
-  protected readonly clients = this.store.clients;
-  protected readonly totalClients = this.store.totalElements;
+  protected readonly clients = this.clientService.clients;
+  protected readonly totalClients = this.clientService.totalElements;
   protected readonly pagination = computed<TablePagination>(() => ({
-    page: this.store.page(),
-    totalPages: this.store.totalPages(),
-    totalElements: this.store.totalElements(),
-    last: this.store.last(),
+    page: this.clientService.page(),
+    totalPages: this.clientService.totalPages(),
+    totalElements: this.clientService.totalElements(),
+    last: this.clientService.last(),
   }));
 
   protected readonly clientColumns: TableColumn<IPessoa>[] = [
@@ -183,7 +183,7 @@ export class ClientsComponent {
       .pipe(
         switchMap((q) => {
           this.loading.set(true);
-          return this.store.carregar(q).pipe(
+          return this.clientService.carregar(q).pipe(
             catchError(() => {
               this.loading.set(false);
               this.pageNotice.set('loadError');
@@ -203,7 +203,7 @@ export class ClientsComponent {
     // Publica o cliente selecionado para o header ("Abrir pasta do cliente").
     effect(() => {
       const id = this.selectedPersonId();
-      const cliente = id !== null ? this.store.buscar(id) : null;
+      const cliente = id !== null ? this.clientService.buscar(id) : null;
       this.pastaCliente.definirCliente(
         cliente
           ? { id: cliente.id, nome: this.clientDisplayName(cliente) }
@@ -298,7 +298,7 @@ export class ClientsComponent {
 
   protected toggleClientFavorite(row: IPessoa, event: MouseEvent): void {
     event.stopPropagation();
-    this.store.alternarFavorito(row.id);
+    this.clientService.alternarFavorito(row.id);
   }
 
   protected newRecord(): void {

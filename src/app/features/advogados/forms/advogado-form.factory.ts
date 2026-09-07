@@ -3,7 +3,7 @@ import { FormControl, FormGroup, ValidatorFn, Validators } from '@angular/forms'
 import { cpfValidator } from '../../../core/auth/cpf';
 import { EstadoCivil } from '../../../core/models';
 import { AdvogadoApi } from '../services/advogado-api.model';
-import { AdvogadoEditavel } from '../services/advogado-store';
+import { AdvogadoEditavel } from '../services/advogado-service';
 
 /**
  * `FormGroup` do cadastro/edição de advogado. Entidade plana (sem herança, sub-recursos ou

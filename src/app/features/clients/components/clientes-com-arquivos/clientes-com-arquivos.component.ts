@@ -16,7 +16,7 @@ import { TableColumn } from '../../../../shared/components/table/table-column.mo
 import { TablePagination } from '../../../../shared/components/table/table.model';
 import { formatFileSize } from '../../../../shared/utils/format-file-size';
 import { ClientePastaResumo } from '../../services/cliente-pasta-resumo.model';
-import { ClientesComArquivosStore } from '../../services/clientes-com-arquivos.store';
+import { ClientesComArquivosService } from '../../services/clientes-com-arquivos.service';
 
 /**
  * Tabela paginada dos clientes que já têm arquivos — mostrada no diálogo "Abrir pasta do
@@ -31,7 +31,7 @@ import { ClientesComArquivosStore } from '../../services/clientes-com-arquivos.s
   styleUrl: './clientes-com-arquivos.component.scss',
 })
 export class ClientesComArquivosComponent {
-  private readonly store = inject(ClientesComArquivosStore);
+  private readonly clientesComArquivosService = inject(ClientesComArquivosService);
   private readonly destroyRef = inject(DestroyRef);
 
   /** O pai incrementa isto para forçar um reload (ex.: ao voltar do explorador). */
@@ -39,17 +39,17 @@ export class ClientesComArquivosComponent {
 
   readonly rowOpen = output<ClientePastaResumo>();
 
-  protected readonly itens = this.store.itens;
+  protected readonly itens = this.clientesComArquivosService.itens;
   protected readonly loading = signal(false);
   protected readonly loadError = signal(false);
   private readonly page = signal(0);
   private readonly retryTick = signal(0);
 
   protected readonly pagination = computed<TablePagination>(() => ({
-    page: this.store.page(),
-    totalPages: this.store.totalPages(),
-    totalElements: this.store.totalElements(),
-    last: this.store.last(),
+    page: this.clientesComArquivosService.page(),
+    totalPages: this.clientesComArquivosService.totalPages(),
+    totalElements: this.clientesComArquivosService.totalElements(),
+    last: this.clientesComArquivosService.last(),
   }));
 
   protected readonly columns: TableColumn<ClientePastaResumo>[] = [
@@ -88,7 +88,7 @@ export class ClientesComArquivosComponent {
       .pipe(
         switchMap(({ page }) => {
           this.loading.set(true);
-          return this.store.carregar(page).pipe(
+          return this.clientesComArquivosService.carregar(page).pipe(
             catchError(() => {
               this.loading.set(false);
               this.loadError.set(true);

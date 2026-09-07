@@ -517,16 +517,34 @@ export class DocumentExplorerComponent {
   protected baixarPastaZip(pasta: Pasta): void {
     this.fecharMenu();
     this.documentsService.baixarPastaZip(pasta.id).subscribe({
-      next: (blob) => {
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `${pasta.nome}.zip`;
-        link.click();
-        URL.revokeObjectURL(url);
-      },
+      next: (blob) => this.salvarBlob(blob, `${pasta.nome}.zip`),
       error: () => this.notify.emit({ key: 'downloadErro', subject: pasta.nome }),
     });
+  }
+
+  /** Baixa a seleção (pastas e/ou documentos) como um único `.zip`. */
+  protected baixarSelecaoZip(): void {
+    const itens = this.itensSelecionados();
+    const pastaIds = itens.filter((i) => i.tipo === 'pasta').map((i) => i.id);
+    const documentoIds = itens.filter((i) => i.tipo === 'documento').map((i) => i.id);
+    if (pastaIds.length === 0 && documentoIds.length === 0) {
+      return;
+    }
+    const nome =
+      pastaIds.length === 1 && documentoIds.length === 0 ? itens[0].nome : 'arquivos';
+    this.documentsService.baixarSelecaoZip(pastaIds, documentoIds).subscribe({
+      next: (blob) => this.salvarBlob(blob, `${nome}.zip`),
+      error: () => this.notify.emit({ key: 'downloadErro', subject: nome }),
+    });
+  }
+
+  private salvarBlob(blob: Blob, nomeArquivo: string): void {
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = nomeArquivo;
+    link.click();
+    URL.revokeObjectURL(url);
   }
 
   /**

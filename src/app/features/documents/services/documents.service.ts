@@ -106,6 +106,18 @@ export class DocumentsService {
     return this.http.get(`${this.base}/pastas/${pastaId}/download`, { responseType: 'blob' });
   }
 
+  /**
+   * Baixa como um `.zip` as pastas e/ou documentos selecionados — cada pasta como subárvore
+   * recursiva, cada documento avulso na raiz do zip.
+   */
+  baixarSelecaoZip(pastaIds: string[], documentoIds: string[]): Observable<Blob> {
+    return this.http.post(
+      `${this.base}/pastas/download`,
+      { pasta_ids: pastaIds, documento_ids: documentoIds },
+      { responseType: 'blob' },
+    );
+  }
+
   renomearDocumento(documentoId: string, nome: string): Observable<Documento> {
     return this.http
       .patch<DocumentoApi>(`${this.base}/documentos/${documentoId}/renomear`, { nome })

@@ -33,4 +33,18 @@ describe('DocumentsService', () => {
     req.flush(zip);
     expect(resultado).toBe(zip);
   });
+
+  it('baixarSelecaoZip faz POST .../pastas/download com os ids em snake_case, como blob', () => {
+    let resultado: Blob | undefined;
+    service.baixarSelecaoZip(['p1', 'p2'], ['d1']).subscribe((b) => (resultado = b));
+
+    const req = http.expectOne(`${BASE}/pastas/download`);
+    expect(req.request.method).toBe('POST');
+    expect(req.request.responseType).toBe('blob');
+    expect(req.request.body).toEqual({ pasta_ids: ['p1', 'p2'], documento_ids: ['d1'] });
+
+    const zip = new Blob(['PK...'], { type: 'application/zip' });
+    req.flush(zip);
+    expect(resultado).toBe(zip);
+  });
 });

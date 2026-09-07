@@ -273,6 +273,10 @@
         {{ qtdSelecionada() === 1 ? 'item selecionado' : 'itens selecionados' }}
       </span>
       <button type="button" class="doc-explorer__selecao-limpar" (click)="limparSelecao()">Limpar</button>
+      <button type="button" (click)="baixarSelecaoZip()">
+        <i class="fa-solid fa-file-zipper" aria-hidden="true"></i>
+        Baixar (.zip)
+      </button>
       @if (pastaAtualId() !== null) {
         <button type="button" (click)="moverSelecaoParaPastaPai()">
           <i class="fa-solid fa-turn-up" aria-hidden="true"></i>

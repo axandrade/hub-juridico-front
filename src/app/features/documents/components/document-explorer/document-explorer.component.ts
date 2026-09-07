@@ -513,6 +513,22 @@ export class DocumentExplorerComponent {
     });
   }
 
+  /** Baixa a pasta (com subpastas e documentos, recursivamente) como um `.zip`. */
+  protected baixarPastaZip(pasta: Pasta): void {
+    this.fecharMenu();
+    this.documentsService.baixarPastaZip(pasta.id).subscribe({
+      next: (blob) => {
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `${pasta.nome}.zip`;
+        link.click();
+        URL.revokeObjectURL(url);
+      },
+      error: () => this.notify.emit({ key: 'downloadErro', subject: pasta.nome }),
+    });
+  }
+
   /**
    * Abre o documento no editor da nuvem (Word/Excel/PowerPoint Online) numa nova aba — só quando o
    * provedor de armazenamento ativo suportar (hoje só OneDrive; local/S3 devolvem `null`).

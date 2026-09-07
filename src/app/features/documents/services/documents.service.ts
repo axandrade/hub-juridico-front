@@ -97,6 +97,15 @@ export class DocumentsService {
     return this.http.delete<void>(`${this.base}/pastas/${pastaId}`);
   }
 
+  /**
+   * Baixa a pasta inteira (subpastas + documentos, recursivamente) como um `.zip`. Diferente do
+   * download de documento, aqui o binário passa pela API (streaming), então vem como blob com o
+   * JWT anexado pelo interceptor.
+   */
+  baixarPastaZip(pastaId: string): Observable<Blob> {
+    return this.http.get(`${this.base}/pastas/${pastaId}/download`, { responseType: 'blob' });
+  }
+
   renomearDocumento(documentoId: string, nome: string): Observable<Documento> {
     return this.http
       .patch<DocumentoApi>(`${this.base}/documentos/${documentoId}/renomear`, { nome })

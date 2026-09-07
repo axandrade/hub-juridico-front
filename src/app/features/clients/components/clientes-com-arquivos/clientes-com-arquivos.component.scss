@@ -10,6 +10,60 @@
   gap: $spacing-sm;
   min-height: 0;
 
+  &__busca {
+    display: flex;
+    align-items: center;
+    gap: $spacing-xs;
+    min-height: 36px;
+    padding: 0 $spacing-sm;
+    border: 1px solid $color-border;
+    border-radius: $border-radius-sm;
+    background-color: $color-surface;
+    color: $color-text-muted;
+
+    &:focus-within {
+      border-color: $color-primary-light;
+      box-shadow: 0 0 0 3px rgba($rouge-light, 0.16);
+    }
+
+    > i {
+      font-size: $font-size-xs;
+    }
+
+    input {
+      flex: 1;
+      min-width: 0;
+      border: 0;
+      background: transparent;
+      color: $color-text-primary;
+      font: inherit;
+      outline: none;
+
+      &::placeholder {
+        color: $color-text-muted;
+      }
+    }
+
+    button {
+      display: inline-flex;
+      border: 0;
+      padding: 2px;
+      background: none;
+      color: $color-text-muted;
+      cursor: pointer;
+
+      &:hover {
+        color: $color-primary;
+      }
+    }
+  }
+
+  &__hint {
+    margin: 0;
+    color: $color-text-muted;
+    font-size: $font-size-xs;
+  }
+
   &__erro {
     margin: 0;
     color: $color-text-secondary;
@@ -23,6 +77,27 @@
       cursor: pointer;
       font: inherit;
       text-decoration: underline;
+    }
+  }
+
+  // Afford: a última coluna (vazia) sinaliza que a linha abre a pasta; no hover vira "Abrir".
+  ::ng-deep tbody td:last-child {
+    text-align: right;
+    white-space: nowrap;
+    color: $color-text-muted;
+    font-size: $font-size-xs;
+
+    &::after {
+      content: '\2192'; // →
+    }
+  }
+
+  ::ng-deep tbody tr:hover td:last-child {
+    color: $color-primary;
+    font-weight: $font-weight-medium;
+
+    &::after {
+      content: 'Abrir \00a0\2192';
     }
   }
 }

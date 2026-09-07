@@ -88,31 +88,6 @@
   min-width: 0;
 }
 
-.clients-pasta-notice {
-  margin: $spacing-sm 0 0;
-  color: $color-text-secondary;
-  font-size: $font-size-xs;
-}
-
-.clients-pasta-voltar {
-  display: inline-flex;
-  align-items: center;
-  gap: $spacing-xs;
-  margin-bottom: $spacing-sm;
-  border: 0;
-  background: none;
-  padding: 0;
-  color: $color-primary;
-  cursor: pointer;
-  font: inherit;
-  font-size: $font-size-xs;
-  font-weight: $font-weight-medium;
-
-  &:hover {
-    text-decoration: underline;
-  }
-}
-
 .clients-resizer {
   position: absolute;
   z-index: 4;

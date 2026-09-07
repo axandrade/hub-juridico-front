@@ -3,6 +3,7 @@ import { Router, RouterOutlet } from '@angular/router';
 
 import { ROUTES } from '../core/constants/app-constants';
 import { AuthService } from '../core/services/auth.service';
+import { PastaClienteDialogComponent } from '../features/clients/components/pasta-cliente-dialog/pasta-cliente-dialog.component';
 import { DownloadsTrayComponent } from '../shared/downloads/downloads-tray.component';
 import { FooterComponent } from './components/footer/footer.component';
 import { HeaderComponent } from './components/header/header.component';
@@ -12,7 +13,14 @@ import { SidebarComponent } from './components/sidebar/sidebar.component';
 @Component({
   selector: 'app-layout',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterOutlet, SidebarComponent, HeaderComponent, FooterComponent, DownloadsTrayComponent],
+  imports: [
+    RouterOutlet,
+    SidebarComponent,
+    HeaderComponent,
+    FooterComponent,
+    DownloadsTrayComponent,
+    PastaClienteDialogComponent,
+  ],
   templateUrl: './layout.component.html',
   styleUrl: './layout.component.scss',
 })

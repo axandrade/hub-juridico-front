@@ -1,12 +1,34 @@
 <div class="clientes-com-arquivos">
+  <label class="clientes-com-arquivos__busca">
+    <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+    <input
+      type="text"
+      placeholder="Buscar cliente por nome ou CPF/CNPJ"
+      [value]="busca()"
+      (input)="onBuscaInput($event)"
+      aria-label="Buscar cliente por nome ou CPF/CNPJ"
+    />
+    @if (busca()) {
+      <button type="button" aria-label="Limpar busca" (click)="limparBusca()">
+        <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+      </button>
+    }
+  </label>
+
+  <p class="clientes-com-arquivos__hint">Clique num cliente para abrir a pasta dele.</p>
+
   <app-data-table
     [columns]="columns"
     [data]="itens()"
     [loading]="loading()"
     trackKey="pessoaId"
-    emptyMessage="Nenhum cliente com arquivos ainda."
+    [emptyMessage]="
+      busca()
+        ? 'Nenhum cliente encontrado para essa busca.'
+        : 'Nenhum cliente com arquivos ainda.'
+    "
     [sortable]="true"
-    [initialSort]="{ key: 'nome', direction: 'asc' }"
+    [initialSort]="{ key: 'ultimoEnvioEm', direction: 'desc' }"
     [pagination]="pagination()"
     (pageChange)="onPageChange($event)"
     (rowClick)="onRowClick($event)"

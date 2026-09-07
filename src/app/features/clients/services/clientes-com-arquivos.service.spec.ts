@@ -56,6 +56,20 @@ describe('ClientesComArquivosService', () => {
     expect(store.last()).toBe(true);
   });
 
+  it('carregar manda busca (trim) como query param quando informada', () => {
+    store.carregar(0, '  Fulano ').subscribe();
+    const req = http.expectOne((r) => r.url === URL);
+    expect(req.request.params.get('busca')).toBe('Fulano');
+    req.flush({ conteudo: [], pagina: 0, tamanho: 10, total_elementos: 0, total_paginas: 1, ultima: true });
+  });
+
+  it('carregar sem busca não manda o param', () => {
+    store.carregar(0).subscribe();
+    const req = http.expectOne((r) => r.url === URL);
+    expect(req.request.params.has('busca')).toBe(false);
+    req.flush({ conteudo: [], pagina: 0, tamanho: 10, total_elementos: 0, total_paginas: 1, ultima: true });
+  });
+
   it('carregar mapeia ultimo_envio_em nulo para null', () => {
     store.carregar(0).subscribe();
     http

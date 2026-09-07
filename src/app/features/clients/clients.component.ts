@@ -8,7 +8,6 @@ import {
   effect,
   inject,
   signal,
-  untracked,
   viewChild,
 } from '@angular/core';
 import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop';
@@ -16,18 +15,10 @@ import { EMPTY, catchError, debounceTime, distinctUntilChanged, skip, switchMap 
 
 import { ModalidadeCliente, IPessoa, TipoPessoa } from '../../core/models';
 import { ButtonComponent } from '../../shared/components/button/button.component';
-import { ModalComponent } from '../../shared/components/modal/modal.component';
 import { PanelShellController } from '../../shared/panel-shell/panel-shell.controller';
 import { PastaClienteService } from './services/pasta-cliente.service';
 import { ClientService, ClientListQuery } from './services/client-service';
-import { ClientePastaResumo } from './services/cliente-pasta-resumo.model';
 import { ClientFormComponent } from './components/client-form/client-form.component';
-import { ClientesComArquivosComponent } from './components/clientes-com-arquivos/clientes-com-arquivos.component';
-import {
-  DocumentExplorerComponent,
-  DocumentExplorerNotice,
-  DocumentExplorerNoticeKey,
-} from '../documents/components/document-explorer/document-explorer.component';
 import { emailPrincipal, contatoPrincipal } from '../../core/models';
 import { DataTableComponent } from '../../shared/components/table/data-table.component';
 import { TableColumn } from '../../shared/components/table/table-column.model';
@@ -38,14 +29,7 @@ type PageNotice = '' | 'loadError';
 @Component({
   selector: 'app-clients',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [
-    ButtonComponent,
-    ClientFormComponent,
-    ModalComponent,
-    DocumentExplorerComponent,
-    ClientesComArquivosComponent,
-    DataTableComponent,
-  ],
+  imports: [ButtonComponent, ClientFormComponent, DataTableComponent],
   templateUrl: './clients.component.html',
   styleUrl: './clients.component.scss',
 })
@@ -53,7 +37,7 @@ export class ClientsComponent {
   private readonly clientService = inject(ClientService);
   private readonly document = inject(DOCUMENT);
   private readonly destroyRef = inject(DestroyRef);
-  protected readonly pastaCliente = inject(PastaClienteService);
+  private readonly pastaCliente = inject(PastaClienteService);
 
   private readonly editor = viewChild(ClientFormComponent);
   /** A grade de clientes — o botão "Colunas" da barra de ações comanda esta instância. */
@@ -64,16 +48,6 @@ export class ClientsComponent {
   protected readonly panelShell = new PanelShellController(this.document, {
     storagePrefix: 'hub-juridico.clients',
   });
-  /** Aviso da pasta do cliente (upload/remoção/erro) mostrado dentro do diálogo. */
-  protected readonly pastaNotice = signal<string | null>(null);
-  /**
-   * Cliente aberto no explorador **dentro do modal** — desacoplado de `selectedPersonId` de
-   * propósito, pra abrir a pasta de um cliente que não está na página carregada da grade sem
-   * disparar o carregamento da ficha no painel de fundo. `null` = mostra a tabela de visão geral.
-   */
-  protected readonly pastaExplorerPessoa = signal<{ id: number; nome: string } | null>(null);
-  /** Incrementado pra forçar o recarregamento da tabela de visão geral (ex.: ao voltar do explorador). */
-  protected readonly pastaResumoTick = signal(0);
   protected readonly pageNotice = signal<PageNotice>('');
   protected readonly loading = signal(false);
 
@@ -200,7 +174,7 @@ export class ClientsComponent {
         }
       });
 
-    // Publica o cliente selecionado para o header ("Abrir pasta do cliente").
+    // Publica o cliente selecionado para o diálogo "Abrir pasta do cliente" (global, no layout).
     effect(() => {
       const id = this.selectedPersonId();
       const cliente = id !== null ? this.clientService.buscar(id) : null;
@@ -213,25 +187,8 @@ export class ClientsComponent {
       );
     });
 
-    // Ao abrir o diálogo: com um cliente selecionado, vai direto pro explorador dele; sem
-    // nenhum, mostra a tabela de visão geral. Só reage à transição de `aberto()`.
-    effect(() => {
-      const aberto = this.pastaCliente.aberto();
-      untracked(() => {
-        if (!aberto) {
-          this.pastaExplorerPessoa.set(null);
-          this.pastaNotice.set(null);
-          return;
-        }
-        const cliente = this.pastaCliente.cliente();
-        if (cliente) {
-          this.pastaExplorerPessoa.set({ id: cliente.id, nome: cliente.nome });
-        } else {
-          this.pastaExplorerPessoa.set(null);
-          this.pastaResumoTick.update((tick) => tick + 1);
-        }
-      });
-    });
+    // Ao sair de /clientes, esquece a seleção: em qualquer outra tela o diálogo abre na visão geral.
+    this.destroyRef.onDestroy(() => this.pastaCliente.definirCliente(null));
   }
 
   private goToFirstPage(): void {
@@ -358,46 +315,6 @@ export class ClientsComponent {
   protected onStatusChanged(client: IPessoa): void {
     this.selectedPersonId.set(client.id);
     this.refreshList();
-  }
-
-  protected fecharPasta(): void {
-    this.pastaCliente.fechar();
-    this.pastaNotice.set(null);
-  }
-
-  /** Clique numa linha da tabela de visão geral: abre o explorador daquele cliente no modal. */
-  protected abrirPastaDoResumo(row: ClientePastaResumo): void {
-    this.pastaNotice.set(null);
-    this.pastaExplorerPessoa.set({ id: row.pessoaId, nome: row.nome });
-  }
-
-  /** Volta do explorador para a tabela de visão geral (e a recarrega). */
-  protected voltarParaListaPastas(): void {
-    this.pastaNotice.set(null);
-    this.pastaExplorerPessoa.set(null);
-    this.pastaResumoTick.update((tick) => tick + 1);
-  }
-
-  protected onPastaNotice(evento: DocumentExplorerNotice): void {
-    const alvo = evento.subject ?? '';
-    const textos: Record<DocumentExplorerNoticeKey, string> = {
-      pastaCriada: `Pasta criada: ${alvo}`,
-      pastaCriadaErro: `Não foi possível criar a pasta: ${alvo}`,
-      renomeado: `Renomeado: ${alvo}`,
-      renomeadoErro: `Não foi possível renomear: ${alvo}`,
-      movidoErro: `Não foi possível mover: ${alvo}`,
-      excluido: `Excluído: ${alvo}`,
-      excluidoErro: `Não foi possível excluir: ${alvo}`,
-      pastaNaoVazia: `A pasta "${alvo}" não está vazia.`,
-      uploadOk: `Arquivo enviado: ${alvo}`,
-      uploadErro: `Não foi possível enviar: ${alvo}`,
-      downloadErro: `Não foi possível baixar: ${alvo}`,
-      editarIndisponivel: `Edição online não disponível para: ${alvo}`,
-      editarErro: `Não foi possível abrir para edição: ${alvo}`,
-      convertidoOk: `Convertido para PDF: ${alvo}`,
-      convertidoErro: `Não foi possível converter: ${alvo}`,
-    };
-    this.pastaNotice.set(textos[evento.key]);
   }
 
   private hiringModeLabel(mode: ModalidadeCliente | ''): string {

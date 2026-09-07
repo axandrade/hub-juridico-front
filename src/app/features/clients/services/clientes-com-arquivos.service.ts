@@ -32,9 +32,12 @@ export class ClientesComArquivosService {
   readonly totalElements = this._totalElements.asReadonly();
   readonly last = this._last.asReadonly();
 
-  /** Carrega uma página (0-based) e atualiza os signals. */
-  carregar(page: number): Observable<ClientePastaResumo[]> {
-    const params = new HttpParams().set('page', page);
+  /** Carrega uma página (0-based), opcionalmente filtrada por `busca` (nome ou CPF/CNPJ). */
+  carregar(page: number, busca?: string): Observable<ClientePastaResumo[]> {
+    let params = new HttpParams().set('page', page);
+    if (busca?.trim()) {
+      params = params.set('busca', busca.trim());
+    }
     return this.http.get<PaginaApi<ClientePastaResumoApi>>(this.url, { params }).pipe(
       tap((pagina) => {
         this._page.set(pagina.pagina ?? 0);

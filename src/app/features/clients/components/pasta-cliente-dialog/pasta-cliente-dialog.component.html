@@ -1,0 +1,31 @@
+@if (pastaCliente.aberto()) {
+  <app-modal
+    [open]="true"
+    [large]="true"
+    [title]="
+      pastaExplorerPessoa()
+        ? 'Pasta — ' + (pastaExplorerPessoa()!.nome || 'cliente')
+        : 'Pastas dos clientes'
+    "
+    (closed)="fechar()"
+  >
+    @if (pastaExplorerPessoa(); as alvo) {
+      <button type="button" class="pasta-dialog__voltar" (click)="voltarParaListaPastas()">
+        <i class="fa-solid fa-arrow-left" aria-hidden="true"></i> Todos os clientes
+      </button>
+      <app-document-explorer
+        [pessoaId]="alvo.id"
+        [pessoaNome]="alvo.nome"
+        (notify)="onPastaNotice($event)"
+      />
+    } @else {
+      <app-clientes-com-arquivos
+        [recarregarTick]="pastaResumoTick()"
+        (rowOpen)="abrirPastaDoResumo($event)"
+      />
+    }
+    @if (pastaNotice()) {
+      <p class="pasta-dialog__notice">{{ pastaNotice() }}</p>
+    }
+  </app-modal>
+}

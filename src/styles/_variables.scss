@@ -40,17 +40,20 @@ $font-weight-light: 300;
 $font-weight-regular: 400;
 $font-weight-medium: 500;
 $font-weight-bold: 700;
-$line-height-base: 1.6;
+$line-height-base: 1.5;
 
 // ------------------------------------------------------------
 // Espaçamento
 // ------------------------------------------------------------
+// Escala apertada (2026-09): degraus médio/grande cortados ~35-50% pra reduzir o
+// "ar" no nível de moldura (gutter da página, gap painel↔tabela, padding de cards/células).
+// xs/sm mantidos — são os valores de encaixe fino dentro dos componentes.
 $spacing-xs: 4px;
 $spacing-sm: 8px;
-$spacing-md: 16px;
-$spacing-lg: 24px;
-$spacing-xl: 32px;
-$spacing-2xl: 48px;
+$spacing-md: 10px;
+$spacing-lg: 12px;
+$spacing-xl: 18px;
+$spacing-2xl: 24px;
 
 // ------------------------------------------------------------
 // Sombras — suaves, botânicas

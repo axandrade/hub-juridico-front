@@ -79,12 +79,21 @@ describe('ClientStore', () => {
     expect(cliente?.dossier.status).toBe('active');
   });
 
-  it('carregar sem tipo/incluirInativos não manda esses params', () => {
+  it('carregar sem tipo/incluirInativos/busca não manda esses params', () => {
     store.carregar({ page: 0, tipo: null, incluirInativos: false }).subscribe();
 
     const req = http.expectOne((r) => r.url === BASE);
     expect(req.request.params.has('tipo')).toBe(false);
     expect(req.request.params.has('incluirInativos')).toBe(false);
+    expect(req.request.params.has('busca')).toBe(false);
+    req.flush({ conteudo: [], pagina: 0, tamanho: 10, total_elementos: 0, total_paginas: 1, ultima: true });
+  });
+
+  it('carregar manda busca (trim) como query param', () => {
+    store.carregar({ page: 0, tipo: null, incluirInativos: false, busca: '  maria  ' }).subscribe();
+
+    const req = http.expectOne((r) => r.url === BASE);
+    expect(req.request.params.get('busca')).toBe('maria');
     req.flush({ conteudo: [], pagina: 0, tamanho: 10, total_elementos: 0, total_paginas: 1, ultima: true });
   });
 

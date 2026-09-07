@@ -57,6 +57,33 @@
           label="Novo"
           (clicked)="newRecord()"
         />
+
+        <div class="clients-columns">
+          <button
+            type="button"
+            class="clients-menu-button"
+            [class.is-active]="gradeClientes.columnsMenuOpen()"
+            (click)="gradeClientes.toggleColumnsMenu()"
+          >
+            <i class="fa-solid fa-table-columns" aria-hidden="true"></i>
+            Colunas
+          </button>
+          @if (gradeClientes.columnsMenuOpen()) {
+            <div class="clients-dropdown clients-columns__menu" role="menu">
+              @for (col of gradeClientes.columns(); track col.key) {
+                <label>
+                  <input
+                    type="checkbox"
+                    [checked]="gradeClientes.isColumnVisible(col.key)"
+                    (change)="gradeClientes.toggleColumnVisibility(col.key)"
+                  />
+                  {{ col.header }}
+                </label>
+              }
+            </div>
+          }
+        </div>
+
         <div class="clients-actions__menu">
           <button type="button" class="clients-menu-button" (click)="toggleMoreActions()">
             <i class="fa-solid fa-ellipsis" aria-hidden="true"></i>
@@ -92,8 +119,57 @@
       </button>
     </div>
 
+    <div class="clients-search-section">
+      <span class="clients-search-section__label">Pesquisar</span>
+      <label class="clients-search">
+        <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+        <input
+          type="text"
+          placeholder="nome, CPF/CNPJ ou e-mail"
+          [value]="busca()"
+          (input)="onBuscaInput($event)"
+          aria-label="Buscar por nome, CPF/CNPJ ou e-mail"
+        />
+        @if (busca()) {
+          <button type="button" aria-label="Limpar busca" (click)="limparBusca()">
+            <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+          </button>
+        }
+      </label>
+      <span class="clients-search-section__count">{{ busca().trim() ? 1 : 0 }} filtro(s)</span>
+    </div>
+
+    <div class="clients-natureza" role="group" aria-label="Filtrar por natureza">
+      <button
+        type="button"
+        [class.is-active]="tipoFiltro() === ''"
+        [attr.aria-pressed]="tipoFiltro() === ''"
+        (click)="selecionarTipo('')"
+      >
+        Todos
+      </button>
+      <button
+        type="button"
+        [class.is-active]="tipoFiltro() === 'FISICA'"
+        [attr.aria-pressed]="tipoFiltro() === 'FISICA'"
+        (click)="selecionarTipo('FISICA')"
+      >
+        Pessoa física
+      </button>
+      <button
+        type="button"
+        [class.is-active]="tipoFiltro() === 'JURIDICA'"
+        [attr.aria-pressed]="tipoFiltro() === 'JURIDICA'"
+        (click)="selecionarTipo('JURIDICA')"
+      >
+        Pessoa jurídica
+      </button>
+    </div>
+
     <div class="clients-table-wrap">
       <app-data-table
+        #gradeClientes
+        [columnsToolbar]="false"
         [columns]="clientColumns"
         [data]="clients()"
         [loading]="loading()"
@@ -103,13 +179,10 @@
         [initialSort]="{ key: 'nome', direction: 'asc' }"
         [columnVisibility]="true"
         [defaultVisibleColumns]="['tipo','nome','cpf_cnpj','email','telefone','status','cadastrado_por_nome']"
-        [filterPredicate]="clientFilterPredicate()"
         [pinFirst]="clientPinFirst"
         [rowClass]="clientRowClass"
         [pinAction]="clientPinAction"
-        [columnFilterValues]="columnFilterValues()"
         [pagination]="pagination()"
-        (columnFilterChange)="onColumnFilterChange($event)"
         (pageChange)="onPageChange($event)"
         (rowClick)="selectClient($event)"
       />
@@ -118,7 +191,11 @@
     <footer class="clients-main__footer">
       <div class="clients-summary-line">
         <span>
-          {{ totalClients() }} cliente(s) cadastrado(s)
+          @if (busca().trim()) {
+            {{ totalClients() }} resultado(s) para "{{ busca().trim() }}"
+          } @else {
+            {{ totalClients() }} cliente(s) cadastrado(s)
+          }
         </span>
       </div>
       @switch (pageNotice()) {

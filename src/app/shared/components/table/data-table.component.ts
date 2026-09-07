@@ -39,8 +39,14 @@ export class DataTableComponent<T extends object> {
   /** Ordenação inicial (só lida uma vez, na primeira renderização). */
   readonly initialSort = input<TableSort | null>(null);
 
-  /** Habilita o botão/dropdown "Colunas" (mostrar/ocultar). */
+  /** Habilita o recurso de mostrar/ocultar colunas. */
   readonly columnVisibility = input<boolean>(false);
+  /**
+   * `true` (padrão): a tabela desenha o próprio botão "Colunas" acima dela.
+   * `false`: o pai desenha o botão/menu e comanda via a API pública
+   * (`columnsMenuOpen`, `toggleColumnsMenu`, `isColumnVisible`, `toggleColumnVisibility`, `columns`).
+   */
+  readonly columnsToolbar = input<boolean>(true);
   /** Colunas visíveis por padrão (por `key`); `null` = todas. */
   readonly defaultVisibleColumns = input<readonly string[] | null>(null);
 
@@ -70,7 +76,8 @@ export class DataTableComponent<T extends object> {
 
   private readonly sortOverride = signal<TableSort | null>(null);
   private readonly visibleKeysOverride = signal<Set<string> | null>(null);
-  protected readonly columnsMenuOpen = signal(false);
+  /** Público: o pai pode ler/fechar o menu quando desenha o próprio botão (`columnsToolbar=false`). */
+  readonly columnsMenuOpen = signal(false);
 
   protected readonly effectiveSort = computed(() => this.sortOverride() ?? this.initialSort());
 
@@ -134,16 +141,16 @@ export class DataTableComponent<T extends object> {
     this.columnFilterChange.emit({ key, value });
   }
 
-  protected toggleColumnsMenu(): void {
+  toggleColumnsMenu(): void {
     this.columnsMenuOpen.update((open) => !open);
   }
 
-  protected isColumnVisible(key: string): boolean {
+  isColumnVisible(key: string): boolean {
     const keys = this.visibleKeysOverride() ?? this.defaultVisibleKeys();
     return keys.has(key);
   }
 
-  protected toggleColumnVisibility(key: string): void {
+  toggleColumnVisibility(key: string): void {
     const next = new Set(this.visibleKeysOverride() ?? this.defaultVisibleKeys());
     if (next.has(key)) {
       if (next.size > 1) {

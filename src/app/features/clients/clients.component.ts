@@ -11,10 +11,9 @@ import {
   untracked,
   viewChild,
 } from '@angular/core';
-import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
-import { EMPTY, catchError, switchMap } from 'rxjs';
+import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop';
+import { EMPTY, catchError, debounceTime, distinctUntilChanged, skip, switchMap } from 'rxjs';
 
-import { onlyDigits } from '../../core/auth/cpf';
 import { ModalidadeCliente, IPessoa, TipoPessoa } from '../../core/models';
 import { ButtonComponent } from '../../shared/components/button/button.component';
 import { ModalComponent } from '../../shared/components/modal/modal.component';
@@ -57,6 +56,8 @@ export class ClientsComponent {
   protected readonly pastaCliente = inject(PastaClienteService);
 
   private readonly editor = viewChild(ClientFormComponent);
+  /** A grade de clientes — o botão "Colunas" da barra de ações comanda esta instância. */
+  protected readonly clientsTable = viewChild(DataTableComponent);
 
   protected readonly selectedPersonId = signal<number | null>(null);
   /** Posição/tamanho/visibilidade do painel — ver `PanelShellController`. */
@@ -82,8 +83,10 @@ export class ClientsComponent {
   private readonly reloadTick = signal(0);
   /** `true` traz também clientes inativos — reflete exatamente o `incluirInativos` do backend. */
   protected readonly incluirInativos = signal(false);
-  /** Valor atual de cada filtro de coluna (server: `tipo`; client-side: `nome`/`cpf_cnpj`/`email`). */
-  protected readonly columnFilterValues = signal<Record<string, string>>({});
+  /** Busca livre (nome/razão, CPF/CNPJ, e-mail) — resolvida no servidor, com debounce. */
+  protected readonly busca = signal('');
+  /** Filtro de natureza (chips) — `''` = todos. Resolvido no servidor. */
+  protected readonly tipoFiltro = signal<TipoPessoa | ''>('');
 
   protected readonly clients = this.store.clients;
   protected readonly totalClients = this.store.totalElements;
@@ -94,67 +97,30 @@ export class ClientsComponent {
     last: this.store.last(),
   }));
 
-  /** Filtro client-side (nome/CPF-CNPJ/e-mail) sobre a página de 10 linhas já carregada. */
-  protected readonly clientFilterPredicate = computed<((row: IPessoa) => boolean) | null>(() => {
-    const filtros = this.columnFilterValues();
-    const nome = filtros['nome']?.trim().toLowerCase() ?? '';
-    const documento = onlyDigits(filtros['cpf_cnpj'] ?? '');
-    const email = filtros['email']?.trim().toLowerCase() ?? '';
-    if (!nome && !documento && !email) {
-      return null;
-    }
-    return (row: IPessoa): boolean => {
-      if (nome && !this.clientDisplayName(row).toLowerCase().includes(nome)) {
-        return false;
-      }
-      if (documento) {
-        const doc = onlyDigits(row.pessoa.tipo === 'FISICA' ? row.pessoa.cpf : row.pessoa.cnpj);
-        if (!doc.includes(documento)) {
-          return false;
-        }
-      }
-      if (email && !row.pessoa.emails.some((e) => e.endereco.toLowerCase().includes(email))) {
-        return false;
-      }
-      return true;
-    };
-  });
-
   protected readonly clientColumns: TableColumn<IPessoa>[] = [
     {
       key: 'tipo',
       header: 'Natureza',
       width: '138px',
       formatter: (_value, row) => (row.pessoa.tipo === 'FISICA' ? 'Pessoa física' : 'Pessoa jurídica'),
-      filter: {
-        type: 'select',
-        options: [
-          { value: '', label: 'Todos' },
-          { value: 'FISICA', label: 'Pessoa física' },
-          { value: 'JURIDICA', label: 'Pessoa jurídica' },
-        ],
-      },
     },
     {
       key: 'nome',
       header: 'Nome / Razão',
       width: '240px',
       formatter: (_value, row) => this.clientDisplayName(row) || '-',
-      filter: { type: 'text' },
     },
     {
       key: 'cpf_cnpj',
       header: 'CPF / CNPJ',
       width: '170px',
       formatter: (_value, row) => (row.pessoa.tipo === 'FISICA' ? row.pessoa.cpf : row.pessoa.cnpj) || '-',
-      filter: { type: 'text' },
     },
     {
       key: 'email',
       header: 'E-mail',
       width: '230px',
       formatter: (_value, row) => emailPrincipal(row.pessoa.emails) || '-',
-      filter: { type: 'text' },
     },
     {
       key: 'telefone',
@@ -177,19 +143,8 @@ export class ClientsComponent {
       header: 'Cadastrado por',
       width: '150px',
       formatter: (_value, row) => row.dossier.registeredBy || '-',
-    },
-    {
-      key: 'modalidade',
-      header: 'Modalidade',
-      width: '150px',
-      formatter: (_value, row) => this.hiringModeLabel(row.dossier.hiringMode),
-    },
-    {
-      key: 'responsavel_interno',
-      header: 'Responsável',
-      width: '160px',
-      formatter: (_value, row) => row.dossier.internalOwner || '-',
-    },
+    }
+
   ];
 
   protected readonly clientPinFirst = (row: IPessoa): boolean => row.favorite;
@@ -207,10 +162,21 @@ export class ClientsComponent {
   };
 
   constructor() {
+    // Busca com debounce: só dispara requisição 300ms depois de parar de digitar.
+    const buscaDebounced = toSignal(
+      toObservable(this.busca).pipe(debounceTime(300), distinctUntilChanged()),
+      { initialValue: this.busca() },
+    );
+    // Nova busca sempre volta pra primeira página.
+    toObservable(buscaDebounced)
+      .pipe(skip(1), takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => this.page.set(0));
+
     const query = computed<ClientListQuery & { tick: number }>(() => ({
       page: this.page(),
-      tipo: (this.columnFilterValues()['tipo'] as TipoPessoa) || null,
+      tipo: this.tipoFiltro() || null,
       incluirInativos: this.incluirInativos(),
+      busca: buscaDebounced(),
       tick: this.reloadTick(),
     }));
 
@@ -282,18 +248,21 @@ export class ClientsComponent {
     this.page.set(page);
   }
 
-  /** Confirma (ou limpa, se `value` vazio) o filtro de uma coluna; `tipo` recarrega no servidor. */
-  protected onColumnFilterChange({ key, value }: { key: string; value: string }): void {
-    this.columnFilterValues.update((atual) => {
-      if (!value.trim()) {
-        const { [key]: _removido, ...resto } = atual;
-        return resto;
-      }
-      return { ...atual, [key]: value };
-    });
-    if (key === 'tipo') {
-      this.page.set(0);
+  protected onBuscaInput(event: Event): void {
+    this.busca.set((event.target as HTMLInputElement).value);
+  }
+
+  protected limparBusca(): void {
+    this.busca.set('');
+  }
+
+  /** Chip de natureza (`''` = Todos). Seleção direta, estilo rádio. */
+  protected selecionarTipo(tipo: TipoPessoa | ''): void {
+    if (this.tipoFiltro() === tipo) {
+      return;
     }
+    this.tipoFiltro.set(tipo);
+    this.page.set(0);
   }
 
   protected onToggleIncluirInativos(event: Event): void {
@@ -350,7 +319,7 @@ export class ClientsComponent {
   }
 
   /**
-   * Clique fora fecha o menu "Mais..." e — se o cadeado não estiver travado —
+   * Clique fora fecha os menus "Mais..." / "Colunas" e — se o cadeado não estiver travado —
    * também desmarca o cliente (clique fora de uma linha da tabela e do painel).
    */
   @HostListener('document:click', ['$event'])
@@ -359,6 +328,11 @@ export class ClientsComponent {
 
     if (this.showMoreActions() && !target?.closest('.clients-actions__menu')) {
       this.showMoreActions.set(false);
+    }
+
+    const tabela = this.clientsTable();
+    if (tabela?.columnsMenuOpen() && !target?.closest('.clients-columns')) {
+      tabela.columnsMenuOpen.set(false);
     }
 
     if (this.selectedPersonId() === null || this.editor()?.locked() || this.panelShell.redimensionando) {

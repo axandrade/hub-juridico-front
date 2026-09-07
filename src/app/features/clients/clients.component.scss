@@ -246,6 +246,137 @@
   user-select: none;
 }
 
+// Seção "Pesquisar" — largura total, rótulo em cima, contador de filtros à direita.
+.clients-search-section {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-areas:
+    'label label'
+    'input count';
+  align-items: center;
+  gap: $spacing-xs $spacing-sm;
+  padding: $spacing-sm $spacing-md;
+  border-bottom: 1px solid rgba($color-border, 0.7);
+
+  &__label {
+    grid-area: label;
+    font-size: $font-size-xs;
+    font-weight: $font-weight-medium;
+    color: $color-text-secondary;
+  }
+
+  &__count {
+    grid-area: count;
+    font-size: $font-size-xs;
+    color: $color-text-muted;
+    white-space: nowrap;
+  }
+}
+
+.clients-search {
+  grid-area: input;
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+  min-width: 0;
+  min-height: 36px;
+  padding: 0 $spacing-sm;
+  border: 1px solid $color-border;
+  border-radius: $border-radius-sm;
+  background-color: $color-surface;
+  color: $color-text-muted;
+
+  &:focus-within {
+    border-color: $color-primary-light;
+    box-shadow: 0 0 0 3px rgba($rouge-light, 0.16);
+  }
+
+  > i {
+    font-size: $font-size-xs;
+  }
+
+  input {
+    flex: 1;
+    min-width: 0;
+    border: 0;
+    background: transparent;
+    color: $color-text-primary;
+    font: inherit;
+    outline: none;
+
+    &::placeholder {
+      color: $color-text-muted;
+    }
+  }
+
+  button {
+    display: inline-flex;
+    border: 0;
+    padding: 2px;
+    background: none;
+    color: $color-text-muted;
+    cursor: pointer;
+
+    &:hover {
+      color: $color-primary;
+    }
+  }
+}
+
+// Chips de natureza (Pessoa física / jurídica) — filtro no servidor, fora do cabeçalho da tabela.
+.clients-natureza {
+  display: flex;
+  gap: $spacing-xs;
+  padding: $spacing-sm $spacing-md;
+  border-bottom: 1px solid rgba($color-border, 0.7);
+
+  button {
+    padding: 4px $spacing-md;
+    border: 1px solid $color-border;
+    border-radius: 999px;
+    background-color: $color-neutral-light;
+    color: $color-text-secondary;
+    cursor: pointer;
+    font: inherit;
+    font-size: $font-size-xs;
+    font-weight: $font-weight-medium;
+    transition:
+      background-color $transition-fast,
+      border-color $transition-fast,
+      color $transition-fast;
+
+    &:hover {
+      border-color: $color-primary-light;
+      color: $color-primary;
+    }
+
+    &.is-active {
+      border-color: $color-primary;
+      background-color: $color-primary;
+      color: #fff;
+    }
+  }
+}
+
+.clients-columns {
+  position: relative;
+
+  &__menu {
+    width: 220px;
+
+    label {
+      display: flex;
+      align-items: center;
+      gap: $spacing-xs;
+      min-height: 30px;
+      padding: 0 $spacing-xs;
+      font-size: $font-size-xs;
+      color: $color-text-secondary;
+      cursor: pointer;
+    }
+  }
+}
+
 .clients-menu-button,
 .clients-panel-toggle,
 .clients-dropdown button {

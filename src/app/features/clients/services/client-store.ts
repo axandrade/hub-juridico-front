@@ -25,6 +25,8 @@ export interface ClientListQuery {
   tipo: TipoPessoa | null;
   /** `true` traz também os clientes inativos; padrão é só ativos. */
   incluirInativos: boolean;
+  /** Busca livre no servidor: nome/razão/fantasia, CPF/CNPJ e e-mail (parcial, sem acento-fold). */
+  busca?: string;
 }
 
 /**
@@ -73,6 +75,9 @@ export class ClientStore {
     }
     if (query.incluirInativos) {
       params = params.set('incluirInativos', true);
+    }
+    if (query.busca?.trim()) {
+      params = params.set('busca', query.busca.trim());
     }
 
     return this.http.get<PaginaApi<ClientRespApi>>(this.base, { params }).pipe(

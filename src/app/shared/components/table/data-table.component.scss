@@ -24,17 +24,17 @@
     top: 0;
     text-align: left;
     padding: $spacing-sm $spacing-md;
-    background-color: $color-primary-pale;
-    color: $color-secondary;
+    background-color: #f1ede1; // neutro quente — não rosa
+    color: $color-text-primary;
     font-family: $font-family-heading;
     font-weight: $font-weight-medium;
-    border-bottom: 2px solid $color-primary-light;
+    border-bottom: 1px solid rgba($burgundy-deep, 0.16);
     white-space: nowrap;
   }
 
   tbody td {
     padding: $spacing-sm $spacing-md;
-    border-bottom: 1px solid $color-border;
+    border-bottom: 1px solid rgba($burgundy-deep, 0.08); // divisória neutra e discreta
     color: $color-text-primary;
   }
 
@@ -42,33 +42,39 @@
     transition:
       background-color $transition-fast,
       box-shadow $transition-fast;
+    cursor: pointer;
 
-    &:hover,
+    // Hover: cinza bem leve — só um feedback, não compete com a seleção.
+    &:hover {
+      background-color: rgba($burgundy-deep, 0.035);
+    }
+
+    // Seleção: tinta bordô + "fita" na lateral esquerda. Inequívoca.
     &.is-selected {
-      background-color: rgba($pink-pale, 0.35);
-      cursor: pointer;
+      background-color: rgba($rouge-dark, 0.08);
+
+      td:first-child {
+        box-shadow: inset 3px 0 0 $color-primary;
+      }
+
+      &:hover {
+        background-color: rgba($rouge-dark, 0.11);
+      }
     }
 
     &:last-child td {
       border-bottom: none;
     }
 
-    // Linha fixada (ex.: favorito): fundo âmbar suave, divisórias mais quentes e
-    // uma "fita" dourada na lateral esquerda (na primeira célula).
+    // Favorito: só a "fita" dourada na lateral esquerda — sem fundo, pra não brigar
+    // com o hover/seleção.
     &.is-favorite {
-      background-color: rgba($color-warning, 0.09);
-
-      td {
-        border-bottom-color: rgba($color-warning, 0.28);
-      }
-
       td:first-child {
         box-shadow: inset 3px 0 0 $color-warning;
       }
 
-      &:hover,
-      &.is-selected {
-        background-color: rgba($color-warning, 0.16);
+      &.is-selected td:first-child {
+        box-shadow: inset 3px 0 0 $color-warning;
       }
 
       .data-table__pin-button.is-active {
@@ -127,14 +133,14 @@
       color $transition-fast,
       box-shadow $transition-fast;
 
-    &:hover,
-    &.is-active {
+    &:hover {
       border-color: $color-primary-light;
-      background-color: rgba($color-primary-pale, 0.55);
+      background-color: rgba($burgundy-deep, 0.05);
       color: $color-primary;
     }
 
     &.is-active {
+      border-color: rgba($color-warning, 0.5);
       color: $color-warning;
     }
 
@@ -286,7 +292,7 @@
     transition: background-color $transition-fast;
 
     &:hover:not(:disabled) {
-      background-color: $color-primary-pale;
+      background-color: rgba($burgundy-deep, 0.05);
     }
 
     &:disabled {

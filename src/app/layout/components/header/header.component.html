@@ -22,13 +22,58 @@
     />
   </div>
 
-  <div class="header__context">
-    <div class="header__user">
-      <i class="fa-solid fa-circle-user" aria-hidden="true"></i>
-      <span>{{ userName() }}</span>
-      @if (userRole()) {
-        <small class="header__user-role">{{ userRole() }}</small>
-      }
-    </div>
+  <div class="header__user-menu">
+    <button
+      type="button"
+      class="header__user-trigger"
+      [class.is-open]="menuAberto()"
+      [attr.aria-expanded]="menuAberto()"
+      aria-haspopup="menu"
+      aria-label="Menu do usuário"
+      (click)="alternarMenu()"
+    >
+      <span class="header__avatar">
+        @if (avatarUrl(); as url) {
+          <img [src]="url" alt="" />
+        } @else {
+          {{ iniciais() }}
+        }
+      </span>
+      <span class="header__user-info">
+        <strong>{{ userName() }}</strong>
+        @if (userRole()) {
+          <small>{{ userRole() }}</small>
+        }
+      </span>
+      <i class="fa-solid fa-chevron-down header__user-caret" aria-hidden="true"></i>
+    </button>
+
+    @if (menuAberto()) {
+      <div class="header__dropdown" role="menu">
+        <div class="header__dropdown-id">
+          <span class="header__avatar header__avatar--lg">
+            @if (avatarUrl(); as url) {
+              <img [src]="url" alt="" />
+            } @else {
+              {{ iniciais() }}
+            }
+          </span>
+          <div>
+            <strong>{{ userName() }}</strong>
+            @if (userEmail()) {
+              <span>{{ userEmail() }}</span>
+            }
+            @if (userRole()) {
+              <small class="header__user-role">{{ userRole() }}</small>
+            }
+          </div>
+        </div>
+
+        <button type="button" class="header__dropdown-item" role="menuitem" (click)="sair()">
+          <i class="fa-solid fa-right-from-bracket" aria-hidden="true"></i>
+          Sair
+        </button>
+      </div>
+    }
   </div>
 </header>

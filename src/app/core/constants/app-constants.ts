@@ -21,7 +21,6 @@ export interface NavItem {
   route?: string;
   badge?: string;
   emphasis?: 'primary' | 'accent' | 'neutral';
-  action?: 'logout';
 }
 
 /** Itens de navegação da sidebar, refletindo o protótipo. */
@@ -66,7 +65,6 @@ export const SIDEBAR_NAV: readonly NavItem[] = [
   },
   { label: 'Usuários', icon: 'fa-solid fa-user', emphasis: 'neutral' },
   { label: 'Configurações', icon: 'fa-solid fa-gear', emphasis: 'neutral' },
-  { label: 'Sair', icon: 'fa-solid fa-right-from-bracket', emphasis: 'accent', action: 'logout' },
 ];
 
 export const DATE_FORMAT = {

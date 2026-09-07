@@ -36,6 +36,8 @@ export interface AuthUser {
   last_login_at: string | null;
   /** O back-end atual não expõe troca de senha obrigatória; mantido opcional. */
   must_change_password?: boolean;
+  /** URL da foto do usuário — ainda não enviada pelo back; o menu do header já a consome quando existir. */
+  avatar_url?: string | null;
 }
 
 /** Corpo de erro RFC 7807 (ProblemDetail) devolvido pela API. */

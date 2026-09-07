@@ -1,8 +1,8 @@
 <div class="layout">
-  <app-sidebar [collapsed]="sidebarCollapsed()" (toggle)="toggleSidebar()" (logout)="logout()" />
+  <app-sidebar [collapsed]="sidebarCollapsed()" (toggle)="toggleSidebar()" />
 
   <div class="layout__main">
-    <app-header />
+    <app-header (logout)="logout()" />
 
     <main class="layout__content">
       <router-outlet />

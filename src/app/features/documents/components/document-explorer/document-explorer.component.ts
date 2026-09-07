@@ -1139,24 +1139,25 @@ export class DocumentExplorerComponent {
 
   // --- utilidades ---
 
+  /** Classe do ícone do documento — a cor por tipo vem do modificador `doc-file-icon--*` (SCSS). */
   protected iconeDocumento(documento: Documento): string {
     const tipo = documento.contentType ?? '';
     if (tipo === 'application/pdf') {
-      return 'fa-solid fa-file-pdf';
+      return 'fa-solid fa-file-pdf doc-file-icon doc-file-icon--pdf';
     }
     if (tipo.startsWith('image/')) {
-      return 'fa-solid fa-file-image';
+      return 'fa-solid fa-file-image doc-file-icon doc-file-icon--image';
     }
     if (tipo === TIPO_DOCX || tipo === 'application/msword' || tipo === 'application/vnd.oasis.opendocument.text') {
-      return 'fa-solid fa-file-word';
+      return 'fa-solid fa-file-word doc-file-icon doc-file-icon--word';
     }
     if (
       tipo === 'application/vnd.ms-excel' ||
       tipo === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     ) {
-      return 'fa-solid fa-file-excel';
+      return 'fa-solid fa-file-excel doc-file-icon doc-file-icon--excel';
     }
-    return 'fa-solid fa-file';
+    return 'fa-solid fa-file doc-file-icon';
   }
 
   protected formatarTamanho(bytes: number | null): string {

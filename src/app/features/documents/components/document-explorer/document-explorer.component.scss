@@ -252,6 +252,23 @@
     color: $color-text-muted;
     margin-right: $spacing-xs;
   }
+
+  // Cor do ícone por tipo de arquivo — mais fácil de bater o olho na lista.
+  i.doc-file-icon--folder {
+    color: #d9a441; // âmbar
+  }
+  i.doc-file-icon--pdf {
+    color: #c0392b; // vermelho
+  }
+  i.doc-file-icon--word {
+    color: #2b579a; // azul Word
+  }
+  i.doc-file-icon--excel {
+    color: #217346; // verde Excel
+  }
+  i.doc-file-icon--image {
+    color: #7d3c98; // roxo
+  }
 }
 
 .doc-explorer__name-btn {

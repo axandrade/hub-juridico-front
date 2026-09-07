@@ -9,11 +9,13 @@ import { AdvogadoApi, PaginaApi } from './advogado-api.model';
 
 /**
  * Filtros do endpoint `GET /api/v1/advogados` — todos reais no servidor (não client-side):
- * `nome`/`cpf`/`oab`/`email`/`cidadeProfissional` casam parcialmente (ilike no backend);
- * `estadoCivil` é igualdade; `incluirInativos` (`false` padrão) traz só `ativo = true`.
+ * `busca` é a pesquisa livre da tela (nome / OAB / e-mail / CPF); `nome`/`cpf`/`oab`/`email`/
+ * `cidadeProfissional` casam parcialmente (ilike no backend); `estadoCivil` é igualdade;
+ * `incluirInativos` (`false` padrão) traz só `ativo = true`.
  */
 export interface AdvogadoListQuery {
   page: number;
+  busca?: string;
   nome?: string;
   cpf?: string;
   oab?: string;
@@ -90,6 +92,9 @@ export class AdvogadoStore {
   /** Carrega uma página da lista com os filtros informados. */
   carregar(query: AdvogadoListQuery): Observable<AdvogadoApi[]> {
     let params = new HttpParams().set('page', query.page).set('size', AdvogadoStore.PAGE_SIZE);
+    if (query.busca?.trim()) {
+      params = params.set('busca', query.busca.trim());
+    }
     if (query.nome) {
       params = params.set('nome', query.nome);
     }

@@ -72,7 +72,16 @@ describe('AdvogadoStore', () => {
 
     const req = http.expectOne((r) => r.url === BASE);
     expect(req.request.params.has('nome')).toBe(false);
+    expect(req.request.params.has('busca')).toBe(false);
     expect(req.request.params.has('incluirInativos')).toBe(false);
+    req.flush({ conteudo: [], pagina: 0, tamanho: 10, total_elementos: 0, total_paginas: 1, ultima: true });
+  });
+
+  it('carregar manda busca (trim) como query param', () => {
+    store.carregar({ page: 0, busca: '  ondaazul ', incluirInativos: false }).subscribe();
+
+    const req = http.expectOne((r) => r.url === BASE);
+    expect(req.request.params.get('busca')).toBe('ondaazul');
     req.flush({ conteudo: [], pagina: 0, tamanho: 10, total_elementos: 0, total_paginas: 1, ultima: true });
   });
 

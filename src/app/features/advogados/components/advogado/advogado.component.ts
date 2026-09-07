@@ -9,8 +9,8 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
-import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
-import { EMPTY, catchError, switchMap } from 'rxjs';
+import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop';
+import { EMPTY, catchError, debounceTime, distinctUntilChanged, skip, switchMap } from 'rxjs';
 
 import { ButtonComponent } from '../../../../shared/components/button/button.component';
 import { DataTableComponent } from '../../../../shared/components/table/data-table.component';
@@ -41,6 +41,8 @@ export class AdvogadoComponent {
   private readonly store = inject(AdvogadoStore);
 
   private readonly form = viewChild(AdvogadoFormComponent);
+  /** A grade — o botão "Colunas" da barra de ações comanda esta instância. */
+  protected readonly grade = viewChild(DataTableComponent);
 
   protected readonly panelShell = new PanelShellController(this.document, {
     storagePrefix: 'hub-juridico.advogados',
@@ -56,7 +58,8 @@ export class AdvogadoComponent {
   private readonly reloadTick = signal(0);
   /** `true` traz também advogados inativos — reflete o `incluirInativos` real do backend. */
   protected readonly incluirInativos = signal(false);
-  protected readonly columnFilterValues = signal<Record<string, string>>({});
+  /** Busca livre (nome / OAB / e-mail / CPF) — resolvida no servidor, com debounce. */
+  protected readonly busca = signal('');
 
   protected readonly advogados = this.store.advogados;
   protected readonly totalAdvogados = this.store.totalElements;
@@ -68,17 +71,16 @@ export class AdvogadoComponent {
   }));
 
   protected readonly advogadoColumns: TableColumn<AdvogadoApi>[] = [
-    { key: 'nome', header: 'Nome', width: '220px', filter: { type: 'text' } },
-    { key: 'oab', header: 'OAB', width: '150px', filter: { type: 'text' } },
+    { key: 'nome', header: 'Nome', width: '220px' },
+    { key: 'oab', header: 'OAB', width: '150px' },
     {
       key: 'cpf',
       header: 'CPF',
       width: '140px',
       formatter: (value) => (value ? maskCpf(String(value)) : '-'),
-      filter: { type: 'text' },
     },
-    { key: 'email', header: 'E-mail', width: '220px', filter: { type: 'text' } },
-    { key: 'cidade_profissional', header: 'Cidade', width: '160px', filter: { type: 'text' } },
+    { key: 'email', header: 'E-mail', width: '220px' },
+    { key: 'cidade_profissional', header: 'Cidade', width: '160px' },
     {
       key: 'ativo',
       header: 'Status',
@@ -106,19 +108,22 @@ export class AdvogadoComponent {
   };
 
   constructor() {
-    const query = computed<AdvogadoListQuery & { tick: number }>(() => {
-      const filtros = this.columnFilterValues();
-      return {
-        page: this.page(),
-        nome: filtros['nome'],
-        oab: filtros['oab'],
-        cpf: filtros['cpf'],
-        email: filtros['email'],
-        cidadeProfissional: filtros['cidade_profissional'],
-        incluirInativos: this.incluirInativos(),
-        tick: this.reloadTick(),
-      };
-    });
+    // Busca com debounce: só dispara requisição 300ms depois de parar de digitar.
+    const buscaDebounced = toSignal(
+      toObservable(this.busca).pipe(debounceTime(300), distinctUntilChanged()),
+      { initialValue: this.busca() },
+    );
+    // Nova busca sempre volta pra primeira página.
+    toObservable(buscaDebounced)
+      .pipe(skip(1), takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => this.page.set(0));
+
+    const query = computed<AdvogadoListQuery & { tick: number }>(() => ({
+      page: this.page(),
+      busca: buscaDebounced(),
+      incluirInativos: this.incluirInativos(),
+      tick: this.reloadTick(),
+    }));
 
     toObservable(query)
       .pipe(
@@ -144,15 +149,12 @@ export class AdvogadoComponent {
     this.page.set(page);
   }
 
-  protected onColumnFilterChange({ key, value }: { key: string; value: string }): void {
-    this.columnFilterValues.update((atual) => {
-      if (!value.trim()) {
-        const { [key]: _removido, ...resto } = atual;
-        return resto;
-      }
-      return { ...atual, [key]: value };
-    });
-    this.page.set(0);
+  protected onBuscaInput(event: Event): void {
+    this.busca.set((event.target as HTMLInputElement).value);
+  }
+
+  protected limparBusca(): void {
+    this.busca.set('');
   }
 
   protected onToggleIncluirInativos(event: Event): void {
@@ -210,6 +212,16 @@ export class AdvogadoComponent {
   protected onEscape(): void {
     if (this.panelShell.layoutPainel() === 'dialog' && this.panelShell.panelVisible()) {
       this.panelShell.setPanelVisible(false);
+    }
+  }
+
+  /** Clique fora fecha o menu "Colunas". */
+  @HostListener('document:click', ['$event'])
+  protected onDocumentClick(event: MouseEvent): void {
+    const target = event.target as HTMLElement | null;
+    const grade = this.grade();
+    if (grade?.columnsMenuOpen() && !target?.closest('.advogados-columns')) {
+      grade.columnsMenuOpen.set(false);
     }
   }
 }

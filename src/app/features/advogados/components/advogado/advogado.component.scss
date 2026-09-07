@@ -83,28 +83,23 @@
   box-shadow: $shadow-sm;
 }
 
-.advogados-header,
+// Barra de ações, seção de busca e faixa de filtros — mesmo desenho da tela de Clientes.
+.advogados-actions,
 .advogados-main__footer {
   padding: $spacing-sm $spacing-md;
   border-bottom: 1px solid rgba($color-border, 0.7);
 }
 
-.advogados-header {
+.advogados-actions {
   @include flex-between;
   gap: $spacing-md;
-
-  h1 {
-    margin: 0;
-    color: $color-text-primary;
-    font-size: $font-size-lg;
-    font-weight: $font-weight-bold;
-  }
 }
 
-.advogados-header__title {
+.advogados-actions__buttons {
   display: flex;
   align-items: center;
-  gap: $spacing-md;
+  gap: $spacing-xs;
+  flex-wrap: wrap;
 }
 
 .advogados-toggle-inativos {
@@ -117,25 +112,133 @@
   user-select: none;
 }
 
-.advogados-panel-toggle {
-  display: inline-flex;
-  min-height: 34px;
+// Seção "Pesquisar" — largura total, rótulo em cima, contador de filtros à direita.
+.advogados-search-section {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-areas:
+    'label label'
+    'input count';
+  align-items: center;
+  gap: $spacing-xs $spacing-sm;
+  padding: $spacing-sm $spacing-md;
+  border-bottom: 1px solid rgba($color-border, 0.7);
+
+  &__label {
+    grid-area: label;
+    font-size: $font-size-xs;
+    font-weight: $font-weight-medium;
+    color: $color-text-secondary;
+  }
+
+  &__count {
+    grid-area: count;
+    font-size: $font-size-xs;
+    color: $color-text-muted;
+    white-space: nowrap;
+  }
+}
+
+.advogados-search {
+  grid-area: input;
+  display: flex;
   align-items: center;
   gap: $spacing-xs;
+  min-width: 0;
+  min-height: 36px;
   padding: 0 $spacing-sm;
-  white-space: nowrap;
+  border: 1px solid $color-border;
+  border-radius: $border-radius-sm;
+  background-color: $color-surface;
+  color: $color-text-muted;
+
+  &:focus-within {
+    border-color: $color-primary-light;
+    box-shadow: 0 0 0 3px rgba($rouge-light, 0.16);
+  }
+
+  > i {
+    font-size: $font-size-xs;
+  }
+
+  input {
+    flex: 1;
+    min-width: 0;
+    border: 0;
+    background: transparent;
+    color: $color-text-primary;
+    font: inherit;
+    outline: none;
+
+    &::placeholder {
+      color: $color-text-muted;
+    }
+  }
+
+  button {
+    display: inline-flex;
+    border: 0;
+    padding: 2px;
+    background: none;
+    color: $color-text-muted;
+    cursor: pointer;
+
+    &:hover {
+      color: $color-primary;
+    }
+  }
+}
+
+// Faixa fina de filtros — só "Mostrar inativos" (advogado não tem natureza como cliente).
+.advogados-filtros {
+  display: flex;
+  align-items: center;
+  padding: $spacing-sm $spacing-md;
+  border-bottom: 1px solid rgba($color-border, 0.7);
+
+  .advogados-toggle-inativos {
+    margin-left: auto;
+
+    &:has(input:disabled) {
+      cursor: progress;
+      opacity: 0.55;
+    }
+  }
+}
+
+.advogados-columns {
+  position: relative;
+
+  &__menu {
+    width: 220px;
+
+    label {
+      display: flex;
+      align-items: center;
+      gap: $spacing-xs;
+      min-height: 30px;
+      padding: 0 $spacing-xs;
+      font-size: $font-size-xs;
+      color: $color-text-secondary;
+      cursor: pointer;
+    }
+  }
+}
+
+.advogados-menu-button,
+.advogados-panel-toggle,
+.advogados-dropdown button {
   border: 1px solid $color-border;
   border-radius: $border-radius-sm;
   background-color: $color-neutral-light;
   color: $color-text-secondary;
   cursor: pointer;
   font: inherit;
-  font-size: $font-size-xs;
-  font-weight: $font-weight-medium;
   transition:
     background-color $transition-fast,
     border-color $transition-fast,
-    color $transition-fast;
+    color $transition-fast,
+    box-shadow $transition-fast;
 
   &:hover,
   &.is-active {
@@ -145,11 +248,48 @@
   }
 }
 
-.advogados-main__footer {
-  border-top: 1px solid rgba($color-border, 0.7);
-  border-bottom: 0;
-  color: $color-text-secondary;
+.advogados-menu-button,
+.advogados-panel-toggle {
+  display: inline-flex;
+  min-height: 34px;
+  align-items: center;
+  gap: $spacing-xs;
+  padding: 0 $spacing-sm;
+  white-space: nowrap;
   font-size: $font-size-xs;
+  font-weight: $font-weight-medium;
+}
+
+.advogados-dropdown {
+  position: absolute;
+  z-index: 5;
+  top: calc(100% + #{$spacing-xs});
+  left: 0;
+  display: grid;
+  width: 230px;
+  gap: $spacing-xs;
+  padding: $spacing-sm;
+  border: 1px solid $color-border;
+  border-radius: $border-radius-md;
+  background-color: $color-surface;
+  box-shadow: $shadow-md;
+
+  button {
+    min-height: 32px;
+    padding: 0 $spacing-sm;
+    text-align: left;
+  }
+}
+
+.advogados-main__footer {
+  border-bottom: 0;
+  color: $color-text-muted;
+  font-size: $font-size-xs;
+}
+
+.advogados-summary-line {
+  padding-bottom: $spacing-xs;
+  font-weight: $font-weight-medium;
 }
 
 .advogados-link-button {
@@ -295,5 +435,12 @@
 
   .advogados-main {
     max-height: none;
+  }
+}
+
+@include respond-below($breakpoint-sm) {
+  .advogados-actions {
+    align-items: stretch;
+    flex-direction: column;
   }
 }

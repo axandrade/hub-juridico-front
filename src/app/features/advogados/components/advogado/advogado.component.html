@@ -47,10 +47,8 @@
   }
 
   <section class="advogados-main" aria-label="Tabela de advogados">
-    <div class="advogados-header">
-      <div class="advogados-header__title">
-        <h1>Advogados</h1>
-
+    <div class="advogados-actions">
+      <div class="advogados-actions__buttons">
         <app-button
           variant="primary"
           size="sm"
@@ -59,14 +57,31 @@
           (clicked)="novoAdvogado()"
         />
 
-        <label class="advogados-toggle-inativos">
-          <input
-            type="checkbox"
-            [checked]="incluirInativos()"
-            (change)="onToggleIncluirInativos($event)"
-          />
-          Mostrar inativos
-        </label>
+        <div class="advogados-columns">
+          <button
+            type="button"
+            class="advogados-menu-button"
+            [class.is-active]="gradeAdvogados.columnsMenuOpen()"
+            (click)="gradeAdvogados.toggleColumnsMenu()"
+          >
+            <i class="fa-solid fa-table-columns" aria-hidden="true"></i>
+            Colunas
+          </button>
+          @if (gradeAdvogados.columnsMenuOpen()) {
+            <div class="advogados-dropdown advogados-columns__menu" role="menu">
+              @for (col of gradeAdvogados.columns(); track col.key) {
+                <label>
+                  <input
+                    type="checkbox"
+                    [checked]="gradeAdvogados.isColumnVisible(col.key)"
+                    (change)="gradeAdvogados.toggleColumnVisibility(col.key)"
+                  />
+                  {{ col.header }}
+                </label>
+              }
+            </div>
+          }
+        </div>
       </div>
 
       <button
@@ -80,8 +95,42 @@
       </button>
     </div>
 
+    <div class="advogados-search-section">
+      <span class="advogados-search-section__label">Pesquisar</span>
+      <label class="advogados-search">
+        <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+        <input
+          type="text"
+          placeholder="nome, OAB, CPF ou e-mail"
+          [value]="busca()"
+          (input)="onBuscaInput($event)"
+          aria-label="Buscar por nome, OAB, CPF ou e-mail"
+        />
+        @if (busca()) {
+          <button type="button" aria-label="Limpar busca" (click)="limparBusca()">
+            <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+          </button>
+        }
+      </label>
+      <span class="advogados-search-section__count">{{ busca().trim() ? 1 : 0 }} filtro(s)</span>
+    </div>
+
+    <div class="advogados-filtros">
+      <label class="advogados-toggle-inativos">
+        <input
+          type="checkbox"
+          [checked]="incluirInativos()"
+          [disabled]="loading()"
+          (change)="onToggleIncluirInativos($event)"
+        />
+        Mostrar inativos
+      </label>
+    </div>
+
     <div class="advogados-table-wrap">
       <app-data-table
+        #gradeAdvogados
+        [columnsToolbar]="false"
         [columns]="advogadoColumns"
         [data]="advogados()"
         [loading]="loading()"
@@ -89,19 +138,26 @@
         emptyMessage="Nenhum advogado encontrado."
         [sortable]="true"
         [initialSort]="{ key: 'nome', direction: 'asc' }"
+        [columnVisibility]="true"
         [rowClass]="advogadoRowClass"
         [pinFirst]="advogadoPinFirst"
         [pinAction]="advogadoPinAction"
-        [columnFilterValues]="columnFilterValues()"
         [pagination]="pagination()"
-        (columnFilterChange)="onColumnFilterChange($event)"
         (pageChange)="onPageChange($event)"
         (rowClick)="selectAdvogado($event)"
       />
     </div>
 
     <footer class="advogados-main__footer">
-      <span>{{ totalAdvogados() }} advogado(s) cadastrado(s)</span>
+      <div class="advogados-summary-line">
+        <span>
+          @if (busca().trim()) {
+            {{ totalAdvogados() }} resultado(s) para "{{ busca().trim() }}"
+          } @else {
+            {{ totalAdvogados() }} advogado(s) cadastrado(s)
+          }
+        </span>
+      </div>
       @if (loadError()) {
         <span>
           · Não foi possível carregar a lista.

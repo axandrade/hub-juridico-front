@@ -42,6 +42,12 @@ export const routes: Routes = [
           import('./features/advogados/advogados.routes').then((m) => m.ADVOGADOS_ROUTES),
         title: 'Hub Jurídico · Advogados',
       },
+      {
+        path: 'processos',
+        loadChildren: () =>
+          import('./features/processos/processos.routes').then((m) => m.PROCESSOS_ROUTES),
+        title: 'Hub Jurídico · Processos',
+      },
     ],
   },
   { path: '**', redirectTo: '' },

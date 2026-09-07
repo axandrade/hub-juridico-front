@@ -10,6 +10,7 @@ export const ROUTES = {
   DASHBOARD: 'dashboard',
   CLIENTS: 'clientes',
   ADVOGADOS: 'advogados',
+  PROCESSOS: 'processos',
   LOGIN: 'login',
   CHANGE_PASSWORD: 'trocar-senha',
 } as const;
@@ -39,7 +40,12 @@ export const SIDEBAR_NAV: readonly NavItem[] = [
     emphasis: 'neutral',
   },
   { label: 'Financeiro', icon: 'fa-solid fa-address-book', emphasis: 'neutral' },
-  { label: 'Processos', icon: 'fa-solid fa-folder-open', emphasis: 'neutral' },
+  {
+    label: 'Processos',
+    icon: 'fa-solid fa-folder-open',
+    route: `/${ROUTES.PROCESSOS}`,
+    emphasis: 'neutral',
+  },
   { label: 'Petições', icon: 'fa-solid fa-file-lines', emphasis: 'neutral' },
   { label: 'Contratos', icon: 'fa-solid fa-file-signature', emphasis: 'neutral' },
   { label: 'Teses', icon: 'fa-solid fa-lightbulb', emphasis: 'neutral' },

@@ -105,8 +105,3 @@ export const MOCK_PROCESSES: IProcess[] = [
     court: 'INSS',
   },
 ];
-
-export const MOCK_CONTEXT = {
-  contextLabel: 'Particular',
-  userName: 'Lincoln',
-} as const;

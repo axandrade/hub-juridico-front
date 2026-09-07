@@ -1,6 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
 
-import { MOCK_CONTEXT } from '../../../core/data/mock-data';
 import { AuthService } from '../../../core/services/auth.service';
 import { PastaClienteService } from '../../../features/clients/services/pasta-cliente.service';
 import { ButtonComponent } from '../../../shared/components/button/button.component';
@@ -19,7 +18,6 @@ export class HeaderComponent {
   private readonly auth = inject(AuthService);
   private readonly pastaCliente = inject(PastaClienteService);
 
-  protected readonly context = MOCK_CONTEXT;
   protected readonly userName = computed(() => this.auth.user()?.name ?? '—');
   protected readonly userRole = computed(() => this.auth.user()?.role ?? '');
 

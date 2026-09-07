@@ -1,0 +1,142 @@
+<div class="combobox" [class.is-open]="aberto()" [class.is-disabled]="disabled()">
+  @if (modo() === 'add' || modo() === 'edit') {
+    <div class="combobox__row">
+      <input
+        #editor
+        type="text"
+        class="combobox__campo"
+        appAutoFocusSelect
+        [placeholder]="modo() === 'edit' ? 'Novo nome' : 'Nome do novo ' + itemNoun()"
+        [value]="rascunho()"
+        (input)="rascunho.set(editor.value)"
+        (keydown.enter)="salvar()"
+        (keydown.escape)="voltarParaBusca(); $event.stopPropagation()"
+      />
+      <button
+        type="button"
+        class="combobox__acao"
+        title="Salvar"
+        aria-label="Salvar"
+        [disabled]="!rascunho().trim()"
+        (click)="salvar()"
+      >
+        <i class="fa-solid fa-check" aria-hidden="true"></i>
+      </button>
+      <button
+        type="button"
+        class="combobox__acao"
+        title="Cancelar"
+        aria-label="Cancelar"
+        (click)="voltarParaBusca()"
+      >
+        <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+      </button>
+    </div>
+  } @else if (modo() === 'delete') {
+    <div class="combobox__row">
+      <span class="combobox__confirm">Excluir o {{ itemNoun() }} "{{ alvo() }}"?</span>
+      <button
+        type="button"
+        class="combobox__acao combobox__acao--perigo"
+        title="Confirmar exclusão"
+        aria-label="Confirmar exclusão"
+        (click)="confirmarExclusao()"
+      >
+        <i class="fa-solid fa-check" aria-hidden="true"></i>
+      </button>
+      <button
+        type="button"
+        class="combobox__acao"
+        title="Cancelar"
+        aria-label="Cancelar"
+        (click)="voltarParaBusca()"
+      >
+        <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+      </button>
+    </div>
+  } @else {
+    <div class="combobox__row">
+      <div class="combobox__field">
+        <input
+          #campo
+          type="text"
+          class="combobox__campo"
+          [class.combobox__campo--select]="!pesquisavel()"
+          role="combobox"
+          autocomplete="off"
+          [attr.aria-autocomplete]="pesquisavel() ? 'list' : null"
+          [attr.aria-expanded]="aberto()"
+          [attr.aria-label]="ariaLabel() || null"
+          [readonly]="!pesquisavel()"
+          [disabled]="disabled()"
+          [placeholder]="placeholder()"
+          [value]="aberto() && pesquisavel() ? consulta() : rotuloAtual()"
+          (focus)="onFoco()"
+          (click)="onClique()"
+          (input)="onInput(campo.value)"
+          (keydown)="onKeydown($event)"
+        />
+        <i class="fa-solid fa-chevron-down combobox__seta" aria-hidden="true"></i>
+
+        @if (aberto()) {
+          <ul class="combobox__lista" role="listbox">
+            @for (opcao of filtradas(); track opcao.value; let i = $index) {
+              <li
+                role="option"
+                class="combobox__opcao"
+                [class.is-active]="i === destaque()"
+                [class.is-selected]="opcao.value === value()"
+                [attr.aria-selected]="opcao.value === value()"
+                (mouseenter)="destaque.set(i)"
+                (mousedown)="$event.preventDefault()"
+                (click)="selecionar(opcao)"
+              >
+                {{ opcao.label }}
+              </li>
+            } @empty {
+              <li class="combobox__vazio">{{ noResultsText() }}</li>
+            }
+          </ul>
+        }
+      </div>
+
+      @if (temAcoes()) {
+        <div class="combobox__menu-wrap">
+          <button
+            type="button"
+            class="combobox__acao"
+            title="Gerenciar"
+            aria-label="Gerenciar opções"
+            [class.is-active]="menuAberto()"
+            [disabled]="disabled()"
+            (click)="alternarMenu()"
+          >
+            <i class="fa-solid fa-ellipsis-vertical" aria-hidden="true"></i>
+          </button>
+          @if (menuAberto()) {
+            <div class="combobox__menu" role="menu">
+              @if (adicionar()) {
+                <button type="button" (click)="iniciarAdicao()">
+                  <i class="fa-solid fa-plus" aria-hidden="true"></i>
+                  Adicionar
+                </button>
+              }
+              @if (editar()) {
+                <button type="button" [disabled]="!value()" (click)="iniciarEdicao()">
+                  <i class="fa-solid fa-pen" aria-hidden="true"></i>
+                  Editar
+                </button>
+              }
+              @if (excluir()) {
+                <button type="button" [disabled]="!value()" (click)="iniciarExclusao()">
+                  <i class="fa-solid fa-trash" aria-hidden="true"></i>
+                  Excluir
+                </button>
+              }
+            </div>
+          }
+        </div>
+      }
+    </div>
+  }
+</div>

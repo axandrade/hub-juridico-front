@@ -16,13 +16,20 @@ import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { Observable } from 'rxjs';
 
 import { ButtonComponent } from '../../../../shared/components/button/button.component';
+import { ComboboxComponent } from '../../../../shared/components/combobox/combobox.component';
 import { ModalComponent } from '../../../../shared/components/modal/modal.component';
 import { AutoFocusSelectDirective } from '../../../../shared/directives/auto-focus-select.directive';
 import { DownloadsService } from '../../../../shared/downloads/downloads.service';
 import { formatFileSize } from '../../../../shared/utils/format-file-size';
+import { TipoAnexoService } from '../../../clients/services/tipo-anexo.service';
 import { DocxRenderDirective } from '../../directives/docx-render.directive';
 import { DocumentsService, resolverTipoAceito } from '../../services/documents.service';
-import { BreadcrumbItem, Documento, Pasta, PastaConteudo } from '../../models/document-explorer.model';
+import {
+  BreadcrumbItem,
+  Documento,
+  Pasta,
+  PastaConteudo,
+} from '../../models/document-explorer.model';
 
 export type DocumentExplorerNoticeKey =
   | 'pastaCriada'
@@ -39,7 +46,8 @@ export type DocumentExplorerNoticeKey =
   | 'editarIndisponivel'
   | 'editarErro'
   | 'convertidoOk'
-  | 'convertidoErro';
+  | 'convertidoErro'
+  | 'tipoErro';
 
 /** Aviso emitido para o rodapé de status do diálogo que hospeda o explorador (`clients.component`). */
 export interface DocumentExplorerNotice {
@@ -53,7 +61,8 @@ type ItemArrastado = { tipo: TipoItem; id: string; nome: string };
 /** Chave de item na seleção: `pasta:<id>` ou `doc:<id>` (mesmo formato do `menuAberto`). */
 type ChaveItem = string;
 
-const chaveDe = (tipo: TipoItem, id: string): ChaveItem => `${tipo === 'pasta' ? 'pasta' : 'doc'}:${id}`;
+const chaveDe = (tipo: TipoItem, id: string): ChaveItem =>
+  `${tipo === 'pasta' ? 'pasta' : 'doc'}:${id}`;
 
 /** Uma janela flutuante de preview (ver `janelas` no componente). */
 interface JanelaPreview {
@@ -98,7 +107,13 @@ const PROTOCOLO_DESKTOP_POR_CONTENT_TYPE: Record<string, string> = {
 @Component({
   selector: 'app-document-explorer',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ButtonComponent, ModalComponent, AutoFocusSelectDirective, DocxRenderDirective],
+  imports: [
+    ButtonComponent,
+    ComboboxComponent,
+    ModalComponent,
+    AutoFocusSelectDirective,
+    DocxRenderDirective,
+  ],
   templateUrl: './document-explorer.component.html',
   styleUrl: './document-explorer.component.scss',
   host: {
@@ -109,6 +124,7 @@ export class DocumentExplorerComponent {
   private readonly documentsService = inject(DocumentsService);
   private readonly downloads = inject(DownloadsService);
   private readonly sanitizer = inject(DomSanitizer);
+  protected readonly tipoAnexoService = inject(TipoAnexoService);
 
   readonly pessoaId = input.required<number>();
   /** Nome do cliente — rotula a raiz do breadcrumb (a "raiz" aqui é a pasta-mãe desse cliente, não algo global). */
@@ -126,13 +142,30 @@ export class DocumentExplorerComponent {
   protected readonly janelas = signal<JanelaPreview[]>([]);
   /** Base acima de `$z-overlay` (200) pras janelas ficarem sobre o modal da pasta; sobe a cada foco. */
   private zSeq = 260;
-  private janelaDrag: { j: JanelaPreview; mx: number; my: number; ox: number; oy: number } | null = null;
-  private janelaResize: { j: JanelaPreview; mx: number; my: number; ow: number; oh: number } | null = null;
+  private janelaDrag: { j: JanelaPreview; mx: number; my: number; ox: number; oy: number } | null =
+    null;
+  private janelaResize: {
+    j: JanelaPreview;
+    mx: number;
+    my: number;
+    ow: number;
+    oh: number;
+  } | null = null;
 
   protected readonly pastaAtualId = signal<string | null>(null);
   protected readonly conteudo = signal<PastaConteudo | null>(null);
   protected readonly loading = signal(false);
   protected readonly enviandoQtd = signal(0);
+
+  // --- painel "Enviar arquivo" (inline, abaixo da barra) ---
+  protected readonly uploadPanelAberto = signal(false);
+  protected readonly arquivosPendentes = signal<File[]>([]);
+  /** Nome do tipo do anexo escolhido (`''` = sem tipo). Persiste entre uploads na sessão. */
+  protected readonly tipoAnexoNome = signal<string>('');
+  /** Nomes dos tipos do catálogo — alimenta o `<app-combobox>` (busca por trechos). */
+  protected readonly nomesDeTipos = computed(() =>
+    this.tipoAnexoService.tipos().map((t) => t.nome),
+  );
   protected readonly dragOverAlvo = signal<string>(''); // id da pasta/breadcrumb sob o arrasto, '' = raiz, null = nenhum
   protected readonly dragOverAlvoAtivo = signal(false);
   protected readonly dragOverFundo = signal(false);
@@ -140,12 +173,18 @@ export class DocumentExplorerComponent {
   /** Item com o nome em edição inline (nova pasta recém-criada, ou renomeação em andamento). */
   protected readonly itemEmEdicao = signal<{ tipo: TipoItem; id: string } | null>(null);
 
-  protected readonly exclusaoAlvo = signal<{ tipo: TipoItem; id: string; nome: string } | null>(null);
+  protected readonly exclusaoAlvo = signal<{ tipo: TipoItem; id: string; nome: string } | null>(
+    null,
+  );
   protected readonly exclusaoSalvando = signal(false);
 
   protected readonly menuAberto = signal<string | null>(null);
   /** Posição (fixa, relativa à viewport) do menu "..." aberto — calculada em `toggleMenu`. */
-  protected readonly menuPos = signal<{ top: number | null; bottom: number | null; right: number } | null>(null);
+  protected readonly menuPos = signal<{
+    top: number | null;
+    bottom: number | null;
+    right: number;
+  } | null>(null);
 
   private itemArrastado: ItemArrastado | null = null;
 
@@ -155,8 +194,15 @@ export class DocumentExplorerComponent {
   /** Última linha clicada sem Ctrl — origem do intervalo do Shift+clique. */
   private ancoraSelecao: ChaveItem | null = null;
   /** Retângulo de arrasto (rubber-band) em coordenadas de viewport, ou `null` quando inativo. */
-  protected readonly retangulo = signal<{ x: number; y: number; w: number; h: number } | null>(null);
-  private rubberBand: { origemX: number; origemY: number; base: ReadonlySet<ChaveItem>; moveu: boolean } | null = null;
+  protected readonly retangulo = signal<{ x: number; y: number; w: number; h: number } | null>(
+    null,
+  );
+  private rubberBand: {
+    origemX: number;
+    origemY: number;
+    base: ReadonlySet<ChaveItem>;
+    moveu: boolean;
+  } | null = null;
   /** `true` enquanto o drag nativo carrega a seleção inteira (mais de um item). */
   private arrastandoSelecao = false;
   /** Itens marcados para exclusão em lote (barra de seleção), ou `null`. */
@@ -171,6 +217,8 @@ export class DocumentExplorerComponent {
   protected readonly qtdSelecionada = computed(() => this.selecao().size);
 
   constructor() {
+    this.tipoAnexoService.carregar();
+
     // `untracked` é essencial aqui: sem ele, a leitura de `pastaAtualId()` dentro de
     // `carregar()` vira dependência do efeito (por ter sido lida durante a execução dele),
     // e o efeito reagiria a toda navegação de pasta — resetando pastaAtualId pra null (raiz)
@@ -180,6 +228,16 @@ export class DocumentExplorerComponent {
       untracked(() => {
         this.pastaAtualId.set(null);
         this.carregar();
+      });
+    });
+
+    // Assim que o catálogo carrega, pré-seleciona o primeiro tipo (se o usuário ainda não escolheu).
+    effect(() => {
+      const tipos = this.tipoAnexoService.tipos();
+      untracked(() => {
+        if (tipos.length > 0 && !this.tipoAnexoNome()) {
+          this.tipoAnexoNome.set(tipos[0].nome);
+        }
       });
     });
 
@@ -201,7 +259,9 @@ export class DocumentExplorerComponent {
     this.itemEmEdicao.set(null);
     this.limparSelecao();
     const pastaId = this.pastaAtualId();
-    const req$ = pastaId ? this.documentsService.conteudo(pastaId) : this.documentsService.raiz(this.pessoaId());
+    const req$ = pastaId
+      ? this.documentsService.conteudo(pastaId)
+      : this.documentsService.raiz(this.pessoaId());
     req$.subscribe({
       next: (conteudo) => {
         this.conteudo.set(conteudo);
@@ -237,12 +297,15 @@ export class DocumentExplorerComponent {
       next: (pasta) => {
         const atual = this.conteudo();
         if (atual) {
-          const subpastas = [...atual.subpastas, pasta].sort((a, b) => a.nome.localeCompare(b.nome));
+          const subpastas = [...atual.subpastas, pasta].sort((a, b) =>
+            a.nome.localeCompare(b.nome),
+          );
           this.conteudo.set({ ...atual, subpastas });
         }
         this.itemEmEdicao.set({ tipo: 'pasta', id: pasta.id });
       },
-      error: (err: unknown) => this.notify.emit({ key: 'pastaCriadaErro', subject: this.mensagemErro(err) }),
+      error: (err: unknown) =>
+        this.notify.emit({ key: 'pastaCriadaErro', subject: this.mensagemErro(err) }),
     });
   }
 
@@ -435,13 +498,19 @@ export class DocumentExplorerComponent {
     if (tipo === 'pasta') {
       const item = atual.subpastas.find((pasta) => pasta.id === id) ?? null;
       if (item) {
-        this.conteudo.set({ ...atual, subpastas: atual.subpastas.filter((pasta) => pasta.id !== id) });
+        this.conteudo.set({
+          ...atual,
+          subpastas: atual.subpastas.filter((pasta) => pasta.id !== id),
+        });
       }
       return item;
     }
     const item = atual.documentos.find((documento) => documento.id === id) ?? null;
     if (item) {
-      this.conteudo.set({ ...atual, documentos: atual.documentos.filter((documento) => documento.id !== id) });
+      this.conteudo.set({
+        ...atual,
+        documentos: atual.documentos.filter((documento) => documento.id !== id),
+      });
     }
     return item;
   }
@@ -452,55 +521,149 @@ export class DocumentExplorerComponent {
       return;
     }
     if (tipo === 'pasta') {
-      const subpastas = [...atual.subpastas, item as Pasta].sort((a, b) => a.nome.localeCompare(b.nome));
+      const subpastas = [...atual.subpastas, item as Pasta].sort((a, b) =>
+        a.nome.localeCompare(b.nome),
+      );
       this.conteudo.set({ ...atual, subpastas });
     } else {
-      const documentos = [...atual.documentos, item as Documento].sort((a, b) => a.nome.localeCompare(b.nome));
+      const documentos = [...atual.documentos, item as Documento].sort((a, b) =>
+        a.nome.localeCompare(b.nome),
+      );
       this.conteudo.set({ ...atual, documentos });
     }
   }
 
   // --- upload ---
 
-  protected abrirSeletorArquivo(): void {
+  /** Botão "Enviar arquivo": abre/fecha o painel inline (escolher arquivos + tipo do anexo). */
+  protected alternarPainelUpload(): void {
+    if (this.uploadPanelAberto()) {
+      this.fecharPainelUpload();
+      return;
+    }
+    this.arquivosPendentes.set([]);
+    this.uploadPanelAberto.set(true);
+  }
+
+  protected fecharPainelUpload(): void {
+    this.uploadPanelAberto.set(false);
+    this.arquivosPendentes.set([]);
+  }
+
+  /** Painel: abre o seletor de arquivos do sistema (não sobe ainda — fica em "pendentes"). */
+  protected escolherArquivos(): void {
     this.fileInput()?.nativeElement.click();
   }
 
   protected onArquivoEscolhido(event: Event): void {
     const input = event.target as HTMLInputElement;
-    if (input.files) {
-      this.enviarArquivos(input.files, this.pastaAtualId());
+    if (input.files && input.files.length > 0) {
+      this.arquivosPendentes.update((atual) => [...atual, ...Array.from(input.files!)]);
     }
     input.value = '';
   }
 
+  protected removerArquivoPendente(indice: number): void {
+    this.arquivosPendentes.update((atual) => atual.filter((_, i) => i !== indice));
+  }
+
+  /** Prévia do nome de exibição que o servidor vai montar (a hora é aproximada — o carimbo real é o do envio). */
+  protected previewNome(arquivo: File): string {
+    const d = new Date();
+    const p = (n: number): string => String(n).padStart(2, '0');
+    const carimbo = `${p(d.getDate())}/${p(d.getMonth() + 1)}/${d.getFullYear()} (${p(d.getHours())}:${p(d.getMinutes())})`;
+    const tipo = this.tipoAnexoNome().trim();
+    return tipo ? `${carimbo} | Anexo: ${tipo} | ${arquivo.name}` : `${carimbo} | ${arquivo.name}`;
+  }
+
+  /** "Enviar" do painel: sobe cada pendente com o tipo do anexo escolhido. */
+  protected confirmarUpload(): void {
+    const arquivos = this.arquivosPendentes();
+    if (arquivos.length === 0) {
+      return;
+    }
+    const tipoAnexo = this.tipoAnexoNome().trim();
+    const pastaDestino = this.pastaAtualId();
+    arquivos.forEach((arquivo) => this.enviarArquivo(arquivo, pastaDestino, tipoAnexo));
+    this.fecharPainelUpload();
+  }
+
+  // --- catálogo "Tipo do anexo": o `<app-combobox>` pede, aqui persiste (ver `TipoAnexoService`) ---
+
+  protected criarTipo(nome: string): void {
+    this.tipoAnexoService.criar(nome).subscribe({
+      next: (tipo) => this.tipoAnexoNome.set(tipo.nome),
+      error: (err: unknown) =>
+        this.notify.emit({ key: 'tipoErro', subject: this.mensagemErro(err) }),
+    });
+  }
+
+  protected renomearTipo({ de, para }: { de: string; para: string }): void {
+    const alvo = this.tipoAnexoService.tipos().find((t) => t.nome === de);
+    if (!alvo) {
+      return;
+    }
+    this.tipoAnexoService.alterar(alvo.id, para).subscribe({
+      next: (tipo) => {
+        if (this.tipoAnexoNome() === de) {
+          this.tipoAnexoNome.set(tipo.nome);
+        }
+      },
+      error: (err: unknown) =>
+        this.notify.emit({ key: 'tipoErro', subject: this.mensagemErro(err) }),
+    });
+  }
+
+  protected excluirTipo(nome: string): void {
+    const alvo = this.tipoAnexoService.tipos().find((t) => t.nome === nome);
+    if (!alvo) {
+      return;
+    }
+    this.tipoAnexoService.excluir(alvo.id).subscribe({
+      next: () => {
+        if (this.tipoAnexoNome() === nome) {
+          this.tipoAnexoNome.set('');
+        }
+      },
+      error: (err: unknown) =>
+        this.notify.emit({ key: 'tipoErro', subject: this.mensagemErro(err) }),
+    });
+  }
+
+  /** Arrastar-e-soltar: sobe direto, sem tipo (o tipo é escolhido no painel de "Enviar arquivo"). */
   private enviarArquivos(arquivos: FileList, pastaDestinoId: string | null): void {
     Array.from(arquivos).forEach((arquivo) => this.enviarArquivo(arquivo, pastaDestinoId));
   }
 
-  private enviarArquivo(arquivo: File, pastaDestinoId: string | null): void {
+  private enviarArquivo(arquivo: File, pastaDestinoId: string | null, tipoAnexo = ''): void {
     const tipo = resolverTipoAceito(arquivo);
     if (!tipo) {
       this.notify.emit({ key: 'uploadErro', subject: `${arquivo.name}: formato não permitido` });
       return;
     }
-    // Reembala com o content-type resolvido quando o navegador não reportou (ou reportou errado) —
-    // senão o backend recebe um MIME vazio/genérico e rejeita mesmo sendo um formato aceito.
-    const arquivoTipado = arquivo.type === tipo ? arquivo : new File([arquivo], arquivo.name, { type: tipo });
+    // Reembala só pra garantir o content-type resolvido (o navegador às vezes reporta vazio); o
+    // nome de exibição — com carimbo e "Anexo: {tipo}" — é montado pelo servidor no `confirmar`.
+    const arquivoTipado =
+      arquivo.type === tipo ? arquivo : new File([arquivo], arquivo.name, { type: tipo });
     this.enviandoQtd.update((n) => n + 1);
-    this.documentsService.enviar(this.pessoaId(), pastaDestinoId, arquivoTipado).subscribe({
-      next: () => {
-        this.enviandoQtd.update((n) => n - 1);
-        if (this.pastaAtualId() === pastaDestinoId) {
-          this.carregar();
-        }
-        this.notify.emit({ key: 'uploadOk', subject: arquivo.name });
-      },
-      error: (err: unknown) => {
-        this.enviandoQtd.update((n) => n - 1);
-        this.notify.emit({ key: 'uploadErro', subject: `${arquivo.name}: ${this.mensagemErro(err)}` });
-      },
-    });
+    this.documentsService
+      .enviar(this.pessoaId(), pastaDestinoId, arquivoTipado, tipoAnexo)
+      .subscribe({
+        next: () => {
+          this.enviandoQtd.update((n) => n - 1);
+          if (this.pastaAtualId() === pastaDestinoId) {
+            this.carregar();
+          }
+          this.notify.emit({ key: 'uploadOk', subject: arquivo.name });
+        },
+        error: (err: unknown) => {
+          this.enviandoQtd.update((n) => n - 1);
+          this.notify.emit({
+            key: 'uploadErro',
+            subject: `${arquivo.name}: ${this.mensagemErro(err)}`,
+          });
+        },
+      });
   }
 
   // --- download / visualizar ---
@@ -534,8 +697,7 @@ export class DocumentExplorerComponent {
     if (pastaIds.length === 0 && documentoIds.length === 0) {
       return;
     }
-    const nome =
-      pastaIds.length === 1 && documentoIds.length === 0 ? itens[0].nome : 'arquivos';
+    const nome = pastaIds.length === 1 && documentoIds.length === 0 ? itens[0].nome : 'arquivos';
     this.downloads.baixarZip(`${nome}.zip`, pastaIds, documentoIds);
   }
 
@@ -581,7 +743,9 @@ export class DocumentExplorerComponent {
    */
   protected editarNoDesktop(documento: Documento): void {
     this.fecharMenu();
-    const protocolo = documento.contentType ? PROTOCOLO_DESKTOP_POR_CONTENT_TYPE[documento.contentType] : undefined;
+    const protocolo = documento.contentType
+      ? PROTOCOLO_DESKTOP_POR_CONTENT_TYPE[documento.contentType]
+      : undefined;
     if (!protocolo) {
       return;
     }
@@ -688,7 +852,9 @@ export class DocumentExplorerComponent {
           j.docxBlob = blob;
         } else {
           const mime =
-            documento.contentType || blob.type || (modo === 'pdf' ? 'application/pdf' : 'application/octet-stream');
+            documento.contentType ||
+            blob.type ||
+            (modo === 'pdf' ? 'application/pdf' : 'application/octet-stream');
           j.url = URL.createObjectURL(new Blob([blob], { type: mime }));
           j.urlSafe = this.sanitizer.bypassSecurityTrustResourceUrl(j.url);
           j.carregando = false;
@@ -751,7 +917,11 @@ export class DocumentExplorerComponent {
   }
 
   protected onJanelaDragStart(event: MouseEvent, j: JanelaPreview): void {
-    if (j.estado !== 'normal' || event.button !== 0 || (event.target as HTMLElement).closest('button')) {
+    if (
+      j.estado !== 'normal' ||
+      event.button !== 0 ||
+      (event.target as HTMLElement).closest('button')
+    ) {
       return;
     }
     event.preventDefault();
@@ -835,7 +1005,8 @@ export class DocumentExplorerComponent {
       if (sel.has(chaveDe('pasta', p.id))) itens.push({ tipo: 'pasta', id: p.id, nome: p.nome });
     }
     for (const d of this.documentos()) {
-      if (sel.has(chaveDe('documento', d.id))) itens.push({ tipo: 'documento', id: d.id, nome: d.nome });
+      if (sel.has(chaveDe('documento', d.id)))
+        itens.push({ tipo: 'documento', id: d.id, nome: d.nome });
     }
     return itens;
   }
@@ -944,7 +1115,9 @@ export class DocumentExplorerComponent {
   }
 
   private moverSelecionados(destinoId: string | null): void {
-    const itens = this.itensSelecionados().filter((i) => !(i.tipo === 'pasta' && i.id === destinoId));
+    const itens = this.itensSelecionados().filter(
+      (i) => !(i.tipo === 'pasta' && i.id === destinoId),
+    );
     if (itens.length === 0) return;
     const total = itens.length;
     let pendentes = total;
@@ -982,7 +1155,10 @@ export class DocumentExplorerComponent {
     }
     // não interfere quando o foco está num campo de texto nem com um diálogo já aberto
     const alvo = event.target as HTMLElement | null;
-    if (alvo && (alvo.tagName === 'INPUT' || alvo.tagName === 'TEXTAREA' || alvo.isContentEditable)) {
+    if (
+      alvo &&
+      (alvo.tagName === 'INPUT' || alvo.tagName === 'TEXTAREA' || alvo.isContentEditable)
+    ) {
       return;
     }
     // janelas de preview minimizadas não bloqueiam o Delete do explorador
@@ -1008,8 +1184,10 @@ export class DocumentExplorerComponent {
       this.carregar();
       const ok = total - falhas - naoVazias;
       if (ok > 0) this.notify.emit({ key: 'excluido', subject: `${ok} item(ns)` });
-      if (naoVazias > 0) this.notify.emit({ key: 'pastaNaoVazia', subject: `${naoVazias} pasta(s) não vazia(s)` });
-      else if (falhas > 0) this.notify.emit({ key: 'excluidoErro', subject: `${falhas} de ${total} item(ns)` });
+      if (naoVazias > 0)
+        this.notify.emit({ key: 'pastaNaoVazia', subject: `${naoVazias} pasta(s) não vazia(s)` });
+      else if (falhas > 0)
+        this.notify.emit({ key: 'excluidoErro', subject: `${falhas} de ${total} item(ns)` });
     };
     for (const item of itens) {
       const req$ =
@@ -1061,7 +1239,11 @@ export class DocumentExplorerComponent {
   }
 
   protected onDragOverAlvo(event: DragEvent, alvoId: string): void {
-    if (this.itemArrastado && this.itemArrastado.tipo === 'pasta' && this.itemArrastado.id === alvoId) {
+    if (
+      this.itemArrastado &&
+      this.itemArrastado.tipo === 'pasta' &&
+      this.itemArrastado.id === alvoId
+    ) {
       return;
     }
     event.preventDefault();
@@ -1084,7 +1266,10 @@ export class DocumentExplorerComponent {
     }
     if (this.arrastandoSelecao) {
       this.moverSelecionados(pasta.id);
-    } else if (this.itemArrastado && !(this.itemArrastado.tipo === 'pasta' && this.itemArrastado.id === pasta.id)) {
+    } else if (
+      this.itemArrastado &&
+      !(this.itemArrastado.tipo === 'pasta' && this.itemArrastado.id === pasta.id)
+    ) {
       this.mover(this.itemArrastado.tipo, this.itemArrastado.id, pasta.id);
     }
     this.itemArrastado = null;
@@ -1138,7 +1323,11 @@ export class DocumentExplorerComponent {
     if (tipo.startsWith('image/')) {
       return 'fa-solid fa-file-image doc-file-icon doc-file-icon--image';
     }
-    if (tipo === TIPO_DOCX || tipo === 'application/msword' || tipo === 'application/vnd.oasis.opendocument.text') {
+    if (
+      tipo === TIPO_DOCX ||
+      tipo === 'application/msword' ||
+      tipo === 'application/vnd.oasis.opendocument.text'
+    ) {
       return 'fa-solid fa-file-word doc-file-icon doc-file-icon--word';
     }
     if (
@@ -1174,7 +1363,11 @@ export class DocumentExplorerComponent {
       return 'Sem conexão com o servidor.';
     }
     return (
-      e?.error?.detail || e?.error?.title || e?.error?.message || e?.message || 'Não foi possível concluir a operação.'
+      e?.error?.detail ||
+      e?.error?.title ||
+      e?.error?.message ||
+      e?.message ||
+      'Não foi possível concluir a operação.'
     );
   }
 }

@@ -191,8 +191,17 @@ export class DocumentsService {
     return this.downloadUrl(documentoId).pipe(switchMap((url) => this.http.get(url, { responseType: 'blob' })));
   }
 
-  /** Fluxo completo de envio: pede a URL pré-assinada, envia o binário cru, confirma os metadados. */
-  enviar(pessoaId: number, pastaId: string | null, arquivo: File): Observable<Documento> {
+  /**
+   * Fluxo completo de envio: pede a URL pré-assinada, envia o binário cru, confirma os metadados.
+   * `tipoAnexo` (opcional) é o item do catálogo escolhido — o servidor monta o nome de exibição
+   * "dd/MM/yyyy (HH:mm) | Anexo: {tipo} | {nome}".
+   */
+  enviar(
+    pessoaId: number,
+    pastaId: string | null,
+    arquivo: File,
+    tipoAnexo?: string,
+  ): Observable<Documento> {
     return this.http
       .post<UploadUrlApi>(`${this.base}/documentos/upload-url`, {
         pessoa_id: pessoaId,
@@ -211,6 +220,7 @@ export class DocumentsService {
                 nome_original: arquivo.name,
                 content_type: arquivo.type,
                 tamanho_bytes: arquivo.size,
+                tipo_anexo: tipoAnexo?.trim() || null,
               }),
             ),
           ),

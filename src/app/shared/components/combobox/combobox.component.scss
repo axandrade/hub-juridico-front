@@ -1,0 +1,204 @@
+@use 'variables' as *;
+@use 'mixins' as *;
+
+:host {
+  display: block;
+}
+
+.combobox {
+  &.is-disabled {
+    opacity: 0.5;
+    pointer-events: none;
+  }
+}
+
+.combobox__row {
+  display: flex;
+  gap: $spacing-xs;
+}
+
+.combobox__field {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+}
+
+.combobox__campo {
+  width: 100%;
+  min-height: 34px;
+  padding: 0 28px 0 $spacing-sm;
+  border: 1px solid $color-border;
+  border-radius: $border-radius-sm;
+  background-color: $color-surface;
+  color: $color-text-primary;
+  font: inherit;
+  font-size: $font-size-xs;
+  outline: none;
+  text-overflow: ellipsis;
+
+  &:focus {
+    border-color: $color-primary-light;
+    box-shadow: 0 0 0 3px rgba($color-primary-light, 0.16);
+  }
+
+  &::placeholder {
+    color: $color-text-muted;
+  }
+
+  // Sem busca: comporta-se como um `<select>`.
+  &--select {
+    cursor: pointer;
+    caret-color: transparent;
+  }
+}
+
+.combobox__seta {
+  position: absolute;
+  top: 50%;
+  right: $spacing-sm;
+  transform: translateY(-50%);
+  color: $color-text-muted;
+  font-size: 10px;
+  pointer-events: none;
+  transition: transform $transition-fast;
+
+  .combobox.is-open & {
+    transform: translateY(-50%) rotate(180deg);
+  }
+}
+
+.combobox__lista {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 30;
+  margin: 0;
+  padding: $spacing-xs;
+  list-style: none;
+  max-height: 240px;
+  overflow-y: auto;
+  border: 1px solid $color-border;
+  border-radius: $border-radius-sm;
+  background-color: $color-surface;
+  box-shadow: $shadow-md;
+}
+
+.combobox__opcao {
+  padding: $spacing-sm;
+  border-radius: $border-radius-sm;
+  color: $color-text-primary;
+  cursor: pointer;
+  font-size: $font-size-xs;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+
+  &.is-active {
+    background-color: rgba($color-primary-pale, 0.55);
+  }
+
+  &.is-selected {
+    font-weight: $font-weight-medium;
+    color: $color-primary;
+  }
+}
+
+.combobox__vazio {
+  padding: $spacing-sm;
+  color: $color-text-muted;
+  font-size: $font-size-xs;
+}
+
+// --- ações (menu "⋮" + botões de salvar/cancelar/confirmar) ---
+.combobox__menu-wrap {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.combobox__acao {
+  @include flex-center;
+  width: 32px;
+  height: 34px;
+  flex-shrink: 0;
+  border: 1px solid $color-border;
+  border-radius: $border-radius-sm;
+  background-color: $color-surface;
+  color: $color-text-secondary;
+  cursor: pointer;
+  font-size: $font-size-xs;
+  transition:
+    background-color $transition-fast,
+    border-color $transition-fast,
+    color $transition-fast;
+
+  &:hover:not(:disabled),
+  &.is-active {
+    border-color: $color-primary-light;
+    background-color: rgba($color-primary-pale, 0.55);
+    color: $color-primary;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  &--perigo:hover:not(:disabled) {
+    border-color: $color-error;
+    background-color: rgba($color-error, 0.12);
+    color: $color-error;
+  }
+}
+
+.combobox__menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  z-index: 30;
+  display: flex;
+  min-width: 160px;
+  flex-direction: column;
+  border: 1px solid $color-border;
+  border-radius: $border-radius-sm;
+  background-color: $color-surface;
+  box-shadow: $shadow-md;
+  overflow: hidden;
+
+  button {
+    display: flex;
+    align-items: center;
+    gap: $spacing-xs;
+    border: none;
+    background: none;
+    color: $color-text-primary;
+    cursor: pointer;
+    font: inherit;
+    font-size: $font-size-xs;
+    padding: $spacing-sm;
+    text-align: left;
+    white-space: nowrap;
+
+    i {
+      width: 1.1em;
+      color: $color-text-muted;
+    }
+
+    &:hover:not(:disabled) {
+      background-color: rgba($color-primary-pale, 0.55);
+    }
+
+    &:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+  }
+}
+
+.combobox__confirm {
+  flex: 1;
+  min-width: 0;
+  align-self: center;
+  font-size: $font-size-xs;
+  color: $color-text-secondary;
+}

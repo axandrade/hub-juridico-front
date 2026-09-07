@@ -38,15 +38,93 @@
         <i class="fa-solid fa-folder-plus" aria-hidden="true"></i>
         Nova pasta
       </button>
-      <button type="button" class="doc-explorer__action" (click)="abrirSeletorArquivo()">
+      <button
+        type="button"
+        class="doc-explorer__action"
+        [class.is-active]="uploadPanelAberto()"
+        (click)="alternarPainelUpload()"
+      >
         <i class="fa-solid fa-file-arrow-up" aria-hidden="true"></i>
         Enviar arquivo
       </button>
-      <button type="button" class="doc-explorer__action" title="Atualizar" aria-label="Atualizar" (click)="recarregar()">
+      <button
+        type="button"
+        class="doc-explorer__action"
+        title="Atualizar"
+        aria-label="Atualizar"
+        (click)="recarregar()"
+      >
         <i class="fa-solid fa-rotate" aria-hidden="true"></i>
       </button>
     </div>
   </div>
+
+  @if (uploadPanelAberto()) {
+    <section class="doc-upload" aria-label="Enviar arquivo">
+      <div class="doc-upload__linha">
+        <span class="doc-upload__rotulo">Tipo do anexo</span>
+        <app-combobox
+          class="doc-upload__combo"
+          ariaLabel="Tipo do anexo"
+          placeholder="Buscar tipo..."
+          emptyLabel="— Sem tipo —"
+          noResultsText="Nenhum tipo encontrado"
+          itemNoun="tipo"
+          [options]="nomesDeTipos()"
+          [value]="tipoAnexoNome()"
+          [pesquisavel]="true"
+          [adicionar]="true"
+          [editar]="true"
+          [excluir]="true"
+          (valueChange)="tipoAnexoNome.set($event)"
+          (aoAdicionar)="criarTipo($event)"
+          (aoEditar)="renomearTipo($event)"
+          (aoExcluir)="excluirTipo($event)"
+        />
+      </div>
+
+      <div class="doc-upload__linha">
+        <button type="button" class="doc-upload__escolher" (click)="escolherArquivos()">
+          <i class="fa-solid fa-file-circle-plus" aria-hidden="true"></i>
+          Escolher arquivo(s)
+        </button>
+
+        @if (arquivosPendentes().length > 0) {
+          <ul class="doc-upload__lista">
+            @for (arq of arquivosPendentes(); track $index) {
+              <li>
+                <i class="fa-solid fa-file" aria-hidden="true"></i>
+                <span class="doc-upload__nome" [title]="previewNome(arq)">{{
+                  previewNome(arq)
+                }}</span>
+                <span class="doc-upload__tam">{{ formatarTamanho(arq.size) }}</span>
+                <button type="button" aria-label="Remover" (click)="removerArquivoPendente($index)">
+                  <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+                </button>
+              </li>
+            }
+          </ul>
+        }
+      </div>
+
+      <div class="doc-upload__acoes">
+        <app-button
+          variant="tertiary"
+          size="sm"
+          label="Cancelar"
+          (clicked)="fecharPainelUpload()"
+        />
+        <app-button
+          variant="primary"
+          size="sm"
+          icon="fa-solid fa-file-arrow-up"
+          label="Enviar"
+          [disabled]="arquivosPendentes().length === 0"
+          (clicked)="confirmarUpload()"
+        />
+      </div>
+    </section>
+  }
 
   @if (enviandoQtd() > 0) {
     <p class="doc-explorer__uploading">
@@ -100,7 +178,9 @@
                   [value]="pasta.nome"
                   (click)="$event.stopPropagation()"
                   (blur)="confirmarEdicaoInline('pasta', pasta.id, $event)"
-                  (keydown.enter)="$event.preventDefault(); confirmarEdicaoInline('pasta', pasta.id, $event)"
+                  (keydown.enter)="
+                    $event.preventDefault(); confirmarEdicaoInline('pasta', pasta.id, $event)
+                  "
                   (keydown.escape)="cancelarEdicaoInline()"
                 />
               } @else {
@@ -109,7 +189,10 @@
                   title="Abrir (um clique no nome)"
                   (click)="$event.stopPropagation(); abrirPasta(pasta)"
                 >
-                  <i class="fa-solid fa-folder doc-file-icon doc-file-icon--folder" aria-hidden="true"></i>
+                  <i
+                    class="fa-solid fa-folder doc-file-icon doc-file-icon--folder"
+                    aria-hidden="true"
+                  ></i>
                   {{ pasta.nome }}
                 </span>
               }
@@ -182,7 +265,10 @@
                   [value]="documento.nome"
                   (click)="$event.stopPropagation()"
                   (blur)="confirmarEdicaoInline('documento', documento.id, $event)"
-                  (keydown.enter)="$event.preventDefault(); confirmarEdicaoInline('documento', documento.id, $event)"
+                  (keydown.enter)="
+                    $event.preventDefault();
+                    confirmarEdicaoInline('documento', documento.id, $event)
+                  "
                   (keydown.escape)="cancelarEdicaoInline()"
                 />
               } @else {
@@ -252,7 +338,10 @@
                       Mover para pasta anterior
                     </button>
                   }
-                  <button type="button" (click)="abrirExclusao('documento', documento.id, documento.nome)">
+                  <button
+                    type="button"
+                    (click)="abrirExclusao('documento', documento.id, documento.nome)"
+                  >
                     <i class="fa-solid fa-trash" aria-hidden="true"></i>
                     Excluir
                   </button>
@@ -282,7 +371,9 @@
         {{ qtdSelecionada() }}
         {{ qtdSelecionada() === 1 ? 'item selecionado' : 'itens selecionados' }}
       </span>
-      <button type="button" class="doc-explorer__selecao-limpar" (click)="limparSelecao()">Limpar</button>
+      <button type="button" class="doc-explorer__selecao-limpar" (click)="limparSelecao()">
+        Limpar
+      </button>
       <button type="button" (click)="baixarSelecaoZip()">
         <i class="fa-solid fa-file-zipper" aria-hidden="true"></i>
         Baixar (.zip)
@@ -337,7 +428,12 @@
   </p>
   <div modalFooter class="doc-explorer__modal-footer">
     <app-button variant="tertiary" label="Cancelar" (clicked)="cancelarExclusao()" />
-    <app-button variant="primary" label="Excluir" [disabled]="exclusaoSalvando()" (clicked)="confirmarExclusao()" />
+    <app-button
+      variant="primary"
+      label="Excluir"
+      [disabled]="exclusaoSalvando()"
+      (clicked)="confirmarExclusao()"
+    />
   </div>
 </app-modal>
 
@@ -412,7 +508,11 @@
     </div>
 
     @if (j.estado === 'normal') {
-      <div class="floating-win__resize" (mousedown)="onJanelaResizeStart($event, j)" aria-hidden="true"></div>
+      <div
+        class="floating-win__resize"
+        (mousedown)="onJanelaResizeStart($event, j)"
+        aria-hidden="true"
+      ></div>
     }
   </div>
 }

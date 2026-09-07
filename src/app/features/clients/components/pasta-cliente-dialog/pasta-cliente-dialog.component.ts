@@ -1,4 +1,11 @@
-import { ChangeDetectionStrategy, Component, effect, inject, signal, untracked } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  effect,
+  inject,
+  signal,
+  untracked,
+} from '@angular/core';
 
 import { ModalComponent } from '../../../../shared/components/modal/modal.component';
 import {
@@ -89,6 +96,7 @@ export class PastaClienteDialogComponent {
       editarErro: `Não foi possível abrir para edição: ${alvo}`,
       convertidoOk: `Convertido para PDF: ${alvo}`,
       convertidoErro: `Não foi possível converter: ${alvo}`,
+      tipoErro: `Não foi possível salvar o tipo do anexo: ${alvo}`,
     };
     this.pastaNotice.set(textos[evento.key]);
   }

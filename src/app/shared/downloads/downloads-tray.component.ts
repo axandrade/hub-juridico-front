@@ -4,7 +4,8 @@ import { DownloadStatus, DownloadTask, DownloadsService } from './downloads.serv
 
 /**
  * Bandeja fixa no canto inferior direito (estilo Google Drive): lista os downloads de zip em
- * andamento/encerrados sem travar o resto da tela. Renderizada uma vez pelo `layout`.
+ * andamento/encerrados, com percentual, sem travar o resto da tela. Renderizada uma vez pelo
+ * `layout`.
  */
 @Component({
   selector: 'app-downloads-tray',
@@ -36,17 +37,28 @@ export class DownloadsTrayComponent {
   }
 
   protected ativa(status: DownloadStatus): boolean {
-    return status === 'preparando' || status === 'baixando';
+    return status === 'preparando' || status === 'compactando' || status === 'baixando';
+  }
+
+  /** 0..100, ou `null` quando não há como calcular (mostra spinner sem barra). */
+  protected porcentagem(t: DownloadTask): number | null {
+    return t.progresso == null ? null : Math.round(t.progresso * 100);
   }
 
   protected linhaStatus(t: DownloadTask): string {
+    const pct = this.porcentagem(t);
     switch (t.status) {
       case 'preparando':
         return 'Preparando…';
+      case 'compactando': {
+        const arquivos =
+          t.totalArquivos > 0 ? `Compactando ${t.arquivosProcessados}/${t.totalArquivos}` : 'Compactando…';
+        return pct == null ? arquivos : `${arquivos} · ${pct}%`;
+      }
       case 'baixando':
-        return t.recebidoBytes > 0 ? `${this.formatarBytes(t.recebidoBytes)} recebidos` : 'Compactando…';
+        return pct == null ? 'Baixando…' : `Baixando… ${pct}%`;
       case 'concluido':
-        return `Concluído · ${this.formatarBytes(t.totalBytes ?? t.recebidoBytes)}`;
+        return 'Concluído';
       case 'cancelado':
         return 'Cancelado';
       case 'erro':
@@ -65,19 +77,5 @@ export class DownloadsTrayComponent {
       default:
         return 'fa-solid fa-file-zipper';
     }
-  }
-
-  private formatarBytes(bytes: number): string {
-    if (bytes < 1024) {
-      return `${bytes} B`;
-    }
-    const unidades = ['KB', 'MB', 'GB'];
-    let valor = bytes / 1024;
-    let i = 0;
-    while (valor >= 1024 && i < unidades.length - 1) {
-      valor /= 1024;
-      i++;
-    }
-    return `${valor.toFixed(valor >= 10 || i === 0 ? 0 : 1)} ${unidades[i]}`;
   }
 }

@@ -17,6 +17,17 @@ import {
   pastaFromApi,
 } from '../models/document-explorer.model';
 
+/** Estado de um job de download de zip com percentual (`ZipDownloadJobResponse` no backend). */
+export interface ZipJobApi {
+  job_id: string;
+  status: 'compactando' | 'pronto' | 'erro' | 'cancelado';
+  nome_arquivo: string;
+  total_arquivos: number;
+  arquivos_processados: number;
+  bytes_totais: number;
+  bytes_processados: number;
+}
+
 /** Espelha `storage.allowed-content-types` do backend (ver `application.yml`) — mantido em sync manualmente. */
 export const TIPOS_ACEITOS = [
   'application/pdf',
@@ -98,29 +109,33 @@ export class DocumentsService {
   }
 
   /**
-   * Baixa a pasta inteira (subpastas + documentos, recursivamente) como um `.zip`. Diferente do
-   * download de documento, aqui o binário passa pela API (streaming), então vem como blob com o
-   * JWT anexado pelo interceptor. Devolve o fluxo de eventos HTTP (`observe: 'events'`) pra
-   * `DownloadsService` acompanhar o progresso na bandeja.
+   * Cria um job de download de zip (pasta/seleção) com percentual — o zip é montado no servidor em
+   * background. Ver `DownloadsService`, que faz o polling do progresso e baixa quando fica pronto.
    */
-  baixarPastaZip(pastaId: string): Observable<HttpEvent<Blob>> {
-    return this.http.get(`${this.base}/pastas/${pastaId}/download`, {
+  iniciarDownloadZip(pastaIds: string[], documentoIds: string[]): Observable<ZipJobApi> {
+    return this.http.post<ZipJobApi>(`${this.base}/pastas/download-job`, {
+      pasta_ids: pastaIds,
+      documento_ids: documentoIds,
+    });
+  }
+
+  /** Estado atual de um job de download (polling). */
+  statusDownloadZip(jobId: string): Observable<ZipJobApi> {
+    return this.http.get<ZipJobApi>(`${this.base}/pastas/download-job/${jobId}`);
+  }
+
+  /** Baixa o zip já pronto — resposta com `Content-Length`, então o progresso desta fase é real. */
+  baixarZipPronto(jobId: string): Observable<HttpEvent<Blob>> {
+    return this.http.get(`${this.base}/pastas/download-job/${jobId}/arquivo`, {
       observe: 'events',
       reportProgress: true,
       responseType: 'blob',
     });
   }
 
-  /**
-   * Baixa como um `.zip` as pastas e/ou documentos selecionados — cada pasta como subárvore
-   * recursiva, cada documento avulso na raiz do zip. Fluxo de eventos como em {@link baixarPastaZip}.
-   */
-  baixarSelecaoZip(pastaIds: string[], documentoIds: string[]): Observable<HttpEvent<Blob>> {
-    return this.http.post(
-      `${this.base}/pastas/download`,
-      { pasta_ids: pastaIds, documento_ids: documentoIds },
-      { observe: 'events', reportProgress: true, responseType: 'blob' },
-    );
+  /** Cancela o job: para a geração no servidor e apaga o zip temporário. */
+  cancelarDownloadZip(jobId: string): Observable<void> {
+    return this.http.delete<void>(`${this.base}/pastas/download-job/${jobId}`);
   }
 
   renomearDocumento(documentoId: string, nome: string): Observable<Documento> {

@@ -519,11 +519,11 @@ export class DocumentExplorerComponent {
 
   /**
    * Baixa a pasta (com subpastas e documentos, recursivamente) como um `.zip` — vira uma tarefa
-   * acompanhável na bandeja de downloads (canto inferior direito), sem travar a tela.
+   * com percentual na bandeja de downloads (canto inferior direito), sem travar a tela.
    */
   protected baixarPastaZip(pasta: Pasta): void {
     this.fecharMenu();
-    this.downloads.acompanhar(`${pasta.nome}.zip`, this.documentsService.baixarPastaZip(pasta.id));
+    this.downloads.baixarZip(`${pasta.nome}.zip`, [pasta.id], []);
   }
 
   /** Baixa a seleção (pastas e/ou documentos) como um único `.zip`, também via bandeja. */
@@ -536,10 +536,7 @@ export class DocumentExplorerComponent {
     }
     const nome =
       pastaIds.length === 1 && documentoIds.length === 0 ? itens[0].nome : 'arquivos';
-    this.downloads.acompanhar(
-      `${nome}.zip`,
-      this.documentsService.baixarSelecaoZip(pastaIds, documentoIds),
-    );
+    this.downloads.baixarZip(`${nome}.zip`, pastaIds, documentoIds);
   }
 
   /**

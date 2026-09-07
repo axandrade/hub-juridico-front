@@ -21,15 +21,37 @@ describe('DocumentsService', () => {
 
   afterEach(() => http.verify());
 
-  it('baixarPastaZip faz GET .../pastas/{id}/download como blob, com eventos de progresso', () => {
+  it('iniciarDownloadZip faz POST .../pastas/download-job com os ids em snake_case', () => {
+    let job: { job_id: string } | undefined;
+    service.iniciarDownloadZip(['p1'], ['d1', 'd2']).subscribe((j) => (job = j));
+
+    const req = http.expectOne(`${BASE}/pastas/download-job`);
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body).toEqual({ pasta_ids: ['p1'], documento_ids: ['d1', 'd2'] });
+    req.flush({ job_id: 'job-9', status: 'compactando' });
+
+    expect(job?.job_id).toBe('job-9');
+  });
+
+  it('statusDownloadZip faz GET .../pastas/download-job/{id} e cancelarDownloadZip faz DELETE', () => {
+    service.statusDownloadZip('job-9').subscribe();
+    http.expectOne(`${BASE}/pastas/download-job/job-9`).flush({ job_id: 'job-9', status: 'pronto' });
+
+    service.cancelarDownloadZip('job-9').subscribe();
+    const del = http.expectOne(`${BASE}/pastas/download-job/job-9`);
+    expect(del.request.method).toBe('DELETE');
+    del.flush(null);
+  });
+
+  it('baixarZipPronto faz GET .../download-job/{id}/arquivo como blob com progresso', () => {
     let corpo: Blob | undefined;
-    service.baixarPastaZip('abc-123').subscribe((evento) => {
+    service.baixarZipPronto('job-9').subscribe((evento) => {
       if (evento.type === HttpEventType.Response) {
         corpo = (evento as HttpResponse<Blob>).body ?? undefined;
       }
     });
 
-    const req = http.expectOne(`${BASE}/pastas/abc-123/download`);
+    const req = http.expectOne(`${BASE}/pastas/download-job/job-9/arquivo`);
     expect(req.request.method).toBe('GET');
     expect(req.request.responseType).toBe('blob');
     expect(req.request.reportProgress).toBe(true);
@@ -58,22 +80,4 @@ describe('DocumentsService', () => {
     expect(resultado?.nome).toBe('foto.pdf');
   });
 
-  it('baixarSelecaoZip faz POST .../pastas/download com os ids em snake_case, como blob', () => {
-    let corpo: Blob | undefined;
-    service.baixarSelecaoZip(['p1', 'p2'], ['d1']).subscribe((evento) => {
-      if (evento.type === HttpEventType.Response) {
-        corpo = (evento as HttpResponse<Blob>).body ?? undefined;
-      }
-    });
-
-    const req = http.expectOne(`${BASE}/pastas/download`);
-    expect(req.request.method).toBe('POST');
-    expect(req.request.responseType).toBe('blob');
-    expect(req.request.reportProgress).toBe(true);
-    expect(req.request.body).toEqual({ pasta_ids: ['p1', 'p2'], documento_ids: ['d1'] });
-
-    const zip = new Blob(['PK...'], { type: 'application/zip' });
-    req.flush(zip);
-    expect(corpo).toBe(zip);
-  });
 });

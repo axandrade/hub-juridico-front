@@ -1,4 +1,4 @@
-import { provideHttpClient } from '@angular/common/http';
+import { HttpEventType, HttpResponse, provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 
@@ -21,17 +21,22 @@ describe('DocumentsService', () => {
 
   afterEach(() => http.verify());
 
-  it('baixarPastaZip faz GET .../pastas/{id}/download como blob', () => {
-    let resultado: Blob | undefined;
-    service.baixarPastaZip('abc-123').subscribe((b) => (resultado = b));
+  it('baixarPastaZip faz GET .../pastas/{id}/download como blob, com eventos de progresso', () => {
+    let corpo: Blob | undefined;
+    service.baixarPastaZip('abc-123').subscribe((evento) => {
+      if (evento.type === HttpEventType.Response) {
+        corpo = (evento as HttpResponse<Blob>).body ?? undefined;
+      }
+    });
 
     const req = http.expectOne(`${BASE}/pastas/abc-123/download`);
     expect(req.request.method).toBe('GET');
     expect(req.request.responseType).toBe('blob');
+    expect(req.request.reportProgress).toBe(true);
 
     const zip = new Blob(['PK...'], { type: 'application/zip' });
     req.flush(zip);
-    expect(resultado).toBe(zip);
+    expect(corpo).toBe(zip);
   });
 
   it('converterParaPdf faz POST .../documentos/{id}/converter-pdf e devolve o Documento', () => {
@@ -54,16 +59,21 @@ describe('DocumentsService', () => {
   });
 
   it('baixarSelecaoZip faz POST .../pastas/download com os ids em snake_case, como blob', () => {
-    let resultado: Blob | undefined;
-    service.baixarSelecaoZip(['p1', 'p2'], ['d1']).subscribe((b) => (resultado = b));
+    let corpo: Blob | undefined;
+    service.baixarSelecaoZip(['p1', 'p2'], ['d1']).subscribe((evento) => {
+      if (evento.type === HttpEventType.Response) {
+        corpo = (evento as HttpResponse<Blob>).body ?? undefined;
+      }
+    });
 
     const req = http.expectOne(`${BASE}/pastas/download`);
     expect(req.request.method).toBe('POST');
     expect(req.request.responseType).toBe('blob');
+    expect(req.request.reportProgress).toBe(true);
     expect(req.request.body).toEqual({ pasta_ids: ['p1', 'p2'], documento_ids: ['d1'] });
 
     const zip = new Blob(['PK...'], { type: 'application/zip' });
     req.flush(zip);
-    expect(resultado).toBe(zip);
+    expect(corpo).toBe(zip);
   });
 });

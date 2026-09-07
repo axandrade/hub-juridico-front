@@ -1,0 +1,146 @@
+@use 'variables' as *;
+@use 'mixins' as *;
+
+.downloads-tray {
+  position: fixed;
+  right: $spacing-lg;
+  bottom: $spacing-lg;
+  z-index: $z-overlay + 1; // acima do modal do explorador
+  width: min(340px, calc(100vw - #{$spacing-lg * 2}));
+  border: 1px solid $color-border;
+  border-radius: $border-radius-md;
+  background-color: $color-surface;
+  box-shadow: $shadow-lg;
+  overflow: hidden;
+}
+
+.downloads-tray__head {
+  @include flex-between;
+  gap: $spacing-sm;
+  padding: $spacing-sm $spacing-md;
+  background-color: #f1ede1; // mesmo tom quente do cabeçalho das tabelas
+  border-bottom: 1px solid rgba($burgundy-deep, 0.12);
+}
+
+.downloads-tray.is-collapsed .downloads-tray__head {
+  border-bottom: 0;
+}
+
+.downloads-tray__title {
+  color: $color-text-primary;
+  font-size: $font-size-xs;
+  font-weight: $font-weight-medium;
+}
+
+.downloads-tray__head-actions {
+  display: flex;
+  gap: 2px;
+
+  button {
+    @include flex-center;
+    width: 26px;
+    height: 26px;
+    border: 0;
+    border-radius: $border-radius-sm;
+    background: none;
+    color: $color-text-secondary;
+    cursor: pointer;
+    font-size: $font-size-xs;
+    transition:
+      background-color $transition-fast,
+      color $transition-fast;
+
+    &:hover {
+      background-color: rgba($burgundy-deep, 0.07);
+      color: $color-primary;
+    }
+  }
+}
+
+.downloads-tray__list {
+  @include thin-scrollbar;
+  max-height: 260px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  overflow-y: auto;
+}
+
+.downloads-tray__item {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: $spacing-sm;
+  padding: $spacing-sm $spacing-md;
+
+  & + & {
+    border-top: 1px solid rgba($color-border, 0.6);
+  }
+}
+
+.downloads-tray__item-icon {
+  font-size: $font-size-base;
+  color: $color-text-muted;
+
+  .is-concluido & {
+    color: $color-success;
+  }
+  .is-erro & {
+    color: $color-error;
+  }
+}
+
+.downloads-tray__item-text {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.downloads-tray__item-name {
+  @include truncate;
+  color: $color-text-primary;
+  font-size: $font-size-xs;
+  font-weight: $font-weight-medium;
+}
+
+.downloads-tray__item-status {
+  color: $color-text-muted;
+  font-size: 11px;
+
+  .is-erro & {
+    color: $color-error;
+  }
+}
+
+.downloads-tray__spinner {
+  font-size: $font-size-xs;
+  color: $color-primary;
+}
+
+.downloads-tray__item-action {
+  @include flex-center;
+  width: 22px;
+  height: 22px;
+  border: 0;
+  border-radius: $border-radius-sm;
+  background: none;
+  color: $color-text-muted;
+  cursor: pointer;
+  font-size: $font-size-xs;
+  transition:
+    background-color $transition-fast,
+    color $transition-fast;
+
+  &:hover {
+    background-color: rgba($burgundy-deep, 0.07);
+    color: $color-primary;
+  }
+}
+
+@include respond-below($breakpoint-sm) {
+  .downloads-tray {
+    right: $spacing-sm;
+    bottom: $spacing-sm;
+  }
+}

@@ -1,4 +1,4 @@
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpEvent } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable, firstValueFrom, from, map, switchMap } from 'rxjs';
 
@@ -100,21 +100,26 @@ export class DocumentsService {
   /**
    * Baixa a pasta inteira (subpastas + documentos, recursivamente) como um `.zip`. Diferente do
    * download de documento, aqui o binário passa pela API (streaming), então vem como blob com o
-   * JWT anexado pelo interceptor.
+   * JWT anexado pelo interceptor. Devolve o fluxo de eventos HTTP (`observe: 'events'`) pra
+   * `DownloadsService` acompanhar o progresso na bandeja.
    */
-  baixarPastaZip(pastaId: string): Observable<Blob> {
-    return this.http.get(`${this.base}/pastas/${pastaId}/download`, { responseType: 'blob' });
+  baixarPastaZip(pastaId: string): Observable<HttpEvent<Blob>> {
+    return this.http.get(`${this.base}/pastas/${pastaId}/download`, {
+      observe: 'events',
+      reportProgress: true,
+      responseType: 'blob',
+    });
   }
 
   /**
    * Baixa como um `.zip` as pastas e/ou documentos selecionados — cada pasta como subárvore
-   * recursiva, cada documento avulso na raiz do zip.
+   * recursiva, cada documento avulso na raiz do zip. Fluxo de eventos como em {@link baixarPastaZip}.
    */
-  baixarSelecaoZip(pastaIds: string[], documentoIds: string[]): Observable<Blob> {
+  baixarSelecaoZip(pastaIds: string[], documentoIds: string[]): Observable<HttpEvent<Blob>> {
     return this.http.post(
       `${this.base}/pastas/download`,
       { pasta_ids: pastaIds, documento_ids: documentoIds },
-      { responseType: 'blob' },
+      { observe: 'events', reportProgress: true, responseType: 'blob' },
     );
   }
 

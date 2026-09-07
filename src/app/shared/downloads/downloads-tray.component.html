@@ -1,0 +1,50 @@
+@if (tarefas().length > 0) {
+  <section class="downloads-tray" [class.is-collapsed]="recolhida()" aria-label="Downloads">
+    <header class="downloads-tray__head">
+      <span class="downloads-tray__title">
+        @if (quantidadeAtivas() > 0) {
+          {{ quantidadeAtivas() }} download(s) em andamento
+        } @else {
+          Downloads
+        }
+      </span>
+      <div class="downloads-tray__head-actions">
+        <button
+          type="button"
+          [attr.aria-label]="recolhida() ? 'Expandir' : 'Recolher'"
+          [attr.aria-expanded]="!recolhida()"
+          (click)="alternarRecolhida()"
+        >
+          <i class="fa-solid" [class.fa-chevron-up]="recolhida()" [class.fa-chevron-down]="!recolhida()" aria-hidden="true"></i>
+        </button>
+        <button type="button" aria-label="Fechar" (click)="limpar()">
+          <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+        </button>
+      </div>
+    </header>
+
+    @if (!recolhida()) {
+      <ul class="downloads-tray__list">
+        @for (t of tarefas(); track t.id) {
+          <li class="downloads-tray__item" [class]="'is-' + t.status">
+            <i class="downloads-tray__item-icon" [class]="icone(t.status)" aria-hidden="true"></i>
+            <div class="downloads-tray__item-text">
+              <span class="downloads-tray__item-name" [title]="t.nome">{{ t.nome }}</span>
+              <span class="downloads-tray__item-status">{{ linhaStatus(t) }}</span>
+            </div>
+            @if (ativa(t.status)) {
+              <i class="fa-solid fa-spinner fa-spin-pulse downloads-tray__spinner" aria-hidden="true"></i>
+              <button type="button" class="downloads-tray__item-action" aria-label="Cancelar" (click)="cancelar(t.id)">
+                <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+              </button>
+            } @else {
+              <button type="button" class="downloads-tray__item-action" aria-label="Remover da lista" (click)="remover(t.id)">
+                <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+              </button>
+            }
+          </li>
+        }
+      </ul>
+    }
+  </section>
+}

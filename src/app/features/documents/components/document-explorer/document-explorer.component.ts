@@ -18,6 +18,7 @@ import { Observable } from 'rxjs';
 import { ButtonComponent } from '../../../../shared/components/button/button.component';
 import { ModalComponent } from '../../../../shared/components/modal/modal.component';
 import { AutoFocusSelectDirective } from '../../../../shared/directives/auto-focus-select.directive';
+import { DownloadsService } from '../../../../shared/downloads/downloads.service';
 import { formatFileSize } from '../../../../shared/utils/format-file-size';
 import { DocxRenderDirective } from '../../directives/docx-render.directive';
 import { DocumentsService, resolverTipoAceito } from '../../services/documents.service';
@@ -106,6 +107,7 @@ const PROTOCOLO_DESKTOP_POR_CONTENT_TYPE: Record<string, string> = {
 })
 export class DocumentExplorerComponent {
   private readonly documentsService = inject(DocumentsService);
+  private readonly downloads = inject(DownloadsService);
   private readonly sanitizer = inject(DomSanitizer);
 
   readonly pessoaId = input.required<number>();
@@ -515,16 +517,16 @@ export class DocumentExplorerComponent {
     });
   }
 
-  /** Baixa a pasta (com subpastas e documentos, recursivamente) como um `.zip`. */
+  /**
+   * Baixa a pasta (com subpastas e documentos, recursivamente) como um `.zip` — vira uma tarefa
+   * acompanhável na bandeja de downloads (canto inferior direito), sem travar a tela.
+   */
   protected baixarPastaZip(pasta: Pasta): void {
     this.fecharMenu();
-    this.documentsService.baixarPastaZip(pasta.id).subscribe({
-      next: (blob) => this.salvarBlob(blob, `${pasta.nome}.zip`),
-      error: () => this.notify.emit({ key: 'downloadErro', subject: pasta.nome }),
-    });
+    this.downloads.acompanhar(`${pasta.nome}.zip`, this.documentsService.baixarPastaZip(pasta.id));
   }
 
-  /** Baixa a seleção (pastas e/ou documentos) como um único `.zip`. */
+  /** Baixa a seleção (pastas e/ou documentos) como um único `.zip`, também via bandeja. */
   protected baixarSelecaoZip(): void {
     const itens = this.itensSelecionados();
     const pastaIds = itens.filter((i) => i.tipo === 'pasta').map((i) => i.id);
@@ -534,19 +536,10 @@ export class DocumentExplorerComponent {
     }
     const nome =
       pastaIds.length === 1 && documentoIds.length === 0 ? itens[0].nome : 'arquivos';
-    this.documentsService.baixarSelecaoZip(pastaIds, documentoIds).subscribe({
-      next: (blob) => this.salvarBlob(blob, `${nome}.zip`),
-      error: () => this.notify.emit({ key: 'downloadErro', subject: nome }),
-    });
-  }
-
-  private salvarBlob(blob: Blob, nomeArquivo: string): void {
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = nomeArquivo;
-    link.click();
-    URL.revokeObjectURL(url);
+    this.downloads.acompanhar(
+      `${nome}.zip`,
+      this.documentsService.baixarSelecaoZip(pastaIds, documentoIds),
+    );
   }
 
   /**

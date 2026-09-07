@@ -3,6 +3,7 @@ import { Router, RouterOutlet } from '@angular/router';
 
 import { ROUTES } from '../core/constants/app-constants';
 import { AuthService } from '../core/services/auth.service';
+import { DownloadsTrayComponent } from '../shared/downloads/downloads-tray.component';
 import { FooterComponent } from './components/footer/footer.component';
 import { HeaderComponent } from './components/header/header.component';
 import { SidebarComponent } from './components/sidebar/sidebar.component';
@@ -11,7 +12,7 @@ import { SidebarComponent } from './components/sidebar/sidebar.component';
 @Component({
   selector: 'app-layout',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterOutlet, SidebarComponent, HeaderComponent, FooterComponent],
+  imports: [RouterOutlet, SidebarComponent, HeaderComponent, FooterComponent, DownloadsTrayComponent],
   templateUrl: './layout.component.html',
   styleUrl: './layout.component.scss',
 })

@@ -83,29 +83,6 @@
             </div>
           }
         </div>
-
-        <div class="clients-actions__menu">
-          <button type="button" class="clients-menu-button" (click)="toggleMoreActions()">
-            <i class="fa-solid fa-ellipsis" aria-hidden="true"></i>
-            Mais...
-          </button>
-
-          @if (showMoreActions()) {
-            <div class="clients-dropdown" role="menu">
-              <button type="button" (click)="shareBase()">Compartilhar base de dados</button>
-              <button type="button" (click)="importBase()">Importar base de dados</button>
-            </div>
-          }
-        </div>
-
-        <label class="clients-toggle-inativos">
-          <input
-            type="checkbox"
-            [checked]="incluirInativos()"
-            (change)="onToggleIncluirInativos($event)"
-          />
-          Mostrar inativos
-        </label>
       </div>
 
       <button
@@ -164,6 +141,15 @@
       >
         Pessoa jurídica
       </button>
+
+      <label class="clients-toggle-inativos">
+        <input
+          type="checkbox"
+          [checked]="incluirInativos()"
+          (change)="onToggleIncluirInativos($event)"
+        />
+        Mostrar inativos
+      </label>
     </div>
 
     <div class="clients-table-wrap">
@@ -198,21 +184,13 @@
           }
         </span>
       </div>
-      @switch (pageNotice()) {
-        @case ('shareReady') {
-          <span>· Compartilhamento de base preparado para a futura integração.</span>
-        }
-        @case ('importReady') {
-          <span>· Importação de base preparada para a futura integração.</span>
-        }
-        @case ('loadError') {
-          <span>
-            · Não foi possível carregar a lista.
-            <button type="button" class="clients-link-button" (click)="reloadList()">
-              Tentar de novo
-            </button>
-          </span>
-        }
+      @if (pageNotice() === 'loadError') {
+        <span>
+          · Não foi possível carregar a lista.
+          <button type="button" class="clients-link-button" (click)="reloadList()">
+            Tentar de novo
+          </button>
+        </span>
       }
     </footer>
   </section>

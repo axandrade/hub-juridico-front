@@ -33,7 +33,7 @@ import { DataTableComponent } from '../../shared/components/table/data-table.com
 import { TableColumn } from '../../shared/components/table/table-column.model';
 import { TablePagination, TablePinAction } from '../../shared/components/table/table.model';
 
-type PageNotice = '' | 'shareReady' | 'importReady' | 'loadError';
+type PageNotice = '' | 'loadError';
 
 @Component({
   selector: 'app-clients',
@@ -74,7 +74,6 @@ export class ClientsComponent {
   protected readonly pastaExplorerPessoa = signal<{ id: number; nome: string } | null>(null);
   /** Incrementado pra forçar o recarregamento da tabela de visão geral (ex.: ao voltar do explorador). */
   protected readonly pastaResumoTick = signal(0);
-  protected readonly showMoreActions = signal(false);
   protected readonly pageNotice = signal<PageNotice>('');
   protected readonly loading = signal(false);
 
@@ -319,16 +318,12 @@ export class ClientsComponent {
   }
 
   /**
-   * Clique fora fecha os menus "Mais..." / "Colunas" e — se o cadeado não estiver travado —
-   * também desmarca o cliente (clique fora de uma linha da tabela e do painel).
+   * Clique fora fecha o menu "Colunas" e — se o cadeado não estiver travado — também desmarca o
+   * cliente (clique fora de uma linha da tabela e do painel).
    */
   @HostListener('document:click', ['$event'])
   protected onDocumentClick(event: MouseEvent): void {
     const target = event.target as HTMLElement | null;
-
-    if (this.showMoreActions() && !target?.closest('.clients-actions__menu')) {
-      this.showMoreActions.set(false);
-    }
 
     const tabela = this.clientsTable();
     if (tabela?.columnsMenuOpen() && !target?.closest('.clients-columns')) {
@@ -401,20 +396,6 @@ export class ClientsComponent {
       convertidoErro: `Não foi possível converter: ${alvo}`,
     };
     this.pastaNotice.set(textos[evento.key]);
-  }
-
-  protected shareBase(): void {
-    this.pageNotice.set('shareReady');
-    this.showMoreActions.set(false);
-  }
-
-  protected importBase(): void {
-    this.pageNotice.set('importReady');
-    this.showMoreActions.set(false);
-  }
-
-  protected toggleMoreActions(): void {
-    this.showMoreActions.update((visible) => !visible);
   }
 
   private hiringModeLabel(mode: ModalidadeCliente | ''): string {

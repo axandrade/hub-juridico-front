@@ -323,9 +323,10 @@
   }
 }
 
-// Filtro de natureza (Todos / Pessoa física / jurídica) — controle segmentado (abas), no servidor.
+// Filtros da lista: controle segmentado de natureza + "Mostrar inativos" à direita.
 .clients-natureza {
   display: flex;
+  align-items: center;
   padding: $spacing-sm $spacing-md;
   border-bottom: 1px solid rgba($color-border, 0.7);
 
@@ -347,12 +348,13 @@
       border-left: 0; // segmentos encostados, sem borda dupla
     }
 
-    &:first-child {
+    // `of-type` (não `child`) — o rótulo do checkbox vem depois e não pode virar "o último".
+    &:first-of-type {
       border-top-left-radius: $border-radius-sm;
       border-bottom-left-radius: $border-radius-sm;
     }
 
-    &:last-child {
+    &:last-of-type {
       border-top-right-radius: $border-radius-sm;
       border-bottom-right-radius: $border-radius-sm;
     }
@@ -368,6 +370,10 @@
       background-color: $color-primary;
       color: #fff;
     }
+  }
+
+  .clients-toggle-inativos {
+    margin-left: auto; // empurra pra ponta direita da faixa
   }
 }
 
@@ -426,7 +432,6 @@
 }
 
 .clients-actions,
-.clients-search,
 .clients-summary,
 .clients-main__footer {
   padding: $spacing-sm $spacing-md;
@@ -436,10 +441,6 @@
 .clients-actions {
   @include flex-between;
   gap: $spacing-md;
-}
-
-.clients-actions__menu {
-  position: relative;
 }
 
 .clients-dropdown {

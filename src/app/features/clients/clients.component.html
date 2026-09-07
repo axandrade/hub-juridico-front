@@ -121,6 +121,7 @@
         type="button"
         [class.is-active]="tipoFiltro() === ''"
         [attr.aria-pressed]="tipoFiltro() === ''"
+        [disabled]="loading()"
         (click)="selecionarTipo('')"
       >
         Todos
@@ -129,6 +130,7 @@
         type="button"
         [class.is-active]="tipoFiltro() === 'FISICA'"
         [attr.aria-pressed]="tipoFiltro() === 'FISICA'"
+        [disabled]="loading()"
         (click)="selecionarTipo('FISICA')"
       >
         Pessoa física
@@ -137,6 +139,7 @@
         type="button"
         [class.is-active]="tipoFiltro() === 'JURIDICA'"
         [attr.aria-pressed]="tipoFiltro() === 'JURIDICA'"
+        [disabled]="loading()"
         (click)="selecionarTipo('JURIDICA')"
       >
         Pessoa jurídica
@@ -146,6 +149,7 @@
         <input
           type="checkbox"
           [checked]="incluirInativos()"
+          [disabled]="loading()"
           (change)="onToggleIncluirInativos($event)"
         />
         Mostrar inativos

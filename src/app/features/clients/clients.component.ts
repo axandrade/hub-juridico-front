@@ -257,7 +257,9 @@ export class ClientsComponent {
 
   /** Chip de natureza (`''` = Todos). Seleção direta, estilo rádio. */
   protected selecionarTipo(tipo: TipoPessoa | ''): void {
-    if (this.tipoFiltro() === tipo) {
+    // Ignora troca de aba enquanto a lista carrega — evita a rajada de requisições canceladas
+    // quando o usuário clica repetido esperando a grade responder (banco lento).
+    if (this.loading() || this.tipoFiltro() === tipo) {
       return;
     }
     this.tipoFiltro.set(tipo);

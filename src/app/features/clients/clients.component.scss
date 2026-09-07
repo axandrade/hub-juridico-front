@@ -359,7 +359,7 @@
       border-bottom-right-radius: $border-radius-sm;
     }
 
-    &:hover:not(.is-active) {
+    &:hover:not(.is-active):not(:disabled) {
       color: $color-primary;
     }
 
@@ -370,10 +370,20 @@
       background-color: $color-primary;
       color: #fff;
     }
+
+    &:disabled {
+      cursor: progress; // lista carregando — troca de aba bloqueada
+      opacity: 0.55;
+    }
   }
 
   .clients-toggle-inativos {
     margin-left: auto; // empurra pra ponta direita da faixa
+
+    &:has(input:disabled) {
+      cursor: progress;
+      opacity: 0.55;
+    }
   }
 }
 

@@ -1,6 +1,6 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject, signal } from '@angular/core';
-import { Observable, map, tap } from 'rxjs';
+import { Observable, catchError, map, of, tap } from 'rxjs';
 
 import { environment } from '../../../../environments/environment';
 import { EstadoCivil } from '../../../core/models';
@@ -24,9 +24,47 @@ export interface AdvogadoListQuery {
 }
 
 /**
+ * Corpo enviado ao criar/editar um advogado. `nome`/`cpf` só entram no POST (são imutáveis no
+ * PUT — ver `AtualizarAdvogadoRequest` no backend). JSON snake_case (ver `JacksonConfig`).
+ */
+interface AdvogadoWriteApi {
+  nome?: string;
+  cpf?: string;
+  nacionalidade: string | null;
+  estado_civil: EstadoCivil | null;
+  profissao: string | null;
+  oab: string | null;
+  rg: string | null;
+  email: string | null;
+  telefone_whatsapp: string | null;
+  endereco_profissional: string | null;
+  cep_profissional: string | null;
+  cidade_profissional: string | null;
+  observacoes: string | null;
+}
+
+/** Campos editáveis de um advogado (camelCase) — o que o formulário produz. */
+export interface AdvogadoEditavel {
+  id: number;
+  nome: string;
+  cpf: string;
+  rg: string;
+  oab: string;
+  profissao: string;
+  nacionalidade: string;
+  estadoCivil: EstadoCivil | '';
+  email: string;
+  telefoneWhatsapp: string;
+  enderecoProfissional: string;
+  cepProfissional: string;
+  cidadeProfissional: string;
+  observacoes: string;
+}
+
+/**
  * Fonte única da lista de advogados. Fala com `/api/v1/advogados` (Spring), que pagina de 10
- * em 10. Tela só-leitura por enquanto (sem `salvar`/`criar` no front ainda, embora o backend já
- * suporte CRUD completo) — ver decisão em `advogado-entity` (memória do projeto).
+ * em 10. Suporta o CRUD completo (`carregar`/`buscarCompleto`/`salvar`/`alterarStatus`/
+ * `alternarFavorito`), consumido pelo `advogado-form`.
  */
 @Injectable({ providedIn: 'root' })
 export class AdvogadoStore {
@@ -92,6 +130,58 @@ export class AdvogadoStore {
       return null;
     }
     return this._advogados().find((advogado) => advogado.id === id) ?? null;
+  }
+
+  /** Ficha por id direto do backend (`GET /advogados/{id}`) — pro form não depender da página carregada. */
+  buscarCompleto(id: number): Observable<AdvogadoApi | null> {
+    return this.http.get<AdvogadoApi>(`${this.base}/${id}`).pipe(catchError(() => of(null)));
+  }
+
+  /** `POST` (id 0) ou `PUT` (id existente); devolve o registro do backend e atualiza a lista. */
+  salvar(advogado: AdvogadoEditavel): Observable<AdvogadoApi> {
+    const comum: AdvogadoWriteApi = {
+      nacionalidade: advogado.nacionalidade || null,
+      estado_civil: advogado.estadoCivil || null,
+      profissao: advogado.profissao || null,
+      oab: advogado.oab || null,
+      rg: advogado.rg || null,
+      email: advogado.email || null,
+      telefone_whatsapp: advogado.telefoneWhatsapp || null,
+      endereco_profissional: advogado.enderecoProfissional || null,
+      cep_profissional: advogado.cepProfissional || null,
+      cidade_profissional: advogado.cidadeProfissional || null,
+      observacoes: advogado.observacoes || null,
+    };
+
+    const request$ =
+      advogado.id > 0
+        ? this.http.put<AdvogadoApi>(`${this.base}/${advogado.id}`, comum)
+        : this.http.post<AdvogadoApi>(this.base, {
+            ...comum,
+            nome: advogado.nome,
+            cpf: advogado.cpf || null,
+          });
+
+    return request$.pipe(
+      tap((salvo) =>
+        this._advogados.update((advogados) =>
+          advogados.some((item) => item.id === salvo.id)
+            ? advogados.map((item) => (item.id === salvo.id ? salvo : item))
+            : [salvo, ...advogados],
+        ),
+      ),
+    );
+  }
+
+  /** Ativa/inativa via `PATCH /advogados/{id}/status` (corpo `{ ativo }`) e substitui o item na lista. */
+  alterarStatus(id: number, ativo: boolean): Observable<AdvogadoApi> {
+    return this.http.patch<AdvogadoApi>(`${this.base}/${id}/status`, { ativo }).pipe(
+      tap((atualizado) =>
+        this._advogados.update((advogados) =>
+          advogados.map((advogado) => (advogado.id === atualizado.id ? atualizado : advogado)),
+        ),
+      ),
+    );
   }
 
   /**

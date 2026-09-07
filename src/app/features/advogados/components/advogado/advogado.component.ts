@@ -7,13 +7,12 @@ import {
   computed,
   inject,
   signal,
+  viewChild,
 } from '@angular/core';
 import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
 import { EMPTY, catchError, switchMap } from 'rxjs';
 
-import { BadgeComponent } from '../../../../shared/components/badge/badge.component';
-import { CardComponent } from '../../../../shared/components/card/card.component';
-import { PanelLayoutSwitcherComponent } from '../../../../shared/components/panel-layout-switcher/panel-layout-switcher.component';
+import { ButtonComponent } from '../../../../shared/components/button/button.component';
 import { DataTableComponent } from '../../../../shared/components/table/data-table.component';
 import { TableColumn } from '../../../../shared/components/table/table-column.model';
 import { TablePagination, TablePinAction } from '../../../../shared/components/table/table.model';
@@ -21,27 +20,18 @@ import { PanelShellController } from '../../../../shared/panel-shell/panel-shell
 import { maskCpf } from '../../../../core/auth/cpf';
 import { AdvogadoApi } from '../../services/advogado-api.model';
 import { AdvogadoListQuery, AdvogadoStore } from '../../services/advogado-store';
-
-const ESTADO_CIVIL_LABELS: Record<string, string> = {
-  SOLTEIRO: 'Solteiro(a)',
-  CASADO: 'Casado(a)',
-  DIVORCIADO: 'Divorciado(a)',
-  VIUVO: 'Viúvo(a)',
-  UNIAO_ESTAVEL: 'União estável',
-};
+import { AdvogadoFormComponent } from '../advogado-form/advogado-form.component';
 
 /**
- * Tela de Advogados — mesmo conceito de "Clientes" (tabela + painel lateral posicionável), mas
- * só leitura por enquanto (o backend já suporta CRUD completo — ver `AdvogadoController` — mas
- * o front ainda não tem formulário de criar/editar). Por isso não há `app-client-form`
- * equivalente aqui, só um painel de detalhes — mas a posição do painel
- * (esquerda/direita/abaixo/diálogo), o redimensionamento e o mostrar/ocultar são os mesmos de
- * Clientes, via `PanelShellController` (ver o JSDoc dele).
+ * Tela de Advogados — mesmo conceito de "Clientes": tabela + painel lateral posicionável, e o
+ * painel é um formulário de criar/editar (`app-advogado-form`). "Novo" abre o painel limpo;
+ * clicar numa linha abre o advogado em edição. Posição do painel, redimensionamento e
+ * mostrar/ocultar vêm do `PanelShellController` (ver o JSDoc dele).
  */
 @Component({
   selector: 'app-advogado',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [DataTableComponent, CardComponent, BadgeComponent, PanelLayoutSwitcherComponent],
+  imports: [DataTableComponent, ButtonComponent, AdvogadoFormComponent],
   templateUrl: './advogado.component.html',
   styleUrl: './advogado.component.scss',
 })
@@ -50,16 +40,17 @@ export class AdvogadoComponent {
   private readonly destroyRef = inject(DestroyRef);
   private readonly store = inject(AdvogadoStore);
 
+  private readonly form = viewChild(AdvogadoFormComponent);
+
   protected readonly panelShell = new PanelShellController(this.document, {
     storagePrefix: 'hub-juridico.advogados',
     larguraPadrao: 380,
   });
 
-  protected readonly selected = signal<AdvogadoApi | null>(null);
+  /** Id do advogado aberto no painel; `null` = cadastro novo. */
+  protected readonly selectedId = signal<number | null>(null);
   protected readonly loading = signal(false);
   protected readonly loadError = signal(false);
-  /** Trava o painel no advogado atual — clicar noutra linha não troca (mesmo padrão de Clientes). */
-  protected readonly locked = signal(false);
 
   private readonly page = signal(0);
   private readonly reloadTick = signal(0);
@@ -101,7 +92,7 @@ export class AdvogadoComponent {
   ];
 
   protected readonly advogadoRowClass = (row: AdvogadoApi): Record<string, boolean> => ({
-    'is-selected': this.selected()?.id === row.id,
+    'is-selected': this.selectedId() === row.id,
     'is-favorite': row.favorito,
     'is-inactive': !row.ativo,
   });
@@ -171,18 +162,7 @@ export class AdvogadoComponent {
 
   protected toggleFavorito(row: AdvogadoApi, event: MouseEvent): void {
     event.stopPropagation();
-    const desejado = this.store.alternarFavorito(row.id);
-    if (desejado !== null && this.selected()?.id === row.id) {
-      this.selected.set({ ...row, favorito: desejado });
-    }
-  }
-
-  protected estadoCivilLabel(valor: unknown): string {
-    return ESTADO_CIVIL_LABELS[String(valor ?? '')] ?? '-';
-  }
-
-  protected cpfLabel(valor: unknown): string {
-    return valor ? maskCpf(String(valor)) : '-';
+    this.store.alternarFavorito(row.id);
   }
 
   protected reloadList(): void {
@@ -190,26 +170,39 @@ export class AdvogadoComponent {
     this.reloadTick.update((tick) => tick + 1);
   }
 
-  protected selectAdvogado(row: AdvogadoApi): void {
-    const atual = this.selected();
-    if (this.locked() && atual !== null && atual.id !== row.id) {
-      return;
-    }
-    this.selected.set(row);
+  private refreshList(): void {
+    this.reloadTick.update((tick) => tick + 1);
+  }
+
+  /** Botão "Novo" — abre o painel limpo pra cadastrar (mesmo papel de `clients.newRecord`). */
+  protected novoAdvogado(): void {
+    this.selectedId.set(null);
     this.panelShell.setPanelVisible(true);
   }
 
-  protected togglePanelLock(): void {
-    this.locked.update((locked) => !locked);
+  protected selectAdvogado(row: AdvogadoApi): void {
+    const form = this.form();
+    if (form?.locked() && this.selectedId() !== row.id) {
+      form.notifyLockedSelection();
+      return;
+    }
+    this.selectedId.set(row.id);
+    this.panelShell.setPanelVisible(true);
   }
 
-  /** Em modo diálogo, "fechar" também esconde o painel — senão fica um diálogo vazio flutuando. */
-  protected clearSelection(): void {
-    this.selected.set(null);
-    this.locked.set(false);
-    if (this.panelShell.layoutPainel() === 'dialog') {
-      this.panelShell.setPanelVisible(false);
-    }
+  protected onSaved(advogado: AdvogadoApi): void {
+    this.selectedId.set(advogado.id);
+    this.refreshList();
+  }
+
+  protected onStatusChanged(advogado: AdvogadoApi): void {
+    this.selectedId.set(advogado.id);
+    this.refreshList();
+  }
+
+  protected onCleared(): void {
+    this.selectedId.set(null);
+    this.refreshList();
   }
 
   /** No modo diálogo, Esc esconde o painel (mantém o advogado selecionado). */

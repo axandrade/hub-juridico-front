@@ -15,93 +15,24 @@
   }
 
   <div class="advogados-panel-slot">
-    <app-card title="Detalhes do advogado" [showEdit]="false" [showClose]="true" (close)="clearSelection()">
-      <div card-actions class="advogados-card-actions">
-        <button
-          type="button"
-          class="advogados-lock-btn"
-          [class.is-active]="locked()"
-          [disabled]="!selected()"
-          title="Travar painel no advogado selecionado"
-          aria-label="Travar painel no advogado selecionado"
-          [attr.aria-pressed]="locked()"
-          (click)="togglePanelLock()"
-        >
-          <i class="fa-solid fa-lock" aria-hidden="true"></i>
-        </button>
-        <app-panel-layout-switcher
-          [layoutPainel]="panelShell.layoutPainel()"
-          (layoutPainelChange)="panelShell.setLayoutPainel($event)"
-        />
-      </div>
-
-      @if (selected(); as advogado) {
-        <dl class="advogado-details">
-          <div class="advogado-details__item">
-            <dt>Nome</dt>
-            <dd>{{ advogado['nome'] || '-' }}</dd>
-          </div>
-          <div class="advogado-details__item">
-            <dt>Status</dt>
-            <dd>
-              <app-badge [tone]="advogado['ativo'] ? 'success' : 'neutral'" [dot]="true">
-                {{ advogado['ativo'] ? 'Ativo' : 'Inativo' }}
-              </app-badge>
-            </dd>
-          </div>
-          <div class="advogado-details__item">
-            <dt>OAB</dt>
-            <dd>{{ advogado['oab'] || '-' }}</dd>
-          </div>
-          <div class="advogado-details__item">
-            <dt>CPF</dt>
-            <dd>{{ cpfLabel(advogado['cpf']) }}</dd>
-          </div>
-          <div class="advogado-details__item">
-            <dt>RG</dt>
-            <dd>{{ advogado['rg'] || '-' }}</dd>
-          </div>
-          <div class="advogado-details__item">
-            <dt>Nacionalidade</dt>
-            <dd>{{ advogado['nacionalidade'] || '-' }}</dd>
-          </div>
-          <div class="advogado-details__item">
-            <dt>Estado civil</dt>
-            <dd>{{ estadoCivilLabel(advogado['estado_civil']) }}</dd>
-          </div>
-          <div class="advogado-details__item">
-            <dt>Profissão</dt>
-            <dd>{{ advogado['profissao'] || '-' }}</dd>
-          </div>
-          <div class="advogado-details__item">
-            <dt>E-mail</dt>
-            <dd>{{ advogado['email'] || '-' }}</dd>
-          </div>
-          <div class="advogado-details__item">
-            <dt>Telefone/WhatsApp</dt>
-            <dd>{{ advogado['telefone_whatsapp'] || '-' }}</dd>
-          </div>
-          <div class="advogado-details__item">
-            <dt>Cidade</dt>
-            <dd>{{ advogado['cidade_profissional'] || '-' }}</dd>
-          </div>
-          <div class="advogado-details__item">
-            <dt>CEP</dt>
-            <dd>{{ advogado['cep_profissional'] || '-' }}</dd>
-          </div>
-          <div class="advogado-details__item advogado-details__item--full">
-            <dt>Endereço profissional</dt>
-            <dd>{{ advogado['endereco_profissional'] || '-' }}</dd>
-          </div>
-          <div class="advogado-details__item advogado-details__item--full">
-            <dt>Observações</dt>
-            <dd>{{ advogado['observacoes'] || '-' }}</dd>
-          </div>
-        </dl>
-      } @else {
-        <p class="advogado-details__empty">Selecione um advogado na tabela para ver os detalhes.</p>
-      }
-    </app-card>
+    @if (panelShell.layoutPainel() === 'dialog' && panelShell.panelVisible()) {
+      <button
+        type="button"
+        class="advogados-panel-slot__close"
+        aria-label="Fechar painel"
+        (click)="panelShell.setPanelVisible(false)"
+      >
+        <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+      </button>
+    }
+    <app-advogado-form
+      [advogadoId]="selectedId()"
+      [layoutPainel]="panelShell.layoutPainel()"
+      (layoutPainelChange)="panelShell.setLayoutPainel($event)"
+      (saved)="onSaved($event)"
+      (statusChanged)="onStatusChanged($event)"
+      (cleared)="onCleared()"
+    />
   </div>
 
   @if (panelShell.panelVisible() && panelShell.layoutPainel() !== 'dialog') {
@@ -119,6 +50,14 @@
     <div class="advogados-header">
       <div class="advogados-header__title">
         <h1>Advogados</h1>
+
+        <app-button
+          variant="primary"
+          size="sm"
+          icon="fa-solid fa-user-plus"
+          label="Novo"
+          (clicked)="novoAdvogado()"
+        />
 
         <label class="advogados-toggle-inativos">
           <input

@@ -1,0 +1,195 @@
+<section class="advogado-panel" aria-label="Cadastro de advogado">
+  <header class="advogado-panel__header">
+    <div>
+      <span>Painel</span>
+      <h2>{{ panelTitle() || 'Novo advogado' }}</h2>
+      @if (isPersisted()) {
+        <small>{{ isInactive() ? 'Inativo' : 'Ativo' }} · Nome e CPF não são editáveis</small>
+      }
+    </div>
+
+    <div class="advogado-panel__tools" aria-label="Ferramentas do painel">
+      <button
+        type="button"
+        class="advogado-icon-button"
+        [class.is-active]="favorite()"
+        title="Configurar favorito"
+        aria-label="Configurar favorito"
+        (click)="toggleFavorite()"
+      >
+        <i class="fa-solid fa-star" aria-hidden="true"></i>
+      </button>
+      <button
+        type="button"
+        class="advogado-icon-button"
+        [class.is-active]="locked()"
+        [disabled]="!isPersisted()"
+        title="Travar painel"
+        aria-label="Travar painel"
+        (click)="togglePanelLock()"
+      >
+        <i class="fa-solid fa-lock" aria-hidden="true"></i>
+      </button>
+
+      <app-panel-layout-switcher
+        [layoutPainel]="layoutPainel()"
+        (layoutPainelChange)="escolherLayout($event)"
+      />
+    </div>
+  </header>
+
+  <form class="advogado-form" [formGroup]="form" (submit)="save($event)">
+    <div class="advogado-form__section">
+      <div class="advogado-form__row">
+        <label class="advogado-field">
+          <span>Nome</span>
+          <input type="text" formControlName="nome" />
+        </label>
+        <label class="advogado-field">
+          <span>CPF</span>
+          <input type="text" appCpfMask formControlName="cpf" />
+        </label>
+      </div>
+
+      <div class="advogado-form__row">
+        <label class="advogado-field">
+          <span>RG</span>
+          <input type="text" formControlName="rg" />
+        </label>
+        <label class="advogado-field">
+          <span>OAB</span>
+          <input type="text" formControlName="oab" />
+        </label>
+      </div>
+
+      <div class="advogado-form__row">
+        <label class="advogado-field">
+          <span>Estado civil</span>
+          <select formControlName="estadoCivil">
+            <option value="">Selecione</option>
+            @for (opcao of estadosCivis; track opcao) {
+              <option [value]="opcao">{{ estadoCivilLabels[opcao] }}</option>
+            }
+          </select>
+        </label>
+        <label class="advogado-field">
+          <span>Nacionalidade</span>
+          <input type="text" formControlName="nacionalidade" />
+        </label>
+      </div>
+
+      <div class="advogado-form__row">
+        <label class="advogado-field">
+          <span>Profissão</span>
+          <input type="text" formControlName="profissao" />
+        </label>
+        <label class="advogado-field">
+          <span>E-mail</span>
+          <input type="email" formControlName="email" />
+        </label>
+      </div>
+
+      <div class="advogado-form__row">
+        <label class="advogado-field">
+          <span>Telefone / WhatsApp</span>
+          <input type="tel" formControlName="telefoneWhatsapp" />
+        </label>
+        <label class="advogado-field">
+          <span>Cidade (profissional)</span>
+          <input type="text" formControlName="cidadeProfissional" />
+        </label>
+      </div>
+
+      <div class="advogado-form__row">
+        <label class="advogado-field">
+          <span>CEP (profissional)</span>
+          <input type="text" appCepMask formControlName="cepProfissional" />
+        </label>
+      </div>
+
+      <label class="advogado-field advogado-field--full">
+        <span>Endereço profissional</span>
+        <input type="text" formControlName="enderecoProfissional" />
+      </label>
+
+      <label class="advogado-field advogado-field--full">
+        <span>Observações</span>
+        <textarea rows="4" formControlName="observacoes"></textarea>
+      </label>
+    </div>
+
+    <footer class="advogado-panel__footer">
+      <span>
+        @switch (notice().key) {
+          @case ('saving') {
+            Salvando...
+          }
+          @case ('saved') {
+            Advogado salvo: {{ notice().subject }}.
+          }
+          @case ('saveError') {
+            Não foi possível salvar: {{ notice().subject }}
+          }
+          @case ('requiredFields') {
+            Informe ao menos o nome (e um e-mail/CPF válidos, se preenchidos).
+          }
+          @case ('confirmInactivate') {
+            Confirme para inativar {{ notice().subject }}.
+          }
+          @case ('statusChanged') {
+            Advogado {{ notice().subject }}.
+          }
+          @case ('statusError') {
+            Não foi possível alterar o status: {{ notice().subject }}
+          }
+          @case ('panelCleared') {
+            Painel limpo.
+          }
+          @case ('panelLockedSelection') {
+            Painel travado: destrave para carregar outro advogado.
+          }
+          @case ('favoriteAdded') {
+            {{ notice().subject }} marcado como favorito.
+          }
+          @case ('favoriteRemoved') {
+            {{ notice().subject }} removido dos favoritos.
+          }
+        }
+      </span>
+      <div>
+        <app-button
+          variant="tertiary"
+          size="sm"
+          icon="fa-solid fa-eraser"
+          label="Limpar painel"
+          (clicked)="clearPanel()"
+        />
+        @if (isPersisted()) {
+          <app-button
+            variant="secondary"
+            size="sm"
+            [icon]="isInactive() ? 'fa-solid fa-rotate-left' : 'fa-solid fa-ban'"
+            [label]="isInactive() ? 'Reativar' : 'Inativar'"
+            (clicked)="requestStatusChange()"
+          />
+        }
+        @if (notice().key === 'confirmInactivate') {
+          <app-button
+            variant="secondary"
+            size="sm"
+            icon="fa-solid fa-check"
+            label="Confirmar"
+            (clicked)="confirmInactivate()"
+          />
+        }
+        <app-button
+          nativeType="submit"
+          variant="primary"
+          size="sm"
+          icon="fa-solid fa-floppy-disk"
+          label="Salvar"
+        />
+      </div>
+    </footer>
+  </form>
+</section>

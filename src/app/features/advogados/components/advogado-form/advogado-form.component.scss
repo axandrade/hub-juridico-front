@@ -1,0 +1,206 @@
+@use 'variables' as *;
+@use 'mixins' as *;
+
+:host {
+  display: block;
+  min-width: 0;
+}
+
+.advogado-panel {
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100vh - 132px);
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid $color-border;
+  border-radius: $border-radius-md;
+  background-color: $color-surface;
+  box-shadow: $shadow-sm;
+}
+
+.advogado-panel__header {
+  @include flex-between;
+  align-items: flex-start;
+  gap: $spacing-sm;
+  padding: $spacing-md;
+  border-bottom: 1px solid rgba($color-border, 0.75);
+
+  > div {
+    min-width: 0;
+  }
+
+  span {
+    color: $color-text-secondary;
+    font-size: $font-size-xs;
+    font-weight: $font-weight-bold;
+    text-transform: uppercase;
+  }
+
+  h2 {
+    @include heading-accent;
+    margin: $spacing-xs 0;
+    font-size: $font-size-xl;
+    line-height: 1.2;
+  }
+
+  small {
+    display: block;
+    max-width: 270px;
+    color: $color-text-muted;
+    font-size: $font-size-xs;
+    line-height: 1.35;
+  }
+}
+
+.advogado-panel__tools,
+.advogado-panel__footer > div {
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+}
+
+.advogado-panel__tools {
+  flex-wrap: nowrap;
+  flex-shrink: 0;
+  gap: 4px;
+}
+
+.advogado-icon-button {
+  @include flex-center;
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  padding: 0;
+  border: 1px solid $color-border;
+  border-radius: $border-radius-sm;
+  background-color: $color-neutral-light;
+  color: $color-text-secondary;
+  cursor: pointer;
+  font: inherit;
+  transition:
+    background-color $transition-fast,
+    border-color $transition-fast,
+    color $transition-fast;
+
+  &:hover,
+  &.is-active {
+    border-color: $color-primary-light;
+    background-color: rgba($color-primary-pale, 0.55);
+    color: $color-primary;
+  }
+
+  &.is-active {
+    color: $color-warning;
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.4;
+
+    &:hover {
+      border-color: $color-border;
+      background-color: $color-neutral-light;
+      color: $color-text-secondary;
+    }
+  }
+}
+
+.advogado-form {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  flex-direction: column;
+}
+
+.advogado-form__section {
+  @include thin-scrollbar;
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  flex-direction: column;
+  gap: $spacing-sm;
+  padding: $spacing-md;
+  overflow: auto;
+}
+
+.advogado-form__row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: $spacing-sm;
+}
+
+.advogado-field {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: $spacing-xs;
+  color: $color-text-secondary;
+  font-size: $font-size-xs;
+  font-weight: $font-weight-medium;
+}
+
+.advogado-field--full {
+  grid-column: 1 / -1;
+}
+
+.advogado-form input,
+.advogado-form select,
+.advogado-form textarea {
+  width: 100%;
+  min-height: 36px;
+  border: 1px solid $color-border;
+  border-radius: $border-radius-sm;
+  background-color: $color-neutral-light;
+  color: $color-text-primary;
+  font: inherit;
+  outline: none;
+  padding: $spacing-xs $spacing-sm;
+  transition:
+    border-color $transition-fast,
+    box-shadow $transition-fast;
+
+  &:focus {
+    border-color: $color-primary-light;
+    box-shadow: 0 0 0 3px rgba($rouge-light, 0.16);
+  }
+
+  &:disabled {
+    background-color: rgba($color-primary-pale, 0.2);
+    color: $color-text-muted;
+    cursor: not-allowed;
+  }
+}
+
+.advogado-form textarea {
+  resize: vertical;
+}
+
+.advogado-panel__footer {
+  @include flex-between;
+  gap: $spacing-md;
+  padding: $spacing-sm $spacing-md;
+  border-top: 1px solid rgba($color-border, 0.75);
+
+  > span {
+    min-width: 0;
+    color: $color-text-muted;
+    font-size: $font-size-xs;
+  }
+}
+
+@include respond-below($breakpoint-lg) {
+  .advogado-panel {
+    max-height: none;
+  }
+}
+
+@include respond-below($breakpoint-sm) {
+  .advogado-form__row {
+    grid-template-columns: 1fr;
+  }
+
+  .advogado-panel__footer {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}

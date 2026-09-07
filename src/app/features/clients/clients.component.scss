@@ -323,34 +323,47 @@
   }
 }
 
-// Chips de natureza (Pessoa física / jurídica) — filtro no servidor, fora do cabeçalho da tabela.
+// Filtro de natureza (Todos / Pessoa física / jurídica) — controle segmentado (abas), no servidor.
 .clients-natureza {
   display: flex;
-  gap: $spacing-xs;
   padding: $spacing-sm $spacing-md;
   border-bottom: 1px solid rgba($color-border, 0.7);
 
   button {
-    padding: 4px $spacing-md;
+    padding: 5px $spacing-md;
     border: 1px solid $color-border;
-    border-radius: 999px;
     background-color: $color-neutral-light;
     color: $color-text-secondary;
     cursor: pointer;
     font: inherit;
     font-size: $font-size-xs;
     font-weight: $font-weight-medium;
+    white-space: nowrap;
     transition:
       background-color $transition-fast,
-      border-color $transition-fast,
       color $transition-fast;
 
-    &:hover {
-      border-color: $color-primary-light;
+    & + button {
+      border-left: 0; // segmentos encostados, sem borda dupla
+    }
+
+    &:first-child {
+      border-top-left-radius: $border-radius-sm;
+      border-bottom-left-radius: $border-radius-sm;
+    }
+
+    &:last-child {
+      border-top-right-radius: $border-radius-sm;
+      border-bottom-right-radius: $border-radius-sm;
+    }
+
+    &:hover:not(.is-active) {
       color: $color-primary;
     }
 
     &.is-active {
+      position: relative;
+      z-index: 1; // a borda bordô cobre a do vizinho
       border-color: $color-primary;
       background-color: $color-primary;
       color: #fff;

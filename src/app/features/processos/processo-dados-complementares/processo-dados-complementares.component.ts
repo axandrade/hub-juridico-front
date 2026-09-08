@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component } from '@angular/core';
 
-import { ProcessoApi } from '../../services/processo-api.model';
+import { ProcessoApi } from '../services/processo-api.model';
 
 /**
  * Aba "Dados complementares" do painel de processo. Ainda **sem campos** — entram numa próxima

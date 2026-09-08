@@ -13,20 +13,20 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { ReactiveFormsModule } from '@angular/forms';
 import { map, startWith } from 'rxjs';
 
-import { ESTADOS_CIVIS } from '../../../../core/models';
-import { ButtonComponent } from '../../../../shared/components/button/button.component';
-import { PanelLayoutSwitcherComponent } from '../../../../shared/components/panel-layout-switcher/panel-layout-switcher.component';
-import { PAINEL_LAYOUT_PADRAO, PainelLayout } from '../../../../shared/models/panel-layout';
-import { CepMaskDirective } from '../../../../shared/directives/cep-mask.directive';
-import { CpfMaskDirective } from '../../../../shared/directives/cpf-mask.directive';
+import { ESTADOS_CIVIS } from '../../../core/models';
+import { ButtonComponent } from '../../../shared/components/button/button.component';
+import { PanelLayoutSwitcherComponent } from '../../../shared/components/panel-layout-switcher/panel-layout-switcher.component';
+import { PAINEL_LAYOUT_PADRAO, PainelLayout } from '../../../shared/models/panel-layout';
+import { CepMaskDirective } from '../../../shared/directives/cep-mask.directive';
+import { CpfMaskDirective } from '../../../shared/directives/cpf-mask.directive';
 import {
   AdvogadoForm,
   createAdvogadoForm,
   patchAdvogadoForm,
   readAdvogadoForm,
-} from '../../forms/advogado-form.factory';
-import { AdvogadoApi } from '../../services/advogado-api.model';
-import { AdvogadoService } from '../../services/advogado-service';
+} from '../forms/advogado-form.factory';
+import { AdvogadoApi } from '../services/advogado-api.model';
+import { AdvogadoService } from '../services/advogado-service';
 
 type NoticeKey =
   | 'idle'

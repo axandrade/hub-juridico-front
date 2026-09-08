@@ -4,6 +4,6 @@ export const ADVOGADOS_ROUTES: Routes = [
   {
     path: '',
     loadComponent: () =>
-      import('./components/advogado/advogado.component').then((m) => m.AdvogadoComponent),
+      import('./advogado.component').then((m) => m.AdvogadoComponent),
   },
 ];

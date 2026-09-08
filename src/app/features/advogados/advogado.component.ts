@@ -12,15 +12,15 @@ import {
 import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { EMPTY, catchError, debounceTime, distinctUntilChanged, skip, switchMap } from 'rxjs';
 
-import { ButtonComponent } from '../../../../shared/components/button/button.component';
-import { DataTableComponent } from '../../../../shared/components/table/data-table.component';
-import { TableColumn } from '../../../../shared/components/table/table-column.model';
-import { TablePagination, TablePinAction } from '../../../../shared/components/table/table.model';
-import { PanelShellController } from '../../../../shared/panel-shell/panel-shell.controller';
-import { maskCpf } from '../../../../core/auth/documentos-br';
-import { AdvogadoApi } from '../../services/advogado-api.model';
-import { AdvogadoListQuery, AdvogadoService } from '../../services/advogado-service';
-import { AdvogadoFormComponent } from '../advogado-form/advogado-form.component';
+import { ButtonComponent } from '../../shared/components/button/button.component';
+import { DataTableComponent } from '../../shared/components/table/data-table.component';
+import { TableColumn } from '../../shared/components/table/table-column.model';
+import { TablePagination, TablePinAction } from '../../shared/components/table/table.model';
+import { PanelShellController } from '../../shared/panel-shell/panel-shell.controller';
+import { maskCpf } from '../../core/auth/documentos-br';
+import { AdvogadoApi } from './services/advogado-api.model';
+import { AdvogadoListQuery, AdvogadoService } from './services/advogado-service';
+import { AdvogadoFormComponent } from './advogado-form/advogado-form.component';
 
 /**
  * Tela de Advogados — mesmo conceito de "Clientes": tabela + painel lateral posicionável, e o

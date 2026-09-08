@@ -253,10 +253,19 @@
             (aoExcluir)="excluirFase($event)"
           />
         </div>
-        <label class="processo-field">
+        <div class="processo-field">
           <span>Comarca / Cidade</span>
-          <input type="text" formControlName="cidade" />
-        </label>
+          <app-combobox
+            ariaLabel="Comarca / Cidade"
+            placeholder="Buscar cidade..."
+            emptyLabel="— Sem cidade —"
+            noResultsText="Nenhuma cidade encontrada"
+            [buscarPagina]="buscarCidades"
+            [value]="cidadeValor()"
+            [valueLabel]="cidadeLabel()"
+            (valueChange)="onCidadeChange($event)"
+          />
+        </div>
       </div>
       <div class="processo-form__row">
         <div class="processo-field">
@@ -267,8 +276,12 @@
             emptyLabel="—"
             [options]="ufs"
             [value]="uf()"
+            [disabled]="ufTravada()"
             (valueChange)="uf.set($event)"
           />
+          @if (ufTravada()) {
+            <small>Definida pela cidade selecionada.</small>
+          }
         </div>
       </div>
 

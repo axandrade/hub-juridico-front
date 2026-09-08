@@ -42,6 +42,7 @@ export interface ProcessoResumoApi {
   fase: string | null;
   uf: string | null;
   cidade: string | null;
+  cidade_id: number | null;
   data_distribuicao: string | null;
   ativo: boolean;
   atualizado_em: string | null;
@@ -72,6 +73,7 @@ export interface ProcessoApi {
   fase: string | null;
   uf: string | null;
   cidade: string | null;
+  cidade_id: number | null;
   observacoes_gerais: string | null;
 
   clientes_secundarios: ClienteSecundarioApi[];
@@ -105,7 +107,7 @@ export interface ProcessoWriteApi {
   procedimento: string | null;
   fase: string | null;
   uf: string | null;
-  cidade: string | null;
+  cidade_id: number | null;
   observacoes_gerais: string | null;
 
   clientes_secundarios: ClienteSecundarioApi[];

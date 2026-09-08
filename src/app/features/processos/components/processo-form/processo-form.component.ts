@@ -28,6 +28,7 @@ import {
   TipoProcesso,
 } from '../../services/processo-api.model';
 import { AcaoProcessoService } from '../../services/acao-processo.service';
+import { CidadeService } from '../../services/cidade-service';
 import { FaseProcessoService } from '../../services/fase-processo.service';
 import { NaturezaProcessoService } from '../../services/natureza-processo.service';
 import { PosicaoClienteService } from '../../services/posicao-cliente.service';
@@ -88,6 +89,7 @@ export class ProcessoFormComponent {
   private readonly acaoService = inject(AcaoProcessoService);
   private readonly naturezaService = inject(NaturezaProcessoService);
   private readonly faseService = inject(FaseProcessoService);
+  private readonly cidadeService = inject(CidadeService);
 
   /** Id do registro a editar; `null` = novo cadastro. */
   readonly processoId = input<number | null>(null);
@@ -107,6 +109,8 @@ export class ProcessoFormComponent {
   protected readonly tipoOpcoes = TIPOS_PROCESSO.map((t) => TIPO_PROCESSO_LABEL[t]);
   protected readonly buscarPessoas = this.processoService.buscarPessoas;
   protected readonly buscarAdvogados = this.processoService.buscarAdvogados;
+  /** Picker paginado de município (`cidades`) — valor = id, rótulo = "Nome — UF". */
+  protected readonly buscarCidades = this.cidadeService.buscarPagina;
   /** Catálogo de status — gerido pelo `<app-combobox>` (adicionar/editar/excluir). */
   protected readonly nomesDeStatus = computed(() => this.statusService.status().map((s) => s.nome));
   /** Catálogo de posição do cliente — mesmo esquema (adicionar/editar/excluir). */
@@ -143,6 +147,9 @@ export class ProcessoFormComponent {
   protected readonly clientePrincipalPosicaoNome = signal('');
   protected readonly contrarioPrincipalPosicaoNome = signal('');
   protected readonly uf = signal('');
+  /** Município escolhido no picker `cidades` (`null` = nenhum). Trava a UF e vira o snapshot no back. */
+  protected readonly cidadeId = signal<number | null>(null);
+  protected readonly cidadeLabel = signal('');
   protected readonly contrarioTipoDocumento = signal<TipoDocumento | ''>('');
   protected readonly clientePrincipalId = signal<number | null>(null);
   protected readonly clientePrincipalLabel = signal('');
@@ -155,6 +162,11 @@ export class ProcessoFormComponent {
   protected readonly advogadoResponsavelValor = computed(() =>
     this.advogadoResponsavelId() === null ? '' : String(this.advogadoResponsavelId()),
   );
+  protected readonly cidadeValor = computed(() =>
+    this.cidadeId() === null ? '' : String(this.cidadeId()),
+  );
+  /** Com município escolhido, a UF vem sempre dele — o combobox de UF fica travado. */
+  protected readonly ufTravada = computed(() => this.cidadeId() !== null);
   protected readonly tags = signal<string[]>([]);
   protected readonly orgaosProcessantes = signal<string[]>([]);
   protected readonly escritoriosAnteriores = signal<string[]>([]);
@@ -249,6 +261,21 @@ export class ProcessoFormComponent {
   protected onAdvogadoResponsavelChange(valor: string): void {
     this.advogadoResponsavelId.set(valor ? Number(valor) : null);
     this.advogadoResponsavelLabel.set('');
+  }
+
+  protected onCidadeChange(valor: string): void {
+    const id = valor ? Number(valor) : null;
+    this.cidadeId.set(id);
+    if (id === null) {
+      this.cidadeLabel.set('');
+      return;
+    }
+    this.cidadeService.resolver(id).subscribe((c) => {
+      if (c) {
+        this.cidadeLabel.set(`${c.nome} — ${c.uf}`);
+        this.uf.set(c.uf);
+      }
+    });
   }
 
   // --- catálogo "Status do processo": o `<app-combobox>` pede, aqui persiste (ver `StatusProcessoService`) ---
@@ -555,7 +582,7 @@ export class ProcessoFormComponent {
       procedimento: raw.procedimento,
       fase: this.faseNome(),
       uf: this.uf(),
-      cidade: raw.cidade,
+      cidadeId: this.cidadeId(),
       observacoesGerais: raw.observacoesGerais,
       tags: this.tags(),
       orgaosProcessantes: this.orgaosProcessantes(),
@@ -621,6 +648,8 @@ export class ProcessoFormComponent {
     this.clientePrincipalPosicaoNome.set('');
     this.contrarioPrincipalPosicaoNome.set('');
     this.uf.set('');
+    this.cidadeId.set(null);
+    this.cidadeLabel.set('');
     this.contrarioTipoDocumento.set('');
     this.clientePrincipalId.set(null);
     this.clientePrincipalLabel.set('');
@@ -651,6 +680,10 @@ export class ProcessoFormComponent {
     this.clientePrincipalPosicaoNome.set(p.cliente_principal_posicao ?? '');
     this.contrarioPrincipalPosicaoNome.set(p.contrario_principal_posicao ?? '');
     this.uf.set(p.uf ?? '');
+    this.cidadeId.set(p.cidade_id);
+    this.cidadeLabel.set(
+      p.cidade_id !== null ? `${p.cidade ?? ''} — ${p.uf ?? ''}` : '',
+    );
     this.contrarioTipoDocumento.set(p.contrario_principal_tipo_documento ?? '');
     this.tags.set([...p.tags]);
     this.orgaosProcessantes.set([...p.orgaos_processantes]);

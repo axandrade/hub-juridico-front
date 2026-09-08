@@ -50,7 +50,7 @@ export interface ProcessoEditavel {
   procedimento: string;
   fase: string;
   uf: string;
-  cidade: string;
+  cidadeId: number | null;
   observacoesGerais: string;
 
   tags: string[];
@@ -141,7 +141,7 @@ export class ProcessoService {
       procedimento: vazioParaNull(processo.procedimento),
       fase: vazioParaNull(processo.fase),
       uf: vazioParaNull(processo.uf),
-      cidade: vazioParaNull(processo.cidade),
+      cidade_id: processo.cidadeId,
       observacoes_gerais: vazioParaNull(processo.observacoesGerais),
       clientes_secundarios: processo.clientesSecundarios,
       partes_contrarias: processo.partesContrarias,
@@ -267,6 +267,7 @@ function resumoDe(p: ProcessoApi): ProcessoResumoApi {
     fase: p.fase,
     uf: p.uf,
     cidade: p.cidade,
+    cidade_id: p.cidade_id,
     data_distribuicao: p.data_distribuicao,
     ativo: p.ativo,
     atualizado_em: p.atualizado_em,

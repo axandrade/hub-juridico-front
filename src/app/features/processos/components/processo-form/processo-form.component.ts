@@ -15,7 +15,6 @@ import { ReactiveFormsModule } from '@angular/forms';
 import { map, startWith } from 'rxjs';
 
 import { maskNumeroCnj, numeroCnjCompleto } from '../../../../core/auth/documentos-br';
-import { BRAZILIAN_STATES } from '../../../../core/models';
 import { ButtonComponent } from '../../../../shared/components/button/button.component';
 import { ComboboxComponent } from '../../../../shared/components/combobox/combobox.component';
 import { PanelLayoutSwitcherComponent } from '../../../../shared/components/panel-layout-switcher/panel-layout-switcher.component';
@@ -103,7 +102,6 @@ export class ProcessoFormComponent {
   /** Lido pela página (via `viewChild`) para travar a troca de ficha. */
   readonly locked = signal(false);
 
-  protected readonly ufs = [...BRAZILIAN_STATES];
   protected readonly tiposDocumento = TIPOS_DOCUMENTO;
   /** Rótulos legíveis do tipo (o `<app-combobox>` estático mostra o texto que recebe). */
   protected readonly tipoOpcoes = TIPOS_PROCESSO.map((t) => TIPO_PROCESSO_LABEL[t]);
@@ -165,8 +163,6 @@ export class ProcessoFormComponent {
   protected readonly cidadeValor = computed(() =>
     this.cidadeId() === null ? '' : String(this.cidadeId()),
   );
-  /** Com município escolhido, a UF vem sempre dele — o combobox de UF fica travado. */
-  protected readonly ufTravada = computed(() => this.cidadeId() !== null);
   protected readonly tags = signal<string[]>([]);
   protected readonly orgaosProcessantes = signal<string[]>([]);
   protected readonly escritoriosAnteriores = signal<string[]>([]);

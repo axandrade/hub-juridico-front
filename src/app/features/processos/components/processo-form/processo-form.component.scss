@@ -153,6 +153,11 @@
   grid-column: 1 / -1;
 }
 
+// Cidade tem nome longo (+ " — UF") — dá mais largura pra ela e menos pra Fase.
+.processo-form__row--cidade {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.9fr);
+}
+
 .processo-form input,
 .processo-form textarea {
   width: 100%;

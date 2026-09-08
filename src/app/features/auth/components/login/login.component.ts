@@ -12,7 +12,7 @@ import { finalize } from 'rxjs';
 
 import { APP_INFO, ROUTES } from '../../../../core/constants/app-constants';
 import { extractApiErrorMessage } from '../../../../core/auth/auth.models';
-import { cpfValidator } from '../../../../core/auth/cpf';
+import { cpfValidator } from '../../../../core/auth/documentos-br';
 import { AuthService } from '../../../../core/services/auth.service';
 import { CpfMaskDirective } from '../../../../shared/directives/cpf-mask.directive';
 

@@ -1,7 +1,7 @@
 import { Directive, ElementRef, inject } from '@angular/core';
 import { NgControl } from '@angular/forms';
 
-import { maskDocumento } from '../../core/auth/cpf';
+import { maskDocumento } from '../../core/auth/documentos-br';
 
 /**
  * Aplica a máscara combinada CPF/CNPJ enquanto o usuário digita (CPF até 11

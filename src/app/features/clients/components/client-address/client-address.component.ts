@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, inject, input } from '@angular/core';
 import { FormControl } from '@angular/forms';
 
-import { onlyDigits } from '../../../../core/auth/cpf';
+import { onlyDigits } from '../../../../core/auth/documentos-br';
 import { CepService } from '../../../../shared/services/cep.service';
 import { EnderecoGroup } from '../../forms/client-form.factory';
 import { ENDERECO_FIELDS } from '../../models/client-form.model';

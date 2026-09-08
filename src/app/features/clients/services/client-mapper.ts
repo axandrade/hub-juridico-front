@@ -1,4 +1,4 @@
-import { maskCnpj, maskCpf, maskDocumento, onlyDigits } from '../../../core/auth/cpf';
+import { maskCnpj, maskCpf, maskDocumento, onlyDigits } from '../../../core/auth/documentos-br';
 import {
   EstadoCivil,
   IPessoa,

@@ -17,7 +17,7 @@ import { DataTableComponent } from '../../../../shared/components/table/data-tab
 import { TableColumn } from '../../../../shared/components/table/table-column.model';
 import { TablePagination, TablePinAction } from '../../../../shared/components/table/table.model';
 import { PanelShellController } from '../../../../shared/panel-shell/panel-shell.controller';
-import { maskCpf } from '../../../../core/auth/cpf';
+import { maskCpf } from '../../../../core/auth/documentos-br';
 import { AdvogadoApi } from '../../services/advogado-api.model';
 import { AdvogadoListQuery, AdvogadoService } from '../../services/advogado-service';
 import { AdvogadoFormComponent } from '../advogado-form/advogado-form.component';

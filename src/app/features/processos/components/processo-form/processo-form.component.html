@@ -52,8 +52,18 @@
           />
         </div>
         <label class="processo-field">
-          <span>Número CNJ</span>
-          <input type="text" formControlName="numeroCnj" />
+          <span>{{ ehJudicial() ? 'Número CNJ' : 'Número do processo' }}</span>
+          @if (ehJudicial()) {
+            <input
+              type="text"
+              formControlName="numeroCnj"
+              appCnjMask
+              inputmode="numeric"
+              placeholder="0000000-00.0000.0.00.0000"
+            />
+          } @else {
+            <input type="text" formControlName="numeroCnj" maxlength="25" />
+          }
         </label>
       </div>
 
@@ -296,6 +306,9 @@
           }
           @case ('requiredFields') {
             Revise os campos destacados.
+          }
+          @case ('cnjInvalido') {
+            Informe o número CNJ completo (0000000-00.0000.0.00.0000).
           }
           @case ('confirmInactivate') {
             Confirme para inativar {{ notice().subject }}.

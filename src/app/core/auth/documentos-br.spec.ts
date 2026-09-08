@@ -1,8 +1,15 @@
 import { FormControl } from '@angular/forms';
 
-import { cpfValidator, isValidCpf, maskCpf, onlyDigits } from './cpf';
+import {
+  cpfValidator,
+  isValidCpf,
+  maskCpf,
+  maskNumeroCnj,
+  numeroCnjCompleto,
+  onlyDigits,
+} from './documentos-br';
 
-describe('cpf helpers', () => {
+describe('documentos-br helpers', () => {
   it('onlyDigits remove máscara', () => {
     expect(onlyDigits('017.869.783-42')).toBe('01786978342');
     expect(onlyDigits(null)).toBe('');
@@ -28,5 +35,25 @@ describe('cpf helpers', () => {
     expect(cpfValidator(new FormControl(''))).toBeNull();
     expect(cpfValidator(new FormControl('017.869.783-42'))).toBeNull();
     expect(cpfValidator(new FormControl('000.000.000-00'))).toEqual({ cpf: true });
+  });
+});
+
+describe('número CNJ helpers', () => {
+  it('maskNumeroCnj formata progressivamente', () => {
+    expect(maskNumeroCnj('')).toBe('');
+    expect(maskNumeroCnj('0801234')).toBe('0801234');
+    expect(maskNumeroCnj('080123456')).toBe('0801234-56');
+    expect(maskNumeroCnj('0801234562026')).toBe('0801234-56.2026');
+    expect(maskNumeroCnj('08012345620265070001')).toBe('0801234-56.2026.5.07.0001');
+    expect(maskNumeroCnj('08012345620265070001999')).toBe('0801234-56.2026.5.07.0001');
+    expect(maskNumeroCnj('0801234-56.2026.5.07.0001')).toBe('0801234-56.2026.5.07.0001');
+  });
+
+  it('numeroCnjCompleto exige 20 dígitos', () => {
+    expect(numeroCnjCompleto('0801234-56.2026.5.07.0001')).toBe(true);
+    expect(numeroCnjCompleto('08012345620265070001')).toBe(true);
+    expect(numeroCnjCompleto('0801234-56.2026.5.07.000')).toBe(false);
+    expect(numeroCnjCompleto('')).toBe(false);
+    expect(numeroCnjCompleto(null)).toBe(false);
   });
 });

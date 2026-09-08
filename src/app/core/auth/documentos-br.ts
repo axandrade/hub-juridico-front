@@ -1,3 +1,8 @@
+/**
+ * Máscaras e validações de campos brasileiros de formulário — CPF, CNPJ, documento
+ * (CPF/CNPJ), CEP e número CNJ de processo. `onlyDigits` é o utilitário base.
+ * Consumido pelas diretivas de máscara (`shared/directives`) e pelos validators dos forms.
+ */
 import { AbstractControl, ValidationErrors, ValidatorFn } from '@angular/forms';
 
 /** Remove tudo que não for dígito. */
@@ -40,6 +45,34 @@ export function maskCnpj(value: string | null | undefined): string {
   if (parts[3]) out += `/${parts[3]}`;
   if (parts[4]) out += `-${parts[4]}`;
   return out;
+}
+
+/**
+ * Aplica a máscara do número CNJ `0000000-00.0000.0.00.0000` progressivamente (20 dígitos).
+ * Só faz sentido em processo judicial — os outros tipos usam input livre.
+ */
+export function maskNumeroCnj(value: string | null | undefined): string {
+  const d = onlyDigits(value).slice(0, 20);
+  const seg = [
+    d.slice(0, 7),
+    d.slice(7, 9),
+    d.slice(9, 13),
+    d.slice(13, 14),
+    d.slice(14, 16),
+    d.slice(16, 20),
+  ];
+  let out = seg[0];
+  if (seg[1]) out += `-${seg[1]}`;
+  if (seg[2]) out += `.${seg[2]}`;
+  if (seg[3]) out += `.${seg[3]}`;
+  if (seg[4]) out += `.${seg[4]}`;
+  if (seg[5]) out += `.${seg[5]}`;
+  return out;
+}
+
+/** `true` quando o valor tem os 20 dígitos do número CNJ (com ou sem máscara). */
+export function numeroCnjCompleto(value: string | null | undefined): boolean {
+  return onlyDigits(value).length === 20;
 }
 
 /** Aplica a máscara `00000-000` progressivamente. */

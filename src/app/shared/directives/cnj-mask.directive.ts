@@ -1,28 +1,29 @@
 import { Directive, ElementRef, inject } from '@angular/core';
 import { NgControl } from '@angular/forms';
 
-import { maskCep } from '../../core/auth/documentos-br';
+import { maskNumeroCnj } from '../../core/auth/documentos-br';
 
 /**
- * Aplica a máscara `00000-000` enquanto o usuário digita, mantendo o
- * `FormControl` sincronizado com o valor mascarado.
- * Uso: `<input appCepMask formControlName="cep" inputmode="numeric" />`.
+ * Aplica a máscara do número CNJ `0000000-00.0000.0.00.0000` enquanto o usuário
+ * digita, mantendo o `FormControl` sincronizado com o valor mascarado. Use só no
+ * campo de número de processo judicial — os demais tipos usam input livre.
+ * Uso: `<input appCnjMask formControlName="numeroCnj" inputmode="numeric" />`.
  */
 @Directive({
-  selector: 'input[appCepMask]',
+  selector: 'input[appCnjMask]',
   host: {
     '(input)': 'onInput()',
     inputmode: 'numeric',
-    maxlength: '9',
+    maxlength: '25',
   },
 })
-export class CepMaskDirective {
+export class CnjMaskDirective {
   private readonly el = inject<ElementRef<HTMLInputElement>>(ElementRef);
   private readonly ngControl = inject(NgControl, { optional: true, self: true });
 
   protected onInput(): void {
     const input = this.el.nativeElement;
-    const masked = maskCep(input.value);
+    const masked = maskNumeroCnj(input.value);
     if (masked === input.value) {
       return;
     }

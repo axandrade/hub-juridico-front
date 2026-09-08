@@ -1,6 +1,6 @@
 import { AbstractControl, FormArray, FormControl, FormGroup, Validators } from '@angular/forms';
 
-import { documentoValidator } from '../../../core/auth/cpf';
+import { documentoValidator } from '../../../core/auth/documentos-br';
 import {
   ModalidadeCliente,
   StatusCliente,

@@ -12,7 +12,7 @@ import {
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormControl } from '@angular/forms';
 
-import { onlyDigits } from '../../../../core/auth/cpf';
+import { onlyDigits } from '../../../../core/auth/documentos-br';
 import { IRepresentanteLegal } from '../../../../core/models';
 import { ButtonComponent } from '../../../../shared/components/button/button.component';
 import { ModalComponent } from '../../../../shared/components/modal/modal.component';

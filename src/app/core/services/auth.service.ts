@@ -14,7 +14,7 @@ import {
 
 import { environment } from '../../../environments/environment';
 import { AuthTokensResponse, AuthUser, toTokenPair } from '../auth/auth.models';
-import { onlyDigits } from '../auth/cpf';
+import { onlyDigits } from '../auth/documentos-br';
 import { TokenStore } from '../auth/token-store';
 
 /**

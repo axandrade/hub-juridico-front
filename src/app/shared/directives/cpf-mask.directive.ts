@@ -1,7 +1,7 @@
 import { Directive, ElementRef, inject } from '@angular/core';
 import { NgControl } from '@angular/forms';
 
-import { maskCpf } from '../../core/auth/cpf';
+import { maskCpf } from '../../core/auth/documentos-br';
 
 /**
  * Aplica a máscara `000.000.000-00` enquanto o usuário digita, mantendo o

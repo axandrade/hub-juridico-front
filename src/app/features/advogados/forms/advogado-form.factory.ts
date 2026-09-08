@@ -1,6 +1,6 @@
 import { FormControl, FormGroup, ValidatorFn, Validators } from '@angular/forms';
 
-import { cpfValidator } from '../../../core/auth/cpf';
+import { cpfValidator } from '../../../core/auth/documentos-br';
 import { EstadoCivil } from '../../../core/models';
 import { AdvogadoApi } from '../services/advogado-api.model';
 import { AdvogadoEditavel } from '../services/advogado-service';

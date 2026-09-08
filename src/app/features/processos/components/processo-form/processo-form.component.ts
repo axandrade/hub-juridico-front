@@ -14,10 +14,12 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { ReactiveFormsModule } from '@angular/forms';
 import { map, startWith } from 'rxjs';
 
+import { maskNumeroCnj, numeroCnjCompleto } from '../../../../core/auth/documentos-br';
 import { BRAZILIAN_STATES } from '../../../../core/models';
 import { ButtonComponent } from '../../../../shared/components/button/button.component';
 import { ComboboxComponent } from '../../../../shared/components/combobox/combobox.component';
 import { PanelLayoutSwitcherComponent } from '../../../../shared/components/panel-layout-switcher/panel-layout-switcher.component';
+import { CnjMaskDirective } from '../../../../shared/directives/cnj-mask.directive';
 import { PAINEL_LAYOUT_PADRAO, PainelLayout } from '../../../../shared/models/panel-layout';
 import {
   ProcessoApi,
@@ -40,6 +42,7 @@ type NoticeKey =
   | 'saved'
   | 'saveError'
   | 'requiredFields'
+  | 'cnjInvalido'
   | 'confirmInactivate'
   | 'statusChanged'
   | 'statusError'
@@ -65,7 +68,13 @@ const TIPOS_DOCUMENTO: TipoDocumento[] = ['CPF', 'CNPJ'];
 @Component({
   selector: 'app-processo-form',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ReactiveFormsModule, ButtonComponent, ComboboxComponent, PanelLayoutSwitcherComponent],
+  imports: [
+    ReactiveFormsModule,
+    ButtonComponent,
+    ComboboxComponent,
+    PanelLayoutSwitcherComponent,
+    CnjMaskDirective,
+  ],
   templateUrl: './processo-form.component.html',
   styleUrl: './processo-form.component.scss',
 })
@@ -110,6 +119,8 @@ export class ProcessoFormComponent {
 
   // Campos dirigidos por <app-combobox> / listas — fora do FormGroup.
   protected readonly tipo = signal<TipoProcesso>('JUDICIAL');
+  /** Só o judicial numera pelo padrão CNJ (máscara + 20 dígitos obrigatórios). */
+  protected readonly ehJudicial = computed(() => this.tipo() === 'JUDICIAL');
   protected readonly statusNome = signal('');
   protected readonly clientePrincipalPosicaoNome = signal('');
   protected readonly uf = signal('');
@@ -197,8 +208,14 @@ export class ProcessoFormComponent {
 
   protected onTipoChange(rotulo: string): void {
     const achado = TIPOS_PROCESSO.find((t) => TIPO_PROCESSO_LABEL[t] === rotulo);
-    if (achado) {
-      this.tipo.set(achado);
+    if (!achado) {
+      return;
+    }
+    this.tipo.set(achado);
+    // Ao virar judicial, formata o que já estava digitado; ao sair, mantém o texto como está.
+    if (achado === 'JUDICIAL') {
+      const numero = this.form.controls.numeroCnj;
+      numero.setValue(maskNumeroCnj(numero.value));
     }
   }
 
@@ -353,6 +370,12 @@ export class ProcessoFormComponent {
     if (this.form.invalid) {
       this.form.markAllAsTouched();
       this.notice.set({ key: 'requiredFields' });
+      return;
+    }
+
+    if (this.ehJudicial() && !numeroCnjCompleto(this.form.controls.numeroCnj.value)) {
+      this.form.controls.numeroCnj.markAsTouched();
+      this.notice.set({ key: 'cnjInvalido' });
       return;
     }
 

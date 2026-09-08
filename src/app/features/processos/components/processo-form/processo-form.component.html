@@ -38,335 +38,363 @@
     </div>
   </header>
 
+  <nav class="processo-panel__tabs" aria-label="Abas do painel">
+    @for (aba of abas; track aba) {
+      <button type="button" [class.is-active]="abaAtiva() === aba" (click)="trocarAba(aba)">
+        @switch (aba) {
+          @case ('gerais') {
+            Dados gerais
+          }
+          @case ('complementares') {
+            Dados complementares
+          }
+        }
+      </button>
+    }
+  </nav>
+
   <form class="processo-form" [formGroup]="form" (submit)="save($event)">
-    <div class="processo-form__section">
-      <div class="processo-form__row">
-        <div class="processo-field">
-          <span>Tipo</span>
-          <app-combobox
-            ariaLabel="Tipo do processo"
-            [pesquisavel]="false"
-            [options]="tipoOpcoes"
-            [value]="tipoRotulo()"
-            (valueChange)="onTipoChange($event)"
-          />
-        </div>
-        <div class="processo-field">
-          <span>{{ ehJudicial() ? 'Número CNJ' : 'Número do processo' }}</span>
-          <div class="processo-field__with-copy">
-            @if (ehJudicial()) {
-              <input
-                type="text"
-                formControlName="numeroCnj"
-                appCnjMask
-                inputmode="numeric"
-                placeholder="0000000-00.0000.0.00.0000"
-                [attr.aria-label]="'Número CNJ'"
+    @switch (abaAtiva()) {
+      @case ('gerais') {
+        <div class="processo-form__section">
+          <div class="processo-form__row">
+            <div class="processo-field">
+              <span>Tipo</span>
+              <app-combobox
+                ariaLabel="Tipo do processo"
+                [pesquisavel]="false"
+                [options]="tipoOpcoes"
+                [value]="tipoRotulo()"
+                (valueChange)="onTipoChange($event)"
               />
-            } @else {
-              <input
-                type="text"
-                formControlName="numeroCnj"
-                maxlength="25"
-                [attr.aria-label]="'Número do processo'"
-              />
-            }
-            <button
-              type="button"
-              class="processo-field__copy"
-              [class.is-active]="numeroCopiado()"
-              [disabled]="!numeroValue().trim()"
-              [title]="numeroCopiado() ? 'Copiado!' : 'Copiar número'"
-              aria-label="Copiar número"
-              (click)="copiarNumero()"
-            >
-              <i
-                class="fa-solid"
-                [class.fa-copy]="!numeroCopiado()"
-                [class.fa-check]="numeroCopiado()"
-                aria-hidden="true"
-              ></i>
-            </button>
+            </div>
+            <div class="processo-field">
+              <span>{{ ehJudicial() ? 'Número CNJ' : 'Número do processo' }}</span>
+              <div class="processo-field__with-copy">
+                @if (ehJudicial()) {
+                  <input
+                    type="text"
+                    formControlName="numeroCnj"
+                    appCnjMask
+                    inputmode="numeric"
+                    placeholder="0000000-00.0000.0.00.0000"
+                    [attr.aria-label]="'Número CNJ'"
+                  />
+                } @else {
+                  <input
+                    type="text"
+                    formControlName="numeroCnj"
+                    maxlength="25"
+                    [attr.aria-label]="'Número do processo'"
+                  />
+                }
+                <button
+                  type="button"
+                  class="processo-field__copy"
+                  [class.is-active]="numeroCopiado()"
+                  [disabled]="!numeroValue().trim()"
+                  [title]="numeroCopiado() ? 'Copiado!' : 'Copiar número'"
+                  aria-label="Copiar número"
+                  (click)="copiarNumero()"
+                >
+                  <i
+                    class="fa-solid"
+                    [class.fa-copy]="!numeroCopiado()"
+                    [class.fa-check]="numeroCopiado()"
+                    aria-hidden="true"
+                  ></i>
+                </button>
+              </div>
+            </div>
           </div>
-        </div>
-      </div>
 
-      <div class="processo-form__row">
-        <div class="processo-field">
-          <span>Status</span>
-          <app-combobox
-            ariaLabel="Status do processo"
-            placeholder="Buscar status..."
-            emptyLabel="— Sem status —"
-            noResultsText="Nenhum status encontrado"
-            itemNoun="status"
-            [options]="nomesDeStatus()"
-            [value]="statusNome()"
-            [adicionar]="true"
-            [editar]="true"
-            [excluir]="true"
-            (valueChange)="statusNome.set($event)"
-            (aoAdicionar)="criarStatus($event)"
-            (aoEditar)="renomearStatus($event)"
-            (aoExcluir)="excluirStatus($event)"
-          />
-        </div>
-        <label class="processo-field">
-          <span>Distribuição</span>
-          <input type="date" formControlName="dataDistribuicao" />
-        </label>
-      </div>
+          <div class="processo-form__row">
+            <div class="processo-field">
+              <span>Status</span>
+              <app-combobox
+                ariaLabel="Status do processo"
+                placeholder="Buscar status..."
+                emptyLabel="— Sem status —"
+                noResultsText="Nenhum status encontrado"
+                itemNoun="status"
+                [options]="nomesDeStatus()"
+                [value]="statusNome()"
+                [adicionar]="true"
+                [editar]="true"
+                [excluir]="true"
+                (valueChange)="statusNome.set($event)"
+                (aoAdicionar)="criarStatus($event)"
+                (aoEditar)="renomearStatus($event)"
+                (aoExcluir)="excluirStatus($event)"
+              />
+            </div>
+            <label class="processo-field">
+              <span>Distribuição</span>
+              <input type="date" formControlName="dataDistribuicao" />
+            </label>
+          </div>
 
-      <div class="processo-form__group-title">Cliente</div>
-      <div class="processo-form__row">
-        <div class="processo-field">
-          <span>Cliente principal</span>
-          <app-combobox
-            ariaLabel="Cliente principal"
-            placeholder="Buscar pessoa..."
-            emptyLabel="— Sem cliente —"
-            noResultsText="Nenhuma pessoa encontrada"
-            [buscarPagina]="buscarPessoas"
-            [value]="clientePrincipalValor()"
-            [valueLabel]="clientePrincipalLabel()"
-            (valueChange)="onClientePrincipalChange($event)"
-          />
-        </div>
-        <div class="processo-field">
-          <span>Posição do cliente</span>
-          <app-combobox
-            ariaLabel="Posição do cliente"
-            placeholder="Buscar posição..."
-            emptyLabel="— Sem posição —"
-            noResultsText="Nenhuma posição encontrada"
-            itemNoun="posição"
-            [options]="nomesDePosicao()"
-            [value]="clientePrincipalPosicaoNome()"
-            [adicionar]="true"
-            [editar]="true"
-            [excluir]="true"
-            (valueChange)="clientePrincipalPosicaoNome.set($event)"
-            (aoAdicionar)="criarPosicao($event, clientePrincipalPosicaoNome)"
-            (aoEditar)="renomearPosicao($event)"
-            (aoExcluir)="excluirPosicao($event)"
-          />
-        </div>
-      </div>
+          <div class="processo-form__group-title">Cliente</div>
+          <div class="processo-form__row">
+            <div class="processo-field">
+              <span>Cliente principal</span>
+              <app-combobox
+                ariaLabel="Cliente principal"
+                placeholder="Buscar pessoa..."
+                emptyLabel="— Sem cliente —"
+                noResultsText="Nenhuma pessoa encontrada"
+                [buscarPagina]="buscarPessoas"
+                [value]="clientePrincipalValor()"
+                [valueLabel]="clientePrincipalLabel()"
+                (valueChange)="onClientePrincipalChange($event)"
+              />
+            </div>
+            <div class="processo-field">
+              <span>Posição do cliente</span>
+              <app-combobox
+                ariaLabel="Posição do cliente"
+                placeholder="Buscar posição..."
+                emptyLabel="— Sem posição —"
+                noResultsText="Nenhuma posição encontrada"
+                itemNoun="posição"
+                [options]="nomesDePosicao()"
+                [value]="clientePrincipalPosicaoNome()"
+                [adicionar]="true"
+                [editar]="true"
+                [excluir]="true"
+                (valueChange)="clientePrincipalPosicaoNome.set($event)"
+                (aoAdicionar)="criarPosicao($event, clientePrincipalPosicaoNome)"
+                (aoEditar)="renomearPosicao($event)"
+                (aoExcluir)="excluirPosicao($event)"
+              />
+            </div>
+          </div>
 
-      <div class="processo-form__group-title">Parte contrária principal</div>
-      <div class="processo-form__row">
-        <label class="processo-field">
-          <span>Nome</span>
-          <input type="text" formControlName="contrarioPrincipalNome" />
-        </label>
-        <div class="processo-field">
-          <span>Posição</span>
-          <app-combobox
-            ariaLabel="Posição da parte contrária"
-            placeholder="Buscar posição..."
-            emptyLabel="— Sem posição —"
-            noResultsText="Nenhuma posição encontrada"
-            itemNoun="posição"
-            [options]="nomesDePosicao()"
-            [value]="contrarioPrincipalPosicaoNome()"
-            [adicionar]="true"
-            [editar]="true"
-            [excluir]="true"
-            (valueChange)="contrarioPrincipalPosicaoNome.set($event)"
-            (aoAdicionar)="criarPosicao($event, contrarioPrincipalPosicaoNome)"
-            (aoEditar)="renomearPosicao($event)"
-            (aoExcluir)="excluirPosicao($event)"
-          />
-        </div>
-      </div>
-      <div class="processo-form__row">
-        <label class="processo-field">
-          <span>Documento</span>
-          <input type="text" formControlName="contrarioPrincipalDocumento" />
-        </label>
-        <div class="processo-field">
-          <span>Tipo de documento</span>
-          <app-combobox
-            ariaLabel="Tipo de documento da parte contrária"
-            [pesquisavel]="false"
-            emptyLabel="—"
-            [options]="tiposDocumento"
-            [value]="contrarioTipoDocumento()"
-            (valueChange)="contrarioTipoDocumento.set($any($event))"
-          />
-        </div>
-      </div>
+          <div class="processo-form__group-title">Parte contrária principal</div>
+          <div class="processo-form__row">
+            <label class="processo-field">
+              <span>Nome</span>
+              <input type="text" formControlName="contrarioPrincipalNome" />
+            </label>
+            <div class="processo-field">
+              <span>Posição</span>
+              <app-combobox
+                ariaLabel="Posição da parte contrária"
+                placeholder="Buscar posição..."
+                emptyLabel="— Sem posição —"
+                noResultsText="Nenhuma posição encontrada"
+                itemNoun="posição"
+                [options]="nomesDePosicao()"
+                [value]="contrarioPrincipalPosicaoNome()"
+                [adicionar]="true"
+                [editar]="true"
+                [excluir]="true"
+                (valueChange)="contrarioPrincipalPosicaoNome.set($event)"
+                (aoAdicionar)="criarPosicao($event, contrarioPrincipalPosicaoNome)"
+                (aoEditar)="renomearPosicao($event)"
+                (aoExcluir)="excluirPosicao($event)"
+              />
+            </div>
+          </div>
+          <div class="processo-form__row">
+            <label class="processo-field">
+              <span>Documento</span>
+              <input type="text" formControlName="contrarioPrincipalDocumento" />
+            </label>
+            <div class="processo-field">
+              <span>Tipo de documento</span>
+              <app-combobox
+                ariaLabel="Tipo de documento da parte contrária"
+                [pesquisavel]="false"
+                emptyLabel="—"
+                [options]="tiposDocumento"
+                [value]="contrarioTipoDocumento()"
+                (valueChange)="contrarioTipoDocumento.set($any($event))"
+              />
+            </div>
+          </div>
 
-      <div class="processo-form__group-title">Tramitação</div>
-      <div class="processo-form__row">
-        <div class="processo-field">
-          <span>Advogado responsável</span>
-          <app-combobox
-            ariaLabel="Advogado responsável"
-            placeholder="Buscar advogado..."
-            emptyLabel="— Sem responsável —"
-            noResultsText="Nenhum advogado encontrado"
-            [buscarPagina]="buscarAdvogados"
-            [value]="advogadoResponsavelValor()"
-            [valueLabel]="advogadoResponsavelLabel()"
-            (valueChange)="onAdvogadoResponsavelChange($event)"
-          />
-        </div>
-        <div class="processo-field">
-          <span>Ação</span>
-          <app-combobox
-            ariaLabel="Ação do processo"
-            placeholder="Buscar ação..."
-            emptyLabel="— Sem ação —"
-            noResultsText="Nenhuma ação encontrada"
-            itemNoun="ação"
-            [options]="nomesDeAcao()"
-            [value]="acaoNome()"
-            [adicionar]="true"
-            [editar]="true"
-            [excluir]="true"
-            (valueChange)="acaoNome.set($event)"
-            (aoAdicionar)="criarAcao($event)"
-            (aoEditar)="renomearAcao($event)"
-            (aoExcluir)="excluirAcao($event)"
-          />
-        </div>
-      </div>
-      <div class="processo-form__row">
-        <div class="processo-field">
-          <span>Natureza</span>
-          <app-combobox
-            ariaLabel="Natureza do processo"
-            placeholder="Buscar natureza..."
-            emptyLabel="— Sem natureza —"
-            noResultsText="Nenhuma natureza encontrada"
-            itemNoun="natureza"
-            [options]="nomesDeNatureza()"
-            [value]="naturezaNome()"
-            [adicionar]="true"
-            [editar]="true"
-            [excluir]="true"
-            (valueChange)="naturezaNome.set($event)"
-            (aoAdicionar)="criarNatureza($event)"
-            (aoEditar)="renomearNatureza($event)"
-            (aoExcluir)="excluirNatureza($event)"
-          />
-        </div>
-        <label class="processo-field">
-          <span>Procedimento</span>
-          <input type="text" formControlName="procedimento" />
-        </label>
-      </div>
-      <div class="processo-form__row processo-form__row--stack">
-        <div class="processo-field">
-          <span>Fase</span>
-          <app-combobox
-            ariaLabel="Fase do processo"
-            placeholder="Buscar fase..."
-            emptyLabel="— Sem fase —"
-            noResultsText="Nenhuma fase encontrada"
-            itemNoun="fase"
-            [options]="nomesDeFase()"
-            [value]="faseNome()"
-            [adicionar]="true"
-            [editar]="true"
-            [excluir]="true"
-            (valueChange)="faseNome.set($event)"
-            (aoAdicionar)="criarFase($event)"
-            (aoEditar)="renomearFase($event)"
-            (aoExcluir)="excluirFase($event)"
-          />
-        </div>
-        <div class="processo-field">
-          <span>Comarca / Cidade</span>
-          <app-combobox
-            ariaLabel="Comarca / Cidade"
-            placeholder="Buscar cidade..."
-            emptyLabel="— Sem cidade —"
-            noResultsText="Nenhuma cidade encontrada"
-            [buscarPagina]="buscarCidades"
-            [value]="cidadeValor()"
-            [valueLabel]="cidadeLabel()"
-            (valueChange)="onCidadeChange($event)"
-          />
-        </div>
-      </div>
+          <div class="processo-form__group-title">Tramitação</div>
+          <div class="processo-form__row">
+            <div class="processo-field">
+              <span>Advogado responsável</span>
+              <app-combobox
+                ariaLabel="Advogado responsável"
+                placeholder="Buscar advogado..."
+                emptyLabel="— Sem responsável —"
+                noResultsText="Nenhum advogado encontrado"
+                [buscarPagina]="buscarAdvogados"
+                [value]="advogadoResponsavelValor()"
+                [valueLabel]="advogadoResponsavelLabel()"
+                (valueChange)="onAdvogadoResponsavelChange($event)"
+              />
+            </div>
+            <div class="processo-field">
+              <span>Ação</span>
+              <app-combobox
+                ariaLabel="Ação do processo"
+                placeholder="Buscar ação..."
+                emptyLabel="— Sem ação —"
+                noResultsText="Nenhuma ação encontrada"
+                itemNoun="ação"
+                [options]="nomesDeAcao()"
+                [value]="acaoNome()"
+                [adicionar]="true"
+                [editar]="true"
+                [excluir]="true"
+                (valueChange)="acaoNome.set($event)"
+                (aoAdicionar)="criarAcao($event)"
+                (aoEditar)="renomearAcao($event)"
+                (aoExcluir)="excluirAcao($event)"
+              />
+            </div>
+          </div>
+          <div class="processo-form__row">
+            <div class="processo-field">
+              <span>Natureza</span>
+              <app-combobox
+                ariaLabel="Natureza do processo"
+                placeholder="Buscar natureza..."
+                emptyLabel="— Sem natureza —"
+                noResultsText="Nenhuma natureza encontrada"
+                itemNoun="natureza"
+                [options]="nomesDeNatureza()"
+                [value]="naturezaNome()"
+                [adicionar]="true"
+                [editar]="true"
+                [excluir]="true"
+                (valueChange)="naturezaNome.set($event)"
+                (aoAdicionar)="criarNatureza($event)"
+                (aoEditar)="renomearNatureza($event)"
+                (aoExcluir)="excluirNatureza($event)"
+              />
+            </div>
+            <label class="processo-field">
+              <span>Procedimento</span>
+              <input type="text" formControlName="procedimento" />
+            </label>
+          </div>
+          <div class="processo-form__row processo-form__row--stack">
+            <div class="processo-field">
+              <span>Fase</span>
+              <app-combobox
+                ariaLabel="Fase do processo"
+                placeholder="Buscar fase..."
+                emptyLabel="— Sem fase —"
+                noResultsText="Nenhuma fase encontrada"
+                itemNoun="fase"
+                [options]="nomesDeFase()"
+                [value]="faseNome()"
+                [adicionar]="true"
+                [editar]="true"
+                [excluir]="true"
+                (valueChange)="faseNome.set($event)"
+                (aoAdicionar)="criarFase($event)"
+                (aoEditar)="renomearFase($event)"
+                (aoExcluir)="excluirFase($event)"
+              />
+            </div>
+            <div class="processo-field">
+              <span>Comarca / Cidade</span>
+              <app-combobox
+                ariaLabel="Comarca / Cidade"
+                placeholder="Buscar cidade..."
+                emptyLabel="— Sem cidade —"
+                noResultsText="Nenhuma cidade encontrada"
+                [buscarPagina]="buscarCidades"
+                [value]="cidadeValor()"
+                [valueLabel]="cidadeLabel()"
+                (valueChange)="onCidadeChange($event)"
+              />
+            </div>
+          </div>
 
-      <div class="processo-form__group-title">Listas</div>
-      <div class="processo-field processo-field--full">
-        <span>Tags</span>
-        <div class="processo-chips">
-          @for (tag of tags(); track tag; let i = $index) {
-            <span class="processo-chip">
-              {{ tag }}
-              <button type="button" aria-label="Remover tag" (click)="removerTag(i)">
-                <i class="fa-solid fa-xmark" aria-hidden="true"></i>
-              </button>
-            </span>
-          }
-          <input
-            #tagInput
-            type="text"
-            class="processo-chips__input"
-            placeholder="Adicionar tag e Enter"
-            (keydown.enter)="
-              $event.preventDefault(); adicionarTag(tagInput.value); tagInput.value = ''
-            "
-          />
-        </div>
-      </div>
+          <div class="processo-form__group-title">Listas</div>
+          <div class="processo-field processo-field--full">
+            <span>Tags</span>
+            <div class="processo-chips">
+              @for (tag of tags(); track tag; let i = $index) {
+                <span class="processo-chip">
+                  {{ tag }}
+                  <button type="button" aria-label="Remover tag" (click)="removerTag(i)">
+                    <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+                  </button>
+                </span>
+              }
+              <input
+                #tagInput
+                type="text"
+                class="processo-chips__input"
+                placeholder="Adicionar tag e Enter"
+                (keydown.enter)="
+                  $event.preventDefault(); adicionarTag(tagInput.value); tagInput.value = ''
+                "
+              />
+            </div>
+          </div>
 
-      <div class="processo-field processo-field--full">
-        <span>Órgãos processantes</span>
-        <div class="processo-chips">
-          @for (orgao of orgaosProcessantes(); track orgao; let i = $index) {
-            <span class="processo-chip">
-              {{ orgao }}
-              <button type="button" aria-label="Remover órgão" (click)="removerOrgao(i)">
-                <i class="fa-solid fa-xmark" aria-hidden="true"></i>
-              </button>
-            </span>
-          }
-          <input
-            #orgaoInput
-            type="text"
-            class="processo-chips__input"
-            placeholder="Adicionar órgão e Enter"
-            (keydown.enter)="
-              $event.preventDefault(); adicionarOrgao(orgaoInput.value); orgaoInput.value = ''
-            "
-          />
-        </div>
-      </div>
+          <div class="processo-field processo-field--full">
+            <span>Órgãos processantes</span>
+            <div class="processo-chips">
+              @for (orgao of orgaosProcessantes(); track orgao; let i = $index) {
+                <span class="processo-chip">
+                  {{ orgao }}
+                  <button type="button" aria-label="Remover órgão" (click)="removerOrgao(i)">
+                    <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+                  </button>
+                </span>
+              }
+              <input
+                #orgaoInput
+                type="text"
+                class="processo-chips__input"
+                placeholder="Adicionar órgão e Enter"
+                (keydown.enter)="
+                  $event.preventDefault(); adicionarOrgao(orgaoInput.value); orgaoInput.value = ''
+                "
+              />
+            </div>
+          </div>
 
-      <div class="processo-field processo-field--full">
-        <span>Escritórios anteriores</span>
-        <div class="processo-chips">
-          @for (esc of escritoriosAnteriores(); track esc; let i = $index) {
-            <span class="processo-chip">
-              {{ esc }}
-              <button type="button" aria-label="Remover escritório" (click)="removerEscritorio(i)">
-                <i class="fa-solid fa-xmark" aria-hidden="true"></i>
-              </button>
-            </span>
-          }
-          <input
-            #escInput
-            type="text"
-            class="processo-chips__input"
-            placeholder="Adicionar escritório e Enter"
-            (keydown.enter)="
-              $event.preventDefault(); adicionarEscritorio(escInput.value); escInput.value = ''
-            "
-          />
-        </div>
-      </div>
+          <div class="processo-field processo-field--full">
+            <span>Escritórios anteriores</span>
+            <div class="processo-chips">
+              @for (esc of escritoriosAnteriores(); track esc; let i = $index) {
+                <span class="processo-chip">
+                  {{ esc }}
+                  <button
+                    type="button"
+                    aria-label="Remover escritório"
+                    (click)="removerEscritorio(i)"
+                  >
+                    <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+                  </button>
+                </span>
+              }
+              <input
+                #escInput
+                type="text"
+                class="processo-chips__input"
+                placeholder="Adicionar escritório e Enter"
+                (keydown.enter)="
+                  $event.preventDefault(); adicionarEscritorio(escInput.value); escInput.value = ''
+                "
+              />
+            </div>
+          </div>
 
-      <label class="processo-field processo-field--full">
-        <span>Observações gerais</span>
-        <textarea rows="4" formControlName="observacoesGerais"></textarea>
-      </label>
-    </div>
+          <label class="processo-field processo-field--full">
+            <span>Observações gerais</span>
+            <textarea rows="4" formControlName="observacoesGerais"></textarea>
+          </label>
+        </div>
+      }
+      @case ('complementares') {
+        <div class="processo-form__section processo-form__section--empty">
+          <p>Os campos de "Dados complementares" entram numa próxima etapa.</p>
+        </div>
+      }
+    }
 
     <footer class="processo-panel__footer">
       <span>

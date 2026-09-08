@@ -54,6 +54,9 @@ type NoticeKey =
   | 'favoriteAdded'
   | 'favoriteRemoved';
 
+/** Abas do painel de processo. "complementares" ainda não tem campos (entra depois). */
+type ProcessoAba = 'gerais' | 'complementares';
+
 interface EditorNotice {
   key: NoticeKey;
   subject?: string;
@@ -134,6 +137,10 @@ export class ProcessoFormComponent {
    */
   protected readonly numeroValue = signal('');
 
+  /** Aba visível do painel. Volta pra "gerais" ao trocar de processo / limpar. */
+  protected readonly abaAtiva = signal<ProcessoAba>('gerais');
+  protected readonly abas: readonly ProcessoAba[] = ['gerais', 'complementares'];
+
   // Campos dirigidos por <app-combobox> / listas — fora do FormGroup.
   protected readonly tipo = signal<TipoProcesso>('JUDICIAL');
   /** Só o judicial numera pelo padrão CNJ (máscara + 20 dígitos obrigatórios). */
@@ -205,6 +212,7 @@ export class ProcessoFormComponent {
       this.lastLoadedKey = key;
 
       untracked(() => {
+        this.abaAtiva.set('gerais');
         if (id !== null) {
           this.processoService.buscarCompleto(id).subscribe((found) => {
             if (found) {
@@ -239,6 +247,10 @@ export class ProcessoFormComponent {
 
   protected escolherLayout(layout: PainelLayout): void {
     this.layoutPainelChange.emit(layout);
+  }
+
+  protected trocarAba(aba: ProcessoAba): void {
+    this.abaAtiva.set(aba);
   }
 
   protected tipoRotulo(): string {
@@ -658,6 +670,7 @@ export class ProcessoFormComponent {
 
   private resetToEmpty(): void {
     this.form.reset();
+    this.abaAtiva.set('gerais');
     this.numeroValue.set('');
     this.tipo.set('JUDICIAL');
     this.statusNome.set('');
@@ -701,9 +714,7 @@ export class ProcessoFormComponent {
     this.contrarioPrincipalPosicaoNome.set(p.contrario_principal_posicao ?? '');
     this.uf.set(p.uf ?? '');
     this.cidadeId.set(p.cidade_id);
-    this.cidadeLabel.set(
-      p.cidade_id !== null ? `${p.cidade ?? ''} — ${p.uf ?? ''}` : '',
-    );
+    this.cidadeLabel.set(p.cidade_id !== null ? `${p.cidade ?? ''} — ${p.uf ?? ''}` : '');
     this.contrarioTipoDocumento.set(p.contrario_principal_tipo_documento ?? '');
     this.tags.set([...p.tags]);
     this.orgaosProcessantes.set([...p.orgaos_processantes]);

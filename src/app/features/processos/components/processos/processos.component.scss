@@ -5,6 +5,72 @@
   display: block;
 }
 
+.processos {
+  --painel-largura: 420px;
+  --painel-altura: 340px;
+
+  position: relative; // âncora do redimensionador
+  display: grid;
+  gap: $spacing-lg;
+  min-height: calc(100vh - 160px);
+  grid-template-columns: var(--painel-largura) minmax(0, 1fr); // padrão = painel à esquerda
+
+  &[data-layout='right'] {
+    grid-template-columns: minmax(0, 1fr) var(--painel-largura);
+
+    .processos-panel-slot {
+      order: 2;
+    }
+    .processos-main {
+      order: 1;
+    }
+  }
+
+  &[data-layout='bottom'] {
+    height: calc(100vh - 160px);
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr) var(--painel-altura);
+
+    .processos-panel-slot {
+      order: 2;
+      min-height: 0;
+      overflow: auto;
+    }
+    .processos-main {
+      order: 1;
+      min-height: 0;
+      max-height: none;
+    }
+  }
+
+  &[data-layout='dialog'] {
+    grid-template-columns: minmax(0, 1fr);
+
+    .processos-panel-slot {
+      position: fixed;
+      z-index: $z-overlay;
+      top: 50%;
+      left: 50%;
+      width: min(520px, 94vw);
+      transform: translate(-50%, -50%);
+    }
+
+    ::ng-deep .processo-panel {
+      max-height: min(88vh, calc(100vh - 72px));
+      box-shadow: $shadow-lg;
+    }
+  }
+
+  // Painel oculto — vale para todos os layouts, então precisa vencer os seletores acima.
+  &.processos--panel-hidden {
+    grid-template-columns: minmax(0, 1fr);
+
+    .processos-panel-slot {
+      display: none;
+    }
+  }
+}
+
 .processos-main {
   display: flex;
   flex-direction: column;
@@ -159,6 +225,7 @@
 }
 
 .processos-menu-button,
+.processos-panel-toggle,
 .processos-dropdown button {
   border: 1px solid $color-border;
   border-radius: $border-radius-sm;
@@ -180,7 +247,8 @@
   }
 }
 
-.processos-menu-button {
+.processos-menu-button,
+.processos-panel-toggle {
   display: inline-flex;
   min-height: 34px;
   align-items: center;
@@ -238,6 +306,134 @@
   flex: 1;
   min-height: 0;
   overflow: auto;
+}
+
+// --- painel lateral (slot + resizer + backdrop) — mesmo desenho de Advogados ---
+.processos-panel-slot {
+  position: relative;
+  min-width: 0;
+}
+
+.processos-panel-slot__close {
+  @include flex-center;
+  position: absolute;
+  top: -14px;
+  right: -14px;
+  z-index: 1;
+  width: 30px;
+  height: 30px;
+  border: 1px solid $color-border;
+  border-radius: 999px;
+  background-color: $color-surface;
+  color: $color-text-secondary;
+  cursor: pointer;
+  box-shadow: $shadow-md;
+  transition:
+    color $transition-fast,
+    border-color $transition-fast;
+
+  &:hover {
+    border-color: $color-primary-light;
+    color: $color-primary;
+  }
+}
+
+.processos-panel-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: $z-overlay - 1;
+  border: 0;
+  padding: 0;
+  background-color: rgba($burgundy-deep, 0.45);
+  cursor: pointer;
+}
+
+.processos-resizer {
+  position: absolute;
+  z-index: 4;
+  touch-action: none;
+
+  &::after {
+    content: '';
+    position: absolute;
+    border-radius: 999px;
+    background-color: rgba($color-border, 0.9);
+    transition: background-color $transition-fast;
+  }
+
+  &:hover::after,
+  &:active::after {
+    background-color: $color-primary-light;
+  }
+}
+
+.processos-resizer--left {
+  top: 0;
+  bottom: 0;
+  left: var(--painel-largura);
+  width: $spacing-lg;
+  transform: translateX(-50%);
+  cursor: col-resize;
+
+  &::after {
+    top: 0;
+    bottom: 0;
+    left: 50%;
+    width: 3px;
+    transform: translateX(-50%);
+  }
+}
+
+.processos-resizer--right {
+  top: 0;
+  bottom: 0;
+  right: var(--painel-largura);
+  width: $spacing-lg;
+  transform: translateX(50%);
+  cursor: col-resize;
+
+  &::after {
+    top: 0;
+    bottom: 0;
+    left: 50%;
+    width: 3px;
+    transform: translateX(-50%);
+  }
+}
+
+.processos-resizer--bottom {
+  left: 0;
+  right: 0;
+  bottom: var(--painel-altura);
+  height: $spacing-lg;
+  transform: translateY(50%);
+  cursor: row-resize;
+
+  &::after {
+    left: 0;
+    right: 0;
+    top: 50%;
+    height: 3px;
+    transform: translateY(-50%);
+  }
+}
+
+@include respond-below($breakpoint-lg) {
+  .processos[data-layout='left'],
+  .processos[data-layout='right'],
+  .processos[data-layout='bottom'] {
+    height: auto;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: none;
+  }
+
+  .processos-resizer {
+    display: none;
+  }
+
+  .processos-main {
+    max-height: none;
+  }
 }
 
 @include respond-below($breakpoint-sm) {

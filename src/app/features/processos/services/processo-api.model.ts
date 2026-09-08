@@ -11,6 +11,23 @@ export const TIPO_PROCESSO_LABEL: Record<TipoProcesso, string> = {
   ARBITRAL: 'Arbitral',
 };
 
+/** CPF ou CNPJ — usado na parte contrária (texto livre, não é `Pessoa`). */
+export type TipoDocumento = 'CPF' | 'CNPJ';
+
+/** Um cliente secundário: `Pessoa` vinculada + posição processual dela. */
+export interface ClienteSecundarioApi {
+  pessoa_id: number;
+  posicao: string | null;
+}
+
+/** Uma parte contrária secundária (texto livre). */
+export interface ParteContrariaApi {
+  nome: string;
+  posicao: string | null;
+  documento: string | null;
+  tipo_documento: TipoDocumento | null;
+}
+
 /** `ProcessoResumoResponse` — uma linha da listagem (só escalares, sem as coleções). */
 export interface ProcessoResumoApi {
   id: number;
@@ -28,6 +45,74 @@ export interface ProcessoResumoApi {
   data_distribuicao: string | null;
   ativo: boolean;
   atualizado_em: string | null;
+}
+
+/** `ProcessoResponse` — completo (aba "Informações básicas" + coleções + auditoria). */
+export interface ProcessoApi {
+  id: number;
+  favorito: boolean;
+  tipo: TipoProcesso;
+  numero_cnj: string | null;
+  status: string | null;
+  pasta: string | null;
+
+  cliente_principal_id: number | null;
+  cliente_principal_posicao: string | null;
+
+  contrario_principal_nome: string | null;
+  contrario_principal_posicao: string | null;
+  contrario_principal_documento: string | null;
+  contrario_principal_tipo_documento: TipoDocumento | null;
+
+  advogado_responsavel_id: number | null;
+  data_distribuicao: string | null;
+  acao: string | null;
+  natureza: string | null;
+  procedimento: string | null;
+  fase: string | null;
+  uf: string | null;
+  cidade: string | null;
+  observacoes_gerais: string | null;
+
+  clientes_secundarios: ClienteSecundarioApi[];
+  partes_contrarias: ParteContrariaApi[];
+  orgaos_processantes: string[];
+  escritorios_anteriores: string[];
+  tags: string[];
+
+  ativo: boolean;
+  atualizado_em: string | null;
+}
+
+/** Corpo do `POST` / `PUT` de processo (`ProcessoRequest` no backend) — snake_case. */
+export interface ProcessoWriteApi {
+  tipo: TipoProcesso;
+  numero_cnj: string | null;
+  status: string | null;
+
+  cliente_principal_id: number | null;
+  cliente_principal_posicao: string | null;
+
+  contrario_principal_nome: string | null;
+  contrario_principal_posicao: string | null;
+  contrario_principal_documento: string | null;
+  contrario_principal_tipo_documento: TipoDocumento | null;
+
+  advogado_responsavel_id: number | null;
+  data_distribuicao: string | null;
+  acao: string | null;
+  natureza: string | null;
+  procedimento: string | null;
+  fase: string | null;
+  uf: string | null;
+  cidade: string | null;
+  observacoes_gerais: string | null;
+
+  clientes_secundarios: ClienteSecundarioApi[];
+  partes_contrarias: ParteContrariaApi[];
+  orgaos_processantes: string[];
+  escritorios_anteriores: string[];
+  tags: string[];
 }
 
 /** Envelope de `PaginaResponse` (mesma forma de `advogado-api.model.ts`). */

@@ -1,112 +1,171 @@
-<section class="processos-main" aria-label="Tabela de processos">
-  <div class="processos-actions">
-    <div class="processos-actions__buttons">
-      <app-button
-        variant="primary"
-        size="sm"
-        icon="fa-solid fa-folder-plus"
-        label="Novo"
-        (clicked)="novoProcesso()"
-      />
+<div
+  class="processos"
+  [attr.data-layout]="panelShell.layoutPainel()"
+  [class.processos--panel-hidden]="!panelShell.panelVisible()"
+  [style.--painel-largura.px]="panelShell.painelLargura()"
+  [style.--painel-altura.px]="panelShell.painelAltura()"
+>
+  @if (panelShell.layoutPainel() === 'dialog' && panelShell.panelVisible()) {
+    <button
+      type="button"
+      class="processos-panel-backdrop"
+      aria-label="Fechar painel"
+      (click)="panelShell.setPanelVisible(false)"
+    ></button>
+  }
 
-      <div class="processos-columns">
-        <button
-          type="button"
-          class="processos-menu-button"
-          [class.is-active]="gradeProcessos.columnsMenuOpen()"
-          (click)="gradeProcessos.toggleColumnsMenu()"
-        >
-          <i class="fa-solid fa-table-columns" aria-hidden="true"></i>
-          Colunas
-        </button>
-        @if (gradeProcessos.columnsMenuOpen()) {
-          <div class="processos-dropdown processos-columns__menu" role="menu">
-            @for (col of gradeProcessos.columns(); track col.key) {
-              <label>
-                <input
-                  type="checkbox"
-                  [checked]="gradeProcessos.isColumnVisible(col.key)"
-                  (change)="gradeProcessos.toggleColumnVisibility(col.key)"
-                />
-                {{ col.header }}
-              </label>
-            }
-          </div>
-        }
-      </div>
-    </div>
-  </div>
-
-  <div class="processos-search-section">
-    <span class="processos-search-section__label">Pesquisar</span>
-    <label class="processos-search">
-      <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
-      <input
-        type="text"
-        placeholder="número, status, natureza, ação ou cidade"
-        [value]="busca()"
-        (input)="onBuscaInput($event)"
-        aria-label="Buscar por número, status, natureza, ação ou cidade"
-      />
-      @if (busca()) {
-        <button type="button" aria-label="Limpar busca" (click)="limparBusca()">
-          <i class="fa-solid fa-xmark" aria-hidden="true"></i>
-        </button>
-      }
-    </label>
-    <span class="processos-search-section__count">{{ busca().trim() ? 1 : 0 }} filtro(s)</span>
-  </div>
-
-  <div class="processos-filtros">
-    <label class="processos-toggle-inativos">
-      <input
-        type="checkbox"
-        [checked]="incluirInativos()"
-        [disabled]="loading()"
-        (change)="onToggleIncluirInativos($event)"
-      />
-      Mostrar inativos
-    </label>
-  </div>
-
-  <div class="processos-table-wrap">
-    <app-data-table
-      #gradeProcessos
-      [columnsToolbar]="false"
-      [columns]="processoColumns"
-      [data]="processos()"
-      [loading]="loading()"
-      trackKey="id"
-      emptyMessage="Nenhum processo encontrado."
-      [sortable]="true"
-      [initialSort]="{ key: 'data_distribuicao', direction: 'desc' }"
-      [columnVisibility]="true"
-      [rowClass]="processoRowClass"
-      [pinFirst]="processoPinFirst"
-      [pinAction]="processoPinAction"
-      [pagination]="pagination()"
-      (pageChange)="onPageChange($event)"
-      (rowClick)="selecionarProcesso($event)"
+  <div class="processos-panel-slot">
+    @if (panelShell.layoutPainel() === 'dialog' && panelShell.panelVisible()) {
+      <button
+        type="button"
+        class="processos-panel-slot__close"
+        aria-label="Fechar painel"
+        (click)="panelShell.setPanelVisible(false)"
+      >
+        <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+      </button>
+    }
+    <app-processo-form
+      [processoId]="selectedId()"
+      [layoutPainel]="panelShell.layoutPainel()"
+      (layoutPainelChange)="panelShell.setLayoutPainel($event)"
+      (saved)="onSaved($event)"
+      (statusChanged)="onStatusChanged($event)"
+      (cleared)="onCleared()"
     />
   </div>
 
-  <footer class="processos-main__footer">
-    <div class="processos-summary-line">
-      <span>
-        @if (busca().trim()) {
-          {{ totalProcessos() }} resultado(s) para "{{ busca().trim() }}"
-        } @else {
-          {{ totalProcessos() }} processo(s) cadastrado(s)
-        }
-      </span>
+  @if (panelShell.panelVisible() && panelShell.layoutPainel() !== 'dialog') {
+    <div
+      class="processos-resizer"
+      [class]="'processos-resizer--' + panelShell.layoutPainel()"
+      role="separator"
+      [attr.aria-orientation]="panelShell.layoutPainel() === 'bottom' ? 'horizontal' : 'vertical'"
+      aria-label="Redimensionar painel"
+      (pointerdown)="panelShell.iniciarResize($event)"
+    ></div>
+  }
+
+  <section class="processos-main" aria-label="Tabela de processos">
+    <div class="processos-actions">
+      <div class="processos-actions__buttons">
+        <app-button
+          variant="primary"
+          size="sm"
+          icon="fa-solid fa-folder-plus"
+          label="Novo"
+          (clicked)="novoProcesso()"
+        />
+
+        <div class="processos-columns">
+          <button
+            type="button"
+            class="processos-menu-button"
+            [class.is-active]="gradeProcessos.columnsMenuOpen()"
+            (click)="gradeProcessos.toggleColumnsMenu()"
+          >
+            <i class="fa-solid fa-table-columns" aria-hidden="true"></i>
+            Colunas
+          </button>
+          @if (gradeProcessos.columnsMenuOpen()) {
+            <div class="processos-dropdown processos-columns__menu" role="menu">
+              @for (col of gradeProcessos.columns(); track col.key) {
+                <label>
+                  <input
+                    type="checkbox"
+                    [checked]="gradeProcessos.isColumnVisible(col.key)"
+                    (change)="gradeProcessos.toggleColumnVisibility(col.key)"
+                  />
+                  {{ col.header }}
+                </label>
+              }
+            </div>
+          }
+        </div>
+      </div>
+
+      <button
+        type="button"
+        class="processos-panel-toggle"
+        [class.is-active]="panelShell.panelVisible()"
+        (click)="panelShell.togglePanel()"
+      >
+        <i class="fa-solid fa-table-columns" aria-hidden="true"></i>
+        {{ panelShell.panelVisible() ? 'Ocultar painel' : 'Mostrar painel' }}
+      </button>
     </div>
-    @if (loadError()) {
-      <span>
-        · Não foi possível carregar a lista.
-        <button type="button" class="processos-link-button" (click)="reloadList()">
-          Tentar de novo
-        </button>
-      </span>
-    }
-  </footer>
-</section>
+
+    <div class="processos-search-section">
+      <span class="processos-search-section__label">Pesquisar</span>
+      <label class="processos-search">
+        <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+        <input
+          type="text"
+          placeholder="número, status, natureza, ação ou cidade"
+          [value]="busca()"
+          (input)="onBuscaInput($event)"
+          aria-label="Buscar por número, status, natureza, ação ou cidade"
+        />
+        @if (busca()) {
+          <button type="button" aria-label="Limpar busca" (click)="limparBusca()">
+            <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+          </button>
+        }
+      </label>
+      <span class="processos-search-section__count">{{ busca().trim() ? 1 : 0 }} filtro(s)</span>
+    </div>
+
+    <div class="processos-filtros">
+      <label class="processos-toggle-inativos">
+        <input
+          type="checkbox"
+          [checked]="incluirInativos()"
+          [disabled]="loading()"
+          (change)="onToggleIncluirInativos($event)"
+        />
+        Mostrar inativos
+      </label>
+    </div>
+
+    <div class="processos-table-wrap">
+      <app-data-table
+        #gradeProcessos
+        [columnsToolbar]="false"
+        [columns]="processoColumns"
+        [data]="processos()"
+        [loading]="loading()"
+        trackKey="id"
+        emptyMessage="Nenhum processo encontrado."
+        [sortable]="true"
+        [initialSort]="{ key: 'data_distribuicao', direction: 'desc' }"
+        [columnVisibility]="true"
+        [rowClass]="processoRowClass"
+        [pinFirst]="processoPinFirst"
+        [pinAction]="processoPinAction"
+        [pagination]="pagination()"
+        (pageChange)="onPageChange($event)"
+        (rowClick)="selecionarProcesso($event)"
+      />
+    </div>
+
+    <footer class="processos-main__footer">
+      <div class="processos-summary-line">
+        <span>
+          @if (busca().trim()) {
+            {{ totalProcessos() }} resultado(s) para "{{ busca().trim() }}"
+          } @else {
+            {{ totalProcessos() }} processo(s) cadastrado(s)
+          }
+        </span>
+      </div>
+      @if (loadError()) {
+        <span>
+          · Não foi possível carregar a lista.
+          <button type="button" class="processos-link-button" (click)="reloadList()">
+            Tentar de novo
+          </button>
+        </span>
+      }
+    </footer>
+  </section>
+</div>

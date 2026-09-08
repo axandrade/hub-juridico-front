@@ -1,3 +1,4 @@
+import { DOCUMENT } from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -15,27 +16,41 @@ import { ButtonComponent } from '../../../../shared/components/button/button.com
 import { DataTableComponent } from '../../../../shared/components/table/data-table.component';
 import { TableColumn } from '../../../../shared/components/table/table-column.model';
 import { TablePagination, TablePinAction } from '../../../../shared/components/table/table.model';
-import { ProcessoResumoApi, TIPO_PROCESSO_LABEL, TipoProcesso } from '../../services/processo-api.model';
+import { PanelShellController } from '../../../../shared/panel-shell/panel-shell.controller';
+import {
+  ProcessoApi,
+  ProcessoResumoApi,
+  TIPO_PROCESSO_LABEL,
+  TipoProcesso,
+} from '../../services/processo-api.model';
 import { ProcessoListQuery, ProcessoService } from '../../services/processo-service';
+import { ProcessoFormComponent } from '../processo-form/processo-form.component';
 
 /**
- * Tela de Processos — listagem. Mesmo desenho de Advogados/Clientes: barra de ações
- * ("Novo" + "Colunas"), busca livre no servidor, "Mostrar inativos", tabela paginada com
- * favorito. O painel/formulário de cadastro entra numa fatia seguinte.
+ * Tela de Processos — tabela + painel lateral posicionável (`app-processo-form`), mesmo conceito
+ * de Advogados/Clientes. "Novo" abre o painel limpo; clicar numa linha abre o processo em edição.
+ * Posição/tamanho/visibilidade do painel vêm do `PanelShellController`.
  */
 @Component({
   selector: 'app-processos',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [DataTableComponent, ButtonComponent],
+  imports: [DataTableComponent, ButtonComponent, ProcessoFormComponent],
   templateUrl: './processos.component.html',
   styleUrl: './processos.component.scss',
 })
 export class ProcessosComponent {
+  private readonly document = inject(DOCUMENT);
   private readonly destroyRef = inject(DestroyRef);
   private readonly processoService = inject(ProcessoService);
 
+  private readonly form = viewChild(ProcessoFormComponent);
   /** A grade — o botão "Colunas" da barra de ações comanda esta instância. */
   protected readonly grade = viewChild(DataTableComponent);
+
+  protected readonly panelShell = new PanelShellController(this.document, {
+    storagePrefix: 'hub-juridico.processos',
+    larguraPadrao: 420,
+  });
 
   protected readonly loading = signal(false);
   protected readonly loadError = signal(false);
@@ -190,14 +205,47 @@ export class ProcessosComponent {
     this.reloadTick.update((tick) => tick + 1);
   }
 
-  /** Placeholder — o painel de cadastro entra numa fatia seguinte. */
-  protected novoProcesso(): void {
-    this.selectedId.set(null);
+  private refreshList(): void {
+    this.reloadTick.update((tick) => tick + 1);
   }
 
-  /** Placeholder — abrirá o processo no painel de edição quando ele existir. */
+  /** Botão "Novo" — abre o painel limpo pra cadastrar. */
+  protected novoProcesso(): void {
+    this.selectedId.set(null);
+    this.panelShell.setPanelVisible(true);
+  }
+
   protected selecionarProcesso(row: ProcessoResumoApi): void {
+    const form = this.form();
+    if (form?.locked() && this.selectedId() !== row.id) {
+      form.notifyLockedSelection();
+      return;
+    }
     this.selectedId.set(row.id);
+    this.panelShell.setPanelVisible(true);
+  }
+
+  protected onSaved(processo: ProcessoApi): void {
+    this.selectedId.set(processo.id);
+    this.refreshList();
+  }
+
+  protected onStatusChanged(processo: ProcessoApi): void {
+    this.selectedId.set(processo.id);
+    this.refreshList();
+  }
+
+  protected onCleared(): void {
+    this.selectedId.set(null);
+    this.refreshList();
+  }
+
+  /** No modo diálogo, Esc esconde o painel (mantém o processo selecionado). */
+  @HostListener('document:keydown.escape')
+  protected onEscape(): void {
+    if (this.panelShell.layoutPainel() === 'dialog' && this.panelShell.panelVisible()) {
+      this.panelShell.setPanelVisible(false);
+    }
   }
 
   /** Clique fora fecha o menu "Colunas". */

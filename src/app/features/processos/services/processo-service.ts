@@ -1,10 +1,20 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject, signal } from '@angular/core';
-import { Observable, map, tap } from 'rxjs';
+import { Observable, catchError, map, of, tap } from 'rxjs';
 
 import { environment } from '../../../../environments/environment';
+import { ComboPagina } from '../../../shared/components/combobox/combobox.component';
 import { FavoritoService } from '../../../shared/services/favorito.service';
-import { PaginaApi, ProcessoResumoApi, TipoProcesso } from './processo-api.model';
+import {
+  ClienteSecundarioApi,
+  PaginaApi,
+  ParteContrariaApi,
+  ProcessoApi,
+  ProcessoResumoApi,
+  ProcessoWriteApi,
+  TipoDocumento,
+  TipoProcesso,
+} from './processo-api.model';
 
 /**
  * Filtros do `GET /api/v1/processos` — todos reais no servidor: `busca` casa parcialmente em
@@ -18,16 +28,54 @@ export interface ProcessoListQuery {
   incluirInativos: boolean;
 }
 
+/** Campos editáveis do processo (aba "Informações básicas") — o que o formulário produz. */
+export interface ProcessoEditavel {
+  id: number;
+  tipo: TipoProcesso;
+  numeroCnj: string;
+  status: string;
+
+  clientePrincipalId: number | null;
+  clientePrincipalPosicao: string;
+
+  contrarioPrincipalNome: string;
+  contrarioPrincipalPosicao: string;
+  contrarioPrincipalDocumento: string;
+  contrarioPrincipalTipoDocumento: TipoDocumento | '';
+
+  advogadoResponsavelId: number | null;
+  dataDistribuicao: string;
+  acao: string;
+  natureza: string;
+  procedimento: string;
+  fase: string;
+  uf: string;
+  cidade: string;
+  observacoesGerais: string;
+
+  tags: string[];
+  orgaosProcessantes: string[];
+  escritoriosAnteriores: string[];
+  /** Preservados como vieram — ainda sem UI de edição nesta fatia. */
+  clientesSecundarios: ClienteSecundarioApi[];
+  partesContrarias: ParteContrariaApi[];
+}
+
+const vazioParaNull = (valor: string): string | null => valor.trim() || null;
+
 /**
- * Fonte da lista de processos. Fala com `/api/v1/processos` (Spring), paginado de 10 em 10.
- * Mesmo desenho de `AdvogadoService` — o CRUD de escrita (criar/editar/status) entra junto com o
- * formulário do painel.
+ * Fonte da lista de processos. Fala com `/api/v1/processos` (Spring), paginado de 10 em 10, e faz
+ * o CRUD de escrita (criar/editar/status) consumido pelo painel `app-processo-form`. Também
+ * resolve os pickers de Cliente principal / Advogado responsável — busca paginada no servidor
+ * (`buscarPessoas` / `buscarAdvogados`), pra alimentar o `<app-combobox>` sem `findAll`.
  */
 @Injectable({ providedIn: 'root' })
 export class ProcessoService {
   private readonly http = inject(HttpClient);
   private readonly favoritoService = inject(FavoritoService);
   private readonly base = `${environment.apiBaseUrl}/processos`;
+  private readonly pessoasUrl = `${environment.apiBaseUrl}/pessoas`;
+  private readonly advogadosUrl = `${environment.apiBaseUrl}/advogados`;
 
   static readonly PAGE_SIZE = 10;
 
@@ -69,6 +117,54 @@ export class ProcessoService {
     );
   }
 
+  /** Ficha completa por id (`GET /processos/{id}`) — pro painel não depender da página carregada. */
+  buscarCompleto(id: number): Observable<ProcessoApi | null> {
+    return this.http.get<ProcessoApi>(`${this.base}/${id}`).pipe(catchError(() => of(null)));
+  }
+
+  /** `POST` (id 0) ou `PUT` (id existente); devolve a ficha e atualiza a linha na lista. */
+  salvar(processo: ProcessoEditavel): Observable<ProcessoApi> {
+    const body: ProcessoWriteApi = {
+      tipo: processo.tipo,
+      numero_cnj: vazioParaNull(processo.numeroCnj),
+      status: vazioParaNull(processo.status),
+      cliente_principal_id: processo.clientePrincipalId,
+      cliente_principal_posicao: vazioParaNull(processo.clientePrincipalPosicao),
+      contrario_principal_nome: vazioParaNull(processo.contrarioPrincipalNome),
+      contrario_principal_posicao: vazioParaNull(processo.contrarioPrincipalPosicao),
+      contrario_principal_documento: vazioParaNull(processo.contrarioPrincipalDocumento),
+      contrario_principal_tipo_documento: processo.contrarioPrincipalTipoDocumento || null,
+      advogado_responsavel_id: processo.advogadoResponsavelId,
+      data_distribuicao: vazioParaNull(processo.dataDistribuicao),
+      acao: vazioParaNull(processo.acao),
+      natureza: vazioParaNull(processo.natureza),
+      procedimento: vazioParaNull(processo.procedimento),
+      fase: vazioParaNull(processo.fase),
+      uf: vazioParaNull(processo.uf),
+      cidade: vazioParaNull(processo.cidade),
+      observacoes_gerais: vazioParaNull(processo.observacoesGerais),
+      clientes_secundarios: processo.clientesSecundarios,
+      partes_contrarias: processo.partesContrarias,
+      orgaos_processantes: processo.orgaosProcessantes,
+      escritorios_anteriores: processo.escritoriosAnteriores,
+      tags: processo.tags,
+    };
+
+    const request$ =
+      processo.id > 0
+        ? this.http.put<ProcessoApi>(`${this.base}/${processo.id}`, body)
+        : this.http.post<ProcessoApi>(this.base, body);
+
+    return request$.pipe(tap((salvo) => this.mesclarNaLista(salvo)));
+  }
+
+  /** Ativa/inativa via `PATCH /processos/{id}/status` (corpo `{ ativo }`) e substitui na lista. */
+  alterarStatus(id: number, ativo: boolean): Observable<ProcessoApi> {
+    return this.http
+      .patch<ProcessoApi>(`${this.base}/${id}/status`, { ativo })
+      .pipe(tap((atualizado) => this.mesclarNaLista(atualizado)));
+  }
+
   /**
    * Alterna o favorito do processo (otimista): atualiza a lista na hora, dispara
    * `PATCH /processos/{id}/favorito` e desfaz se a API falhar. Devolve o estado desejado, ou
@@ -89,9 +185,90 @@ export class ProcessoService {
     return desejado;
   }
 
+  // --- pickers de vínculo (Cliente principal / Advogado responsável) ---
+
+  /** Página de pessoas para o `<app-combobox [buscarPagina]>` (valor = id, rótulo = nome). */
+  buscarPessoas = (termo: string, pagina: number): Observable<ComboPagina> =>
+    this.paginaVinculo(this.pessoasUrl, termo, pagina, (p) => nomeDePessoa(p));
+
+  /** Página de advogados para o picker. */
+  buscarAdvogados = (termo: string, pagina: number): Observable<ComboPagina> =>
+    this.paginaVinculo(this.advogadosUrl, termo, pagina, (a) => String(a['nome'] ?? '(sem nome)'));
+
+  /** Rótulo de uma pessoa por id (`valueLabel` do combobox quando a página dela não carregou). */
+  rotuloPessoa(id: number): Observable<string> {
+    return this.http.get<Record<string, unknown>>(`${this.pessoasUrl}/${id}`).pipe(
+      map(nomeDePessoa),
+      catchError(() => of('')),
+    );
+  }
+
+  rotuloAdvogado(id: number): Observable<string> {
+    return this.http.get<Record<string, unknown>>(`${this.advogadosUrl}/${id}`).pipe(
+      map((a) => String(a['nome'] ?? '')),
+      catchError(() => of('')),
+    );
+  }
+
+  private paginaVinculo(
+    url: string,
+    termo: string,
+    pagina: number,
+    rotulo: (item: Record<string, unknown>) => string,
+  ): Observable<ComboPagina> {
+    let params = new HttpParams().set('page', pagina).set('size', ProcessoService.PAGE_SIZE);
+    if (termo.trim()) {
+      params = params.set('busca', termo.trim());
+    }
+    return this.http.get<PaginaApi<Record<string, unknown>>>(url, { params }).pipe(
+      map((p) => ({
+        itens: (p.conteudo ?? []).map((item) => ({
+          valor: String(item['id']),
+          rotulo: rotulo(item),
+        })),
+        ultima: p.ultima ?? true,
+      })),
+    );
+  }
+
+  private mesclarNaLista(salvo: ProcessoApi): void {
+    const linha = resumoDe(salvo);
+    this._processos.update((processos) =>
+      processos.some((p) => p.id === linha.id)
+        ? processos.map((p) => (p.id === linha.id ? linha : p))
+        : [linha, ...processos],
+    );
+  }
+
   private setFavoritoLocal(id: number, favorito: boolean): void {
     this._processos.update((processos) =>
       processos.map((p) => (p.id === id ? { ...p, favorito } : p)),
     );
   }
+}
+
+/** Nome de exibição de uma pessoa (física: `nome`; jurídica: `razao_social` / `nome_fantasia`). */
+function nomeDePessoa(p: Record<string, unknown>): string {
+  return String(p['nome'] ?? p['razao_social'] ?? p['nome_fantasia'] ?? '(sem nome)');
+}
+
+/** Deriva a linha da listagem a partir da ficha completa (pós-save). */
+function resumoDe(p: ProcessoApi): ProcessoResumoApi {
+  return {
+    id: p.id,
+    favorito: p.favorito,
+    tipo: p.tipo,
+    numero_cnj: p.numero_cnj,
+    status: p.status,
+    pasta: p.pasta,
+    cliente_principal_id: p.cliente_principal_id,
+    advogado_responsavel_id: p.advogado_responsavel_id,
+    natureza: p.natureza,
+    fase: p.fase,
+    uf: p.uf,
+    cidade: p.cidade,
+    data_distribuicao: p.data_distribuicao,
+    ativo: p.ativo,
+    atualizado_em: p.atualizado_em,
+  };
 }

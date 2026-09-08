@@ -1,0 +1,359 @@
+<section class="processo-panel" aria-label="Cadastro de processo">
+  <header class="processo-panel__header">
+    <div>
+      <span>Painel</span>
+      <h2>{{ panelTitle() || 'Novo processo' }}</h2>
+      @if (isPersisted()) {
+        <small>{{ pasta() }} · {{ isInactive() ? 'Inativo' : 'Ativo' }}</small>
+      }
+    </div>
+
+    <div class="processo-panel__tools" aria-label="Ferramentas do painel">
+      <button
+        type="button"
+        class="processo-icon-button"
+        [class.is-active]="favorite()"
+        title="Configurar favorito"
+        aria-label="Configurar favorito"
+        (click)="toggleFavorite()"
+      >
+        <i class="fa-solid fa-star" aria-hidden="true"></i>
+      </button>
+      <button
+        type="button"
+        class="processo-icon-button"
+        [class.is-active]="locked()"
+        [disabled]="!isPersisted()"
+        title="Travar painel"
+        aria-label="Travar painel"
+        (click)="togglePanelLock()"
+      >
+        <i class="fa-solid fa-lock" aria-hidden="true"></i>
+      </button>
+
+      <app-panel-layout-switcher
+        [layoutPainel]="layoutPainel()"
+        (layoutPainelChange)="escolherLayout($event)"
+      />
+    </div>
+  </header>
+
+  <form class="processo-form" [formGroup]="form" (submit)="save($event)">
+    <div class="processo-form__section">
+      <div class="processo-form__row">
+        <div class="processo-field">
+          <span>Tipo</span>
+          <app-combobox
+            ariaLabel="Tipo do processo"
+            [pesquisavel]="false"
+            [options]="tipoOpcoes"
+            [value]="tipoRotulo()"
+            (valueChange)="onTipoChange($event)"
+          />
+        </div>
+        <label class="processo-field">
+          <span>Número CNJ</span>
+          <input type="text" formControlName="numeroCnj" />
+        </label>
+      </div>
+
+      <div class="processo-form__row">
+        <div class="processo-field">
+          <span>Status</span>
+          <app-combobox
+            ariaLabel="Status do processo"
+            placeholder="Buscar status..."
+            emptyLabel="— Sem status —"
+            noResultsText="Nenhum status encontrado"
+            itemNoun="status"
+            [options]="nomesDeStatus()"
+            [value]="statusNome()"
+            [adicionar]="true"
+            [editar]="true"
+            [excluir]="true"
+            (valueChange)="statusNome.set($event)"
+            (aoAdicionar)="criarStatus($event)"
+            (aoEditar)="renomearStatus($event)"
+            (aoExcluir)="excluirStatus($event)"
+          />
+        </div>
+        <label class="processo-field">
+          <span>Distribuição</span>
+          <input type="date" formControlName="dataDistribuicao" />
+        </label>
+      </div>
+
+      <div class="processo-form__group-title">Cliente</div>
+      <div class="processo-form__row">
+        <div class="processo-field">
+          <span>Cliente principal</span>
+          <app-combobox
+            ariaLabel="Cliente principal"
+            placeholder="Buscar pessoa..."
+            emptyLabel="— Sem cliente —"
+            noResultsText="Nenhuma pessoa encontrada"
+            [buscarPagina]="buscarPessoas"
+            [value]="clientePrincipalValor()"
+            [valueLabel]="clientePrincipalLabel()"
+            (valueChange)="onClientePrincipalChange($event)"
+          />
+        </div>
+        <div class="processo-field">
+          <span>Posição do cliente</span>
+          <app-combobox
+            ariaLabel="Posição do cliente"
+            placeholder="Buscar posição..."
+            emptyLabel="— Sem posição —"
+            noResultsText="Nenhuma posição encontrada"
+            itemNoun="posição"
+            [options]="nomesDePosicao()"
+            [value]="clientePrincipalPosicaoNome()"
+            [adicionar]="true"
+            [editar]="true"
+            [excluir]="true"
+            (valueChange)="clientePrincipalPosicaoNome.set($event)"
+            (aoAdicionar)="criarPosicao($event)"
+            (aoEditar)="renomearPosicao($event)"
+            (aoExcluir)="excluirPosicao($event)"
+          />
+        </div>
+      </div>
+
+      <div class="processo-form__group-title">Parte contrária principal</div>
+      <div class="processo-form__row">
+        <label class="processo-field">
+          <span>Nome</span>
+          <input type="text" formControlName="contrarioPrincipalNome" />
+        </label>
+        <label class="processo-field">
+          <span>Posição</span>
+          <input
+            type="text"
+            formControlName="contrarioPrincipalPosicao"
+            placeholder="Réu, Requerido…"
+          />
+        </label>
+      </div>
+      <div class="processo-form__row">
+        <label class="processo-field">
+          <span>Documento</span>
+          <input type="text" formControlName="contrarioPrincipalDocumento" />
+        </label>
+        <div class="processo-field">
+          <span>Tipo de documento</span>
+          <app-combobox
+            ariaLabel="Tipo de documento da parte contrária"
+            [pesquisavel]="false"
+            emptyLabel="—"
+            [options]="tiposDocumento"
+            [value]="contrarioTipoDocumento()"
+            (valueChange)="contrarioTipoDocumento.set($any($event))"
+          />
+        </div>
+      </div>
+
+      <div class="processo-form__group-title">Tramitação</div>
+      <div class="processo-form__row">
+        <div class="processo-field">
+          <span>Advogado responsável</span>
+          <app-combobox
+            ariaLabel="Advogado responsável"
+            placeholder="Buscar advogado..."
+            emptyLabel="— Sem responsável —"
+            noResultsText="Nenhum advogado encontrado"
+            [buscarPagina]="buscarAdvogados"
+            [value]="advogadoResponsavelValor()"
+            [valueLabel]="advogadoResponsavelLabel()"
+            (valueChange)="onAdvogadoResponsavelChange($event)"
+          />
+        </div>
+        <label class="processo-field">
+          <span>Ação</span>
+          <input type="text" formControlName="acao" />
+        </label>
+      </div>
+      <div class="processo-form__row">
+        <label class="processo-field">
+          <span>Natureza</span>
+          <input type="text" formControlName="natureza" />
+        </label>
+        <label class="processo-field">
+          <span>Procedimento</span>
+          <input type="text" formControlName="procedimento" />
+        </label>
+      </div>
+      <div class="processo-form__row">
+        <label class="processo-field">
+          <span>Fase</span>
+          <input type="text" formControlName="fase" />
+        </label>
+        <label class="processo-field">
+          <span>Comarca / Cidade</span>
+          <input type="text" formControlName="cidade" />
+        </label>
+      </div>
+      <div class="processo-form__row">
+        <div class="processo-field">
+          <span>UF</span>
+          <app-combobox
+            ariaLabel="UF"
+            placeholder="UF"
+            emptyLabel="—"
+            [options]="ufs"
+            [value]="uf()"
+            (valueChange)="uf.set($event)"
+          />
+        </div>
+      </div>
+
+      <div class="processo-form__group-title">Listas</div>
+      <div class="processo-field processo-field--full">
+        <span>Tags</span>
+        <div class="processo-chips">
+          @for (tag of tags(); track tag; let i = $index) {
+            <span class="processo-chip">
+              {{ tag }}
+              <button type="button" aria-label="Remover tag" (click)="removerTag(i)">
+                <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+              </button>
+            </span>
+          }
+          <input
+            #tagInput
+            type="text"
+            class="processo-chips__input"
+            placeholder="Adicionar tag e Enter"
+            (keydown.enter)="
+              $event.preventDefault(); adicionarTag(tagInput.value); tagInput.value = ''
+            "
+          />
+        </div>
+      </div>
+
+      <div class="processo-field processo-field--full">
+        <span>Órgãos processantes</span>
+        <div class="processo-chips">
+          @for (orgao of orgaosProcessantes(); track orgao; let i = $index) {
+            <span class="processo-chip">
+              {{ orgao }}
+              <button type="button" aria-label="Remover órgão" (click)="removerOrgao(i)">
+                <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+              </button>
+            </span>
+          }
+          <input
+            #orgaoInput
+            type="text"
+            class="processo-chips__input"
+            placeholder="Adicionar órgão e Enter"
+            (keydown.enter)="
+              $event.preventDefault(); adicionarOrgao(orgaoInput.value); orgaoInput.value = ''
+            "
+          />
+        </div>
+      </div>
+
+      <div class="processo-field processo-field--full">
+        <span>Escritórios anteriores</span>
+        <div class="processo-chips">
+          @for (esc of escritoriosAnteriores(); track esc; let i = $index) {
+            <span class="processo-chip">
+              {{ esc }}
+              <button type="button" aria-label="Remover escritório" (click)="removerEscritorio(i)">
+                <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+              </button>
+            </span>
+          }
+          <input
+            #escInput
+            type="text"
+            class="processo-chips__input"
+            placeholder="Adicionar escritório e Enter"
+            (keydown.enter)="
+              $event.preventDefault(); adicionarEscritorio(escInput.value); escInput.value = ''
+            "
+          />
+        </div>
+      </div>
+
+      <label class="processo-field processo-field--full">
+        <span>Observações gerais</span>
+        <textarea rows="4" formControlName="observacoesGerais"></textarea>
+      </label>
+    </div>
+
+    <footer class="processo-panel__footer">
+      <span>
+        @switch (notice().key) {
+          @case ('saving') {
+            Salvando...
+          }
+          @case ('saved') {
+            Processo salvo: {{ notice().subject }}.
+          }
+          @case ('saveError') {
+            Não foi possível salvar: {{ notice().subject }}
+          }
+          @case ('requiredFields') {
+            Revise os campos destacados.
+          }
+          @case ('confirmInactivate') {
+            Confirme para inativar {{ notice().subject }}.
+          }
+          @case ('statusChanged') {
+            Processo {{ notice().subject }}.
+          }
+          @case ('statusError') {
+            Não foi possível alterar o status: {{ notice().subject }}
+          }
+          @case ('panelCleared') {
+            Painel limpo.
+          }
+          @case ('panelLockedSelection') {
+            Painel travado: destrave para carregar outro processo.
+          }
+          @case ('favoriteAdded') {
+            {{ notice().subject }} marcado como favorito.
+          }
+          @case ('favoriteRemoved') {
+            {{ notice().subject }} removido dos favoritos.
+          }
+        }
+      </span>
+      <div>
+        <app-button
+          variant="tertiary"
+          size="sm"
+          icon="fa-solid fa-eraser"
+          label="Limpar painel"
+          (clicked)="clearPanel()"
+        />
+        @if (isPersisted()) {
+          <app-button
+            variant="secondary"
+            size="sm"
+            [icon]="isInactive() ? 'fa-solid fa-rotate-left' : 'fa-solid fa-ban'"
+            [label]="isInactive() ? 'Reativar' : 'Inativar'"
+            (clicked)="requestStatusChange()"
+          />
+        }
+        @if (notice().key === 'confirmInactivate') {
+          <app-button
+            variant="secondary"
+            size="sm"
+            icon="fa-solid fa-check"
+            label="Confirmar"
+            (clicked)="confirmInactivate()"
+          />
+        }
+        <app-button
+          nativeType="submit"
+          variant="primary"
+          size="sm"
+          icon="fa-solid fa-floppy-disk"
+          label="Salvar"
+        />
+      </div>
+    </footer>
+  </form>
+</section>

@@ -11,21 +11,17 @@ export const TIPO_PROCESSO_LABEL: Record<TipoProcesso, string> = {
   ARBITRAL: 'Arbitral',
 };
 
-/** CPF ou CNPJ — usado na parte contrária (texto livre, não é `Pessoa`). */
-export type TipoDocumento = 'CPF' | 'CNPJ';
-
 /** Um cliente secundário: `Pessoa` vinculada + posição processual dela. */
 export interface ClienteSecundarioApi {
   pessoa_id: number;
   posicao: string | null;
 }
 
-/** Uma parte contrária secundária (texto livre). */
+/** Uma parte contrária secundária (texto livre). `documento` é CPF ou CNPJ, só dígitos. */
 export interface ParteContrariaApi {
   nome: string;
   posicao: string | null;
   documento: string | null;
-  tipo_documento: TipoDocumento | null;
 }
 
 /** `ProcessoResumoResponse` — uma linha da listagem (só escalares, sem as coleções). */
@@ -63,7 +59,6 @@ export interface ProcessoApi {
   contrario_principal_nome: string | null;
   contrario_principal_posicao: string | null;
   contrario_principal_documento: string | null;
-  contrario_principal_tipo_documento: TipoDocumento | null;
 
   advogado_responsavel_id: number | null;
   data_distribuicao: string | null;
@@ -98,7 +93,6 @@ export interface ProcessoWriteApi {
   contrario_principal_nome: string | null;
   contrario_principal_posicao: string | null;
   contrario_principal_documento: string | null;
-  contrario_principal_tipo_documento: TipoDocumento | null;
 
   advogado_responsavel_id: number | null;
   data_distribuicao: string | null;

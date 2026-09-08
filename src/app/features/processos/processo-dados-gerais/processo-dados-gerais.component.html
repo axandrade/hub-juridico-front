@@ -140,20 +140,15 @@
   </div>
   <div class="processo-form__row">
     <label class="processo-field">
-      <span>Documento</span>
-      <input type="text" formControlName="contrarioPrincipalDocumento" />
-    </label>
-    <div class="processo-field">
-      <span>Tipo de documento</span>
-      <app-combobox
-        ariaLabel="Tipo de documento da parte contrária"
-        [pesquisavel]="false"
-        emptyLabel="—"
-        [options]="tiposDocumento"
-        [value]="contrarioTipoDocumento()"
-        (valueChange)="contrarioTipoDocumento.set($any($event))"
+      <span>CPF/CNPJ</span>
+      <input
+        type="text"
+        formControlName="contrarioPrincipalDocumento"
+        appDocumentoMask
+        placeholder="000.000.000-00"
+        [attr.aria-label]="'CPF ou CNPJ da parte contrária'"
       />
-    </div>
+    </label>
   </div>
 
   <div class="processo-form__group-title">Tramitação</div>

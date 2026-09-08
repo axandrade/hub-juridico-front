@@ -14,12 +14,8 @@ import { ReactiveFormsModule } from '@angular/forms';
 import { maskNumeroCnj, numeroCnjCompleto } from '../../../core/auth/documentos-br';
 import { ComboboxComponent } from '../../../shared/components/combobox/combobox.component';
 import { CnjMaskDirective } from '../../../shared/directives/cnj-mask.directive';
-import {
-  ProcessoApi,
-  TIPO_PROCESSO_LABEL,
-  TipoDocumento,
-  TipoProcesso,
-} from '../services/processo-api.model';
+import { DocumentoMaskDirective } from '../../../shared/directives/documento-mask.directive';
+import { ProcessoApi, TIPO_PROCESSO_LABEL, TipoProcesso } from '../services/processo-api.model';
 import { AcaoProcessoService } from '../services/acao-processo.service';
 import { CidadeService } from '../services/cidade-service';
 import { FaseProcessoService } from '../services/fase-processo.service';
@@ -34,7 +30,6 @@ import {
 } from '../forms/processo-form.factory';
 
 const TIPOS_PROCESSO: TipoProcesso[] = ['JUDICIAL', 'ADMINISTRATIVO', 'ARBITRAL'];
-const TIPOS_DOCUMENTO: TipoDocumento[] = ['CPF', 'CNPJ'];
 
 /** Resultado da validação da aba — o shell mapeia pro `notice` do rodapé. */
 export type DadosGeraisValidacao = 'ok' | 'requiredFields' | 'cnjInvalido';
@@ -51,7 +46,7 @@ export type DadosGeraisValores = Omit<ProcessoEditavel, 'id'>;
 @Component({
   selector: 'app-processo-dados-gerais',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ReactiveFormsModule, ComboboxComponent, CnjMaskDirective],
+  imports: [ReactiveFormsModule, ComboboxComponent, CnjMaskDirective, DocumentoMaskDirective],
   templateUrl: './processo-dados-gerais.component.html',
   styleUrl: './processo-dados-gerais.component.scss',
 })
@@ -68,7 +63,6 @@ export class ProcessoDadosGeraisComponent {
   /** Erro numa operação de catálogo (criar/renomear/excluir) — o shell mostra no rodapé. */
   readonly erro = output<string>();
 
-  protected readonly tiposDocumento = TIPOS_DOCUMENTO;
   /** Rótulos legíveis do tipo (o `<app-combobox>` estático mostra o texto que recebe). */
   protected readonly tipoOpcoes = TIPOS_PROCESSO.map((t) => TIPO_PROCESSO_LABEL[t]);
   protected readonly buscarPessoas = this.processoService.buscarPessoas;
@@ -111,7 +105,6 @@ export class ProcessoDadosGeraisComponent {
   /** Município escolhido no picker `cidades` (`null` = nenhum). Vira o snapshot de cidade/uf no back. */
   protected readonly cidadeId = signal<number | null>(null);
   protected readonly cidadeLabel = signal('');
-  protected readonly contrarioTipoDocumento = signal<TipoDocumento | ''>('');
   protected readonly clientePrincipalId = signal<number | null>(null);
   protected readonly clientePrincipalLabel = signal('');
   protected readonly advogadoResponsavelId = signal<number | null>(null);
@@ -162,7 +155,6 @@ export class ProcessoDadosGeraisComponent {
     this.uf.set(p.uf ?? '');
     this.cidadeId.set(p.cidade_id);
     this.cidadeLabel.set(p.cidade_id !== null ? `${p.cidade ?? ''} — ${p.uf ?? ''}` : '');
-    this.contrarioTipoDocumento.set(p.contrario_principal_tipo_documento ?? '');
     this.tags.set([...p.tags]);
     this.orgaosProcessantes.set([...p.orgaos_processantes]);
     this.escritoriosAnteriores.set([...p.escritorios_anteriores]);
@@ -199,7 +191,6 @@ export class ProcessoDadosGeraisComponent {
     this.uf.set('');
     this.cidadeId.set(null);
     this.cidadeLabel.set('');
-    this.contrarioTipoDocumento.set('');
     this.clientePrincipalId.set(null);
     this.clientePrincipalLabel.set('');
     this.advogadoResponsavelId.set(null);
@@ -236,7 +227,6 @@ export class ProcessoDadosGeraisComponent {
       contrarioPrincipalNome: raw.contrarioPrincipalNome,
       contrarioPrincipalPosicao: this.contrarioPrincipalPosicaoNome(),
       contrarioPrincipalDocumento: raw.contrarioPrincipalDocumento,
-      contrarioPrincipalTipoDocumento: this.contrarioTipoDocumento(),
       advogadoResponsavelId: this.advogadoResponsavelId(),
       dataDistribuicao: raw.dataDistribuicao,
       acao: this.acaoNome(),

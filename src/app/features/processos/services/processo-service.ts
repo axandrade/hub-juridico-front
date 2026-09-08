@@ -12,9 +12,9 @@ import {
   ProcessoApi,
   ProcessoResumoApi,
   ProcessoWriteApi,
-  TipoDocumento,
   TipoProcesso,
 } from './processo-api.model';
+import { onlyDigits } from '../../../core/auth/documentos-br';
 
 /**
  * Filtros do `GET /api/v1/processos` — todos reais no servidor: `busca` casa parcialmente em
@@ -40,8 +40,8 @@ export interface ProcessoEditavel {
 
   contrarioPrincipalNome: string;
   contrarioPrincipalPosicao: string;
+  /** CPF ou CNPJ (mascarado ou não) — o serviço manda só os dígitos. */
   contrarioPrincipalDocumento: string;
-  contrarioPrincipalTipoDocumento: TipoDocumento | '';
 
   advogadoResponsavelId: number | null;
   dataDistribuicao: string;
@@ -132,8 +132,7 @@ export class ProcessoService {
       cliente_principal_posicao: vazioParaNull(processo.clientePrincipalPosicao),
       contrario_principal_nome: vazioParaNull(processo.contrarioPrincipalNome),
       contrario_principal_posicao: vazioParaNull(processo.contrarioPrincipalPosicao),
-      contrario_principal_documento: vazioParaNull(processo.contrarioPrincipalDocumento),
-      contrario_principal_tipo_documento: processo.contrarioPrincipalTipoDocumento || null,
+      contrario_principal_documento: onlyDigits(processo.contrarioPrincipalDocumento) || null,
       advogado_responsavel_id: processo.advogadoResponsavelId,
       data_distribuicao: vazioParaNull(processo.dataDistribuicao),
       acao: vazioParaNull(processo.acao),

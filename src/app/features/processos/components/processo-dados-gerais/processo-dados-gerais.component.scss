@@ -1,0 +1,195 @@
+@use 'variables' as *;
+@use 'mixins' as *;
+
+:host {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  flex-direction: column;
+}
+
+:host([hidden]) {
+  display: none;
+}
+
+.processo-form__section {
+  @include thin-scrollbar;
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  flex-direction: column;
+  gap: $spacing-sm;
+  padding: $spacing-md;
+  overflow: auto;
+}
+
+.processo-form__group-title {
+  margin-top: $spacing-xs;
+  color: $color-text-secondary;
+  font-size: $font-size-xs;
+  font-weight: $font-weight-bold;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.processo-form__row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: $spacing-sm;
+}
+
+// Fase + Comarca/Cidade empilhadas (cada uma ocupa a linha toda) — o nome da
+// cidade (+ " — UF") fica apertado se dividir a linha com a Fase.
+.processo-form__row--stack {
+  grid-template-columns: 1fr;
+}
+
+.processo-field {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: $spacing-xs;
+  color: $color-text-secondary;
+  font-size: $font-size-xs;
+  font-weight: $font-weight-medium;
+}
+
+.processo-field--full {
+  grid-column: 1 / -1;
+}
+
+// Botão de copiar sobreposto dentro do campo de número (não ocupa espaço próprio).
+.processo-field__with-copy {
+  position: relative;
+
+  input {
+    width: 100%;
+    padding-right: 30px;
+  }
+}
+
+.processo-field__copy {
+  @include flex-center;
+  position: absolute;
+  top: 50%;
+  right: 4px;
+  transform: translateY(-50%);
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 0;
+  border-radius: $border-radius-sm;
+  background: transparent;
+  color: $color-text-secondary;
+  font-size: 11px;
+  opacity: 0.5;
+  cursor: pointer;
+  transition:
+    opacity $transition-fast,
+    color $transition-fast;
+
+  &:hover {
+    opacity: 1;
+    color: $color-primary;
+  }
+
+  &.is-active {
+    opacity: 1;
+    color: $color-success;
+  }
+
+  &:disabled {
+    opacity: 0.25;
+    cursor: not-allowed;
+  }
+}
+
+.processo-form__section input,
+.processo-form__section textarea {
+  width: 100%;
+  min-height: 36px;
+  border: 1px solid $color-border;
+  border-radius: $border-radius-sm;
+  background-color: $color-neutral-light;
+  color: $color-text-primary;
+  font: inherit;
+  outline: none;
+  padding: $spacing-xs $spacing-sm;
+  transition:
+    border-color $transition-fast,
+    box-shadow $transition-fast;
+
+  &:focus {
+    border-color: $color-primary-light;
+    box-shadow: 0 0 0 3px rgba($rouge-light, 0.16);
+  }
+
+  &:disabled {
+    background-color: rgba($color-primary-pale, 0.2);
+    color: $color-text-muted;
+    cursor: not-allowed;
+  }
+}
+
+.processo-form__section textarea {
+  resize: vertical;
+}
+
+// Listas de texto livre (tags / órgãos / escritórios) — chips + input inline.
+.processo-chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: $spacing-xs;
+  padding: $spacing-xs;
+  border: 1px solid $color-border;
+  border-radius: $border-radius-sm;
+  background-color: $color-neutral-light;
+
+  &:focus-within {
+    border-color: $color-primary-light;
+    box-shadow: 0 0 0 3px rgba($rouge-light, 0.16);
+  }
+}
+
+.processo-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: $spacing-xs;
+  padding: 2px $spacing-xs;
+  border-radius: $border-radius-sm;
+  background-color: rgba($color-primary-pale, 0.55);
+  color: $color-primary;
+  font-size: $font-size-xs;
+  font-weight: $font-weight-regular;
+
+  button {
+    display: inline-flex;
+    border: 0;
+    padding: 0;
+    background: none;
+    color: inherit;
+    cursor: pointer;
+    opacity: 0.7;
+
+    &:hover {
+      opacity: 1;
+    }
+  }
+}
+
+.processo-chips__input {
+  flex: 1;
+  min-width: 120px;
+  min-height: 26px;
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  padding: 0 $spacing-xs !important;
+}
+
+@include respond-below($breakpoint-sm) {
+  .processo-form__row {
+    grid-template-columns: 1fr;
+  }
+}

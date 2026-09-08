@@ -1,0 +1,24 @@
+@use 'variables' as *;
+
+:host {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  flex-direction: column;
+}
+
+:host([hidden]) {
+  display: none;
+}
+
+.processo-dados-complementares__vazio {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  align-items: center;
+  justify-content: center;
+  padding: $spacing-md;
+  color: $color-text-muted;
+  font-size: $font-size-base;
+  text-align: center;
+}

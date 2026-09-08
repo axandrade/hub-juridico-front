@@ -11,11 +11,11 @@ import {
   viewChild,
 } from '@angular/core';
 
-import { ButtonComponent } from '../../../../shared/components/button/button.component';
-import { PanelLayoutSwitcherComponent } from '../../../../shared/components/panel-layout-switcher/panel-layout-switcher.component';
-import { PAINEL_LAYOUT_PADRAO, PainelLayout } from '../../../../shared/models/panel-layout';
-import { ProcessoApi } from '../../services/processo-api.model';
-import { ProcessoService } from '../../services/processo-service';
+import { ButtonComponent } from '../../../shared/components/button/button.component';
+import { PanelLayoutSwitcherComponent } from '../../../shared/components/panel-layout-switcher/panel-layout-switcher.component';
+import { PAINEL_LAYOUT_PADRAO, PainelLayout } from '../../../shared/models/panel-layout';
+import { ProcessoApi } from '../services/processo-api.model';
+import { ProcessoService } from '../services/processo-service';
 import { ProcessoDadosComplementaresComponent } from '../processo-dados-complementares/processo-dados-complementares.component';
 import { ProcessoDadosGeraisComponent } from '../processo-dados-gerais/processo-dados-gerais.component';
 

@@ -12,19 +12,19 @@ import {
 import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { EMPTY, catchError, debounceTime, distinctUntilChanged, skip, switchMap } from 'rxjs';
 
-import { ButtonComponent } from '../../../../shared/components/button/button.component';
-import { DataTableComponent } from '../../../../shared/components/table/data-table.component';
-import { TableColumn } from '../../../../shared/components/table/table-column.model';
-import { TablePagination, TablePinAction } from '../../../../shared/components/table/table.model';
-import { PanelShellController } from '../../../../shared/panel-shell/panel-shell.controller';
+import { ButtonComponent } from '../../shared/components/button/button.component';
+import { DataTableComponent } from '../../shared/components/table/data-table.component';
+import { TableColumn } from '../../shared/components/table/table-column.model';
+import { TablePagination, TablePinAction } from '../../shared/components/table/table.model';
+import { PanelShellController } from '../../shared/panel-shell/panel-shell.controller';
 import {
   ProcessoApi,
   ProcessoResumoApi,
   TIPO_PROCESSO_LABEL,
   TipoProcesso,
-} from '../../services/processo-api.model';
-import { ProcessoListQuery, ProcessoService } from '../../services/processo-service';
-import { ProcessoFormComponent } from '../processo-form/processo-form.component';
+} from './services/processo-api.model';
+import { ProcessoListQuery, ProcessoService } from './services/processo-service';
+import { ProcessoFormComponent } from './processo-form/processo-form.component';
 
 /**
  * Tela de Processos — tabela + painel lateral posicionável (`app-processo-form`), mesmo conceito

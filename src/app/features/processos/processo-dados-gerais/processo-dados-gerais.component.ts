@@ -11,27 +11,27 @@ import {
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ReactiveFormsModule } from '@angular/forms';
 
-import { maskNumeroCnj, numeroCnjCompleto } from '../../../../core/auth/documentos-br';
-import { ComboboxComponent } from '../../../../shared/components/combobox/combobox.component';
-import { CnjMaskDirective } from '../../../../shared/directives/cnj-mask.directive';
+import { maskNumeroCnj, numeroCnjCompleto } from '../../../core/auth/documentos-br';
+import { ComboboxComponent } from '../../../shared/components/combobox/combobox.component';
+import { CnjMaskDirective } from '../../../shared/directives/cnj-mask.directive';
 import {
   ProcessoApi,
   TIPO_PROCESSO_LABEL,
   TipoDocumento,
   TipoProcesso,
-} from '../../services/processo-api.model';
-import { AcaoProcessoService } from '../../services/acao-processo.service';
-import { CidadeService } from '../../services/cidade-service';
-import { FaseProcessoService } from '../../services/fase-processo.service';
-import { NaturezaProcessoService } from '../../services/natureza-processo.service';
-import { PosicaoClienteService } from '../../services/posicao-cliente.service';
-import { ProcessoEditavel, ProcessoService } from '../../services/processo-service';
-import { StatusProcessoService } from '../../services/status-processo.service';
+} from '../services/processo-api.model';
+import { AcaoProcessoService } from '../services/acao-processo.service';
+import { CidadeService } from '../services/cidade-service';
+import { FaseProcessoService } from '../services/fase-processo.service';
+import { NaturezaProcessoService } from '../services/natureza-processo.service';
+import { PosicaoClienteService } from '../services/posicao-cliente.service';
+import { ProcessoEditavel, ProcessoService } from '../services/processo-service';
+import { StatusProcessoService } from '../services/status-processo.service';
 import {
   ProcessoForm,
   createProcessoForm,
   patchProcessoForm,
-} from '../../forms/processo-form.factory';
+} from '../forms/processo-form.factory';
 
 const TIPOS_PROCESSO: TipoProcesso[] = ['JUDICIAL', 'ADMINISTRATIVO', 'ARBITRAL'];
 const TIPOS_DOCUMENTO: TipoDocumento[] = ['CPF', 'CNPJ'];

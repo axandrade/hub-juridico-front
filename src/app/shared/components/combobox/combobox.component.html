@@ -1,4 +1,11 @@
-<div class="combobox" [class.is-open]="aberto()" [class.is-disabled]="disabled()">
+<!-- para o clique dentro do widget: se um <label> envolver o componente, ele reencaminharia
+     o clique pro <input> interno e reabriria a lista ao selecionar uma opção -->
+<div
+  class="combobox"
+  [class.is-open]="aberto()"
+  [class.is-disabled]="disabled()"
+  (click)="$event.stopPropagation()"
+>
   @if (modo() === 'add' || modo() === 'edit') {
     <div class="combobox__row">
       <input
@@ -34,7 +41,7 @@
     </div>
   } @else if (modo() === 'delete') {
     <div class="combobox__row">
-      <span class="combobox__confirm">Excluir o {{ itemNoun() }} "{{ alvo() }}"?</span>
+      <span class="combobox__confirm">Excluir o {{ itemNoun() }} "{{ alvoRotulo() }}"?</span>
       <button
         type="button"
         class="combobox__acao combobox__acao--perigo"
@@ -61,16 +68,16 @@
           #campo
           type="text"
           class="combobox__campo"
-          [class.combobox__campo--select]="!pesquisavel()"
+          [class.combobox__campo--select]="!buscaLivre()"
           role="combobox"
           autocomplete="off"
-          [attr.aria-autocomplete]="pesquisavel() ? 'list' : null"
+          [attr.aria-autocomplete]="buscaLivre() ? 'list' : null"
           [attr.aria-expanded]="aberto()"
           [attr.aria-label]="ariaLabel() || null"
-          [readonly]="!pesquisavel()"
+          [readonly]="!buscaLivre()"
           [disabled]="disabled()"
           [placeholder]="placeholder()"
-          [value]="aberto() && pesquisavel() ? consulta() : rotuloAtual()"
+          [value]="aberto() && buscaLivre() ? consulta() : rotuloAtual()"
           (focus)="onFoco()"
           (click)="onClique()"
           (input)="onInput(campo.value)"
@@ -79,7 +86,7 @@
         <i class="fa-solid fa-chevron-down combobox__seta" aria-hidden="true"></i>
 
         @if (aberto()) {
-          <ul class="combobox__lista" role="listbox">
+          <ul class="combobox__lista" role="listbox" (scroll)="onScrollLista($event)">
             @for (opcao of filtradas(); track opcao.value; let i = $index) {
               <li
                 role="option"
@@ -94,7 +101,12 @@
                 {{ opcao.label }}
               </li>
             } @empty {
-              <li class="combobox__vazio">{{ noResultsText() }}</li>
+              @if (!carregando()) {
+                <li class="combobox__vazio">{{ noResultsText() }}</li>
+              }
+            }
+            @if (carregando()) {
+              <li class="combobox__vazio">Carregando…</li>
             }
           </ul>
         }

@@ -13,6 +13,8 @@ import {
   untracked,
   viewChild,
 } from '@angular/core';
+import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
+import { Observable, debounceTime, distinctUntilChanged, filter, skip } from 'rxjs';
 
 import { AutoFocusSelectDirective } from '../../directives/auto-focus-select.directive';
 
@@ -28,6 +30,18 @@ type Modo = 'busca' | 'add' | 'edit' | 'delete';
 export interface ComboEdicao {
   de: string;
   para: string;
+}
+
+/** Um item vindo do servidor (modo `buscarPagina`) — `valor` opaco, `rotulo` exibido. */
+export interface ComboItemRemoto {
+  valor: string;
+  rotulo: string;
+}
+
+/** Uma página de resultados do servidor. `ultima: true` para o "carregar mais" no scroll. */
+export interface ComboPagina {
+  itens: ComboItemRemoto[];
+  ultima: boolean;
 }
 
 /** Minúsculas, sem acento e sem espaço nas pontas — base da busca "por trechos". */
@@ -48,6 +62,12 @@ const normalizar = (texto: string): string =>
  *
  * Trabalha com opções de texto puro (`options: string[]`). Com `emptyLabel` definido, uma opção
  * extra de valor `''` aparece no topo (equivalente ao `<option value="">` do select).
+ *
+ * **Busca paginada no servidor**: passe `buscarPagina` — `(termo, pagina) => Observable<ComboPagina>`.
+ * Aí o componente não filtra localmente: busca a página 0 ao abrir e a cada tecla (com debounce),
+ * e pede a próxima página ao rolar até o fim da lista. Os itens têm `valor` ≠ `rotulo` (ex.: id +
+ * nome), então serve de "escolher entidade"; passe `valueLabel` com o rótulo do valor atual (a
+ * página dele pode não estar carregada).
  *
  * Gestão do catálogo pelo menu "⋮": ligue `adicionar` / `editar` / `excluir` (booleanos) — cada
  * um habilita a opção correspondente no menu. Se **nenhum** estiver ligado, o botão "⋮" nem
@@ -81,6 +101,17 @@ export class ComboboxComponent {
   /** Substantivo do item, pra frase de confirmação e placeholders ("Excluir o {itemNoun} …"). */
   readonly itemNoun = input<string>('item');
 
+  /**
+   * Ativa a busca paginada no servidor: `(termo, pagina) => Observable<ComboPagina>`. Quando
+   * definido, `options` é ignorado e a lista vem 100% do servidor (página 0 ao abrir/digitar,
+   * próxima página no scroll).
+   */
+  readonly buscarPagina = input<
+    ((termo: string, pagina: number) => Observable<ComboPagina>) | null
+  >(null);
+  /** Rótulo do valor atual — usado quando a página desse valor ainda não foi carregada. */
+  readonly valueLabel = input<string>('');
+
   /** Liga a opção "Adicionar" no menu "⋮". */
   readonly adicionar = input<boolean>(false);
   /** Liga a opção "Editar" no menu "⋮" (desabilitada quando nada está selecionado). */
@@ -110,26 +141,41 @@ export class ComboboxComponent {
   protected readonly rascunho = signal('');
   /** Valor alvo de editar/excluir — fixado ao entrar no modo, não muda se `value` mudar. */
   protected readonly alvo = signal('');
+  /** Rótulo do alvo (pra frase de confirmação — `alvo` pode ser um id opaco). */
+  protected readonly alvoRotulo = signal('');
+
+  // --- busca paginada no servidor (`buscarPagina`) ---
+  protected readonly remoto = computed(() => this.buscarPagina() !== null);
+  private readonly remotoItens = signal<ComboOption[]>([]);
+  private readonly remotoPagina = signal(0);
+  private readonly remotoUltima = signal(true);
+  protected readonly carregando = signal(false);
 
   /** Só mostra o "⋮" se ao menos uma das 3 ações estiver ligada. */
   protected readonly temAcoes = computed(() => this.adicionar() || this.editar() || this.excluir());
 
+  /** Busca livre no campo — explícita (`pesquisavel`) ou implícita (modo servidor). */
+  protected readonly buscaLivre = computed(() => this.pesquisavel() || this.remoto());
+
   /** Todas as opções, com a "vazia" no topo quando `emptyLabel` está definido. */
   private readonly todas = computed<ComboOption[]>(() => {
-    const base = this.options().map((o) => ({ value: o, label: o }));
+    const base = this.remoto()
+      ? this.remotoItens()
+      : this.options().map((o) => ({ value: o, label: o }));
     const vazia = this.emptyLabel().trim();
     return vazia ? [{ value: '', label: this.emptyLabel() }, ...base] : base;
   });
 
   /** Rótulo do valor selecionado — é o que o campo mostra quando fechado. */
   protected readonly rotuloAtual = computed(
-    () => this.todas().find((o) => o.value === this.value())?.label ?? '',
+    () => this.todas().find((o) => o.value === this.value())?.label || this.valueLabel(),
   );
 
   /** Opções que casam com a consulta, já ordenadas por relevância (tudo, se não pesquisável). */
   protected readonly filtradas = computed<ComboOption[]>(() => {
     const todas = this.todas();
-    if (!this.pesquisavel()) {
+    // Modo servidor / sem busca: sem filtro local — a lista já vem pronta.
+    if (this.remoto() || !this.pesquisavel()) {
       return todas;
     }
     const consulta = normalizar(this.consulta());
@@ -149,6 +195,17 @@ export class ComboboxComponent {
   });
 
   constructor() {
+    // Modo servidor: cada tecla (com debounce) recomeça da página 0 com o novo termo.
+    toObservable(this.consulta)
+      .pipe(
+        skip(1),
+        debounceTime(250),
+        distinctUntilChanged(),
+        filter(() => this.remoto() && this.aberto()),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe(() => this.carregarPagina(0));
+
     // Mantém o destaque dentro da lista quando ela encolhe ao filtrar.
     effect(() => {
       const total = this.filtradas().length;
@@ -196,21 +253,60 @@ export class ComboboxComponent {
     this.consulta.set('');
     this.destaque.set(0);
     this.aberto.set(true);
+    if (this.remoto()) {
+      this.remotoItens.set([]);
+      this.carregarPagina(0);
+    }
   }
 
-  /** Foco no campo: abre a lista só quando pesquisável (senão o clique é que abre/fecha). */
+  /** Foco no campo: abre a lista só quando há busca (senão o clique é que abre/fecha). */
   protected onFoco(): void {
-    if (this.pesquisavel()) {
+    if (this.buscaLivre()) {
       this.abrir();
     }
   }
 
-  /** Clique no campo: pesquisável só abre; sem busca, alterna como um `<select>`. */
+  /** Clique no campo: com busca só abre; sem busca, alterna como um `<select>`. */
   protected onClique(): void {
-    if (this.pesquisavel() || !this.aberto()) {
+    if (this.buscaLivre() || !this.aberto()) {
       this.abrir();
     } else {
       this.fechar();
+    }
+  }
+
+  /** Modo servidor: pede uma página e anexa (ou substitui, se `pagina === 0`). */
+  private carregarPagina(pagina: number): void {
+    const fn = this.buscarPagina();
+    if (!fn || this.carregando()) {
+      return;
+    }
+    this.carregando.set(true);
+    fn(this.consulta().trim(), pagina)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (res) => {
+          const itens = res.itens.map((i) => ({ value: i.valor, label: i.rotulo }));
+          this.remotoItens.update((atual) => (pagina === 0 ? itens : [...atual, ...itens]));
+          this.remotoPagina.set(pagina);
+          this.remotoUltima.set(res.ultima);
+          this.carregando.set(false);
+        },
+        error: () => {
+          this.remotoUltima.set(true);
+          this.carregando.set(false);
+        },
+      });
+  }
+
+  /** Rolou até perto do fim: puxa a próxima página (modo servidor). */
+  protected onScrollLista(event: Event): void {
+    if (!this.remoto() || this.carregando() || this.remotoUltima()) {
+      return;
+    }
+    const el = event.target as HTMLElement;
+    if (el.scrollTop + el.clientHeight >= el.scrollHeight - 24) {
+      this.carregarPagina(this.remotoPagina() + 1);
     }
   }
 
@@ -293,7 +389,8 @@ export class ComboboxComponent {
     }
     this.menuAberto.set(false);
     this.alvo.set(this.value());
-    this.rascunho.set(this.value());
+    this.alvoRotulo.set(this.rotuloAtual());
+    this.rascunho.set(this.rotuloAtual());
     this.modo.set('edit');
   }
 
@@ -303,6 +400,7 @@ export class ComboboxComponent {
     }
     this.menuAberto.set(false);
     this.alvo.set(this.value());
+    this.alvoRotulo.set(this.rotuloAtual());
     this.modo.set('delete');
   }
 

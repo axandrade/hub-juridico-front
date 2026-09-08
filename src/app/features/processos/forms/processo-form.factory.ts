@@ -4,9 +4,9 @@ import { ProcessoApi } from '../services/processo-api.model';
 
 /**
  * `FormGroup` da aba "Informações básicas" do processo — só os campos de texto/data/textarea.
- * Os campos que usam `<app-combobox>` (tipo, status, ação, posição do cliente, posição da parte
- * contrária, UF, tipo de documento, cliente principal, advogado responsável) e as listas (tags,
- * órgãos, escritórios) ficam em signals no componente, porque o combobox trabalha por
+ * Os campos que usam `<app-combobox>` (tipo, status, ação, natureza, posição do cliente, posição
+ * da parte contrária, UF, tipo de documento, cliente principal, advogado responsável) e as listas
+ * (tags, órgãos, escritórios) ficam em signals no componente, porque o combobox trabalha por
  * `[value]`/`(valueChange)`, não por `formControlName`.
  */
 export type ProcessoForm = FormGroup<{
@@ -14,7 +14,6 @@ export type ProcessoForm = FormGroup<{
   contrarioPrincipalNome: FormControl<string>;
   contrarioPrincipalDocumento: FormControl<string>;
   dataDistribuicao: FormControl<string>;
-  natureza: FormControl<string>;
   procedimento: FormControl<string>;
   fase: FormControl<string>;
   cidade: FormControl<string>;
@@ -31,7 +30,6 @@ export function createProcessoForm(): ProcessoForm {
     contrarioPrincipalNome: text(),
     contrarioPrincipalDocumento: text(),
     dataDistribuicao: text(),
-    natureza: text(),
     procedimento: text(),
     fase: text(),
     cidade: text(),
@@ -46,7 +44,6 @@ export function patchProcessoForm(form: ProcessoForm, p: ProcessoApi): void {
       contrarioPrincipalNome: p.contrario_principal_nome ?? '',
       contrarioPrincipalDocumento: p.contrario_principal_documento ?? '',
       dataDistribuicao: p.data_distribuicao ?? '',
-      natureza: p.natureza ?? '',
       procedimento: p.procedimento ?? '',
       fase: p.fase ?? '',
       cidade: p.cidade ?? '',

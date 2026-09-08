@@ -209,10 +209,25 @@
         </div>
       </div>
       <div class="processo-form__row">
-        <label class="processo-field">
+        <div class="processo-field">
           <span>Natureza</span>
-          <input type="text" formControlName="natureza" />
-        </label>
+          <app-combobox
+            ariaLabel="Natureza do processo"
+            placeholder="Buscar natureza..."
+            emptyLabel="— Sem natureza —"
+            noResultsText="Nenhuma natureza encontrada"
+            itemNoun="natureza"
+            [options]="nomesDeNatureza()"
+            [value]="naturezaNome()"
+            [adicionar]="true"
+            [editar]="true"
+            [excluir]="true"
+            (valueChange)="naturezaNome.set($event)"
+            (aoAdicionar)="criarNatureza($event)"
+            (aoEditar)="renomearNatureza($event)"
+            (aoExcluir)="excluirNatureza($event)"
+          />
+        </div>
         <label class="processo-field">
           <span>Procedimento</span>
           <input type="text" formControlName="procedimento" />

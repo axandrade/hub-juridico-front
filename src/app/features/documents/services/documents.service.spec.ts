@@ -61,6 +61,87 @@ describe('DocumentsService', () => {
     expect(corpo).toBe(zip);
   });
 
+  it('enviar (PUT único): pede a url, sobe o binário, confirma e emite progresso + concluido', () => {
+    const eventos: string[] = [];
+    const arquivo = new File(['conteudo'], 'contrato.pdf', { type: 'application/pdf' });
+    service.enviar(1, null, arquivo).subscribe((ev) => eventos.push(ev.tipo));
+
+    const urlReq = http.expectOne(`${BASE}/documentos/upload-url`);
+    expect(urlReq.request.body).toEqual({
+      pessoa_id: 1,
+      pasta_id: null,
+      content_type: 'application/pdf',
+      tamanho_bytes: arquivo.size,
+    });
+    urlReq.flush({
+      storage_key: 'pessoas/1/uuid.pdf',
+      upload_url: 'https://storage.exemplo/put',
+      http_method: 'PUT',
+      expires_in_seconds: 900,
+      chunked: false,
+      chunk_size_bytes: null,
+    });
+
+    const putReq = http.expectOne('https://storage.exemplo/put');
+    expect(putReq.request.method).toBe('PUT');
+    expect(putReq.request.reportProgress).toBe(true);
+    putReq.flush('ok');
+
+    const confirmReq = http.expectOne(`${BASE}/documentos/confirmar`);
+    expect(confirmReq.request.body).toMatchObject({
+      storage_key: 'pessoas/1/uuid.pdf',
+      nome_original: 'contrato.pdf',
+    });
+    confirmReq.flush({
+      id: 'doc-9',
+      pasta_id: null,
+      nome_original: 'contrato.pdf',
+      content_type: 'application/pdf',
+      tamanho_bytes: arquivo.size,
+      enviado_em: '2026-09-08T00:00:00Z',
+    });
+
+    expect(eventos).toContain('progresso');
+    expect(eventos.at(-1)).toBe('concluido');
+  });
+
+  it('enviar (em blocos): fatia o arquivo em PUTs com Content-Range e confirma no fim', async () => {
+    const tick = (): Promise<void> => new Promise((r) => setTimeout(r, 0));
+    const eventos: string[] = [];
+    const arquivo = new File([new Uint8Array(10)], 'grande.pdf', { type: 'application/pdf' });
+    service.enviar(1, null, arquivo).subscribe((ev) => eventos.push(ev.tipo));
+
+    http.expectOne(`${BASE}/documentos/upload-url`).flush({
+      storage_key: 'pessoas/1/uuid.pdf',
+      upload_url: 'https://graph.exemplo/session',
+      http_method: 'PUT',
+      expires_in_seconds: 900,
+      chunked: true,
+      chunk_size_bytes: 4,
+    });
+    await tick();
+
+    // 10 bytes / blocos de 4 => 3 PUTs (0-3, 4-7, 8-9), sequenciais.
+    const faixas = ['bytes 0-3/10', 'bytes 4-7/10', 'bytes 8-9/10'];
+    for (const faixa of faixas) {
+      const bloco = http.expectOne('https://graph.exemplo/session');
+      expect(bloco.request.headers.get('Content-Range')).toBe(faixa);
+      bloco.flush('');
+      await tick();
+    }
+
+    http.expectOne(`${BASE}/documentos/confirmar`).flush({
+      id: 'doc-9',
+      pasta_id: null,
+      nome_original: 'grande.pdf',
+      content_type: 'application/pdf',
+      tamanho_bytes: 10,
+      enviado_em: '2026-09-08T00:00:00Z',
+    });
+
+    expect(eventos.at(-1)).toBe('concluido');
+  });
+
   it('converterParaPdf faz POST .../documentos/{id}/converter-pdf e devolve o Documento', () => {
     let resultado: { id: string; nome: string } | undefined;
     service.converterParaPdf('doc-1').subscribe((d) => (resultado = d));

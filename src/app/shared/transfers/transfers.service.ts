@@ -1,22 +1,32 @@
 import { HttpEventType } from '@angular/common/http';
 import { Injectable, computed, inject, signal } from '@angular/core';
-import { Subscription, last, switchMap, takeWhile, tap, timer } from 'rxjs';
+import { Observable, Subscription, last, switchMap, takeWhile, tap, timer } from 'rxjs';
 
-import { DocumentsService, ZipJobApi } from '../../features/documents/services/documents.service';
+import {
+  DocumentsService,
+  UploadEvento,
+  ZipJobApi,
+} from '../../features/documents/services/documents.service';
+import { Documento } from '../../features/documents/models/document-explorer.model';
 
-export type DownloadStatus =
+export type TransferDirection = 'download' | 'upload';
+
+export type TransferStatus =
   | 'preparando'
   | 'compactando'
   | 'baixando'
+  | 'enviando'
   | 'concluido'
   | 'erro'
   | 'cancelado';
 
-export interface DownloadTask {
+export interface TransferTask {
   readonly id: string;
-  /** Nome do arquivo final salvo (ex.: `Processo.zip`). */
+  readonly tipo: TransferDirection;
+  /** Nome exibido na bandeja (ex.: `Processo.zip` no download, `contrato.pdf` no upload). */
   readonly nome: string;
-  status: DownloadStatus;
+  status: TransferStatus;
+  /** Só nos downloads de zip — quantos itens já entraram no pacote. */
   totalArquivos: number;
   arquivosProcessados: number;
   /** 0..1, ou `null` quando não dá pra calcular (ex.: sem tamanho total). */
@@ -26,20 +36,31 @@ export interface DownloadTask {
 /** Intervalo do polling do progresso da compactação, no servidor. */
 export const POLL_MS = 900;
 
-const ATIVA = (t: DownloadTask): boolean =>
-  t.status === 'preparando' || t.status === 'compactando' || t.status === 'baixando';
+const ATIVA = (t: TransferTask): boolean =>
+  t.status === 'preparando' ||
+  t.status === 'compactando' ||
+  t.status === 'baixando' ||
+  t.status === 'enviando';
 
 /**
- * Bandeja de downloads no estilo Google Drive, com percentual real. O zip é montado no servidor
- * (job assíncrono): aqui se cria o job, faz-se polling do progresso da compactação e, quando fica
- * pronto, baixa-se o arquivo já completo (com `Content-Length`, então essa fase também tem %).
+ * Bandeja de transferências no canto inferior direito (estilo Google Drive), com percentual real.
+ * Reúne downloads e uploads:
+ *
+ * <ul>
+ *   <li><b>Download de zip</b> (`baixarZip`): o zip é montado no servidor (job assíncrono) — cria-se
+ *   o job, faz-se polling da compactação e, quando fica pronto, baixa-se o arquivo já completo
+ *   (com `Content-Length`, então essa fase também tem %).</li>
+ *   <li><b>Upload</b> (`enviar`): acompanha o envio direto pro armazenamento (PUT único ou sessão em
+ *   blocos, ver `DocumentsService.enviar`), com o percentual vindo dos eventos de progresso.</li>
+ * </ul>
+ *
  * Nada disso trava a tela, e a bandeja sobrevive à navegação entre telas.
  */
 @Injectable({ providedIn: 'root' })
-export class DownloadsService {
+export class TransfersService {
   private readonly docs = inject(DocumentsService);
 
-  private readonly _tarefas = signal<DownloadTask[]>([]);
+  private readonly _tarefas = signal<TransferTask[]>([]);
   readonly tarefas = this._tarefas.asReadonly();
   readonly quantidadeAtivas = computed(() => this._tarefas().filter(ATIVA).length);
 
@@ -53,7 +74,7 @@ export class DownloadsService {
   baixarZip(nome: string, pastaIds: string[], documentoIds: string[]): string {
     const id = this.novoId();
     this._tarefas.update((tarefas) => [
-      { id, nome, status: 'preparando', totalArquivos: 0, arquivosProcessados: 0, progresso: null },
+      this.tarefaNova(id, 'download', nome, 'preparando'),
       ...tarefas,
     ]);
     this.registro.set(id, { sub: null, jobId: null });
@@ -74,7 +95,39 @@ export class DownloadsService {
     return id;
   }
 
-  /** Aborta o download (polling ou transferência) e manda o servidor descartar o job. */
+  /**
+   * Acompanha um upload já em curso numa tarefa da bandeja. `nome` é o nome exibido (o do arquivo);
+   * `envio$` vem de `DocumentsService.enviar`. `aoConcluir` roda com o `Documento` criado quando o
+   * envio termina — a tela usa isso pra recarregar a listagem. O upload segue mesmo que a tela que
+   * o disparou seja fechada.
+   */
+  enviar(nome: string, envio$: Observable<UploadEvento>, aoConcluir?: (documento: Documento) => void): string {
+    const id = this.novoId();
+    this._tarefas.update((tarefas) => [
+      this.tarefaNova(id, 'upload', nome, 'enviando', 0),
+      ...tarefas,
+    ]);
+    this.registro.set(id, { sub: null, jobId: null });
+
+    const sub = envio$.subscribe({
+      next: (evento) => {
+        if (evento.tipo === 'progresso') {
+          this.atualizar(id, {
+            progresso: evento.total > 0 ? evento.enviados / evento.total : null,
+          });
+        } else {
+          this.atualizar(id, { status: 'concluido', progresso: 1 });
+          this.registro.delete(id);
+          aoConcluir?.(evento.documento);
+        }
+      },
+      error: () => this.marcar(id, 'erro'),
+    });
+    this.registro.get(id)!.sub = sub;
+    return id;
+  }
+
+  /** Aborta a transferência (polling, download ou upload) e, no download, manda o servidor descartar o job. */
   cancelar(id: string): void {
     const reg = this.registro.get(id);
     reg?.sub?.unsubscribe();
@@ -162,19 +215,29 @@ export class DownloadsService {
     });
   }
 
-  private marcar(id: string, status: DownloadStatus): void {
+  private tarefaNova(
+    id: string,
+    tipo: TransferDirection,
+    nome: string,
+    status: TransferStatus,
+    progresso: number | null = null,
+  ): TransferTask {
+    return { id, tipo, nome, status, totalArquivos: 0, arquivosProcessados: 0, progresso };
+  }
+
+  private marcar(id: string, status: TransferStatus): void {
     this.registro.delete(id);
     this.atualizar(id, { status });
   }
 
-  private atualizar(id: string, patch: Partial<DownloadTask>): void {
+  private atualizar(id: string, patch: Partial<TransferTask>): void {
     this._tarefas.update((tarefas) => tarefas.map((t) => (t.id === id ? { ...t, ...patch } : t)));
   }
 
   private novoId(): string {
     return typeof crypto !== 'undefined' && 'randomUUID' in crypto
       ? crypto.randomUUID()
-      : `dl-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      : `tr-${Date.now()}-${Math.random().toString(36).slice(2)}`;
   }
 
   private salvarBlob(blob: Blob, nomeArquivo: string): void {

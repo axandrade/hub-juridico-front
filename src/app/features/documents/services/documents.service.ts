@@ -1,6 +1,6 @@
-import { HttpClient, HttpEvent } from '@angular/common/http';
+import { HttpClient, HttpEvent, HttpEventType, HttpUploadProgressEvent } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
-import { Observable, firstValueFrom, from, map, switchMap } from 'rxjs';
+import { Observable, concat, filter, firstValueFrom, map, startWith, switchMap } from 'rxjs';
 
 import { environment } from '../../../../environments/environment';
 import {
@@ -27,6 +27,15 @@ export interface ZipJobApi {
   bytes_totais: number;
   bytes_processados: number;
 }
+
+/**
+ * Progresso de um upload em andamento (`DocumentsService.enviar`). `progresso` repete a cada pedaço
+ * enviado (`enviados`/`total` em bytes); `concluido` fecha o fluxo com o `Documento` já criado no
+ * `confirmar`.
+ */
+export type UploadEvento =
+  | { tipo: 'progresso'; enviados: number; total: number }
+  | { tipo: 'concluido'; documento: Documento };
 
 /** Espelha `storage.allowed-content-types` do backend (ver `application.yml`) — mantido em sync manualmente. */
 export const TIPOS_ACEITOS = [
@@ -110,7 +119,7 @@ export class DocumentsService {
 
   /**
    * Cria um job de download de zip (pasta/seleção) com percentual — o zip é montado no servidor em
-   * background. Ver `DownloadsService`, que faz o polling do progresso e baixa quando fica pronto.
+   * background. Ver `TransfersService`, que faz o polling do progresso e baixa quando fica pronto.
    */
   iniciarDownloadZip(pastaIds: string[], documentoIds: string[]): Observable<ZipJobApi> {
     return this.http.post<ZipJobApi>(`${this.base}/pastas/download-job`, {
@@ -195,13 +204,16 @@ export class DocumentsService {
    * Fluxo completo de envio: pede a URL pré-assinada, envia o binário cru, confirma os metadados.
    * `tipoAnexo` (opcional) é o item do catálogo escolhido — o servidor monta o nome de exibição
    * "dd/MM/yyyy (HH:mm) | Anexo: {tipo} | {nome}".
+   *
+   * Emite `{ tipo: 'progresso' }` conforme o binário sobe (para o percentual da bandeja de
+   * transferências) e fecha com `{ tipo: 'concluido', documento }`.
    */
   enviar(
     pessoaId: number,
     pastaId: string | null,
     arquivo: File,
     tipoAnexo?: string,
-  ): Observable<Documento> {
+  ): Observable<UploadEvento> {
     return this.http
       .post<UploadUrlApi>(`${this.base}/documentos/upload-url`, {
         pessoa_id: pessoaId,
@@ -210,54 +222,84 @@ export class DocumentsService {
         tamanho_bytes: arquivo.size,
       })
       .pipe(
-        switchMap((alvo) =>
-          (alvo.chunked ? this.enviarEmBlocos(alvo, arquivo) : this.enviarUnico(alvo, arquivo)).pipe(
-            switchMap(() =>
-              this.http.post<DocumentoApi>(`${this.base}/documentos/confirmar`, {
-                pessoa_id: pessoaId,
-                pasta_id: pastaId,
-                storage_key: alvo.storage_key,
-                nome_original: arquivo.name,
-                content_type: arquivo.type,
-                tamanho_bytes: arquivo.size,
-                tipo_anexo: tipoAnexo?.trim() || null,
-              }),
-            ),
-          ),
-        ),
-        map(documentoFromApi),
+        switchMap((alvo) => {
+          const total = arquivo.size;
+          const envio$ = (
+            alvo.chunked ? this.enviarEmBlocos(alvo, arquivo) : this.enviarUnico(alvo, arquivo)
+          ).pipe(
+            startWith(0),
+            map((enviados): UploadEvento => ({ tipo: 'progresso', enviados, total })),
+          );
+          const confirmar$ = this.http
+            .post<DocumentoApi>(`${this.base}/documentos/confirmar`, {
+              pessoa_id: pessoaId,
+              pasta_id: pastaId,
+              storage_key: alvo.storage_key,
+              nome_original: arquivo.name,
+              content_type: arquivo.type,
+              tamanho_bytes: arquivo.size,
+              tipo_anexo: tipoAnexo?.trim() || null,
+            })
+            .pipe(map((doc): UploadEvento => ({ tipo: 'concluido', documento: documentoFromApi(doc) })));
+          return concat(envio$, confirmar$);
+        }),
       );
   }
 
-  /** PUT único do arquivo inteiro — local/S3. */
-  private enviarUnico(alvo: UploadUrlApi, arquivo: File): Observable<unknown> {
-    return this.http.request(alvo.http_method, alvo.upload_url, {
-      body: arquivo,
-      headers: { 'Content-Type': arquivo.type },
-      responseType: 'text',
-    });
+  /** PUT único do arquivo inteiro (local/S3) — emite os bytes já enviados conforme o progresso. */
+  private enviarUnico(alvo: UploadUrlApi, arquivo: File): Observable<number> {
+    return this.http
+      .request(alvo.http_method, alvo.upload_url, {
+        body: arquivo,
+        headers: { 'Content-Type': arquivo.type },
+        responseType: 'text',
+        observe: 'events',
+        reportProgress: true,
+      })
+      .pipe(
+        filter(
+          (evento: HttpEvent<unknown>): evento is HttpUploadProgressEvent =>
+            evento.type === HttpEventType.UploadProgress,
+        ),
+        map((evento) => evento.loaded),
+      );
   }
 
   /**
    * Sessão de upload em blocos (OneDrive/Graph, ver `UploadUrlApi.chunked`): a mesma `upload_url`
    * recebe vários PUTs sequenciais, cada um com `Content-Range` marcando o pedaço enviado. Precisa
    * ser sequencial (o Graph exige os blocos em ordem) — por isso `async/await` em vez de RxJS puro.
+   * Emite o total acumulado de bytes a cada bloco confirmado e aborta entre blocos se a inscrição
+   * for cancelada.
    */
-  private enviarEmBlocos(alvo: UploadUrlApi, arquivo: File): Observable<unknown> {
-    return from(this.enviarBlocosSequencial(alvo.upload_url, arquivo, alvo.chunk_size_bytes ?? arquivo.size));
-  }
-
-  private async enviarBlocosSequencial(url: string, arquivo: File, tamanhoBloco: number): Promise<void> {
-    const total = arquivo.size;
-    for (let inicio = 0; inicio < total; inicio += tamanhoBloco) {
-      const fim = Math.min(inicio + tamanhoBloco, total);
-      const bloco = arquivo.slice(inicio, fim);
-      await firstValueFrom(
-        this.http.put(url, bloco, {
-          headers: { 'Content-Range': `bytes ${inicio}-${fim - 1}/${total}` },
-          responseType: 'text',
-        }),
-      );
-    }
+  private enviarEmBlocos(alvo: UploadUrlApi, arquivo: File): Observable<number> {
+    return new Observable<number>((subscriber) => {
+      let cancelado = false;
+      const total = arquivo.size;
+      const tamanhoBloco = alvo.chunk_size_bytes ?? total;
+      (async () => {
+        try {
+          for (let inicio = 0; inicio < total; inicio += tamanhoBloco) {
+            if (cancelado) {
+              return;
+            }
+            const fim = Math.min(inicio + tamanhoBloco, total);
+            await firstValueFrom(
+              this.http.put(alvo.upload_url, arquivo.slice(inicio, fim), {
+                headers: { 'Content-Range': `bytes ${inicio}-${fim - 1}/${total}` },
+                responseType: 'text',
+              }),
+            );
+            subscriber.next(fim);
+          }
+          subscriber.complete();
+        } catch (erro) {
+          subscriber.error(erro);
+        }
+      })();
+      return () => {
+        cancelado = true;
+      };
+    });
   }
 }

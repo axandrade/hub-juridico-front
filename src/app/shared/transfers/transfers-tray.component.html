@@ -1,0 +1,54 @@
+@if (tarefas().length > 0) {
+  <section class="transfers-tray" [class.is-collapsed]="recolhida()" aria-label="Transferências">
+    <header class="transfers-tray__head">
+      <span class="transfers-tray__title">
+        @if (quantidadeAtivas() > 0) {
+          {{ quantidadeAtivas() }} transferência(s) em andamento
+        } @else {
+          Transferências
+        }
+      </span>
+      <div class="transfers-tray__head-actions">
+        <button
+          type="button"
+          [attr.aria-label]="recolhida() ? 'Expandir' : 'Recolher'"
+          [attr.aria-expanded]="!recolhida()"
+          (click)="alternarRecolhida()"
+        >
+          <i class="fa-solid" [class.fa-chevron-up]="recolhida()" [class.fa-chevron-down]="!recolhida()" aria-hidden="true"></i>
+        </button>
+        <button type="button" aria-label="Fechar" (click)="limpar()">
+          <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+        </button>
+      </div>
+    </header>
+
+    @if (!recolhida()) {
+      <ul class="transfers-tray__list">
+        @for (t of tarefas(); track t.id) {
+          <li class="transfers-tray__item" [class]="'is-' + t.status">
+            <i class="transfers-tray__item-icon" [class]="icone(t)" aria-hidden="true"></i>
+            <div class="transfers-tray__item-text">
+              <span class="transfers-tray__item-name" [title]="t.nome">{{ t.nome }}</span>
+              <span class="transfers-tray__item-status">{{ linhaStatus(t) }}</span>
+              @if (ativa(t.status)) {
+                <span class="transfers-tray__bar" [class.is-indeterminate]="porcentagem(t) === null">
+                  <span class="transfers-tray__bar-fill" [style.width.%]="porcentagem(t) ?? 100"></span>
+                </span>
+              }
+            </div>
+            @if (ativa(t.status)) {
+              <button type="button" class="transfers-tray__item-action" aria-label="Cancelar" (click)="cancelar(t.id)">
+                <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+              </button>
+            } @else {
+              <button type="button" class="transfers-tray__item-action" aria-label="Remover da lista" (click)="remover(t.id)">
+                <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+              </button>
+            }
+          </li>
+        }
+      </ul>
+    }
+  </section>
+}

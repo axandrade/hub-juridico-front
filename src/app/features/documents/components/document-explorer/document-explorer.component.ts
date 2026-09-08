@@ -19,7 +19,7 @@ import { ButtonComponent } from '../../../../shared/components/button/button.com
 import { ComboboxComponent } from '../../../../shared/components/combobox/combobox.component';
 import { ModalComponent } from '../../../../shared/components/modal/modal.component';
 import { AutoFocusSelectDirective } from '../../../../shared/directives/auto-focus-select.directive';
-import { DownloadsService } from '../../../../shared/downloads/downloads.service';
+import { TransfersService } from '../../../../shared/transfers/transfers.service';
 import { formatFileSize } from '../../../../shared/utils/format-file-size';
 import { TipoAnexoService } from '../../../clients/services/tipo-anexo.service';
 import { DocxRenderDirective } from '../../directives/docx-render.directive';
@@ -40,7 +40,6 @@ export type DocumentExplorerNoticeKey =
   | 'excluido'
   | 'excluidoErro'
   | 'pastaNaoVazia'
-  | 'uploadOk'
   | 'uploadErro'
   | 'downloadErro'
   | 'editarIndisponivel'
@@ -122,7 +121,7 @@ const PROTOCOLO_DESKTOP_POR_CONTENT_TYPE: Record<string, string> = {
 })
 export class DocumentExplorerComponent {
   private readonly documentsService = inject(DocumentsService);
-  private readonly downloads = inject(DownloadsService);
+  private readonly transferencias = inject(TransfersService);
   private readonly sanitizer = inject(DomSanitizer);
   protected readonly tipoAnexoService = inject(TipoAnexoService);
 
@@ -155,7 +154,6 @@ export class DocumentExplorerComponent {
   protected readonly pastaAtualId = signal<string | null>(null);
   protected readonly conteudo = signal<PastaConteudo | null>(null);
   protected readonly loading = signal(false);
-  protected readonly enviandoQtd = signal(0);
 
   // --- painel "Enviar arquivo" (inline, abaixo da barra) ---
   protected readonly uploadPanelAberto = signal(false);
@@ -645,25 +643,14 @@ export class DocumentExplorerComponent {
     // nome de exibição — com carimbo e "Anexo: {tipo}" — é montado pelo servidor no `confirmar`.
     const arquivoTipado =
       arquivo.type === tipo ? arquivo : new File([arquivo], arquivo.name, { type: tipo });
-    this.enviandoQtd.update((n) => n + 1);
-    this.documentsService
-      .enviar(this.pessoaId(), pastaDestinoId, arquivoTipado, tipoAnexo)
-      .subscribe({
-        next: () => {
-          this.enviandoQtd.update((n) => n - 1);
-          if (this.pastaAtualId() === pastaDestinoId) {
-            this.carregar();
-          }
-          this.notify.emit({ key: 'uploadOk', subject: arquivo.name });
-        },
-        error: (err: unknown) => {
-          this.enviandoQtd.update((n) => n - 1);
-          this.notify.emit({
-            key: 'uploadErro',
-            subject: `${arquivo.name}: ${this.mensagemErro(err)}`,
-          });
-        },
-      });
+    // O envio vira uma tarefa com percentual na bandeja de transferências (canto inferior direito),
+    // sem travar a tela e seguindo mesmo que o explorador seja fechado. Falhas aparecem na bandeja.
+    const envio$ = this.documentsService.enviar(this.pessoaId(), pastaDestinoId, arquivoTipado, tipoAnexo);
+    this.transferencias.enviar(arquivo.name, envio$, () => {
+      if (this.pastaAtualId() === pastaDestinoId) {
+        this.carregar();
+      }
+    });
   }
 
   // --- download / visualizar ---
@@ -682,11 +669,11 @@ export class DocumentExplorerComponent {
 
   /**
    * Baixa a pasta (com subpastas e documentos, recursivamente) como um `.zip` — vira uma tarefa
-   * com percentual na bandeja de downloads (canto inferior direito), sem travar a tela.
+   * com percentual na bandeja de transferências (canto inferior direito), sem travar a tela.
    */
   protected baixarPastaZip(pasta: Pasta): void {
     this.fecharMenu();
-    this.downloads.baixarZip(`${pasta.nome}.zip`, [pasta.id], []);
+    this.transferencias.baixarZip(`${pasta.nome}.zip`, [pasta.id], []);
   }
 
   /** Baixa a seleção (pastas e/ou documentos) como um único `.zip`, também via bandeja. */
@@ -698,7 +685,7 @@ export class DocumentExplorerComponent {
       return;
     }
     const nome = pastaIds.length === 1 && documentoIds.length === 0 ? itens[0].nome : 'arquivos';
-    this.downloads.baixarZip(`${nome}.zip`, pastaIds, documentoIds);
+    this.transferencias.baixarZip(`${nome}.zip`, pastaIds, documentoIds);
   }
 
   /**

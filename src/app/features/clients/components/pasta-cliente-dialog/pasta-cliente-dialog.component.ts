@@ -89,7 +89,6 @@ export class PastaClienteDialogComponent {
       excluido: `Excluído: ${alvo}`,
       excluidoErro: `Não foi possível excluir: ${alvo}`,
       pastaNaoVazia: `A pasta "${alvo}" não está vazia.`,
-      uploadOk: `Arquivo enviado: ${alvo}`,
       uploadErro: `Não foi possível enviar: ${alvo}`,
       downloadErro: `Não foi possível baixar: ${alvo}`,
       editarIndisponivel: `Edição online não disponível para: ${alvo}`,

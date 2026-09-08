@@ -4,7 +4,7 @@ import { Router, RouterOutlet } from '@angular/router';
 import { ROUTES } from '../core/constants/app-constants';
 import { AuthService } from '../core/services/auth.service';
 import { PastaClienteDialogComponent } from '../features/clients/components/pasta-cliente-dialog/pasta-cliente-dialog.component';
-import { DownloadsTrayComponent } from '../shared/downloads/downloads-tray.component';
+import { TransfersTrayComponent } from '../shared/transfers/transfers-tray.component';
 import { FooterComponent } from './components/footer/footer.component';
 import { HeaderComponent } from './components/header/header.component';
 import { SidebarComponent } from './components/sidebar/sidebar.component';
@@ -18,7 +18,7 @@ import { SidebarComponent } from './components/sidebar/sidebar.component';
     SidebarComponent,
     HeaderComponent,
     FooterComponent,
-    DownloadsTrayComponent,
+    TransfersTrayComponent,
     PastaClienteDialogComponent,
   ],
   templateUrl: './layout.component.html',

@@ -4,18 +4,16 @@ import { ProcessoApi } from '../services/processo-api.model';
 
 /**
  * `FormGroup` da aba "Informações básicas" do processo — só os campos de texto/data/textarea.
- * Os campos que usam `<app-combobox>` (tipo, status, posição do cliente, UF, tipo de documento,
- * cliente principal, advogado responsável) e as listas (tags, órgãos, escritórios) ficam em
- * signals no componente, porque o combobox trabalha por `[value]`/`(valueChange)`, não por
- * `formControlName`.
+ * Os campos que usam `<app-combobox>` (tipo, status, ação, posição do cliente, posição da parte
+ * contrária, UF, tipo de documento, cliente principal, advogado responsável) e as listas (tags,
+ * órgãos, escritórios) ficam em signals no componente, porque o combobox trabalha por
+ * `[value]`/`(valueChange)`, não por `formControlName`.
  */
 export type ProcessoForm = FormGroup<{
   numeroCnj: FormControl<string>;
   contrarioPrincipalNome: FormControl<string>;
-  contrarioPrincipalPosicao: FormControl<string>;
   contrarioPrincipalDocumento: FormControl<string>;
   dataDistribuicao: FormControl<string>;
-  acao: FormControl<string>;
   natureza: FormControl<string>;
   procedimento: FormControl<string>;
   fase: FormControl<string>;
@@ -31,10 +29,8 @@ export function createProcessoForm(): ProcessoForm {
   return new FormGroup({
     numeroCnj: text(),
     contrarioPrincipalNome: text(),
-    contrarioPrincipalPosicao: text(),
     contrarioPrincipalDocumento: text(),
     dataDistribuicao: text(),
-    acao: text(),
     natureza: text(),
     procedimento: text(),
     fase: text(),
@@ -48,10 +44,8 @@ export function patchProcessoForm(form: ProcessoForm, p: ProcessoApi): void {
     {
       numeroCnj: p.numero_cnj ?? '',
       contrarioPrincipalNome: p.contrario_principal_nome ?? '',
-      contrarioPrincipalPosicao: p.contrario_principal_posicao ?? '',
       contrarioPrincipalDocumento: p.contrario_principal_documento ?? '',
       dataDistribuicao: p.data_distribuicao ?? '',
-      acao: p.acao ?? '',
       natureza: p.natureza ?? '',
       procedimento: p.procedimento ?? '',
       fase: p.fase ?? '',

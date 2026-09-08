@@ -27,6 +27,7 @@ import {
   TipoDocumento,
   TipoProcesso,
 } from '../../services/processo-api.model';
+import { AcaoProcessoService } from '../../services/acao-processo.service';
 import { PosicaoClienteService } from '../../services/posicao-cliente.service';
 import { ProcessoEditavel, ProcessoService } from '../../services/processo-service';
 import { StatusProcessoService } from '../../services/status-processo.service';
@@ -82,6 +83,7 @@ export class ProcessoFormComponent {
   private readonly processoService = inject(ProcessoService);
   private readonly statusService = inject(StatusProcessoService);
   private readonly posicaoService = inject(PosicaoClienteService);
+  private readonly acaoService = inject(AcaoProcessoService);
 
   /** Id do registro a editar; `null` = novo cadastro. */
   readonly processoId = input<number | null>(null);
@@ -107,6 +109,8 @@ export class ProcessoFormComponent {
   protected readonly nomesDePosicao = computed(() =>
     this.posicaoService.posicoes().map((p) => p.nome),
   );
+  /** Catálogo de ação — mesmo esquema (adicionar/editar/excluir). */
+  protected readonly nomesDeAcao = computed(() => this.acaoService.acoes().map((a) => a.nome));
 
   protected readonly form: ProcessoForm = createProcessoForm();
   private readonly numeroValue = toSignal(
@@ -122,7 +126,10 @@ export class ProcessoFormComponent {
   /** Só o judicial numera pelo padrão CNJ (máscara + 20 dígitos obrigatórios). */
   protected readonly ehJudicial = computed(() => this.tipo() === 'JUDICIAL');
   protected readonly statusNome = signal('');
+  protected readonly acaoNome = signal('');
+  /** Posição do cliente principal e da parte contrária — mesmo catálogo `PosicaoCliente`. */
   protected readonly clientePrincipalPosicaoNome = signal('');
+  protected readonly contrarioPrincipalPosicaoNome = signal('');
   protected readonly uf = signal('');
   protected readonly contrarioTipoDocumento = signal<TipoDocumento | ''>('');
   protected readonly clientePrincipalId = signal<number | null>(null);
@@ -156,6 +163,7 @@ export class ProcessoFormComponent {
   constructor() {
     this.statusService.carregar();
     this.posicaoService.carregar();
+    this.acaoService.carregar();
 
     effect(() => {
       const id = this.processoId();
@@ -271,11 +279,16 @@ export class ProcessoFormComponent {
     });
   }
 
-  // --- catálogo "Posição do cliente" (ver `PosicaoClienteService`) ---
+  // --- catálogo "Posição do cliente" — alimenta os dois combos de posição (cliente e contrária) ---
 
-  protected criarPosicao(nome: string): void {
+  /** Os dois campos que apontam pro catálogo; renomear/excluir propaga pra ambos. */
+  private posicoesEmUso(): WritableSignal<string>[] {
+    return [this.clientePrincipalPosicaoNome, this.contrarioPrincipalPosicaoNome];
+  }
+
+  protected criarPosicao(nome: string, alvo: WritableSignal<string>): void {
     this.posicaoService.criar(nome).subscribe({
-      next: (p) => this.clientePrincipalPosicaoNome.set(p.nome),
+      next: (p) => alvo.set(p.nome),
       error: (err: unknown) =>
         this.notice.set({ key: 'saveError', subject: this.httpErrorMessage(err) }),
     });
@@ -288,8 +301,10 @@ export class ProcessoFormComponent {
     }
     this.posicaoService.alterar(alvo.id, para).subscribe({
       next: (p) => {
-        if (this.clientePrincipalPosicaoNome() === de) {
-          this.clientePrincipalPosicaoNome.set(p.nome);
+        for (const campo of this.posicoesEmUso()) {
+          if (campo() === de) {
+            campo.set(p.nome);
+          }
         }
       },
       error: (err: unknown) =>
@@ -304,8 +319,52 @@ export class ProcessoFormComponent {
     }
     this.posicaoService.excluir(alvo.id).subscribe({
       next: () => {
-        if (this.clientePrincipalPosicaoNome() === nome) {
-          this.clientePrincipalPosicaoNome.set('');
+        for (const campo of this.posicoesEmUso()) {
+          if (campo() === nome) {
+            campo.set('');
+          }
+        }
+      },
+      error: (err: unknown) =>
+        this.notice.set({ key: 'saveError', subject: this.httpErrorMessage(err) }),
+    });
+  }
+
+  // --- catálogo "Ação" (ver `AcaoProcessoService`) — mesmo esquema do status ---
+
+  protected criarAcao(nome: string): void {
+    this.acaoService.criar(nome).subscribe({
+      next: (a) => this.acaoNome.set(a.nome),
+      error: (err: unknown) =>
+        this.notice.set({ key: 'saveError', subject: this.httpErrorMessage(err) }),
+    });
+  }
+
+  protected renomearAcao({ de, para }: { de: string; para: string }): void {
+    const alvo = this.acaoService.acoes().find((a) => a.nome === de);
+    if (!alvo) {
+      return;
+    }
+    this.acaoService.alterar(alvo.id, para).subscribe({
+      next: (a) => {
+        if (this.acaoNome() === de) {
+          this.acaoNome.set(a.nome);
+        }
+      },
+      error: (err: unknown) =>
+        this.notice.set({ key: 'saveError', subject: this.httpErrorMessage(err) }),
+    });
+  }
+
+  protected excluirAcao(nome: string): void {
+    const alvo = this.acaoService.acoes().find((a) => a.nome === nome);
+    if (!alvo) {
+      return;
+    }
+    this.acaoService.excluir(alvo.id).subscribe({
+      next: () => {
+        if (this.acaoNome() === nome) {
+          this.acaoNome.set('');
         }
       },
       error: (err: unknown) =>
@@ -388,12 +447,12 @@ export class ProcessoFormComponent {
       clientePrincipalId: this.clientePrincipalId(),
       clientePrincipalPosicao: this.clientePrincipalPosicaoNome(),
       contrarioPrincipalNome: raw.contrarioPrincipalNome,
-      contrarioPrincipalPosicao: raw.contrarioPrincipalPosicao,
+      contrarioPrincipalPosicao: this.contrarioPrincipalPosicaoNome(),
       contrarioPrincipalDocumento: raw.contrarioPrincipalDocumento,
       contrarioPrincipalTipoDocumento: this.contrarioTipoDocumento(),
       advogadoResponsavelId: this.advogadoResponsavelId(),
       dataDistribuicao: raw.dataDistribuicao,
-      acao: raw.acao,
+      acao: this.acaoNome(),
       natureza: raw.natureza,
       procedimento: raw.procedimento,
       fase: raw.fase,
@@ -458,7 +517,9 @@ export class ProcessoFormComponent {
     this.form.reset();
     this.tipo.set('JUDICIAL');
     this.statusNome.set('');
+    this.acaoNome.set('');
     this.clientePrincipalPosicaoNome.set('');
+    this.contrarioPrincipalPosicaoNome.set('');
     this.uf.set('');
     this.contrarioTipoDocumento.set('');
     this.clientePrincipalId.set(null);
@@ -484,7 +545,9 @@ export class ProcessoFormComponent {
     patchProcessoForm(this.form, p);
     this.tipo.set(p.tipo);
     this.statusNome.set(p.status ?? '');
+    this.acaoNome.set(p.acao ?? '');
     this.clientePrincipalPosicaoNome.set(p.cliente_principal_posicao ?? '');
+    this.contrarioPrincipalPosicaoNome.set(p.contrario_principal_posicao ?? '');
     this.uf.set(p.uf ?? '');
     this.contrarioTipoDocumento.set(p.contrario_principal_tipo_documento ?? '');
     this.tags.set([...p.tags]);

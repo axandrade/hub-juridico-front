@@ -122,7 +122,7 @@
             [editar]="true"
             [excluir]="true"
             (valueChange)="clientePrincipalPosicaoNome.set($event)"
-            (aoAdicionar)="criarPosicao($event)"
+            (aoAdicionar)="criarPosicao($event, clientePrincipalPosicaoNome)"
             (aoEditar)="renomearPosicao($event)"
             (aoExcluir)="excluirPosicao($event)"
           />
@@ -135,14 +135,25 @@
           <span>Nome</span>
           <input type="text" formControlName="contrarioPrincipalNome" />
         </label>
-        <label class="processo-field">
+        <div class="processo-field">
           <span>Posição</span>
-          <input
-            type="text"
-            formControlName="contrarioPrincipalPosicao"
-            placeholder="Réu, Requerido…"
+          <app-combobox
+            ariaLabel="Posição da parte contrária"
+            placeholder="Buscar posição..."
+            emptyLabel="— Sem posição —"
+            noResultsText="Nenhuma posição encontrada"
+            itemNoun="posição"
+            [options]="nomesDePosicao()"
+            [value]="contrarioPrincipalPosicaoNome()"
+            [adicionar]="true"
+            [editar]="true"
+            [excluir]="true"
+            (valueChange)="contrarioPrincipalPosicaoNome.set($event)"
+            (aoAdicionar)="criarPosicao($event, contrarioPrincipalPosicaoNome)"
+            (aoEditar)="renomearPosicao($event)"
+            (aoExcluir)="excluirPosicao($event)"
           />
-        </label>
+        </div>
       </div>
       <div class="processo-form__row">
         <label class="processo-field">
@@ -177,10 +188,25 @@
             (valueChange)="onAdvogadoResponsavelChange($event)"
           />
         </div>
-        <label class="processo-field">
+        <div class="processo-field">
           <span>Ação</span>
-          <input type="text" formControlName="acao" />
-        </label>
+          <app-combobox
+            ariaLabel="Ação do processo"
+            placeholder="Buscar ação..."
+            emptyLabel="— Sem ação —"
+            noResultsText="Nenhuma ação encontrada"
+            itemNoun="ação"
+            [options]="nomesDeAcao()"
+            [value]="acaoNome()"
+            [adicionar]="true"
+            [editar]="true"
+            [excluir]="true"
+            (valueChange)="acaoNome.set($event)"
+            (aoAdicionar)="criarAcao($event)"
+            (aoEditar)="renomearAcao($event)"
+            (aoExcluir)="excluirAcao($event)"
+          />
+        </div>
       </div>
       <div class="processo-form__row">
         <label class="processo-field">

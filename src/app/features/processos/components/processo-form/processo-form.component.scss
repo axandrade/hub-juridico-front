@@ -153,6 +153,52 @@
   grid-column: 1 / -1;
 }
 
+// Botão de copiar sobreposto dentro do campo de número (não ocupa espaço próprio).
+.processo-field__with-copy {
+  position: relative;
+
+  input {
+    width: 100%;
+    padding-right: 30px;
+  }
+}
+
+.processo-field__copy {
+  @include flex-center;
+  position: absolute;
+  top: 50%;
+  right: 4px;
+  transform: translateY(-50%);
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 0;
+  border-radius: $border-radius-sm;
+  background: transparent;
+  color: $color-text-secondary;
+  font-size: 11px;
+  opacity: 0.5;
+  cursor: pointer;
+  transition:
+    opacity $transition-fast,
+    color $transition-fast;
+
+  &:hover {
+    opacity: 1;
+    color: $color-primary;
+  }
+
+  &.is-active {
+    opacity: 1;
+    color: $color-success;
+  }
+
+  &:disabled {
+    opacity: 0.25;
+    cursor: not-allowed;
+  }
+}
+
 // Fase + Comarca/Cidade empilhadas (cada uma ocupa a linha toda) — o nome da
 // cidade (+ " — UF") fica apertado se dividir a linha com a Fase.
 .processo-form__row--stack {

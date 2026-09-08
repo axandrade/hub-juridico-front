@@ -1,6 +1,7 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  DestroyRef,
   WritableSignal,
   computed,
   effect,
@@ -124,8 +125,10 @@ export class ProcessoFormComponent {
   /** Catálogo de fase — mesmo esquema (adicionar/editar/excluir). */
   protected readonly nomesDeFase = computed(() => this.faseService.fases().map((f) => f.nome));
 
+  private readonly destroyRef = inject(DestroyRef);
+
   protected readonly form: ProcessoForm = createProcessoForm();
-  private readonly numeroValue = toSignal(
+  protected readonly numeroValue = toSignal(
     this.form.controls.numeroCnj.valueChanges.pipe(
       startWith(this.form.controls.numeroCnj.value),
       map(() => this.form.controls.numeroCnj.value),
@@ -175,6 +178,9 @@ export class ProcessoFormComponent {
   protected readonly ativo = signal(true);
   protected readonly pasta = signal('');
   protected readonly notice = signal<EditorNotice>({ key: 'idle' });
+  /** Feedback visual do botão "copiar número" (ícone vira ✓ por ~1,5s). */
+  protected readonly numeroCopiado = signal(false);
+  private copiadoTimer?: ReturnType<typeof setTimeout>;
 
   protected readonly panelTitle = () => this.numeroValue().trim() || this.pasta();
 
@@ -186,6 +192,7 @@ export class ProcessoFormComponent {
     this.acaoService.carregar();
     this.naturezaService.carregar();
     this.faseService.carregar();
+    this.destroyRef.onDestroy(() => clearTimeout(this.copiadoTimer));
 
     effect(() => {
       const id = this.processoId();
@@ -526,6 +533,19 @@ export class ProcessoFormComponent {
 
   private removerDaLista(lista: WritableSignal<string[]>, indice: number): void {
     lista.update((atual) => atual.filter((_, i) => i !== indice));
+  }
+
+  /** Copia o número (CNJ ou livre) pro clipboard e pisca o ✓ por ~1,5s. */
+  protected copiarNumero(): void {
+    const valor = this.numeroValue().trim();
+    if (!valor || !navigator.clipboard) {
+      return;
+    }
+    navigator.clipboard.writeText(valor).then(() => {
+      this.numeroCopiado.set(true);
+      clearTimeout(this.copiadoTimer);
+      this.copiadoTimer = setTimeout(() => this.numeroCopiado.set(false), 1500);
+    });
   }
 
   protected toggleFavorite(): void {

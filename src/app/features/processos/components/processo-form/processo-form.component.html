@@ -51,20 +51,44 @@
             (valueChange)="onTipoChange($event)"
           />
         </div>
-        <label class="processo-field">
+        <div class="processo-field">
           <span>{{ ehJudicial() ? 'Número CNJ' : 'Número do processo' }}</span>
-          @if (ehJudicial()) {
-            <input
-              type="text"
-              formControlName="numeroCnj"
-              appCnjMask
-              inputmode="numeric"
-              placeholder="0000000-00.0000.0.00.0000"
-            />
-          } @else {
-            <input type="text" formControlName="numeroCnj" maxlength="25" />
-          }
-        </label>
+          <div class="processo-field__with-copy">
+            @if (ehJudicial()) {
+              <input
+                type="text"
+                formControlName="numeroCnj"
+                appCnjMask
+                inputmode="numeric"
+                placeholder="0000000-00.0000.0.00.0000"
+                [attr.aria-label]="'Número CNJ'"
+              />
+            } @else {
+              <input
+                type="text"
+                formControlName="numeroCnj"
+                maxlength="25"
+                [attr.aria-label]="'Número do processo'"
+              />
+            }
+            <button
+              type="button"
+              class="processo-field__copy"
+              [class.is-active]="numeroCopiado()"
+              [disabled]="!numeroValue().trim()"
+              [title]="numeroCopiado() ? 'Copiado!' : 'Copiar número'"
+              aria-label="Copiar número"
+              (click)="copiarNumero()"
+            >
+              <i
+                class="fa-solid"
+                [class.fa-copy]="!numeroCopiado()"
+                [class.fa-check]="numeroCopiado()"
+                aria-hidden="true"
+              ></i>
+            </button>
+          </div>
+        </div>
       </div>
 
       <div class="processo-form__row">

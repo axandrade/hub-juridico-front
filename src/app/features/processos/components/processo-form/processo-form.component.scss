@@ -153,9 +153,10 @@
   grid-column: 1 / -1;
 }
 
-// Cidade tem nome longo (+ " — UF") — dá mais largura pra ela e menos pra Fase.
-.processo-form__row--cidade {
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1.9fr);
+// Fase + Comarca/Cidade empilhadas (cada uma ocupa a linha toda) — o nome da
+// cidade (+ " — UF") fica apertado se dividir a linha com a Fase.
+.processo-form__row--stack {
+  grid-template-columns: 1fr;
 }
 
 .processo-form input,

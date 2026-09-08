@@ -54,8 +54,13 @@
   </nav>
 
   <div class="processo-form">
-    <app-processo-dados-gerais [hidden]="abaAtiva() !== 'gerais'" (erro)="notificarErro($event)" />
-    <app-processo-dados-complementares [hidden]="abaAtiva() !== 'complementares'" />
+    <div class="processo-form__conteudo">
+      <app-processo-dados-gerais
+        [hidden]="abaAtiva() !== 'gerais'"
+        (erro)="notificarErro($event)"
+      />
+      <app-processo-dados-complementares [hidden]="abaAtiva() !== 'complementares'" />
+    </div>
 
     <footer class="processo-panel__footer">
       <span>

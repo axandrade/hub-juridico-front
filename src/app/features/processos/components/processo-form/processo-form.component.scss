@@ -140,8 +140,17 @@
   }
 }
 
-// Área das abas (flex:1) — cada aba (`app-processo-dados-gerais` / `-complementares`) preenche.
+// Corpo do painel: área das abas (rola) + rodapé fixo.
 .processo-form {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  flex-direction: column;
+}
+
+// Conteúdo da aba ativa — cada `app-processo-dados-*` (`:host { flex: 1 }`) preenche; a inativa
+// fica `[hidden]` (display:none). O scroll mora dentro de cada aba.
+.processo-form__conteudo {
   display: flex;
   flex: 1;
   min-height: 0;

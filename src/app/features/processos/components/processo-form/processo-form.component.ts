@@ -28,6 +28,7 @@ import {
   TipoProcesso,
 } from '../../services/processo-api.model';
 import { AcaoProcessoService } from '../../services/acao-processo.service';
+import { FaseProcessoService } from '../../services/fase-processo.service';
 import { NaturezaProcessoService } from '../../services/natureza-processo.service';
 import { PosicaoClienteService } from '../../services/posicao-cliente.service';
 import { ProcessoEditavel, ProcessoService } from '../../services/processo-service';
@@ -86,6 +87,7 @@ export class ProcessoFormComponent {
   private readonly posicaoService = inject(PosicaoClienteService);
   private readonly acaoService = inject(AcaoProcessoService);
   private readonly naturezaService = inject(NaturezaProcessoService);
+  private readonly faseService = inject(FaseProcessoService);
 
   /** Id do registro a editar; `null` = novo cadastro. */
   readonly processoId = input<number | null>(null);
@@ -117,6 +119,8 @@ export class ProcessoFormComponent {
   protected readonly nomesDeNatureza = computed(() =>
     this.naturezaService.naturezas().map((n) => n.nome),
   );
+  /** Catálogo de fase — mesmo esquema (adicionar/editar/excluir). */
+  protected readonly nomesDeFase = computed(() => this.faseService.fases().map((f) => f.nome));
 
   protected readonly form: ProcessoForm = createProcessoForm();
   private readonly numeroValue = toSignal(
@@ -134,6 +138,7 @@ export class ProcessoFormComponent {
   protected readonly statusNome = signal('');
   protected readonly acaoNome = signal('');
   protected readonly naturezaNome = signal('');
+  protected readonly faseNome = signal('');
   /** Posição do cliente principal e da parte contrária — mesmo catálogo `PosicaoCliente`. */
   protected readonly clientePrincipalPosicaoNome = signal('');
   protected readonly contrarioPrincipalPosicaoNome = signal('');
@@ -172,6 +177,7 @@ export class ProcessoFormComponent {
     this.posicaoService.carregar();
     this.acaoService.carregar();
     this.naturezaService.carregar();
+    this.faseService.carregar();
 
     effect(() => {
       const id = this.processoId();
@@ -422,6 +428,48 @@ export class ProcessoFormComponent {
     });
   }
 
+  // --- catálogo "Fase" (ver `FaseProcessoService`) — mesmo esquema do status ---
+
+  protected criarFase(nome: string): void {
+    this.faseService.criar(nome).subscribe({
+      next: (f) => this.faseNome.set(f.nome),
+      error: (err: unknown) =>
+        this.notice.set({ key: 'saveError', subject: this.httpErrorMessage(err) }),
+    });
+  }
+
+  protected renomearFase({ de, para }: { de: string; para: string }): void {
+    const alvo = this.faseService.fases().find((f) => f.nome === de);
+    if (!alvo) {
+      return;
+    }
+    this.faseService.alterar(alvo.id, para).subscribe({
+      next: (f) => {
+        if (this.faseNome() === de) {
+          this.faseNome.set(f.nome);
+        }
+      },
+      error: (err: unknown) =>
+        this.notice.set({ key: 'saveError', subject: this.httpErrorMessage(err) }),
+    });
+  }
+
+  protected excluirFase(nome: string): void {
+    const alvo = this.faseService.fases().find((f) => f.nome === nome);
+    if (!alvo) {
+      return;
+    }
+    this.faseService.excluir(alvo.id).subscribe({
+      next: () => {
+        if (this.faseNome() === nome) {
+          this.faseNome.set('');
+        }
+      },
+      error: (err: unknown) =>
+        this.notice.set({ key: 'saveError', subject: this.httpErrorMessage(err) }),
+    });
+  }
+
   protected adicionarTag(valor: string): void {
     this.adicionarNaLista(this.tags, valor);
   }
@@ -505,7 +553,7 @@ export class ProcessoFormComponent {
       acao: this.acaoNome(),
       natureza: this.naturezaNome(),
       procedimento: raw.procedimento,
-      fase: raw.fase,
+      fase: this.faseNome(),
       uf: this.uf(),
       cidade: raw.cidade,
       observacoesGerais: raw.observacoesGerais,
@@ -569,6 +617,7 @@ export class ProcessoFormComponent {
     this.statusNome.set('');
     this.acaoNome.set('');
     this.naturezaNome.set('');
+    this.faseNome.set('');
     this.clientePrincipalPosicaoNome.set('');
     this.contrarioPrincipalPosicaoNome.set('');
     this.uf.set('');
@@ -598,6 +647,7 @@ export class ProcessoFormComponent {
     this.statusNome.set(p.status ?? '');
     this.acaoNome.set(p.acao ?? '');
     this.naturezaNome.set(p.natureza ?? '');
+    this.faseNome.set(p.fase ?? '');
     this.clientePrincipalPosicaoNome.set(p.cliente_principal_posicao ?? '');
     this.contrarioPrincipalPosicaoNome.set(p.contrario_principal_posicao ?? '');
     this.uf.set(p.uf ?? '');

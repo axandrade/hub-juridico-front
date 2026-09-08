@@ -234,10 +234,25 @@
         </label>
       </div>
       <div class="processo-form__row">
-        <label class="processo-field">
+        <div class="processo-field">
           <span>Fase</span>
-          <input type="text" formControlName="fase" />
-        </label>
+          <app-combobox
+            ariaLabel="Fase do processo"
+            placeholder="Buscar fase..."
+            emptyLabel="— Sem fase —"
+            noResultsText="Nenhuma fase encontrada"
+            itemNoun="fase"
+            [options]="nomesDeFase()"
+            [value]="faseNome()"
+            [adicionar]="true"
+            [editar]="true"
+            [excluir]="true"
+            (valueChange)="faseNome.set($event)"
+            (aoAdicionar)="criarFase($event)"
+            (aoEditar)="renomearFase($event)"
+            (aoExcluir)="excluirFase($event)"
+          />
+        </div>
         <label class="processo-field">
           <span>Comarca / Cidade</span>
           <input type="text" formControlName="cidade" />

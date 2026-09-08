@@ -45,7 +45,7 @@
           @case ('gerais') {
             Dados gerais
           }
-          @case ('complementares') {
+          @case ('outrosEnvolvidos') {
             Outros envolvidos
           }
         }
@@ -59,7 +59,7 @@
         [hidden]="abaAtiva() !== 'gerais'"
         (erro)="notificarErro($event)"
       />
-      <app-processo-dados-complementares [hidden]="abaAtiva() !== 'complementares'" />
+      <app-processo-outros-envolvidos [hidden]="abaAtiva() !== 'outrosEnvolvidos'" />
     </div>
 
     <footer class="processo-panel__footer">

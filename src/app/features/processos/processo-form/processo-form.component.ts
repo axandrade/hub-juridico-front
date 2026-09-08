@@ -16,7 +16,7 @@ import { PanelLayoutSwitcherComponent } from '../../../shared/components/panel-l
 import { PAINEL_LAYOUT_PADRAO, PainelLayout } from '../../../shared/models/panel-layout';
 import { ProcessoApi } from '../services/processo-api.model';
 import { ProcessoService } from '../services/processo-service';
-import { ProcessoDadosComplementaresComponent } from '../processo-dados-complementares/processo-dados-complementares.component';
+import { ProcessoOutrosEnvolvidosComponent } from '../processo-outros-envolvidos/processo-outros-envolvidos.component';
 import { ProcessoDadosGeraisComponent } from '../processo-dados-gerais/processo-dados-gerais.component';
 
 type NoticeKey =
@@ -34,8 +34,8 @@ type NoticeKey =
   | 'favoriteAdded'
   | 'favoriteRemoved';
 
-/** Abas do painel de processo. "complementares" ainda não tem campos (entra depois). */
-type ProcessoAba = 'gerais' | 'complementares';
+/** Abas do painel de processo. "outrosEnvolvidos" ainda não tem campos (entra depois). */
+type ProcessoAba = 'gerais' | 'outrosEnvolvidos';
 
 interface EditorNotice {
   key: NoticeKey;
@@ -45,7 +45,7 @@ interface EditorNotice {
 /**
  * Shell do painel de cadastro/edição de processo: header (favorito/lock/layout), abas, rodapé
  * (Limpar/Reativar-Inativar/Salvar) e a orquestração — carrega a ficha por `processoId`, salva e
- * troca status. Os campos moram nas abas (`app-processo-dados-gerais`; "Dados complementares"
+ * troca status. Os campos moram nas abas (`app-processo-dados-gerais`; "Outros envolvidos"
  * ainda vazia), acessadas via `viewChild`. Mesmo desenho de `advogado-form`.
  */
 @Component({
@@ -55,7 +55,7 @@ interface EditorNotice {
     ButtonComponent,
     PanelLayoutSwitcherComponent,
     ProcessoDadosGeraisComponent,
-    ProcessoDadosComplementaresComponent,
+    ProcessoOutrosEnvolvidosComponent,
   ],
   templateUrl: './processo-form.component.html',
   styleUrl: './processo-form.component.scss',
@@ -76,11 +76,11 @@ export class ProcessoFormComponent {
   readonly locked = signal(false);
 
   private readonly dadosGerais = viewChild(ProcessoDadosGeraisComponent);
-  private readonly dadosComplementares = viewChild(ProcessoDadosComplementaresComponent);
+  private readonly outrosEnvolvidos = viewChild(ProcessoOutrosEnvolvidosComponent);
 
   /** Aba visível do painel. Volta pra "gerais" ao trocar de processo / limpar. */
   protected readonly abaAtiva = signal<ProcessoAba>('gerais');
-  protected readonly abas: readonly ProcessoAba[] = ['gerais', 'complementares'];
+  protected readonly abas: readonly ProcessoAba[] = ['gerais', 'outrosEnvolvidos'];
 
   protected readonly entityId = signal(0);
   protected readonly favorite = signal(false);
@@ -233,7 +233,7 @@ export class ProcessoFormComponent {
     this.ativo.set(p.ativo);
     this.pasta.set(p.pasta ?? '');
     this.dadosGerais()?.carregar(p);
-    this.dadosComplementares()?.carregar(p);
+    this.outrosEnvolvidos()?.carregar(p);
   }
 
   private limparPainel(): void {
@@ -243,7 +243,7 @@ export class ProcessoFormComponent {
     this.pasta.set('');
     this.abaAtiva.set('gerais');
     this.dadosGerais()?.limpar();
-    this.dadosComplementares()?.limpar();
+    this.outrosEnvolvidos()?.limpar();
   }
 
   private rotuloDe(p: ProcessoApi): string {

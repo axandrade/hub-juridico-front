@@ -11,9 +11,8 @@ import {
   signal,
   untracked,
 } from '@angular/core';
-import { toSignal } from '@angular/core/rxjs-interop';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ReactiveFormsModule } from '@angular/forms';
-import { map, startWith } from 'rxjs';
 
 import { maskNumeroCnj, numeroCnjCompleto } from '../../../../core/auth/documentos-br';
 import { ButtonComponent } from '../../../../shared/components/button/button.component';
@@ -128,13 +127,12 @@ export class ProcessoFormComponent {
   private readonly destroyRef = inject(DestroyRef);
 
   protected readonly form: ProcessoForm = createProcessoForm();
-  protected readonly numeroValue = toSignal(
-    this.form.controls.numeroCnj.valueChanges.pipe(
-      startWith(this.form.controls.numeroCnj.value),
-      map(() => this.form.controls.numeroCnj.value),
-    ),
-    { requireSync: true },
-  );
+  /**
+   * Valor atual do campo de número — segue o que o usuário digita **e** o que é carregado por
+   * `patchProcessoForm` (que roda com `emitEvent: false`, então `valueChanges` não cobre a carga;
+   * `loadIntoForm` seta este signal explicitamente).
+   */
+  protected readonly numeroValue = signal('');
 
   // Campos dirigidos por <app-combobox> / listas — fora do FormGroup.
   protected readonly tipo = signal<TipoProcesso>('JUDICIAL');
@@ -193,6 +191,10 @@ export class ProcessoFormComponent {
     this.naturezaService.carregar();
     this.faseService.carregar();
     this.destroyRef.onDestroy(() => clearTimeout(this.copiadoTimer));
+
+    this.form.controls.numeroCnj.valueChanges
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((v) => this.numeroValue.set(v ?? ''));
 
     effect(() => {
       const id = this.processoId();
@@ -656,6 +658,7 @@ export class ProcessoFormComponent {
 
   private resetToEmpty(): void {
     this.form.reset();
+    this.numeroValue.set('');
     this.tipo.set('JUDICIAL');
     this.statusNome.set('');
     this.acaoNome.set('');
@@ -688,6 +691,7 @@ export class ProcessoFormComponent {
     this.ativo.set(p.ativo);
     this.pasta.set(p.pasta ?? '');
     patchProcessoForm(this.form, p);
+    this.numeroValue.set(p.numero_cnj ?? '');
     this.tipo.set(p.tipo);
     this.statusNome.set(p.status ?? '');
     this.acaoNome.set(p.acao ?? '');

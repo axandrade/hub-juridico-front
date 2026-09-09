@@ -170,7 +170,8 @@ export class ProcessoFormComponent {
 
   protected save(): void {
     const gerais = this.dadosGerais();
-    if (!gerais) {
+    const outros = this.outrosEnvolvidos();
+    if (!gerais || !outros) {
       return;
     }
     const validacao = gerais.validar();
@@ -180,17 +181,19 @@ export class ProcessoFormComponent {
     }
 
     this.notice.set({ key: 'saving' });
-    this.processoService.salvar({ id: this.entityId(), ...gerais.coletar() }).subscribe({
-      next: (salvo) => {
-        this.aplicarProcesso(salvo);
-        this.lastLoadedKey = `id:${salvo.id}`;
-        this.notice.set({ key: 'saved', subject: this.rotuloDe(salvo) });
-        this.saved.emit(salvo);
-      },
-      error: (err: unknown) => {
-        this.notice.set({ key: 'saveError', subject: this.mensagemErroHttp(err) });
-      },
-    });
+    this.processoService
+      .salvar({ id: this.entityId(), ...gerais.coletar(), ...outros.coletar() })
+      .subscribe({
+        next: (salvo) => {
+          this.aplicarProcesso(salvo);
+          this.lastLoadedKey = `id:${salvo.id}`;
+          this.notice.set({ key: 'saved', subject: this.rotuloDe(salvo) });
+          this.saved.emit(salvo);
+        },
+        error: (err: unknown) => {
+          this.notice.set({ key: 'saveError', subject: this.mensagemErroHttp(err) });
+        },
+      });
   }
 
   protected requestStatusChange(): void {

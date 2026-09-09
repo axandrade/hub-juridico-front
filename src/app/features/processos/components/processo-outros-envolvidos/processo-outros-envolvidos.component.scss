@@ -1,4 +1,5 @@
 @use 'variables' as *;
+@use 'mixins' as *;
 
 :host {
   display: flex;
@@ -11,14 +12,148 @@
   display: none;
 }
 
-.processo-outros-envolvidos__vazio {
+.processo-form__section {
+  @include thin-scrollbar;
   display: flex;
   flex: 1;
   min-height: 0;
-  align-items: center;
-  justify-content: center;
+  flex-direction: column;
+  gap: $spacing-sm;
   padding: $spacing-md;
+  overflow: auto;
+}
+
+.processo-form__group-title {
+  margin-top: $spacing-xs;
+  color: $color-text-secondary;
+  font-size: $font-size-xs;
+  font-weight: $font-weight-bold;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.processo-form__row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: $spacing-sm;
+}
+
+// Campo único ocupando a linha toda (ex.: "Órgão" — rótulos longos, apertava dividindo com Data).
+.processo-form__row--full {
+  grid-template-columns: 1fr;
+}
+
+.processo-field {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: $spacing-xs;
+  color: $color-text-secondary;
+  font-size: $font-size-xs;
+  font-weight: $font-weight-medium;
+}
+
+.processo-form__section input {
+  width: 100%;
+  min-height: 36px;
+  border: 1px solid $color-border;
+  border-radius: $border-radius-sm;
+  background-color: $color-neutral-light;
+  color: $color-text-primary;
+  font: inherit;
+  outline: none;
+  padding: $spacing-xs $spacing-sm;
+  transition:
+    border-color $transition-fast,
+    box-shadow $transition-fast;
+
+  &:focus {
+    border-color: $color-primary-light;
+    box-shadow: 0 0 0 3px rgba($rouge-light, 0.16);
+  }
+}
+
+.processo-outros__acoes {
+  display: flex;
+  gap: $spacing-sm;
+  margin-top: $spacing-xs;
+}
+
+.processo-outros__botao {
+  display: inline-flex;
+  align-items: center;
+  gap: $spacing-xs;
+  padding: $spacing-xs $spacing-md;
+  border: 1px solid $color-border;
+  border-radius: $border-radius-sm;
+  background-color: $color-neutral-light;
+  color: $color-text-primary;
+  font: inherit;
+  font-size: $font-size-xs;
+  cursor: pointer;
+  transition:
+    border-color $transition-fast,
+    background-color $transition-fast;
+
+  &:hover:not(:disabled) {
+    border-color: $color-primary-light;
+    color: $color-primary;
+  }
+
+  &:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+}
+
+.processo-outros__lista {
+  @include thin-scrollbar;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: $spacing-xs;
+  list-style: none;
+  border: 1px solid $color-border;
+  border-radius: $border-radius-sm;
+  background-color: $color-neutral-light;
+  min-height: 88px;
+  max-height: 200px;
+  overflow: auto;
+
+  button {
+    width: 100%;
+    padding: $spacing-xs $spacing-sm;
+    border: 0;
+    border-radius: $border-radius-sm;
+    background: transparent;
+    color: $color-text-primary;
+    font: inherit;
+    font-size: $font-size-xs;
+    text-align: left;
+    cursor: pointer;
+
+    &:hover {
+      background-color: rgba($color-primary-pale, 0.3);
+    }
+
+    &.is-selected {
+      background-color: rgba($color-primary-pale, 0.7);
+      color: $color-primary;
+      font-weight: $font-weight-medium;
+    }
+  }
+}
+
+.processo-outros__vazio {
+  padding: $spacing-sm;
   color: $color-text-muted;
-  font-size: $font-size-base;
+  font-size: $font-size-xs;
   text-align: center;
+}
+
+@include respond-below($breakpoint-sm) {
+  .processo-form__row {
+    grid-template-columns: 1fr;
+  }
 }

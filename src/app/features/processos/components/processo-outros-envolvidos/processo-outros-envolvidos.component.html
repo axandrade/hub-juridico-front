@@ -1,3 +1,216 @@
-<div class="processo-outros-envolvidos__vazio">
-  <p>Os campos de "Outros envolvidos" entram numa próxima etapa.</p>
+<div class="processo-form__section">
+  <!-- ============ Advogados ============ -->
+  <div class="processo-form__group-title">Advogados</div>
+
+  <div class="processo-form__row" [formGroup]="advForm">
+    <label class="processo-field">
+      <span>Advogado</span>
+      <input type="text" formControlName="advogado" maxlength="255" />
+    </label>
+    <div class="processo-field">
+      <span>Posição</span>
+      <app-combobox
+        ariaLabel="Posição do advogado"
+        placeholder="Buscar posição..."
+        emptyLabel="— Sem posição —"
+        noResultsText="Nenhuma posição encontrada"
+        itemNoun="posição"
+        [options]="nomesDePosicao()"
+        [value]="posicaoRascunho()"
+        [adicionar]="true"
+        (valueChange)="posicaoRascunho.set($event)"
+        (aoAdicionar)="criarPosicao($event)"
+      />
+    </div>
+  </div>
+
+  <div class="processo-form__row" [formGroup]="advForm">
+    <label class="processo-field">
+      <span>OAB</span>
+      <input type="text" formControlName="oab" maxlength="50" />
+    </label>
+    <div class="processo-field">
+      <span>UF</span>
+      <app-combobox
+        ariaLabel="UF da OAB"
+        placeholder="Buscar UF..."
+        emptyLabel="— Sem UF —"
+        noResultsText="Nenhuma UF encontrada"
+        [options]="ufOpcoes"
+        [value]="ufRascunho()"
+        (valueChange)="ufRascunho.set($event)"
+      />
+    </div>
+  </div>
+
+  <div class="processo-outros__acoes">
+    <button type="button" class="processo-outros__botao" (click)="adicionarAdvogado()">
+      <i class="fa-solid fa-plus" aria-hidden="true"></i> Adicionar
+    </button>
+    <button
+      type="button"
+      class="processo-outros__botao"
+      [disabled]="advSelecionado() < 0"
+      (click)="removerAdvogado()"
+    >
+      <i class="fa-solid fa-trash-can" aria-hidden="true"></i> Remover
+    </button>
+  </div>
+
+  <ul class="processo-outros__lista" role="listbox" aria-label="Advogados adicionados">
+    @for (linha of advogados(); track $index) {
+      <li>
+        <button
+          type="button"
+          role="option"
+          [attr.aria-selected]="advSelecionado() === $index"
+          [class.is-selected]="advSelecionado() === $index"
+          (click)="selecionarAdvogado($index)"
+        >
+          {{ rotuloAdvogado(linha) }}
+        </button>
+      </li>
+    } @empty {
+      <li class="processo-outros__vazio">Nenhum advogado adicionado.</li>
+    }
+  </ul>
+
+  <!-- ============ Magistrados ============ -->
+  <div class="processo-form__group-title">Magistrados</div>
+
+  <div class="processo-form__row" [formGroup]="magForm">
+    <label class="processo-field">
+      <span>Magistrado</span>
+      <input type="text" formControlName="magistrado" maxlength="255" />
+    </label>
+    <div class="processo-field">
+      <span>Resultado</span>
+      <app-combobox
+        ariaLabel="Resultado da decisão"
+        placeholder="Buscar resultado..."
+        emptyLabel="— Sem resultado —"
+        noResultsText="Nenhum resultado encontrado"
+        itemNoun="resultado"
+        [options]="nomesDeResultado()"
+        [value]="resultadoRascunho()"
+        [adicionar]="true"
+        (valueChange)="resultadoRascunho.set($event)"
+        (aoAdicionar)="criarResultado($event)"
+      />
+    </div>
+  </div>
+
+  <div class="processo-form__row processo-form__row--full">
+    <div class="processo-field">
+      <span>Órgão</span>
+      <app-combobox
+        ariaLabel="Órgão julgador"
+        placeholder="Buscar órgão..."
+        emptyLabel="— Sem órgão —"
+        noResultsText="Nenhum órgão encontrado"
+        itemNoun="órgão"
+        [options]="nomesDeOrgao()"
+        [value]="orgaoRascunho()"
+        [adicionar]="true"
+        (valueChange)="orgaoRascunho.set($event)"
+        (aoAdicionar)="criarOrgao($event)"
+      />
+    </div>
+  </div>
+
+  <div class="processo-form__row" [formGroup]="magForm">
+    <label class="processo-field">
+      <span>Data</span>
+      <input type="date" formControlName="data" />
+    </label>
+  </div>
+
+  <div class="processo-outros__acoes">
+    <button type="button" class="processo-outros__botao" (click)="adicionarMagistrado()">
+      <i class="fa-solid fa-plus" aria-hidden="true"></i> Adicionar
+    </button>
+    <button
+      type="button"
+      class="processo-outros__botao"
+      [disabled]="magSelecionado() < 0"
+      (click)="removerMagistrado()"
+    >
+      <i class="fa-solid fa-trash-can" aria-hidden="true"></i> Remover
+    </button>
+  </div>
+
+  <ul class="processo-outros__lista" role="listbox" aria-label="Magistrados adicionados">
+    @for (linha of magistrados(); track $index) {
+      <li>
+        <button
+          type="button"
+          role="option"
+          [attr.aria-selected]="magSelecionado() === $index"
+          [class.is-selected]="magSelecionado() === $index"
+          (click)="selecionarMagistrado($index)"
+        >
+          {{ rotuloMagistrado(linha) }}
+        </button>
+      </li>
+    } @empty {
+      <li class="processo-outros__vazio">Nenhum magistrado adicionado.</li>
+    }
+  </ul>
+
+  <!-- ============ Testemunhas ============ -->
+  <div class="processo-form__group-title">Testemunhas</div>
+
+  <div class="processo-form__row" [formGroup]="testForm">
+    <label class="processo-field">
+      <span>Testemunha</span>
+      <input type="text" formControlName="testemunha" maxlength="255" />
+    </label>
+    <div class="processo-field">
+      <span>Parte interessada</span>
+      <app-combobox
+        ariaLabel="Parte interessada da testemunha"
+        placeholder="Buscar parte..."
+        emptyLabel="— Sem parte —"
+        noResultsText="Nenhuma parte encontrada"
+        itemNoun="parte"
+        [options]="nomesDeParte()"
+        [value]="parteRascunho()"
+        [adicionar]="true"
+        (valueChange)="parteRascunho.set($event)"
+        (aoAdicionar)="criarParte($event)"
+      />
+    </div>
+  </div>
+
+  <div class="processo-outros__acoes">
+    <button type="button" class="processo-outros__botao" (click)="adicionarTestemunha()">
+      <i class="fa-solid fa-plus" aria-hidden="true"></i> Adicionar
+    </button>
+    <button
+      type="button"
+      class="processo-outros__botao"
+      [disabled]="testSelecionado() < 0"
+      (click)="removerTestemunha()"
+    >
+      <i class="fa-solid fa-trash-can" aria-hidden="true"></i> Remover
+    </button>
+  </div>
+
+  <ul class="processo-outros__lista" role="listbox" aria-label="Testemunhas adicionadas">
+    @for (linha of testemunhas(); track $index) {
+      <li>
+        <button
+          type="button"
+          role="option"
+          [attr.aria-selected]="testSelecionado() === $index"
+          [class.is-selected]="testSelecionado() === $index"
+          (click)="selecionarTestemunha($index)"
+        >
+          {{ rotuloTestemunha(linha) }}
+        </button>
+      </li>
+    } @empty {
+      <li class="processo-outros__vazio">Nenhuma testemunha adicionada.</li>
+    }
+  </ul>
 </div>

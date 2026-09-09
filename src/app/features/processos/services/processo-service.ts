@@ -7,6 +7,9 @@ import { ComboPagina } from '../../../shared/components/combobox/combobox.compon
 import { FavoritoService } from '../../../shared/services/favorito.service';
 import {
   ClienteSecundarioApi,
+  OutroEnvolvidoAdvogadoApi,
+  OutroEnvolvidoMagistradoApi,
+  OutroEnvolvidoTestemunhaApi,
   PaginaApi,
   ParteContrariaApi,
   ProcessoApi,
@@ -56,6 +59,12 @@ export interface ProcessoEditavel {
   tags: string[];
   orgaosProcessantes: string[];
   escritoriosAnteriores: string[];
+  /** Advogados "outros envolvidos" (aba "Outros envolvidos"). */
+  outrosEnvolvidosAdvogados: OutroEnvolvidoAdvogadoApi[];
+  /** Magistrados "outros envolvidos" (aba "Outros envolvidos"). */
+  outrosEnvolvidosMagistrados: OutroEnvolvidoMagistradoApi[];
+  /** Testemunhas "outros envolvidos" (aba "Outros envolvidos"). */
+  outrosEnvolvidosTestemunhas: OutroEnvolvidoTestemunhaApi[];
   /** Preservados como vieram — ainda sem UI de edição nesta fatia. */
   clientesSecundarios: ClienteSecundarioApi[];
   partesContrarias: ParteContrariaApi[];
@@ -144,6 +153,9 @@ export class ProcessoService {
       observacoes_gerais: vazioParaNull(processo.observacoesGerais),
       clientes_secundarios: processo.clientesSecundarios,
       partes_contrarias: processo.partesContrarias,
+      outros_envolvidos_advogados: processo.outrosEnvolvidosAdvogados,
+      outros_envolvidos_magistrados: processo.outrosEnvolvidosMagistrados,
+      outros_envolvidos_testemunhas: processo.outrosEnvolvidosTestemunhas,
       orgaos_processantes: processo.orgaosProcessantes,
       escritorios_anteriores: processo.escritoriosAnteriores,
       tags: processo.tags,

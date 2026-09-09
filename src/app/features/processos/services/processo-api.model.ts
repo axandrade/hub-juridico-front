@@ -24,6 +24,37 @@ export interface ParteContrariaApi {
   documento: string | null;
 }
 
+/**
+ * Um advogado "outro envolvido" (aba "Outros envolvidos", seção "Advogados") — tudo texto livre,
+ * sem vínculo com o cadastro de advogados. `uf` é a sigla (2 letras).
+ */
+export interface OutroEnvolvidoAdvogadoApi {
+  advogado: string;
+  posicao: string | null;
+  oab: string | null;
+  uf: string | null;
+}
+
+/**
+ * Um magistrado "outro envolvido" (aba "Outros envolvidos", seção "Magistrados"). `magistrado` e
+ * `data` (ISO `yyyy-MM-dd`) são obrigatórios; `resultado`/`orgao` são o texto dos catálogos.
+ */
+export interface OutroEnvolvidoMagistradoApi {
+  magistrado: string;
+  resultado: string | null;
+  orgao: string | null;
+  data: string;
+}
+
+/**
+ * Uma testemunha "outra envolvida" (aba "Outros envolvidos", seção "Testemunhas"). Os dois campos
+ * são obrigatórios; `parte_interessada` é o texto do catálogo `ParteInteressada`.
+ */
+export interface OutroEnvolvidoTestemunhaApi {
+  testemunha: string;
+  parte_interessada: string;
+}
+
 /** `ProcessoResumoResponse` — uma linha da listagem (só escalares, sem as coleções). */
 export interface ProcessoResumoApi {
   id: number;
@@ -73,6 +104,9 @@ export interface ProcessoApi {
 
   clientes_secundarios: ClienteSecundarioApi[];
   partes_contrarias: ParteContrariaApi[];
+  outros_envolvidos_advogados: OutroEnvolvidoAdvogadoApi[];
+  outros_envolvidos_magistrados: OutroEnvolvidoMagistradoApi[];
+  outros_envolvidos_testemunhas: OutroEnvolvidoTestemunhaApi[];
   orgaos_processantes: string[];
   escritorios_anteriores: string[];
   tags: string[];
@@ -106,6 +140,9 @@ export interface ProcessoWriteApi {
 
   clientes_secundarios: ClienteSecundarioApi[];
   partes_contrarias: ParteContrariaApi[];
+  outros_envolvidos_advogados: OutroEnvolvidoAdvogadoApi[];
+  outros_envolvidos_magistrados: OutroEnvolvidoMagistradoApi[];
+  outros_envolvidos_testemunhas: OutroEnvolvidoTestemunhaApi[];
   orgaos_processantes: string[];
   escritorios_anteriores: string[];
   tags: string[];

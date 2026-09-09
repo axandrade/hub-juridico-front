@@ -34,8 +34,17 @@ const TIPOS_PROCESSO: TipoProcesso[] = ['JUDICIAL', 'ADMINISTRATIVO', 'ARBITRAL'
 /** Resultado da validação da aba — o shell mapeia pro `notice` do rodapé. */
 export type DadosGeraisValidacao = 'ok' | 'requiredFields' | 'cnjInvalido';
 
-/** Campos da aba — o shell junta com `id` pra montar o `ProcessoEditavel`. */
-export type DadosGeraisValores = Omit<ProcessoEditavel, 'id'>;
+/**
+ * Campos desta aba — o shell junta com `id` e com o que vem da aba "Outros envolvidos"
+ * (`outrosEnvolvidos*`) pra montar o `ProcessoEditavel`.
+ */
+export type DadosGeraisValores = Omit<
+  ProcessoEditavel,
+  | 'id'
+  | 'outrosEnvolvidosAdvogados'
+  | 'outrosEnvolvidosMagistrados'
+  | 'outrosEnvolvidosTestemunhas'
+>;
 
 /**
  * Aba "Dados gerais" do painel de processo — dona do `FormGroup` (campos de texto/data), dos

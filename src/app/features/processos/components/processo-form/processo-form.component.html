@@ -59,7 +59,10 @@
         [hidden]="abaAtiva() !== 'gerais'"
         (erro)="notificarErro($event)"
       />
-      <app-processo-outros-envolvidos [hidden]="abaAtiva() !== 'outrosEnvolvidos'" />
+      <app-processo-outros-envolvidos
+        [hidden]="abaAtiva() !== 'outrosEnvolvidos'"
+        (erro)="notificarErro($event)"
+      />
     </div>
 
     <footer class="processo-panel__footer">

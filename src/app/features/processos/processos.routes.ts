@@ -4,6 +4,6 @@ export const PROCESSOS_ROUTES: Routes = [
   {
     path: '',
     loadComponent: () =>
-      import('./processos.component').then((m) => m.ProcessosComponent),
+      import('./components/processos.component').then((m) => m.ProcessosComponent),
   },
 ];

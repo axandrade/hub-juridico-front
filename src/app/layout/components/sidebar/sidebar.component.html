@@ -18,7 +18,7 @@
 
   <nav class="sidebar__nav">
     <ul>
-      @for (item of navItems; track item.label) {
+      @for (item of navItems(); track item.label) {
         <li>
           @if (item.route) {
             <a

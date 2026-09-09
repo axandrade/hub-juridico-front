@@ -22,6 +22,17 @@ export const authGuard: CanActivateFn = (_route, state) => {
   return true;
 };
 
+/** Rotas só-admin (ex.: cadastro de usuários) — redireciona não-admin para o dashboard. */
+export const adminGuard: CanActivateFn = () => {
+  const auth = inject(AuthService);
+  const router = inject(Router);
+
+  if (auth.isAdmin()) {
+    return true;
+  }
+  return router.createUrlTree([`/${ROUTES.DASHBOARD}`]);
+};
+
 /** Impede que um usuário já autenticado volte para a tela de login. */
 export const publicOnlyGuard: CanActivateFn = () => {
   const auth = inject(AuthService);

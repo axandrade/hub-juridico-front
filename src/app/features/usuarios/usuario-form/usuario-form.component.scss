@@ -1,0 +1,122 @@
+@use 'variables' as *;
+
+.usuario-form {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-md;
+  width: 100%;
+  max-width: 620px;
+  margin: 0 auto;
+}
+
+.usuario-form__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: $spacing-sm $spacing-md;
+}
+
+.usuario-field {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: $spacing-xs;
+  font-size: $font-size-xs;
+  font-weight: $font-weight-medium;
+  color: $color-text-secondary;
+
+  &--full {
+    grid-column: 1 / -1;
+  }
+
+  input,
+  select {
+    box-sizing: border-box;
+    width: 100%;
+    max-width: 100%;
+    min-height: 36px;
+    padding: $spacing-xs $spacing-sm;
+    border: 1px solid $color-border;
+    border-radius: $border-radius-sm;
+    background: $color-neutral-light;
+    color: $color-text-primary;
+    font: inherit;
+    outline: none;
+
+    &:focus {
+      border-color: $color-primary-light;
+      box-shadow: 0 0 0 3px rgba($rouge-light, 0.16);
+    }
+
+    &:disabled {
+      background: rgba($color-primary-pale, 0.2);
+      color: $color-text-muted;
+    }
+  }
+}
+
+.usuario-field__erro {
+  color: $color-error;
+  font-weight: $font-weight-regular;
+}
+
+.usuario-form__hint {
+  margin: 0;
+  font-size: $font-size-xs;
+  color: $color-text-muted;
+}
+
+.usuario-form__bloco {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-sm;
+  padding: $spacing-sm $spacing-md;
+  border: 1px solid $color-border;
+  border-radius: $border-radius-sm;
+  background: rgba($color-primary-pale, 0.12);
+}
+
+.usuario-form__bloco-linha {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  flex-wrap: wrap;
+  font-size: $font-size-xs;
+
+  strong.is-inativo {
+    color: $color-text-muted;
+  }
+}
+
+.usuario-form__confirm {
+  display: inline-flex;
+  align-items: center;
+  gap: $spacing-xs;
+  font-size: $font-size-xs;
+}
+
+.usuario-form__msg {
+  margin: 0;
+  font-size: $font-size-xs;
+
+  &.is-erro {
+    color: $color-error;
+  }
+
+  &.is-ok {
+    color: $color-success;
+  }
+}
+
+.usuario-form__acoes {
+  display: flex;
+  justify-content: flex-end;
+  gap: $spacing-sm;
+  padding-top: $spacing-sm;
+  border-top: 1px solid rgba($color-border, 0.6);
+}
+
+@media (max-width: 560px) {
+  .usuario-form__grid {
+    grid-template-columns: 1fr;
+  }
+}

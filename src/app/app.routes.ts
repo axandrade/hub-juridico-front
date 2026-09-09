@@ -1,6 +1,6 @@
 import { Routes } from '@angular/router';
 
-import { authGuard, passwordChangeGuard, publicOnlyGuard } from './core/guards/auth.guard';
+import { adminGuard, authGuard, passwordChangeGuard, publicOnlyGuard } from './core/guards/auth.guard';
 import { LayoutComponent } from './layout/layout.component';
 
 export const routes: Routes = [
@@ -47,6 +47,13 @@ export const routes: Routes = [
         loadChildren: () =>
           import('./features/processos/processos.routes').then((m) => m.PROCESSOS_ROUTES),
         title: 'Hub Jurídico · Processos',
+      },
+      {
+        path: 'usuarios',
+        canActivate: [adminGuard],
+        loadChildren: () =>
+          import('./features/usuarios/usuarios.routes').then((m) => m.USUARIOS_ROUTES),
+        title: 'Hub Jurídico · Usuários',
       },
     ],
   },

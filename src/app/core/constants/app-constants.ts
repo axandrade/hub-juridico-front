@@ -11,6 +11,7 @@ export const ROUTES = {
   CLIENTS: 'clientes',
   ADVOGADOS: 'advogados',
   PROCESSOS: 'processos',
+  USUARIOS: 'usuarios',
   LOGIN: 'login',
   CHANGE_PASSWORD: 'trocar-senha',
 } as const;
@@ -21,6 +22,8 @@ export interface NavItem {
   route?: string;
   badge?: string;
   emphasis?: 'primary' | 'accent' | 'neutral';
+  /** Só aparece na sidebar para usuários ADMIN (ver `SidebarComponent`). */
+  adminOnly?: boolean;
 }
 
 /** Itens de navegação da sidebar, refletindo o protótipo. */
@@ -63,7 +66,13 @@ export const SIDEBAR_NAV: readonly NavItem[] = [
     route: `/${ROUTES.DASHBOARD}`,
     emphasis: 'primary',
   },
-  { label: 'Usuários', icon: 'fa-solid fa-user', emphasis: 'neutral' },
+  {
+    label: 'Usuários',
+    icon: 'fa-solid fa-user',
+    route: `/${ROUTES.USUARIOS}`,
+    emphasis: 'neutral',
+    adminOnly: true,
+  },
   { label: 'Configurações', icon: 'fa-solid fa-gear', emphasis: 'neutral' },
 ];
 

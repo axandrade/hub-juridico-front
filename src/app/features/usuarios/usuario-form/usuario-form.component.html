@@ -1,0 +1,171 @@
+<form class="usuario-form" [formGroup]="form" (ngSubmit)="salvar()">
+  <div class="usuario-form__grid">
+    <label class="usuario-field">
+      <span>CPF</span>
+      <input
+        type="text"
+        formControlName="cpf"
+        appCpfMask
+        placeholder="000.000.000-00"
+        autocomplete="off"
+      />
+    </label>
+
+    <label class="usuario-field">
+      <span>Papel</span>
+      <select formControlName="role">
+        @for (r of roles; track r) {
+          <option [value]="r">{{ roleLabel[r] }}</option>
+        }
+      </select>
+    </label>
+
+    <label class="usuario-field usuario-field--full">
+      <span>Nome</span>
+      <input type="text" formControlName="name" maxlength="255" autocomplete="off" />
+    </label>
+
+    <label class="usuario-field usuario-field--full">
+      <span>E-mail</span>
+      <input type="email" formControlName="email" maxlength="255" autocomplete="off" />
+    </label>
+
+    @if (!modoEdicao()) {
+      <label class="usuario-field">
+        <span>Senha inicial</span>
+        <input type="password" formControlName="senha" autocomplete="new-password" />
+        @if (senhaErro('senha', 'form'); as msg) {
+          <small class="usuario-field__erro">{{ msg }}</small>
+        }
+      </label>
+      <label class="usuario-field">
+        <span>Confirmar senha</span>
+        <input type="password" formControlName="confirmarSenha" autocomplete="new-password" />
+        @if (senhaErro('confirmarSenha', 'form'); as msg) {
+          <small class="usuario-field__erro">{{ msg }}</small>
+        }
+      </label>
+      <p class="usuario-form__hint usuario-field--full">
+        O usuário será obrigado a trocar a senha no primeiro acesso.
+      </p>
+    }
+  </div>
+
+  @if (modoEdicao() && carregado()) {
+    <div class="usuario-form__bloco">
+      <div class="usuario-form__bloco-linha">
+        <span>
+          Status:
+          <strong [class.is-inativo]="!ativo()">{{ ativo() ? 'Ativo' : 'Inativo' }}</strong>
+        </span>
+        @if (!confirmandoInativacao()) {
+          @if (ativo()) {
+            <app-button
+              variant="secondary"
+              size="sm"
+              icon="fa-solid fa-ban"
+              label="Inativar"
+              [disabled]="ehEuMesmo()"
+              (clicked)="pedirInativacao()"
+            />
+          } @else {
+            <app-button
+              variant="secondary"
+              size="sm"
+              icon="fa-solid fa-rotate-left"
+              label="Reativar"
+              (clicked)="alternarStatus(true)"
+            />
+          }
+        } @else {
+          <span class="usuario-form__confirm">
+            Confirmar inativação?
+            <app-button variant="secondary" size="sm" label="Sim" (clicked)="alternarStatus(false)" />
+            <app-button
+              variant="tertiary"
+              size="sm"
+              label="Não"
+              (clicked)="confirmandoInativacao.set(false)"
+            />
+          </span>
+        }
+      </div>
+      @if (ehEuMesmo()) {
+        <small class="usuario-form__hint">Você não pode inativar a própria conta.</small>
+      }
+    </div>
+
+    <div class="usuario-form__bloco">
+      @if (!resetAberto()) {
+        <app-button
+          variant="tertiary"
+          size="sm"
+          icon="fa-solid fa-key"
+          label="Redefinir senha"
+          (clicked)="resetAberto.set(true)"
+        />
+      } @else {
+        <div class="usuario-form__grid" [formGroup]="resetForm">
+          <label class="usuario-field">
+            <span>Nova senha</span>
+            <input type="password" formControlName="senha" autocomplete="new-password" />
+            @if (senhaErro('senha', 'resetForm'); as msg) {
+              <small class="usuario-field__erro">{{ msg }}</small>
+            }
+          </label>
+          <label class="usuario-field">
+            <span>Confirmar</span>
+            <input type="password" formControlName="confirmarSenha" autocomplete="new-password" />
+            @if (senhaErro('confirmarSenha', 'resetForm'); as msg) {
+              <small class="usuario-field__erro">{{ msg }}</small>
+            }
+          </label>
+        </div>
+        <div class="usuario-form__bloco-linha">
+          <app-button
+            variant="secondary"
+            size="sm"
+            label="Redefinir"
+            (clicked)="confirmarReset()"
+          />
+          <app-button
+            variant="tertiary"
+            size="sm"
+            label="Cancelar"
+            (clicked)="resetAberto.set(false)"
+          />
+        </div>
+      }
+    </div>
+  }
+
+  @switch (notice()) {
+    @case ('requiredFields') {
+      <p class="usuario-form__msg is-erro">Revise os campos destacados.</p>
+    }
+    @case ('saveError') {
+      <p class="usuario-form__msg is-erro">{{ noticeMsg() }}</p>
+    }
+    @case ('statusError') {
+      <p class="usuario-form__msg is-erro">{{ noticeMsg() }}</p>
+    }
+    @case ('senhaError') {
+      <p class="usuario-form__msg is-erro">{{ noticeMsg() }}</p>
+    }
+    @case ('senhaOk') {
+      <p class="usuario-form__msg is-ok">{{ noticeMsg() }}</p>
+    }
+  }
+
+  <div class="usuario-form__acoes">
+    <app-button variant="tertiary" size="sm" label="Cancelar" (clicked)="cancelar()" />
+    <app-button
+      variant="primary"
+      size="sm"
+      icon="fa-solid fa-floppy-disk"
+      [label]="notice() === 'saving' ? 'Salvando...' : 'Salvar'"
+      [disabled]="notice() === 'saving'"
+      (clicked)="salvar()"
+    />
+  </div>
+</form>

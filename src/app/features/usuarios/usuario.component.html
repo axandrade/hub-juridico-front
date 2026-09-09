@@ -1,0 +1,86 @@
+<section class="usuarios" aria-label="Usuários">
+  <div class="usuarios__actions">
+    <app-button
+      variant="primary"
+      size="sm"
+      icon="fa-solid fa-user-plus"
+      label="Novo usuário"
+      (clicked)="novoUsuario()"
+    />
+  </div>
+
+  <div class="usuarios__search">
+    <span class="usuarios__search-label">Pesquisar</span>
+    <label class="usuarios__search-input">
+      <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+      <input
+        type="text"
+        placeholder="nome, e-mail ou CPF"
+        [value]="busca()"
+        (input)="onBuscaInput($event)"
+        aria-label="Buscar por nome, e-mail ou CPF"
+      />
+      @if (busca()) {
+        <button type="button" aria-label="Limpar busca" (click)="limparBusca()">
+          <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+        </button>
+      }
+    </label>
+  </div>
+
+  <div class="usuarios__filtros">
+    <label class="usuarios__toggle">
+      <input
+        type="checkbox"
+        [checked]="incluirInativos()"
+        [disabled]="loading()"
+        (change)="onToggleInativos($event)"
+      />
+      Mostrar inativos
+    </label>
+  </div>
+
+  <div class="usuarios__table">
+    <app-data-table
+      [columnsToolbar]="false"
+      [columns]="colunas"
+      [data]="usuarios()"
+      [loading]="loading()"
+      trackKey="id"
+      emptyMessage="Nenhum usuário encontrado."
+      [sortable]="true"
+      [initialSort]="{ key: 'name', direction: 'asc' }"
+      [rowClass]="rowClass"
+      [pagination]="pagination()"
+      (pageChange)="onPageChange($event)"
+      (rowClick)="abrirUsuario($event)"
+    />
+  </div>
+
+  <footer class="usuarios__footer">
+    <span>{{ total() }} usuário(s)</span>
+    @if (loadError()) {
+      <span>
+        · Não foi possível carregar.
+        <button type="button" class="usuarios__link" (click)="reloadList()">Tentar de novo</button>
+      </span>
+    }
+  </footer>
+</section>
+
+<app-modal
+  [open]="modalAberto()"
+  [wide]="true"
+  [title]="selecionadoId() === null ? 'Novo usuário' : 'Editar usuário'"
+  (closed)="fecharModal()"
+>
+  @if (modalAberto()) {
+    <app-usuario-form
+      [usuarioId]="selecionadoId()"
+      [meuId]="meuId()"
+      (salvo)="onSalvo()"
+      (statusAlterado)="onStatusAlterado()"
+      (cancelado)="fecharModal()"
+    />
+  }
+</app-modal>

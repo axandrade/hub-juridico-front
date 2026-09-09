@@ -16,6 +16,7 @@ import {
 import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
 import { Observable, debounceTime, distinctUntilChanged, filter, skip } from 'rxjs';
 
+import { AuthService } from '../../../core/services/auth.service';
 import { AutoFocusSelectDirective } from '../../directives/auto-focus-select.directive';
 
 interface ComboOption {
@@ -85,6 +86,7 @@ const normalizar = (texto: string): string =>
 export class ComboboxComponent {
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly auth = inject(AuthService);
 
   /** Opções selecionáveis (texto puro). */
   readonly options = input<string[]>([]);
@@ -151,8 +153,14 @@ export class ComboboxComponent {
   private readonly remotoUltima = signal(true);
   protected readonly carregando = signal(false);
 
-  /** Só mostra o "⋮" se ao menos uma das 3 ações estiver ligada. */
-  protected readonly temAcoes = computed(() => this.adicionar() || this.editar() || this.excluir());
+  /**
+   * Só mostra o "⋮" quando ao menos uma das 3 ações está ligada **e** o usuário é ADMIN — só
+   * ADMIN gere catálogos (o back trava igual com `@GerirCatalogo`). Para um USER o combobox vira
+   * um select pesquisável comum; os `[adicionar]`/`[editar]`/`[excluir]` das telas não mudam.
+   */
+  protected readonly temAcoes = computed(
+    () => (this.adicionar() || this.editar() || this.excluir()) && this.auth.isAdmin(),
+  );
 
   /** Busca livre no campo — explícita (`pesquisavel`) ou implícita (modo servidor). */
   protected readonly buscaLivre = computed(() => this.pesquisavel() || this.remoto());

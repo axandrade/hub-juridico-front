@@ -38,6 +38,8 @@ export class AuthService {
   readonly user = this._user.asReadonly();
   readonly isAuthenticated = computed(() => this._user() !== null);
   readonly mustChangePassword = computed(() => this._user()?.must_change_password ?? false);
+  /** `role === 'ADMIN'`. Só ADMIN gere catálogos (ver `<app-combobox>` e `@GerirCatalogo` no back). */
+  readonly isAdmin = computed(() => this._user()?.role === 'ADMIN');
 
   private refreshInFlight$: Observable<string> | null = null;
 

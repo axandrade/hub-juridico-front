@@ -6,6 +6,7 @@ import { environment } from '../../../../environments/environment';
 import { ComboPagina } from '../../../shared/components/combobox/combobox.component';
 import { FavoritoService } from '../../../shared/services/favorito.service';
 import {
+  CenarioRiscoApi,
   ClienteSecundarioApi,
   OutroEnvolvidoAdvogadoApi,
   OutroEnvolvidoMagistradoApi,
@@ -55,6 +56,16 @@ export interface ProcessoEditavel {
   uf: string;
   cidadeId: number | null;
   observacoesGerais: string;
+
+  // aba "Objeto"
+  objetoPrincipal: string;
+  objetosSecundarios: string[];
+  observacoesObjeto: string;
+  valorPedido: number | null;
+  valorDeferido: number | null;
+  cenarioProvavel: CenarioRiscoApi;
+  cenarioPossivel: CenarioRiscoApi;
+  cenarioRemoto: CenarioRiscoApi;
 
   tags: string[];
   orgaosProcessantes: string[];
@@ -151,6 +162,14 @@ export class ProcessoService {
       uf: vazioParaNull(processo.uf),
       cidade_id: processo.cidadeId,
       observacoes_gerais: vazioParaNull(processo.observacoesGerais),
+      objeto_principal: vazioParaNull(processo.objetoPrincipal),
+      observacoes_objeto: vazioParaNull(processo.observacoesObjeto),
+      valor_pedido: processo.valorPedido,
+      valor_deferido: processo.valorDeferido,
+      cenario_provavel: processo.cenarioProvavel,
+      cenario_possivel: processo.cenarioPossivel,
+      cenario_remoto: processo.cenarioRemoto,
+      objetos_secundarios: processo.objetosSecundarios,
       clientes_secundarios: processo.clientesSecundarios,
       partes_contrarias: processo.partesContrarias,
       outros_envolvidos_advogados: processo.outrosEnvolvidosAdvogados,

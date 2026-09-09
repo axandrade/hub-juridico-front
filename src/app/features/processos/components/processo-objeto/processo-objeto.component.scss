@@ -1,0 +1,205 @@
+@use 'variables' as *;
+@use 'mixins' as *;
+
+:host {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  flex-direction: column;
+}
+
+:host([hidden]) {
+  display: none;
+}
+
+.processo-form__section {
+  @include thin-scrollbar;
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  flex-direction: column;
+  gap: $spacing-sm;
+  padding: $spacing-md;
+  overflow: auto;
+}
+
+.processo-form__group-title {
+  margin-top: $spacing-xs;
+  color: $color-text-secondary;
+  font-size: $font-size-xs;
+  font-weight: $font-weight-bold;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.processo-field {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: $spacing-xs;
+  color: $color-text-secondary;
+  font-size: $font-size-xs;
+  font-weight: $font-weight-medium;
+}
+
+.processo-field--full {
+  width: 100%;
+}
+
+.processo-form__section input,
+.processo-form__section textarea {
+  width: 100%;
+  min-height: 36px;
+  border: 1px solid $color-border;
+  border-radius: $border-radius-sm;
+  background-color: $color-neutral-light;
+  color: $color-text-primary;
+  font: inherit;
+  outline: none;
+  padding: $spacing-xs $spacing-sm;
+  transition:
+    border-color $transition-fast,
+    box-shadow $transition-fast;
+
+  &:focus {
+    border-color: $color-primary-light;
+    box-shadow: 0 0 0 3px rgba($rouge-light, 0.16);
+  }
+}
+
+.processo-form__section textarea {
+  resize: vertical;
+}
+
+.processo-objeto__moeda {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+
+  &[readonly] {
+    background-color: rgba($color-primary-pale, 0.2);
+    color: $color-text-muted;
+  }
+}
+
+// Linha do "Objeto secundário": combobox + Adicionar + Remover.
+.processo-objeto__sec-linha {
+  display: flex;
+  gap: $spacing-sm;
+  align-items: stretch;
+
+  app-combobox {
+    flex: 1;
+    min-width: 0;
+  }
+}
+
+.processo-objeto__botao {
+  display: inline-flex;
+  align-items: center;
+  gap: $spacing-xs;
+  padding: $spacing-xs $spacing-md;
+  border: 1px solid $color-border;
+  border-radius: $border-radius-sm;
+  background-color: $color-neutral-light;
+  color: $color-text-primary;
+  font: inherit;
+  font-size: $font-size-xs;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    border-color $transition-fast,
+    color $transition-fast;
+
+  &:hover:not(:disabled) {
+    border-color: $color-primary-light;
+    color: $color-primary;
+  }
+
+  &:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+}
+
+.processo-objeto__lista {
+  @include thin-scrollbar;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: $spacing-xs 0 0;
+  padding: $spacing-xs;
+  list-style: none;
+  border: 1px solid $color-border;
+  border-radius: $border-radius-sm;
+  background-color: $color-neutral-light;
+  min-height: 72px;
+  max-height: 160px;
+  overflow: auto;
+
+  button {
+    width: 100%;
+    min-height: 0;
+    padding: $spacing-xs $spacing-sm;
+    border: 0;
+    border-radius: $border-radius-sm;
+    background: transparent;
+    color: $color-text-primary;
+    font: inherit;
+    font-size: $font-size-xs;
+    text-align: left;
+    cursor: pointer;
+
+    &:hover {
+      background-color: rgba($color-primary-pale, 0.3);
+    }
+
+    &.is-selected {
+      background-color: rgba($color-primary-pale, 0.7);
+      color: $color-primary;
+      font-weight: $font-weight-medium;
+    }
+  }
+}
+
+.processo-objeto__vazio {
+  padding: $spacing-sm;
+  color: $color-text-muted;
+  font-size: $font-size-xs;
+  text-align: center;
+}
+
+// Linha de cenário: valor | % | provisionar.
+.processo-objeto__cenario {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: $spacing-sm;
+  align-items: end;
+}
+
+.processo-objeto__check {
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+  padding-bottom: 8px;
+  color: $color-text-secondary;
+  font-size: $font-size-xs;
+  font-weight: $font-weight-medium;
+  white-space: nowrap;
+  cursor: pointer;
+
+  input {
+    width: auto;
+    min-height: 0;
+    margin: 0;
+  }
+}
+
+@include respond-below($breakpoint-sm) {
+  .processo-objeto__cenario {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .processo-objeto__sec-linha {
+    flex-wrap: wrap;
+  }
+}

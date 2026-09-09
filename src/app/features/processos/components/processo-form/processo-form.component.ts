@@ -16,6 +16,7 @@ import { PanelLayoutSwitcherComponent } from '../../../../shared/components/pane
 import { PAINEL_LAYOUT_PADRAO, PainelLayout } from '../../../../shared/models/panel-layout';
 import { ProcessoApi } from '../../services/processo-api.model';
 import { ProcessoService } from '../../services/processo-service';
+import { ProcessoObjetoComponent } from '../processo-objeto/processo-objeto.component';
 import { ProcessoOutrosEnvolvidosComponent } from '../processo-outros-envolvidos/processo-outros-envolvidos.component';
 import { ProcessoDadosGeraisComponent } from '../processo-dados-gerais/processo-dados-gerais.component';
 
@@ -34,8 +35,8 @@ type NoticeKey =
   | 'favoriteAdded'
   | 'favoriteRemoved';
 
-/** Abas do painel de processo. "outrosEnvolvidos" ainda não tem campos (entra depois). */
-type ProcessoAba = 'gerais' | 'outrosEnvolvidos';
+/** Abas do painel de processo. */
+type ProcessoAba = 'gerais' | 'outrosEnvolvidos' | 'objeto';
 
 interface EditorNotice {
   key: NoticeKey;
@@ -56,6 +57,7 @@ interface EditorNotice {
     PanelLayoutSwitcherComponent,
     ProcessoDadosGeraisComponent,
     ProcessoOutrosEnvolvidosComponent,
+    ProcessoObjetoComponent,
   ],
   templateUrl: './processo-form.component.html',
   styleUrl: './processo-form.component.scss',
@@ -77,10 +79,11 @@ export class ProcessoFormComponent {
 
   private readonly dadosGerais = viewChild(ProcessoDadosGeraisComponent);
   private readonly outrosEnvolvidos = viewChild(ProcessoOutrosEnvolvidosComponent);
+  private readonly objeto = viewChild(ProcessoObjetoComponent);
 
   /** Aba visível do painel. Volta pra "gerais" ao trocar de processo / limpar. */
   protected readonly abaAtiva = signal<ProcessoAba>('gerais');
-  protected readonly abas: readonly ProcessoAba[] = ['gerais', 'outrosEnvolvidos'];
+  protected readonly abas: readonly ProcessoAba[] = ['gerais', 'outrosEnvolvidos', 'objeto'];
 
   protected readonly entityId = signal(0);
   protected readonly favorite = signal(false);
@@ -171,7 +174,8 @@ export class ProcessoFormComponent {
   protected save(): void {
     const gerais = this.dadosGerais();
     const outros = this.outrosEnvolvidos();
-    if (!gerais || !outros) {
+    const objeto = this.objeto();
+    if (!gerais || !outros || !objeto) {
       return;
     }
     const validacao = gerais.validar();
@@ -182,7 +186,7 @@ export class ProcessoFormComponent {
 
     this.notice.set({ key: 'saving' });
     this.processoService
-      .salvar({ id: this.entityId(), ...gerais.coletar(), ...outros.coletar() })
+      .salvar({ id: this.entityId(), ...gerais.coletar(), ...outros.coletar(), ...objeto.coletar() })
       .subscribe({
         next: (salvo) => {
           this.aplicarProcesso(salvo);
@@ -237,6 +241,7 @@ export class ProcessoFormComponent {
     this.pasta.set(p.pasta ?? '');
     this.dadosGerais()?.carregar(p);
     this.outrosEnvolvidos()?.carregar(p);
+    this.objeto()?.carregar(p);
   }
 
   private limparPainel(): void {
@@ -247,6 +252,7 @@ export class ProcessoFormComponent {
     this.abaAtiva.set('gerais');
     this.dadosGerais()?.limpar();
     this.outrosEnvolvidos()?.limpar();
+    this.objeto()?.limpar();
   }
 
   private rotuloDe(p: ProcessoApi): string {

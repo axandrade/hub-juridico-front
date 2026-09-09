@@ -55,6 +55,17 @@ export interface OutroEnvolvidoTestemunhaApi {
   parte_interessada: string;
 }
 
+/**
+ * Um cenário de risco da aba "Objeto" (provável / possível / remoto). `valor`/`percentual` são
+ * número (BRL / %) ou `null` (cenário não informado); `percentual` é snapshot de
+ * `valor / valor_pedido * 100`. `provisionar` = se o escritório provisiona esse cenário.
+ */
+export interface CenarioRiscoApi {
+  valor: number | null;
+  percentual: number | null;
+  provisionar: boolean;
+}
+
 /** `ProcessoResumoResponse` — uma linha da listagem (só escalares, sem as coleções). */
 export interface ProcessoResumoApi {
   id: number;
@@ -102,6 +113,15 @@ export interface ProcessoApi {
   cidade_id: number | null;
   observacoes_gerais: string | null;
 
+  objeto_principal: string | null;
+  observacoes_objeto: string | null;
+  valor_pedido: number | null;
+  valor_deferido: number | null;
+  cenario_provavel: CenarioRiscoApi;
+  cenario_possivel: CenarioRiscoApi;
+  cenario_remoto: CenarioRiscoApi;
+  objetos_secundarios: string[];
+
   clientes_secundarios: ClienteSecundarioApi[];
   partes_contrarias: ParteContrariaApi[];
   outros_envolvidos_advogados: OutroEnvolvidoAdvogadoApi[];
@@ -137,6 +157,15 @@ export interface ProcessoWriteApi {
   uf: string | null;
   cidade_id: number | null;
   observacoes_gerais: string | null;
+
+  objeto_principal: string | null;
+  observacoes_objeto: string | null;
+  valor_pedido: number | null;
+  valor_deferido: number | null;
+  cenario_provavel: CenarioRiscoApi;
+  cenario_possivel: CenarioRiscoApi;
+  cenario_remoto: CenarioRiscoApi;
+  objetos_secundarios: string[];
 
   clientes_secundarios: ClienteSecundarioApi[];
   partes_contrarias: ParteContrariaApi[];

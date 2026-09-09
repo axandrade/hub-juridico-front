@@ -48,6 +48,9 @@
           @case ('outrosEnvolvidos') {
             Outros envolvidos
           }
+          @case ('objeto') {
+            Objeto
+          }
         }
       </button>
     }
@@ -63,6 +66,7 @@
         [hidden]="abaAtiva() !== 'outrosEnvolvidos'"
         (erro)="notificarErro($event)"
       />
+      <app-processo-objeto [hidden]="abaAtiva() !== 'objeto'" (erro)="notificarErro($event)" />
     </div>
 
     <footer class="processo-panel__footer">

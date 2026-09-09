@@ -10,6 +10,30 @@ export function onlyDigits(value: string | null | undefined): string {
   return (value ?? '').replace(/\D/g, '');
 }
 
+/**
+ * Máscara de moeda BRL "cents-based": os dígitos digitados viram centavos, com separador de
+ * milhar. `'18000'` → `'180,00'`; `1234.5` (número do backend) → `'1.234,50'`. Vazio → `''`.
+ */
+export function maskMoeda(value: string | number | null | undefined): string {
+  if (value === null || value === undefined || value === '') {
+    return '';
+  }
+  const cents =
+    typeof value === 'number' ? Math.round(value * 100) : Number(onlyDigits(value));
+  if (!Number.isFinite(cents)) {
+    return '';
+  }
+  const digitos = Math.abs(cents).toString().padStart(3, '0');
+  const inteiro = digitos.slice(0, -2).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  return `${inteiro},${digitos.slice(-2)}`;
+}
+
+/** `'1.234,56'` → `1234.56`. Vazio → `null`. */
+export function parseMoeda(value: string | null | undefined): number | null {
+  const d = onlyDigits(value);
+  return d ? Number(d) / 100 : null;
+}
+
 /** Aplica a máscara `000.000.000-00` progressivamente. */
 export function maskCpf(value: string | null | undefined): string {
   const d = onlyDigits(value).slice(0, 11);

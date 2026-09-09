@@ -1,0 +1,163 @@
+<div class="processo-form__section" [formGroup]="form">
+  <div class="processo-field processo-field--full">
+    <span>Objeto principal</span>
+    <app-combobox
+      ariaLabel="Objeto principal"
+      placeholder="Buscar objeto..."
+      emptyLabel="— Sem objeto —"
+      noResultsText="Nenhum objeto encontrado"
+      itemNoun="objeto"
+      [options]="nomesDeObjeto()"
+      [value]="objetoPrincipal()"
+      [adicionar]="true"
+      [editar]="true"
+      [excluir]="true"
+      (valueChange)="objetoPrincipal.set($event)"
+      (aoAdicionar)="criarObjeto($event, 'principal')"
+      (aoEditar)="renomearObjeto($event)"
+      (aoExcluir)="excluirObjeto($event)"
+    />
+  </div>
+
+  <div class="processo-field processo-field--full">
+    <span>Objeto secundário</span>
+    <div class="processo-objeto__sec-linha">
+      <app-combobox
+        ariaLabel="Objeto secundário"
+        placeholder="Buscar objeto..."
+        emptyLabel="— Sem objeto —"
+        noResultsText="Nenhum objeto encontrado"
+        itemNoun="objeto"
+        [options]="nomesDeObjeto()"
+        [value]="objetoSecundarioDraft()"
+        [adicionar]="true"
+        [editar]="true"
+        [excluir]="true"
+        (valueChange)="objetoSecundarioDraft.set($event)"
+        (aoAdicionar)="criarObjeto($event, 'secundario')"
+        (aoEditar)="renomearObjeto($event)"
+        (aoExcluir)="excluirObjeto($event)"
+      />
+      <button type="button" class="processo-objeto__botao" (click)="adicionarSecundario()">
+        <i class="fa-solid fa-plus" aria-hidden="true"></i> Adicionar
+      </button>
+      <button
+        type="button"
+        class="processo-objeto__botao"
+        [disabled]="secSelecionado() < 0"
+        (click)="removerSecundario()"
+      >
+        <i class="fa-solid fa-trash-can" aria-hidden="true"></i> Remover
+      </button>
+    </div>
+    <ul class="processo-objeto__lista" role="listbox" aria-label="Objetos secundários">
+      @for (obj of objetosSecundarios(); track $index) {
+        <li>
+          <button
+            type="button"
+            role="option"
+            [attr.aria-selected]="secSelecionado() === $index"
+            [class.is-selected]="secSelecionado() === $index"
+            (click)="selecionarSecundario($index)"
+          >
+            {{ obj }}
+          </button>
+        </li>
+      } @empty {
+        <li class="processo-objeto__vazio">Nenhum objeto secundário.</li>
+      }
+    </ul>
+  </div>
+
+  <label class="processo-field processo-field--full">
+    <span>Observações do objeto</span>
+    <textarea rows="4" formControlName="observacoesObjeto"></textarea>
+  </label>
+
+  <label class="processo-field processo-field--full">
+    <span>Valor pedido</span>
+    <input
+      type="text"
+      class="processo-objeto__moeda"
+      formControlName="valorPedido"
+      appMoedaMask
+      placeholder="0,00"
+    />
+  </label>
+
+  <div class="processo-form__group-title">Cenários de risco</div>
+
+  <div class="processo-objeto__cenario">
+    <label class="processo-field">
+      <span>Valor provável</span>
+      <input
+        type="text"
+        class="processo-objeto__moeda"
+        formControlName="valorProvavel"
+        appMoedaMask
+        placeholder="0,00"
+      />
+    </label>
+    <label class="processo-field">
+      <span>% provável</span>
+      <input type="text" class="processo-objeto__moeda" [value]="pctTexto(pctProvavel())" readonly />
+    </label>
+    <label class="processo-objeto__check">
+      <input type="checkbox" formControlName="provisionarProvavel" />
+      <span>Provisionar</span>
+    </label>
+  </div>
+
+  <div class="processo-objeto__cenario">
+    <label class="processo-field">
+      <span>Valor possível</span>
+      <input
+        type="text"
+        class="processo-objeto__moeda"
+        formControlName="valorPossivel"
+        appMoedaMask
+        placeholder="0,00"
+      />
+    </label>
+    <label class="processo-field">
+      <span>% possível</span>
+      <input type="text" class="processo-objeto__moeda" [value]="pctTexto(pctPossivel())" readonly />
+    </label>
+    <label class="processo-objeto__check">
+      <input type="checkbox" formControlName="provisionarPossivel" />
+      <span>Provisionar</span>
+    </label>
+  </div>
+
+  <div class="processo-objeto__cenario">
+    <label class="processo-field">
+      <span>Valor remoto</span>
+      <input
+        type="text"
+        class="processo-objeto__moeda"
+        formControlName="valorRemoto"
+        appMoedaMask
+        placeholder="0,00"
+      />
+    </label>
+    <label class="processo-field">
+      <span>% remoto</span>
+      <input type="text" class="processo-objeto__moeda" [value]="pctTexto(pctRemoto())" readonly />
+    </label>
+    <label class="processo-objeto__check">
+      <input type="checkbox" formControlName="provisionarRemoto" />
+      <span>Provisionar</span>
+    </label>
+  </div>
+
+  <label class="processo-field processo-field--full">
+    <span>Valor deferido</span>
+    <input
+      type="text"
+      class="processo-objeto__moeda"
+      formControlName="valorDeferido"
+      appMoedaMask
+      placeholder="0,00"
+    />
+  </label>
+</div>

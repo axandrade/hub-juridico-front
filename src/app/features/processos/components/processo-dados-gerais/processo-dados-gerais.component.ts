@@ -44,6 +44,14 @@ export type DadosGeraisValores = Omit<
   | 'outrosEnvolvidosAdvogados'
   | 'outrosEnvolvidosMagistrados'
   | 'outrosEnvolvidosTestemunhas'
+  | 'objetoPrincipal'
+  | 'objetosSecundarios'
+  | 'observacoesObjeto'
+  | 'valorPedido'
+  | 'valorDeferido'
+  | 'cenarioProvavel'
+  | 'cenarioPossivel'
+  | 'cenarioRemoto'
 >;
 
 /**

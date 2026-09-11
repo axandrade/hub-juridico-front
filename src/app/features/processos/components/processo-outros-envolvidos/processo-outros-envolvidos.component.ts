@@ -1,8 +1,10 @@
 import { ChangeDetectionStrategy, Component, computed, inject, output, signal } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 
+import { cpfValidator, maskCpf, onlyDigits } from '../../../../core/auth/documentos-br';
 import { BRAZILIAN_STATES } from '../../../../core/models/pessoa.model';
 import { ComboboxComponent } from '../../../../shared/components/combobox/combobox.component';
+import { CpfMaskDirective } from '../../../../shared/directives/cpf-mask.directive';
 import { OrgaoJulgadorService } from '../../services/orgao-julgador.service';
 import { ParteInteressadaService } from '../../services/parte-interessada.service';
 import { PosicaoClienteService } from '../../services/posicao-cliente.service';
@@ -38,7 +40,7 @@ export type OutrosEnvolvidosValores = Pick<
 @Component({
   selector: 'app-processo-outros-envolvidos',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ReactiveFormsModule, ComboboxComponent],
+  imports: [ReactiveFormsModule, ComboboxComponent, CpfMaskDirective],
   templateUrl: './processo-outros-envolvidos.component.html',
   styleUrl: './processo-outros-envolvidos.component.scss',
 })
@@ -100,11 +102,13 @@ export class ProcessoOutrosEnvolvidosComponent {
 
   protected readonly nomesDeParte = computed(() => this.parteService.partes().map((p) => p.nome));
 
-  /** Campo de texto da linha de testemunha em edição (parte interessada é combobox → signal). */
+  /** Campos de texto da linha de testemunha em edição (parte interessada é combobox → signal). */
   protected readonly testForm: FormGroup<{
     testemunha: FormControl<string>;
+    cpf: FormControl<string>;
   }> = new FormGroup({
     testemunha: new FormControl('', { nonNullable: true }),
+    cpf: new FormControl('', { nonNullable: true, validators: [cpfValidator] }),
   });
   protected readonly parteRascunho = signal('');
 
@@ -233,19 +237,20 @@ export class ProcessoOutrosEnvolvidosComponent {
 
   // ===================== lista de testemunhas =====================
 
-  /** Linha do listbox: "TESTEMUNHA | PARTE INTERESSADA". */
+  /** Linha do listbox: "TESTEMUNHA | CPF | PARTE INTERESSADA" (CPF vazio vira "—"). */
   protected rotuloTestemunha(o: OutroEnvolvidoTestemunhaApi): string {
-    return `${o.testemunha} | ${o.parte_interessada}`;
+    return `${o.testemunha} | ${o.cpf ? maskCpf(o.cpf) : '—'} | ${o.parte_interessada}`;
   }
 
   protected adicionarTestemunha(): void {
     const testemunha = this.testForm.controls.testemunha.value.trim();
     const parte = this.parteRascunho().trim();
-    if (!testemunha || !parte) {
+    if (!testemunha || !parte || this.testForm.controls.cpf.invalid) {
       this.testForm.markAllAsTouched();
       return;
     }
-    this.testemunhas.update((atual) => [...atual, { testemunha, parte_interessada: parte }]);
+    const cpf = onlyDigits(this.testForm.controls.cpf.value) || null;
+    this.testemunhas.update((atual) => [...atual, { testemunha, cpf, parte_interessada: parte }]);
     this.limparRascunhoTestemunha();
   }
 

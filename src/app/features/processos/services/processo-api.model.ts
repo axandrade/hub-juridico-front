@@ -47,11 +47,13 @@ export interface OutroEnvolvidoMagistradoApi {
 }
 
 /**
- * Uma testemunha "outra envolvida" (aba "Outros envolvidos", seção "Testemunhas"). Os dois campos
- * são obrigatórios; `parte_interessada` é o texto do catálogo `ParteInteressada`.
+ * Uma testemunha "outra envolvida" (aba "Outros envolvidos", seção "Testemunhas"). `testemunha` e
+ * `parte_interessada` são obrigatórios (`parte_interessada` é o texto do catálogo
+ * `ParteInteressada`); `cpf` é opcional, só dígitos (sem CNPJ — testemunha é sempre pessoa física).
  */
 export interface OutroEnvolvidoTestemunhaApi {
   testemunha: string;
+  cpf: string | null;
   parte_interessada: string;
 }
 

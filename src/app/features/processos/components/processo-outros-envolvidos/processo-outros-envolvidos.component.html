@@ -165,6 +165,19 @@
       <span>Testemunha</span>
       <input type="text" formControlName="testemunha" maxlength="255" />
     </label>
+    <label class="processo-field">
+      <span>CPF</span>
+      <input
+        type="text"
+        formControlName="cpf"
+        appCpfMask
+        inputmode="numeric"
+        placeholder="000.000.000-00"
+      />
+    </label>
+  </div>
+
+  <div class="processo-form__row processo-form__row--full" [formGroup]="testForm">
     <div class="processo-field">
       <span>Parte interessada</span>
       <app-combobox

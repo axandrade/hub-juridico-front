@@ -4,10 +4,15 @@ import { Observable, tap } from 'rxjs';
 
 import { environment } from '../../../../environments/environment';
 
-/** Item do catálogo "Órgão" julgador (`GET /api/v1/orgao-julgador`). */
+/**
+ * Item do catálogo "Órgão" julgador (`GET /api/v1/orgao-julgador`). `nome` vem pronto como
+ * "TRIBUNAL - descrição" (o back reconstrói); `tribunal_id` identifica o tribunal por trás, pra
+ * filtrar a lista quando um tribunal é escolhido (aba "Dados gerais" → "Órgãos processantes").
+ */
 export interface OrgaoJulgador {
   id: number;
   nome: string;
+  tribunal_id: number;
 }
 
 /**
@@ -46,6 +51,7 @@ export class OrgaoJulgadorService {
     });
   }
 
+  /** `nome` no formato "TRIBUNAL - descrição" (ex.: "TRT-7 - Tribunal Regional do Trabalho da 7ª Região"). */
   criar(nome: string): Observable<OrgaoJulgador> {
     return this.http
       .post<OrgaoJulgador>(this.url, { nome })

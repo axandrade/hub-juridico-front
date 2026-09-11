@@ -79,6 +79,28 @@ export interface ObservacaoProcessoApi {
   texto: string;
 }
 
+/**
+ * Um item de "Órgãos processantes" (`ProcessoResponse.orgaosProcessantes`) — mesma forma de
+ * `OrgaoJulgador` do catálogo (`nome` pronto como "TRIBUNAL - descrição"), devolvido dentro da
+ * ficha do processo pra não precisar de uma segunda chamada.
+ */
+export interface OrgaoProcessanteApi {
+  id: number;
+  nome: string;
+  tribunal_id: number;
+}
+
+/**
+ * Uma entrada do histórico de tribunais responsáveis pelo processo — registrada automaticamente
+ * quando um órgão novo entra em "Órgãos processantes". Nomes resolvidos ao vivo (podem ser `null`
+ * se o tribunal/órgão foi excluído do catálogo depois). Só leitura.
+ */
+export interface ProcessoTribunalHistoricoApi {
+  data: string;
+  tribunal_nome: string | null;
+  orgao_nome: string | null;
+}
+
 /** `ProcessoResumoResponse` — uma linha da listagem (só escalares, sem as coleções). */
 export interface ProcessoResumoApi {
   id: number;
@@ -143,10 +165,12 @@ export interface ProcessoApi {
   outros_envolvidos_advogados: OutroEnvolvidoAdvogadoApi[];
   outros_envolvidos_magistrados: OutroEnvolvidoMagistradoApi[];
   outros_envolvidos_testemunhas: OutroEnvolvidoTestemunhaApi[];
-  orgaos_processantes: string[];
+  /** Órgão processante atual — `null` se ainda não definido. Trocar arquiva o anterior no histórico. */
+  orgao_processante: OrgaoProcessanteApi | null;
   escritorios_anteriores: string[];
   tags: string[];
   observacoes_previas: ObservacaoProcessoApi[];
+  tribunais_historico: ProcessoTribunalHistoricoApi[];
 
   ativo: boolean;
   atualizado_em: string | null;
@@ -190,7 +214,8 @@ export interface ProcessoWriteApi {
   outros_envolvidos_advogados: OutroEnvolvidoAdvogadoApi[];
   outros_envolvidos_magistrados: OutroEnvolvidoMagistradoApi[];
   outros_envolvidos_testemunhas: OutroEnvolvidoTestemunhaApi[];
-  orgaos_processantes: string[];
+  /** Id do catálogo `orgao_julgador` (chave estrangeira) — `null` = sem órgão processante. */
+  orgao_processante_id: number | null;
   escritorios_anteriores: string[];
   tags: string[];
 }

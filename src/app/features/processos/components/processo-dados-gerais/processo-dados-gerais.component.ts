@@ -17,7 +17,9 @@ import { CnjMaskDirective } from '../../../../shared/directives/cnj-mask.directi
 import { DocumentoMaskDirective } from '../../../../shared/directives/documento-mask.directive';
 import {
   ObservacaoProcessoApi,
+  OrgaoProcessanteApi,
   ProcessoApi,
+  ProcessoTribunalHistoricoApi,
   TIPO_PROCESSO_LABEL,
   TipoProcesso,
 } from '../../services/processo-api.model';
@@ -25,10 +27,12 @@ import { AcaoProcessoService } from '../../services/acao-processo.service';
 import { CidadeService } from '../../services/cidade-service';
 import { FaseProcessoService } from '../../services/fase-processo.service';
 import { NaturezaProcessoService } from '../../services/natureza-processo.service';
+import { OrgaoJulgadorService } from '../../services/orgao-julgador.service';
 import { PosicaoClienteService } from '../../services/posicao-cliente.service';
 import { ProcedimentoProcessoService } from '../../services/procedimento-processo.service';
 import { ProcessoEditavel, ProcessoService } from '../../services/processo-service';
 import { StatusProcessoService } from '../../services/status-processo.service';
+import { TribunalService } from '../../services/tribunal.service';
 import {
   ProcessoForm,
   createProcessoForm,
@@ -82,6 +86,8 @@ export class ProcessoDadosGeraisComponent {
   private readonly procedimentoService = inject(ProcedimentoProcessoService);
   private readonly faseService = inject(FaseProcessoService);
   private readonly cidadeService = inject(CidadeService);
+  private readonly tribunalService = inject(TribunalService);
+  private readonly orgaoJulgadorService = inject(OrgaoJulgadorService);
   private readonly destroyRef = inject(DestroyRef);
 
   /** Erro numa operação de catálogo (criar/renomear/excluir) — o shell mostra no rodapé. */
@@ -105,6 +111,35 @@ export class ProcessoDadosGeraisComponent {
     this.procedimentoService.procedimentos().map((p) => p.nome),
   );
   protected readonly nomesDeFase = computed(() => this.faseService.fases().map((f) => f.nome));
+
+  // --- "Órgão processante" atual: cascata Tribunal → Órgão (filtrado pelo tribunal escolhido) ---
+  protected readonly nomesDeTribunal = computed(() =>
+    this.tribunalService.tribunais().map((t) => t.nome),
+  );
+  /** Tribunal/órgão exibidos nos dois combobox — o valor escolhido JÁ É o "órgão processante" atual. */
+  protected readonly tribunalAtual = signal('');
+  protected readonly orgaoAtual = signal('');
+  /** Id do catálogo `orgao_julgador` que vai no `PUT` — `null` = sem órgão processante definido. */
+  protected readonly orgaoProcessanteId = signal<number | null>(null);
+  /**
+   * Só os órgãos do tribunal escolhido — vazio até escolher um tribunal. Mostra só a descrição
+   * (sem repetir o código do tribunal, já escolhido no combobox anterior); `nome` do catálogo vem
+   * como "TRIBUNAL - descrição" (ver `OrgaoJulgadorService`).
+   */
+  protected readonly orgaosDoTribunalAtual = computed(() => {
+    const tribunal = this.tribunalService.tribunais().find((t) => t.nome === this.tribunalAtual());
+    if (!tribunal) {
+      return [];
+    }
+    const prefixo = `${tribunal.nome} - `;
+    return this.orgaoJulgadorService
+      .orgaos()
+      .filter((o) => o.tribunal_id === tribunal.id)
+      .map((o) => ({ id: o.id, descricao: o.nome.startsWith(prefixo) ? o.nome.slice(prefixo.length) : o.nome }));
+  });
+  protected readonly nomesDeOrgaoDoTribunal = computed(() =>
+    this.orgaosDoTribunalAtual().map((o) => o.descricao),
+  );
 
   protected readonly form: ProcessoForm = createProcessoForm();
   /**
@@ -148,7 +183,6 @@ export class ProcessoDadosGeraisComponent {
     this.cidadeId() === null ? '' : String(this.cidadeId()),
   );
   protected readonly tags = signal<string[]>([]);
-  protected readonly orgaosProcessantes = signal<string[]>([]);
   protected readonly escritoriosAnteriores = signal<string[]>([]);
   // Preservados como vieram — sem UI de edição nesta fatia.
   private clientesSecundarios: ProcessoApi['clientes_secundarios'] = [];
@@ -160,6 +194,8 @@ export class ProcessoDadosGeraisComponent {
    * ordenado do mais recente pro mais antigo.
    */
   private static readonly OBSERVACOES_POR_PAGINA = 5;
+  /** Oculto por padrão — só abre quando o usuário clica em "Visualizar Histórico de observações". */
+  protected readonly mostrarHistoricoObservacoes = signal(false);
   private readonly observacoesPrevias = signal<ObservacaoProcessoApi[]>([]);
   protected readonly historicoObservacoes = computed(() =>
     [...this.observacoesPrevias()].sort((a, b) => b.data.localeCompare(a.data)),
@@ -180,6 +216,33 @@ export class ProcessoDadosGeraisComponent {
     );
   });
 
+  /**
+   * Histórico de tribunais responsáveis pelo processo — o backend registra automaticamente
+   * quando um órgão novo entra em "Órgãos processantes" (ver `ProcessoService`). Só leitura;
+   * ordenado do mais recente pro mais antigo, paginado de 5 em 5 (mesmo padrão de observações).
+   */
+  private static readonly TRIBUNAIS_POR_PAGINA = 5;
+  /** Oculto por padrão — só abre quando o usuário clica em "Visualizar Histórico de tribunais...". */
+  protected readonly mostrarHistoricoTribunais = signal(false);
+  private readonly tribunaisHistorico = signal<ProcessoTribunalHistoricoApi[]>([]);
+  protected readonly historicoTribunais = computed(() =>
+    [...this.tribunaisHistorico()].sort((a, b) => b.data.localeCompare(a.data)),
+  );
+  protected readonly paginaTribunais = signal(0);
+  protected readonly totalPaginasTribunais = computed(() =>
+    Math.max(
+      1,
+      Math.ceil(this.historicoTribunais().length / ProcessoDadosGeraisComponent.TRIBUNAIS_POR_PAGINA),
+    ),
+  );
+  protected readonly tribunaisPagina = computed(() => {
+    const inicio = this.paginaTribunais() * ProcessoDadosGeraisComponent.TRIBUNAIS_POR_PAGINA;
+    return this.historicoTribunais().slice(
+      inicio,
+      inicio + ProcessoDadosGeraisComponent.TRIBUNAIS_POR_PAGINA,
+    );
+  });
+
   constructor() {
     this.statusService.carregar();
     this.posicaoService.carregar();
@@ -187,6 +250,8 @@ export class ProcessoDadosGeraisComponent {
     this.naturezaService.carregar();
     this.procedimentoService.carregar();
     this.faseService.carregar();
+    this.tribunalService.carregar();
+    this.orgaoJulgadorService.carregar();
     this.destroyRef.onDestroy(() => clearTimeout(this.copiadoTimer));
 
     this.form.controls.numeroCnj.valueChanges
@@ -212,12 +277,16 @@ export class ProcessoDadosGeraisComponent {
     this.cidadeId.set(p.cidade_id);
     this.cidadeLabel.set(p.cidade_id !== null ? `${p.cidade ?? ''} — ${p.uf ?? ''}` : '');
     this.tags.set([...p.tags]);
-    this.orgaosProcessantes.set([...p.orgaos_processantes]);
+    this.aplicarOrgaoProcessante(p.orgao_processante);
     this.escritoriosAnteriores.set([...p.escritorios_anteriores]);
     this.clientesSecundarios = p.clientes_secundarios;
     this.partesContrarias = p.partes_contrarias;
     this.observacoesPrevias.set(p.observacoes_previas);
     this.paginaObservacoes.set(0);
+    this.mostrarHistoricoObservacoes.set(false);
+    this.tribunaisHistorico.set(p.tribunais_historico);
+    this.paginaTribunais.set(0);
+    this.mostrarHistoricoTribunais.set(false);
 
     this.clientePrincipalId.set(p.cliente_principal_id);
     this.clientePrincipalLabel.set('');
@@ -255,12 +324,16 @@ export class ProcessoDadosGeraisComponent {
     this.advogadoResponsavelId.set(null);
     this.advogadoResponsavelLabel.set('');
     this.tags.set([]);
-    this.orgaosProcessantes.set([]);
+    this.aplicarOrgaoProcessante(null);
     this.escritoriosAnteriores.set([]);
     this.clientesSecundarios = [];
     this.partesContrarias = [];
     this.observacoesPrevias.set([]);
     this.paginaObservacoes.set(0);
+    this.mostrarHistoricoObservacoes.set(false);
+    this.tribunaisHistorico.set([]);
+    this.paginaTribunais.set(0);
+    this.mostrarHistoricoTribunais.set(false);
   }
 
   /** Valida antes de salvar; marca os campos e devolve o motivo pro shell. */
@@ -299,7 +372,7 @@ export class ProcessoDadosGeraisComponent {
       observacoesGerais: raw.observacoesGerais,
       destacarObservacao: raw.destacarObservacao,
       tags: this.tags(),
-      orgaosProcessantes: this.orgaosProcessantes(),
+      orgaoProcessanteId: this.orgaoProcessanteId(),
       escritoriosAnteriores: this.escritoriosAnteriores(),
       clientesSecundarios: this.clientesSecundarios,
       partesContrarias: this.partesContrarias,
@@ -606,7 +679,63 @@ export class ProcessoDadosGeraisComponent {
     });
   }
 
-  // --- listas de texto livre (tags / órgãos / escritórios) ---
+  // --- "Órgão processante" atual: cascata Tribunal → Órgão (ver signals/computed acima) ---
+
+  /** Troca de tribunal invalida o órgão escolhido antes (lista de opções muda). */
+  protected onTribunalAtualChange(nome: string): void {
+    this.tribunalAtual.set(nome);
+    this.orgaoAtual.set('');
+    this.orgaoProcessanteId.set(null);
+  }
+
+  protected criarTribunalProcessante(nome: string): void {
+    this.tribunalService.criar(nome).subscribe({
+      next: (t) => this.onTribunalAtualChange(t.nome),
+      error: (err: unknown) => this.erro.emit(this.mensagemErroHttp(err)),
+    });
+  }
+
+  /** Escolher o órgão JÁ define o "órgão processante" atual — sem passo de "Adicionar". */
+  protected onOrgaoAtualChange(descricao: string): void {
+    this.orgaoAtual.set(descricao);
+    const item = this.orgaosDoTribunalAtual().find((o) => o.descricao === descricao);
+    this.orgaoProcessanteId.set(item?.id ?? null);
+  }
+
+  protected criarOrgaoDoTribunalAtual(descricao: string): void {
+    const tribunal = this.tribunalAtual().trim();
+    if (!tribunal || !descricao.trim()) {
+      return;
+    }
+    this.orgaoJulgadorService.criar(`${tribunal} - ${descricao.trim()}`).subscribe({
+      next: (criado) => {
+        this.orgaoAtual.set(this.descricaoDoOrgao(criado.nome, tribunal));
+        this.orgaoProcessanteId.set(criado.id);
+      },
+      error: (err: unknown) => this.erro.emit(this.mensagemErroHttp(err)),
+    });
+  }
+
+  private descricaoDoOrgao(nomeCompleto: string, tribunalNome: string): string {
+    const prefixo = `${tribunalNome} - `;
+    return nomeCompleto.startsWith(prefixo) ? nomeCompleto.slice(prefixo.length) : nomeCompleto;
+  }
+
+  /** Deriva tribunal/órgão exibidos nos dois combobox a partir do "órgão processante" da ficha. */
+  private aplicarOrgaoProcessante(orgao: OrgaoProcessanteApi | null): void {
+    if (!orgao) {
+      this.tribunalAtual.set('');
+      this.orgaoAtual.set('');
+      this.orgaoProcessanteId.set(null);
+      return;
+    }
+    const separador = orgao.nome.indexOf(' - ');
+    this.tribunalAtual.set(separador >= 0 ? orgao.nome.slice(0, separador) : orgao.nome);
+    this.orgaoAtual.set(separador >= 0 ? orgao.nome.slice(separador + 3) : '');
+    this.orgaoProcessanteId.set(orgao.id);
+  }
+
+  // --- listas de texto livre (tags / escritórios) ---
 
   protected adicionarTag(valor: string): void {
     this.adicionarNaLista(this.tags, valor);
@@ -614,14 +743,6 @@ export class ProcessoDadosGeraisComponent {
 
   protected removerTag(indice: number): void {
     this.removerDaLista(this.tags, indice);
-  }
-
-  protected adicionarOrgao(valor: string): void {
-    this.adicionarNaLista(this.orgaosProcessantes, valor);
-  }
-
-  protected removerOrgao(indice: number): void {
-    this.removerDaLista(this.orgaosProcessantes, indice);
   }
 
   protected adicionarEscritorio(valor: string): void {
@@ -648,12 +769,28 @@ export class ProcessoDadosGeraisComponent {
     return new Date(data).toLocaleString('pt-BR');
   }
 
+  protected toggleHistoricoObservacoes(): void {
+    this.mostrarHistoricoObservacoes.update((v) => !v);
+  }
+
+  protected toggleHistoricoTribunais(): void {
+    this.mostrarHistoricoTribunais.update((v) => !v);
+  }
+
   protected paginaObservacoesAnterior(): void {
     this.paginaObservacoes.update((p) => Math.max(0, p - 1));
   }
 
   protected paginaObservacoesProxima(): void {
     this.paginaObservacoes.update((p) => Math.min(this.totalPaginasObservacoes() - 1, p + 1));
+  }
+
+  protected paginaTribunaisAnterior(): void {
+    this.paginaTribunais.update((p) => Math.max(0, p - 1));
+  }
+
+  protected paginaTribunaisProxima(): void {
+    this.paginaTribunais.update((p) => Math.min(this.totalPaginasTribunais() - 1, p + 1));
   }
 
   private mensagemErroHttp(err: unknown): string {

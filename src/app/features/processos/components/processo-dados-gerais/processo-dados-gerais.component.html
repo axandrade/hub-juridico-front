@@ -283,28 +283,88 @@
     </div>
   </div>
 
-  <div class="processo-field processo-field--full">
-    <span>Órgãos processantes</span>
-    <div class="processo-chips">
-      @for (orgao of orgaosProcessantes(); track orgao; let i = $index) {
-        <span class="processo-chip">
-          {{ orgao }}
-          <button type="button" aria-label="Remover órgão" (click)="removerOrgao(i)">
-            <i class="fa-solid fa-xmark" aria-hidden="true"></i>
-          </button>
-        </span>
-      }
-      <input
-        #orgaoInput
-        type="text"
-        class="processo-chips__input"
-        placeholder="Adicionar órgão e Enter"
-        (keydown.enter)="
-          $event.preventDefault(); adicionarOrgao(orgaoInput.value); orgaoInput.value = ''
-        "
+  <div class="processo-form__group-title">Órgão processante</div>
+  <div class="processo-form__row">
+    <div class="processo-field">
+      <span>Tribunal</span>
+      <app-combobox
+        ariaLabel="Tribunal"
+        placeholder="Buscar tribunal..."
+        emptyLabel="— Sem tribunal —"
+        noResultsText="Nenhum tribunal encontrado"
+        itemNoun="tribunal"
+        [options]="nomesDeTribunal()"
+        [value]="tribunalAtual()"
+        [adicionar]="true"
+        (valueChange)="onTribunalAtualChange($event)"
+        (aoAdicionar)="criarTribunalProcessante($event)"
+      />
+    </div>
+    <div class="processo-field">
+      <span>Órgão</span>
+      <app-combobox
+        ariaLabel="Órgão do tribunal escolhido"
+        placeholder="Buscar órgão..."
+        emptyLabel="— Sem órgão —"
+        noResultsText="Nenhum órgão encontrado"
+        itemNoun="órgão"
+        [options]="nomesDeOrgaoDoTribunal()"
+        [value]="orgaoAtual()"
+        [adicionar]="!!tribunalAtual()"
+        (valueChange)="onOrgaoAtualChange($event)"
+        (aoAdicionar)="criarOrgaoDoTribunalAtual($event)"
       />
     </div>
   </div>
+
+  @if (historicoTribunais().length) {
+    <div class="processo-field processo-field--full">
+      <button
+        type="button"
+        class="processo-historico__alternar"
+        (click)="toggleHistoricoTribunais()"
+      >
+        <i
+          class="fa-solid"
+          [class.fa-chevron-right]="!mostrarHistoricoTribunais()"
+          [class.fa-chevron-down]="mostrarHistoricoTribunais()"
+          aria-hidden="true"
+        ></i>
+        {{ mostrarHistoricoTribunais() ? 'Ocultar' : 'Visualizar' }} Histórico de tribunais responsáveis
+      </button>
+      @if (mostrarHistoricoTribunais()) {
+        <ul class="processo-observacoes-historico">
+          @for (h of tribunaisPagina(); track h.data) {
+            <li>
+              <time>{{ formatarDataHora(h.data) }}</time>
+              <p>{{ h.tribunal_nome || 'Tribunal excluído' }} — {{ h.orgao_nome || 'Órgão excluído' }}</p>
+            </li>
+          }
+        </ul>
+        @if (totalPaginasTribunais() > 1) {
+          <div class="processo-observacoes-historico__paginacao">
+            <button
+              type="button"
+              [disabled]="paginaTribunais() === 0"
+              (click)="paginaTribunaisAnterior()"
+            >
+              <i class="fa-solid fa-chevron-left" aria-hidden="true"></i>
+              Anterior
+            </button>
+            <span>Página {{ paginaTribunais() + 1 }} de {{ totalPaginasTribunais() }}</span>
+            <button
+              type="button"
+              [disabled]="paginaTribunais() + 1 >= totalPaginasTribunais()"
+              (click)="paginaTribunaisProxima()"
+            >
+              Próxima
+              <i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
+            </button>
+          </div>
+        }
+      }
+    </div>
+  }
 
   <div class="processo-field processo-field--full">
     <span>Escritórios anteriores</span>
@@ -341,40 +401,54 @@
 
   @if (historicoObservacoes().length) {
     <div class="processo-field processo-field--full">
-      <span>Histórico de observações</span>
-      <ul class="processo-observacoes-historico">
-        @for (obs of observacoesPagina(); track obs.data) {
-          <li>
-            <time>
-              {{ formatarDataHora(obs.data) }}
-              <span class="processo-observacoes-historico__autor">
-                — {{ obs.autor_nome || 'Autor desconhecido' }}
-              </span>
-            </time>
-            <p>{{ obs.texto }}</p>
-          </li>
+      <button
+        type="button"
+        class="processo-historico__alternar"
+        (click)="toggleHistoricoObservacoes()"
+      >
+        <i
+          class="fa-solid"
+          [class.fa-chevron-right]="!mostrarHistoricoObservacoes()"
+          [class.fa-chevron-down]="mostrarHistoricoObservacoes()"
+          aria-hidden="true"
+        ></i>
+        {{ mostrarHistoricoObservacoes() ? 'Ocultar' : 'Visualizar' }} Histórico de observações
+      </button>
+      @if (mostrarHistoricoObservacoes()) {
+        <ul class="processo-observacoes-historico">
+          @for (obs of observacoesPagina(); track obs.data) {
+            <li>
+              <time>
+                {{ formatarDataHora(obs.data) }}
+                <span class="processo-observacoes-historico__autor">
+                  — {{ obs.autor_nome || 'Autor desconhecido' }}
+                </span>
+              </time>
+              <p>{{ obs.texto }}</p>
+            </li>
+          }
+        </ul>
+        @if (totalPaginasObservacoes() > 1) {
+          <div class="processo-observacoes-historico__paginacao">
+            <button
+              type="button"
+              [disabled]="paginaObservacoes() === 0"
+              (click)="paginaObservacoesAnterior()"
+            >
+              <i class="fa-solid fa-chevron-left" aria-hidden="true"></i>
+              Anterior
+            </button>
+            <span>Página {{ paginaObservacoes() + 1 }} de {{ totalPaginasObservacoes() }}</span>
+            <button
+              type="button"
+              [disabled]="paginaObservacoes() + 1 >= totalPaginasObservacoes()"
+              (click)="paginaObservacoesProxima()"
+            >
+              Próxima
+              <i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
+            </button>
+          </div>
         }
-      </ul>
-      @if (totalPaginasObservacoes() > 1) {
-        <div class="processo-observacoes-historico__paginacao">
-          <button
-            type="button"
-            [disabled]="paginaObservacoes() === 0"
-            (click)="paginaObservacoesAnterior()"
-          >
-            <i class="fa-solid fa-chevron-left" aria-hidden="true"></i>
-            Anterior
-          </button>
-          <span>Página {{ paginaObservacoes() + 1 }} de {{ totalPaginasObservacoes() }}</span>
-          <button
-            type="button"
-            [disabled]="paginaObservacoes() + 1 >= totalPaginasObservacoes()"
-            (click)="paginaObservacoesProxima()"
-          >
-            Próxima
-            <i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
-          </button>
-        </div>
       }
     </div>
   }

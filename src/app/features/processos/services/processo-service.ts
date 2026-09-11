@@ -70,7 +70,8 @@ export interface ProcessoEditavel {
   cenarioRemoto: CenarioRiscoApi;
 
   tags: string[];
-  orgaosProcessantes: string[];
+  /** Id do catálogo `orgao_julgador` (chave estrangeira) — escolhido via cascata Tribunal→Órgão. */
+  orgaoProcessanteId: number | null;
   escritoriosAnteriores: string[];
   /** Advogados "outros envolvidos" (aba "Outros envolvidos"). */
   outrosEnvolvidosAdvogados: OutroEnvolvidoAdvogadoApi[];
@@ -178,7 +179,7 @@ export class ProcessoService {
       outros_envolvidos_advogados: processo.outrosEnvolvidosAdvogados,
       outros_envolvidos_magistrados: processo.outrosEnvolvidosMagistrados,
       outros_envolvidos_testemunhas: processo.outrosEnvolvidosTestemunhas,
-      orgaos_processantes: processo.orgaosProcessantes,
+      orgao_processante_id: processo.orgaoProcessanteId,
       escritorios_anteriores: processo.escritoriosAnteriores,
       tags: processo.tags,
     };

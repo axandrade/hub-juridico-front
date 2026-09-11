@@ -207,6 +207,30 @@
   }
 }
 
+// Link "Visualizar/Ocultar Histórico de ..." — oculta a lista até o usuário clicar.
+.processo-historico__alternar {
+  display: inline-flex;
+  align-items: center;
+  gap: $spacing-xs;
+  align-self: flex-start;
+  border: 0;
+  background: none;
+  padding: 0;
+  color: $color-primary;
+  font: inherit;
+  font-size: $font-size-xs;
+  font-weight: $font-weight-medium;
+  cursor: pointer;
+
+  i {
+    font-size: 10px;
+  }
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
 // Histórico de "Observações gerais" — entradas datadas, arquivadas pelo backend a cada troca de
 // texto salva; mais recente primeiro.
 .processo-observacoes-historico {

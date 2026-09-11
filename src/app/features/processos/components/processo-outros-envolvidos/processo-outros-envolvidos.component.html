@@ -100,20 +100,38 @@
     </div>
   </div>
 
+  <div class="processo-form__row" [formGroup]="magForm">
+    <div class="processo-field">
+      <span>Tribunal</span>
+      <app-combobox
+        ariaLabel="Tribunal do magistrado"
+        placeholder="Buscar tribunal..."
+        emptyLabel="— Sem tribunal —"
+        noResultsText="Nenhum tribunal encontrado"
+        itemNoun="tribunal"
+        [options]="nomesDeTribunal()"
+        [value]="tribunalRascunhoMag()"
+        [adicionar]="true"
+        (valueChange)="onTribunalRascunhoMagChange($event)"
+        (aoAdicionar)="criarTribunalMagistrado($event)"
+      />
+    </div>
+  </div>
+
   <div class="processo-form__row processo-form__row--full">
     <div class="processo-field">
       <span>Órgão</span>
       <app-combobox
-        ariaLabel="Órgão julgador"
+        ariaLabel="Órgão do tribunal escolhido (magistrado)"
         placeholder="Buscar órgão..."
         emptyLabel="— Sem órgão —"
         noResultsText="Nenhum órgão encontrado"
         itemNoun="órgão"
-        [options]="nomesDeOrgao()"
-        [value]="orgaoRascunho()"
-        [adicionar]="true"
-        (valueChange)="orgaoRascunho.set($event)"
-        (aoAdicionar)="criarOrgao($event)"
+        [options]="nomesDeOrgaoDoTribunalMag()"
+        [value]="orgaoRascunhoMag()"
+        [adicionar]="!!tribunalRascunhoMag()"
+        (valueChange)="orgaoRascunhoMag.set($event)"
+        (aoAdicionar)="criarOrgaoDoTribunalRascunhoMag($event)"
       />
     </div>
   </div>

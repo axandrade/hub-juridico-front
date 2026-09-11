@@ -36,13 +36,22 @@ export interface OutroEnvolvidoAdvogadoApi {
 }
 
 /**
- * Um magistrado "outro envolvido" (aba "Outros envolvidos", seção "Magistrados"). `magistrado` e
- * `data` (ISO `yyyy-MM-dd`) são obrigatórios; `resultado`/`orgao` são o texto dos catálogos.
+ * Um magistrado "outro envolvido" (aba "Outros envolvidos", seção "Magistrados") — resposta.
+ * `magistrado` e `data` (ISO `yyyy-MM-dd`) são obrigatórios; `resultado` é o texto do catálogo
+ * `ResultadoDecisao`; `orgao` já vem resolvido (id + "TRIBUNAL - descrição"), `null` = sem órgão.
  */
 export interface OutroEnvolvidoMagistradoApi {
   magistrado: string;
   resultado: string | null;
-  orgao: string | null;
+  orgao: OrgaoProcessanteApi | null;
+  data: string;
+}
+
+/** Corpo de um magistrado no `PUT`/`POST` — `orgao_id` é chave estrangeira (`orgao_julgador`). */
+export interface OutroEnvolvidoMagistradoWriteApi {
+  magistrado: string;
+  resultado: string | null;
+  orgao_id: number | null;
   data: string;
 }
 
@@ -212,7 +221,7 @@ export interface ProcessoWriteApi {
   clientes_secundarios: ClienteSecundarioApi[];
   partes_contrarias: ParteContrariaApi[];
   outros_envolvidos_advogados: OutroEnvolvidoAdvogadoApi[];
-  outros_envolvidos_magistrados: OutroEnvolvidoMagistradoApi[];
+  outros_envolvidos_magistrados: OutroEnvolvidoMagistradoWriteApi[];
   outros_envolvidos_testemunhas: OutroEnvolvidoTestemunhaApi[];
   /** Id do catálogo `orgao_julgador` (chave estrangeira) — `null` = sem órgão processante. */
   orgao_processante_id: number | null;

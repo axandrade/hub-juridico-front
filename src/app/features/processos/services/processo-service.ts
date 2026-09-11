@@ -9,7 +9,7 @@ import {
   CenarioRiscoApi,
   ClienteSecundarioApi,
   OutroEnvolvidoAdvogadoApi,
-  OutroEnvolvidoMagistradoApi,
+  OutroEnvolvidoMagistradoWriteApi,
   OutroEnvolvidoTestemunhaApi,
   PaginaApi,
   ParteContrariaApi,
@@ -76,7 +76,7 @@ export interface ProcessoEditavel {
   /** Advogados "outros envolvidos" (aba "Outros envolvidos"). */
   outrosEnvolvidosAdvogados: OutroEnvolvidoAdvogadoApi[];
   /** Magistrados "outros envolvidos" (aba "Outros envolvidos"). */
-  outrosEnvolvidosMagistrados: OutroEnvolvidoMagistradoApi[];
+  outrosEnvolvidosMagistrados: OutroEnvolvidoMagistradoWriteApi[];
   /** Testemunhas "outros envolvidos" (aba "Outros envolvidos"). */
   outrosEnvolvidosTestemunhas: OutroEnvolvidoTestemunhaApi[];
   /** Preservados como vieram — ainda sem UI de edição nesta fatia. */

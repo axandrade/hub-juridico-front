@@ -9,6 +9,7 @@ import { OrgaoJulgadorService } from '../../services/orgao-julgador.service';
 import { ParteInteressadaService } from '../../services/parte-interessada.service';
 import { PosicaoClienteService } from '../../services/posicao-cliente.service';
 import { ResultadoDecisaoService } from '../../services/resultado-decisao.service';
+import { TribunalService } from '../../services/tribunal.service';
 import {
   OutroEnvolvidoAdvogadoApi,
   OutroEnvolvidoMagistradoApi,
@@ -48,6 +49,7 @@ export class ProcessoOutrosEnvolvidosComponent {
   private readonly posicaoService = inject(PosicaoClienteService);
   private readonly resultadoService = inject(ResultadoDecisaoService);
   private readonly orgaoService = inject(OrgaoJulgadorService);
+  private readonly tribunalService = inject(TribunalService);
   private readonly parteService = inject(ParteInteressadaService);
 
   /** Erro numa operação de catálogo (criar/renomear/excluir) — o shell mostra no rodapé. */
@@ -81,9 +83,8 @@ export class ProcessoOutrosEnvolvidosComponent {
   protected readonly nomesDeResultado = computed(() =>
     this.resultadoService.resultados().map((r) => r.nome),
   );
-  protected readonly nomesDeOrgao = computed(() => this.orgaoService.orgaos().map((o) => o.nome));
 
-  /** Campos de texto da linha de magistrado em edição (resultado e órgão são combobox → signals). */
+  /** Campos de texto da linha de magistrado em edição (resultado e tribunal/órgão são combobox → signals). */
   protected readonly magForm: FormGroup<{
     magistrado: FormControl<string>;
     data: FormControl<string>;
@@ -92,7 +93,28 @@ export class ProcessoOutrosEnvolvidosComponent {
     data: new FormControl('', { nonNullable: true }),
   });
   protected readonly resultadoRascunho = signal('');
-  protected readonly orgaoRascunho = signal('');
+
+  // --- cascata Tribunal → Órgão do magistrado em edição (mesmo padrão de "Órgão processante") ---
+  protected readonly nomesDeTribunal = computed(() =>
+    this.tribunalService.tribunais().map((t) => t.nome),
+  );
+  protected readonly tribunalRascunhoMag = signal('');
+  protected readonly orgaoRascunhoMag = signal('');
+  /** Só os órgãos do tribunal escolhido no rascunho — vazio até escolher um tribunal. */
+  protected readonly orgaosDoTribunalRascunhoMag = computed(() => {
+    const tribunal = this.tribunalService.tribunais().find((t) => t.nome === this.tribunalRascunhoMag());
+    if (!tribunal) {
+      return [];
+    }
+    const prefixo = `${tribunal.nome} - `;
+    return this.orgaoService
+      .orgaos()
+      .filter((o) => o.tribunal_id === tribunal.id)
+      .map((o) => ({ id: o.id, descricao: o.nome.startsWith(prefixo) ? o.nome.slice(prefixo.length) : o.nome }));
+  });
+  protected readonly nomesDeOrgaoDoTribunalMag = computed(() =>
+    this.orgaosDoTribunalRascunhoMag().map((o) => o.descricao),
+  );
 
   protected readonly magistrados = signal<OutroEnvolvidoMagistradoApi[]>([]);
   /** Índice selecionado no listbox de magistrados (`-1` = nenhum). */
@@ -120,6 +142,7 @@ export class ProcessoOutrosEnvolvidosComponent {
     this.posicaoService.carregar();
     this.resultadoService.carregar();
     this.orgaoService.carregar();
+    this.tribunalService.carregar();
     this.parteService.carregar();
   }
 
@@ -151,7 +174,12 @@ export class ProcessoOutrosEnvolvidosComponent {
   coletar(): OutrosEnvolvidosValores {
     return {
       outrosEnvolvidosAdvogados: this.advogados(),
-      outrosEnvolvidosMagistrados: this.magistrados(),
+      outrosEnvolvidosMagistrados: this.magistrados().map((m) => ({
+        magistrado: m.magistrado,
+        resultado: m.resultado,
+        orgao_id: m.orgao?.id ?? null,
+        data: m.data,
+      })),
       outrosEnvolvidosTestemunhas: this.testemunhas(),
     };
   }
@@ -198,7 +226,7 @@ export class ProcessoOutrosEnvolvidosComponent {
 
   /** Linha do listbox: "MAGISTRADO | RESULTADO | ÓRGÃO | DATA" (campo vazio vira "—"). */
   protected rotuloMagistrado(o: OutroEnvolvidoMagistradoApi): string {
-    return [o.magistrado, o.resultado, o.orgao, this.dataBr(o.data)]
+    return [o.magistrado, o.resultado, o.orgao?.nome, this.dataBr(o.data)]
       .map((v) => v?.trim() || '—')
       .join(' | ');
   }
@@ -210,12 +238,14 @@ export class ProcessoOutrosEnvolvidosComponent {
       this.magForm.markAllAsTouched();
       return;
     }
+    const item = this.orgaosDoTribunalRascunhoMag().find((o) => o.descricao === this.orgaoRascunhoMag());
+    const orgao = item ? this.orgaoService.orgaos().find((o) => o.id === item.id) : undefined;
     this.magistrados.update((atual) => [
       ...atual,
       {
         magistrado,
         resultado: this.resultadoRascunho().trim() || null,
-        orgao: this.orgaoRascunho().trim() || null,
+        orgao: orgao ? { id: orgao.id, nome: orgao.nome, tribunal_id: orgao.tribunal_id } : null,
         data,
       },
     ]);
@@ -283,9 +313,30 @@ export class ProcessoOutrosEnvolvidosComponent {
     });
   }
 
-  protected criarOrgao(nome: string): void {
-    this.orgaoService.criar(nome).subscribe({
-      next: (o) => this.orgaoRascunho.set(o.nome),
+  protected onTribunalRascunhoMagChange(nome: string): void {
+    this.tribunalRascunhoMag.set(nome);
+    this.orgaoRascunhoMag.set(''); // troca de tribunal invalida o órgão escolhido antes
+  }
+
+  protected criarTribunalMagistrado(nome: string): void {
+    this.tribunalService.criar(nome).subscribe({
+      next: (t) => this.onTribunalRascunhoMagChange(t.nome),
+      error: (err: unknown) => this.erro.emit(this.mensagemErroHttp(err)),
+    });
+  }
+
+  protected criarOrgaoDoTribunalRascunhoMag(descricao: string): void {
+    const tribunal = this.tribunalRascunhoMag().trim();
+    if (!tribunal || !descricao.trim()) {
+      return;
+    }
+    this.orgaoService.criar(`${tribunal} - ${descricao.trim()}`).subscribe({
+      next: (criado) => {
+        const prefixo = `${tribunal} - `;
+        this.orgaoRascunhoMag.set(
+          criado.nome.startsWith(prefixo) ? criado.nome.slice(prefixo.length) : criado.nome,
+        );
+      },
       error: (err: unknown) => this.erro.emit(this.mensagemErroHttp(err)),
     });
   }
@@ -314,7 +365,8 @@ export class ProcessoOutrosEnvolvidosComponent {
   private limparRascunhoMagistrado(): void {
     this.magForm.reset();
     this.resultadoRascunho.set('');
-    this.orgaoRascunho.set('');
+    this.tribunalRascunhoMag.set('');
+    this.orgaoRascunhoMag.set('');
   }
 
   private limparRascunhoTestemunha(): void {

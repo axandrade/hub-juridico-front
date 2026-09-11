@@ -21,6 +21,7 @@ import { CidadeService } from '../../services/cidade-service';
 import { FaseProcessoService } from '../../services/fase-processo.service';
 import { NaturezaProcessoService } from '../../services/natureza-processo.service';
 import { PosicaoClienteService } from '../../services/posicao-cliente.service';
+import { ProcedimentoProcessoService } from '../../services/procedimento-processo.service';
 import { ProcessoEditavel, ProcessoService } from '../../services/processo-service';
 import { StatusProcessoService } from '../../services/status-processo.service';
 import {
@@ -73,6 +74,7 @@ export class ProcessoDadosGeraisComponent {
   private readonly posicaoService = inject(PosicaoClienteService);
   private readonly acaoService = inject(AcaoProcessoService);
   private readonly naturezaService = inject(NaturezaProcessoService);
+  private readonly procedimentoService = inject(ProcedimentoProcessoService);
   private readonly faseService = inject(FaseProcessoService);
   private readonly cidadeService = inject(CidadeService);
   private readonly destroyRef = inject(DestroyRef);
@@ -94,6 +96,9 @@ export class ProcessoDadosGeraisComponent {
   protected readonly nomesDeNatureza = computed(() =>
     this.naturezaService.naturezas().map((n) => n.nome),
   );
+  protected readonly nomesDeProcedimento = computed(() =>
+    this.procedimentoService.procedimentos().map((p) => p.nome),
+  );
   protected readonly nomesDeFase = computed(() => this.faseService.fases().map((f) => f.nome));
 
   protected readonly form: ProcessoForm = createProcessoForm();
@@ -114,6 +119,7 @@ export class ProcessoDadosGeraisComponent {
   protected readonly statusNome = signal('');
   protected readonly acaoNome = signal('');
   protected readonly naturezaNome = signal('');
+  protected readonly procedimentoNome = signal('');
   protected readonly faseNome = signal('');
   /** Posição do cliente principal e da parte contrária — mesmo catálogo `PosicaoCliente`. */
   protected readonly clientePrincipalPosicaoNome = signal('');
@@ -148,6 +154,7 @@ export class ProcessoDadosGeraisComponent {
     this.posicaoService.carregar();
     this.acaoService.carregar();
     this.naturezaService.carregar();
+    this.procedimentoService.carregar();
     this.faseService.carregar();
     this.destroyRef.onDestroy(() => clearTimeout(this.copiadoTimer));
 
@@ -166,6 +173,7 @@ export class ProcessoDadosGeraisComponent {
     this.statusNome.set(p.status ?? '');
     this.acaoNome.set(p.acao ?? '');
     this.naturezaNome.set(p.natureza ?? '');
+    this.procedimentoNome.set(p.procedimento ?? '');
     this.faseNome.set(p.fase ?? '');
     this.clientePrincipalPosicaoNome.set(p.cliente_principal_posicao ?? '');
     this.contrarioPrincipalPosicaoNome.set(p.contrario_principal_posicao ?? '');
@@ -202,6 +210,7 @@ export class ProcessoDadosGeraisComponent {
     this.statusNome.set('');
     this.acaoNome.set('');
     this.naturezaNome.set('');
+    this.procedimentoNome.set('');
     this.faseNome.set('');
     this.clientePrincipalPosicaoNome.set('');
     this.contrarioPrincipalPosicaoNome.set('');
@@ -248,7 +257,7 @@ export class ProcessoDadosGeraisComponent {
       dataDistribuicao: raw.dataDistribuicao,
       acao: this.acaoNome(),
       natureza: this.naturezaNome(),
-      procedimento: raw.procedimento,
+      procedimento: this.procedimentoNome(),
       fase: this.faseNome(),
       uf: this.uf(),
       cidadeId: this.cidadeId(),
@@ -477,6 +486,45 @@ export class ProcessoDadosGeraisComponent {
       next: () => {
         if (this.naturezaNome() === nome) {
           this.naturezaNome.set('');
+        }
+      },
+      error: (err: unknown) => this.erro.emit(this.mensagemErroHttp(err)),
+    });
+  }
+
+  // --- catálogo "Procedimento" (ver `ProcedimentoProcessoService`) ---
+
+  protected criarProcedimento(nome: string): void {
+    this.procedimentoService.criar(nome).subscribe({
+      next: (p) => this.procedimentoNome.set(p.nome),
+      error: (err: unknown) => this.erro.emit(this.mensagemErroHttp(err)),
+    });
+  }
+
+  protected renomearProcedimento({ de, para }: { de: string; para: string }): void {
+    const alvo = this.procedimentoService.procedimentos().find((p) => p.nome === de);
+    if (!alvo) {
+      return;
+    }
+    this.procedimentoService.alterar(alvo.id, para).subscribe({
+      next: (p) => {
+        if (this.procedimentoNome() === de) {
+          this.procedimentoNome.set(p.nome);
+        }
+      },
+      error: (err: unknown) => this.erro.emit(this.mensagemErroHttp(err)),
+    });
+  }
+
+  protected excluirProcedimento(nome: string): void {
+    const alvo = this.procedimentoService.procedimentos().find((p) => p.nome === nome);
+    if (!alvo) {
+      return;
+    }
+    this.procedimentoService.excluir(alvo.id).subscribe({
+      next: () => {
+        if (this.procedimentoNome() === nome) {
+          this.procedimentoNome.set('');
         }
       },
       error: (err: unknown) => this.erro.emit(this.mensagemErroHttp(err)),

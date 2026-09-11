@@ -206,10 +206,25 @@
         (aoExcluir)="excluirNatureza($event)"
       />
     </div>
-    <label class="processo-field">
+    <div class="processo-field">
       <span>Procedimento</span>
-      <input type="text" formControlName="procedimento" />
-    </label>
+      <app-combobox
+        ariaLabel="Procedimento do processo"
+        placeholder="Buscar procedimento..."
+        emptyLabel="— Sem procedimento —"
+        noResultsText="Nenhum procedimento encontrado"
+        itemNoun="procedimento"
+        [options]="nomesDeProcedimento()"
+        [value]="procedimentoNome()"
+        [adicionar]="true"
+        [editar]="true"
+        [excluir]="true"
+        (valueChange)="procedimentoNome.set($event)"
+        (aoAdicionar)="criarProcedimento($event)"
+        (aoEditar)="renomearProcedimento($event)"
+        (aoExcluir)="excluirProcedimento($event)"
+      />
+    </div>
   </div>
   <div class="processo-form__row processo-form__row--stack">
     <div class="processo-field">

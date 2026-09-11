@@ -334,6 +334,11 @@
     <textarea rows="4" formControlName="observacoesGerais"></textarea>
   </label>
 
+  <label class="processo-checkbox">
+    <input type="checkbox" formControlName="destacarObservacao" />
+    Destacar observação no hover da linha (listagem)
+  </label>
+
   @if (historicoObservacoes().length) {
     <div class="processo-field processo-field--full">
       <span>Histórico de observações</span>

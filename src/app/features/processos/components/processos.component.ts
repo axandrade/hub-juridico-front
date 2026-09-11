@@ -136,6 +136,10 @@ export class ProcessosComponent {
 
   protected readonly processoPinFirst = (row: ProcessoResumoApi): boolean => row.favorito;
 
+  /** Tooltip nativo da linha — a observação, só quando "Destacar" está marcado no processo. */
+  protected readonly processoRowTitle = (row: ProcessoResumoApi): string | null =>
+    row.destacar_observacao && row.observacoes_gerais?.trim() ? row.observacoes_gerais : null;
+
   protected readonly processoPinAction: TablePinAction<ProcessoResumoApi> = {
     isActive: (row) => row.favorito,
     onToggle: (row, event) => this.toggleFavorito(row, event),

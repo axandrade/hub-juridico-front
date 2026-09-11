@@ -16,6 +16,7 @@ export type ProcessoForm = FormGroup<{
   contrarioPrincipalDocumento: FormControl<string>;
   dataDistribuicao: FormControl<string>;
   observacoesGerais: FormControl<string>;
+  destacarObservacao: FormControl<boolean>;
 }>;
 
 function text(validators: ValidatorFn[] = []): FormControl<string> {
@@ -29,6 +30,7 @@ export function createProcessoForm(): ProcessoForm {
     contrarioPrincipalDocumento: text([documentoValidator]),
     dataDistribuicao: text(),
     observacoesGerais: text(),
+    destacarObservacao: new FormControl(false, { nonNullable: true }),
   });
 }
 
@@ -40,6 +42,7 @@ export function patchProcessoForm(form: ProcessoForm, p: ProcessoApi): void {
       contrarioPrincipalDocumento: maskDocumento(p.contrario_principal_documento),
       dataDistribuicao: p.data_distribuicao ?? '',
       observacoesGerais: p.observacoes_gerais ?? '',
+      destacarObservacao: p.destacar_observacao,
     },
     { emitEvent: false },
   );

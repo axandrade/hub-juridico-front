@@ -93,6 +93,8 @@ export interface ProcessoResumoApi {
   cidade: string | null;
   cidade_id: number | null;
   data_distribuicao: string | null;
+  observacoes_gerais: string | null;
+  destacar_observacao: boolean;
   ativo: boolean;
   atualizado_em: string | null;
 }
@@ -123,6 +125,7 @@ export interface ProcessoApi {
   cidade: string | null;
   cidade_id: number | null;
   observacoes_gerais: string | null;
+  destacar_observacao: boolean;
 
   objeto_principal: string | null;
   observacoes_objeto: string | null;
@@ -169,6 +172,7 @@ export interface ProcessoWriteApi {
   uf: string | null;
   cidade_id: number | null;
   observacoes_gerais: string | null;
+  destacar_observacao: boolean;
 
   objeto_principal: string | null;
   observacoes_objeto: string | null;

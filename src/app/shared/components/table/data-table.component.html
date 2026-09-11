@@ -88,7 +88,11 @@
         </tr>
       } @else {
         @for (row of rows(); track trackRow($index, row)) {
-          <tr [class]="rowClass() ? rowClass()!(row) : null" (click)="rowClick.emit(row)">
+          <tr
+            [class]="rowClass() ? rowClass()!(row) : null"
+            [attr.title]="rowTitle() ? rowTitle()!(row) : null"
+            (click)="rowClick.emit(row)"
+          >
             @if (pinAction(); as pin) {
               <td class="data-table__pin">
                 <button

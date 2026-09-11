@@ -61,6 +61,8 @@ export class DataTableComponent<T extends object> {
   readonly pinFirst = input<((row: T) => boolean) | null>(null);
   /** Classes extras por linha (ex.: `is-selected`, `is-inactive`). */
   readonly rowClass = input<((row: T) => Record<string, boolean>) | null>(null);
+  /** `title` nativo da linha (tooltip no hover); `null`/vazio = sem tooltip nessa linha. */
+  readonly rowTitle = input<((row: T) => string | null) | null>(null);
   /** Coluna de ação fixa (ex.: favoritar) desenhada pela própria tabela. */
   readonly pinAction = input<TablePinAction<T> | null>(null);
 

@@ -56,6 +56,8 @@ export interface ProcessoEditavel {
   uf: string;
   cidadeId: number | null;
   observacoesGerais: string;
+  /** Se marcado, "observacoesGerais" aparece como tooltip ao passar o mouse na linha da listagem. */
+  destacarObservacao: boolean;
 
   // aba "Objeto"
   objetoPrincipal: string;
@@ -162,6 +164,7 @@ export class ProcessoService {
       uf: vazioParaNull(processo.uf),
       cidade_id: processo.cidadeId,
       observacoes_gerais: vazioParaNull(processo.observacoesGerais),
+      destacar_observacao: processo.destacarObservacao,
       objeto_principal: vazioParaNull(processo.objetoPrincipal),
       observacoes_objeto: vazioParaNull(processo.observacoesObjeto),
       valor_pedido: processo.valorPedido,
@@ -299,6 +302,8 @@ function resumoDe(p: ProcessoApi): ProcessoResumoApi {
     cidade: p.cidade,
     cidade_id: p.cidade_id,
     data_distribuicao: p.data_distribuicao,
+    observacoes_gerais: p.observacoes_gerais,
+    destacar_observacao: p.destacar_observacao,
     ativo: p.ativo,
     atualizado_em: p.atualizado_em,
   };

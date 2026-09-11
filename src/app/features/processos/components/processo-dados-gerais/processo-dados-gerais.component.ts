@@ -297,6 +297,7 @@ export class ProcessoDadosGeraisComponent {
       uf: this.uf(),
       cidadeId: this.cidadeId(),
       observacoesGerais: raw.observacoesGerais,
+      destacarObservacao: raw.destacarObservacao,
       tags: this.tags(),
       orgaosProcessantes: this.orgaosProcessantes(),
       escritoriosAnteriores: this.escritoriosAnteriores(),

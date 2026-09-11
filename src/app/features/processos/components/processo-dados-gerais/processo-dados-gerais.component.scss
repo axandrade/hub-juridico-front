@@ -188,6 +188,17 @@
   padding: 0 $spacing-xs !important;
 }
 
+.processo-checkbox {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: $color-text-secondary;
+  font-size: $font-size-xs;
+  font-weight: $font-weight-medium;
+  cursor: pointer;
+  user-select: none;
+}
+
 // Histórico de "Observações gerais" — entradas datadas, arquivadas pelo backend a cada troca de
 // texto salva; mais recente primeiro.
 .processo-observacoes-historico {

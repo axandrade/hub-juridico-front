@@ -333,4 +333,44 @@
     <span>Observações gerais</span>
     <textarea rows="4" formControlName="observacoesGerais"></textarea>
   </label>
+
+  @if (historicoObservacoes().length) {
+    <div class="processo-field processo-field--full">
+      <span>Histórico de observações</span>
+      <ul class="processo-observacoes-historico">
+        @for (obs of observacoesPagina(); track obs.data) {
+          <li>
+            <time>
+              {{ formatarDataHora(obs.data) }}
+              <span class="processo-observacoes-historico__autor">
+                — {{ obs.autor_nome || 'Autor desconhecido' }}
+              </span>
+            </time>
+            <p>{{ obs.texto }}</p>
+          </li>
+        }
+      </ul>
+      @if (totalPaginasObservacoes() > 1) {
+        <div class="processo-observacoes-historico__paginacao">
+          <button
+            type="button"
+            [disabled]="paginaObservacoes() === 0"
+            (click)="paginaObservacoesAnterior()"
+          >
+            <i class="fa-solid fa-chevron-left" aria-hidden="true"></i>
+            Anterior
+          </button>
+          <span>Página {{ paginaObservacoes() + 1 }} de {{ totalPaginasObservacoes() }}</span>
+          <button
+            type="button"
+            [disabled]="paginaObservacoes() + 1 >= totalPaginasObservacoes()"
+            (click)="paginaObservacoesProxima()"
+          >
+            Próxima
+            <i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
+          </button>
+        </div>
+      }
+    </div>
+  }
 </div>

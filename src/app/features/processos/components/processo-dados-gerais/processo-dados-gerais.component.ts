@@ -15,7 +15,12 @@ import { maskNumeroCnj, numeroCnjCompleto } from '../../../../core/auth/document
 import { ComboboxComponent } from '../../../../shared/components/combobox/combobox.component';
 import { CnjMaskDirective } from '../../../../shared/directives/cnj-mask.directive';
 import { DocumentoMaskDirective } from '../../../../shared/directives/documento-mask.directive';
-import { ProcessoApi, TIPO_PROCESSO_LABEL, TipoProcesso } from '../../services/processo-api.model';
+import {
+  ObservacaoProcessoApi,
+  ProcessoApi,
+  TIPO_PROCESSO_LABEL,
+  TipoProcesso,
+} from '../../services/processo-api.model';
 import { AcaoProcessoService } from '../../services/acao-processo.service';
 import { CidadeService } from '../../services/cidade-service';
 import { FaseProcessoService } from '../../services/fase-processo.service';
@@ -149,6 +154,32 @@ export class ProcessoDadosGeraisComponent {
   private clientesSecundarios: ProcessoApi['clientes_secundarios'] = [];
   private partesContrarias: ProcessoApi['partes_contrarias'] = [];
 
+  /**
+   * Histórico de "Observações gerais" — o backend arquiva a entrada automaticamente quando o
+   * texto muda num `PUT` (ver `ProcessoService.arquivarObservacaoSeAlterada`). Só leitura;
+   * ordenado do mais recente pro mais antigo.
+   */
+  private static readonly OBSERVACOES_POR_PAGINA = 5;
+  private readonly observacoesPrevias = signal<ObservacaoProcessoApi[]>([]);
+  protected readonly historicoObservacoes = computed(() =>
+    [...this.observacoesPrevias()].sort((a, b) => b.data.localeCompare(a.data)),
+  );
+  /** Página atual do histórico (0-based) — paginação só no front, a lista inteira já veio na ficha. */
+  protected readonly paginaObservacoes = signal(0);
+  protected readonly totalPaginasObservacoes = computed(() =>
+    Math.max(
+      1,
+      Math.ceil(this.historicoObservacoes().length / ProcessoDadosGeraisComponent.OBSERVACOES_POR_PAGINA),
+    ),
+  );
+  protected readonly observacoesPagina = computed(() => {
+    const inicio = this.paginaObservacoes() * ProcessoDadosGeraisComponent.OBSERVACOES_POR_PAGINA;
+    return this.historicoObservacoes().slice(
+      inicio,
+      inicio + ProcessoDadosGeraisComponent.OBSERVACOES_POR_PAGINA,
+    );
+  });
+
   constructor() {
     this.statusService.carregar();
     this.posicaoService.carregar();
@@ -185,6 +216,8 @@ export class ProcessoDadosGeraisComponent {
     this.escritoriosAnteriores.set([...p.escritorios_anteriores]);
     this.clientesSecundarios = p.clientes_secundarios;
     this.partesContrarias = p.partes_contrarias;
+    this.observacoesPrevias.set(p.observacoes_previas);
+    this.paginaObservacoes.set(0);
 
     this.clientePrincipalId.set(p.cliente_principal_id);
     this.clientePrincipalLabel.set('');
@@ -226,6 +259,8 @@ export class ProcessoDadosGeraisComponent {
     this.escritoriosAnteriores.set([]);
     this.clientesSecundarios = [];
     this.partesContrarias = [];
+    this.observacoesPrevias.set([]);
+    this.paginaObservacoes.set(0);
   }
 
   /** Valida antes de salvar; marca os campos e devolve o motivo pro shell. */
@@ -605,6 +640,19 @@ export class ProcessoDadosGeraisComponent {
 
   private removerDaLista(lista: WritableSignal<string[]>, indice: number): void {
     lista.update((atual) => atual.filter((_, i) => i !== indice));
+  }
+
+  /** `data` da observação (ISO, `Instant`) formatada como data e hora pt-BR. */
+  protected formatarDataHora(data: string): string {
+    return new Date(data).toLocaleString('pt-BR');
+  }
+
+  protected paginaObservacoesAnterior(): void {
+    this.paginaObservacoes.update((p) => Math.max(0, p - 1));
+  }
+
+  protected paginaObservacoesProxima(): void {
+    this.paginaObservacoes.update((p) => Math.min(this.totalPaginasObservacoes() - 1, p + 1));
   }
 
   private mensagemErroHttp(err: unknown): string {

@@ -66,6 +66,17 @@ export interface CenarioRiscoApi {
   provisionar: boolean;
 }
 
+/**
+ * Uma entrada do histórico de "Observações gerais" — arquivada automaticamente pelo backend
+ * quando o texto muda num `PUT`. `autor_id` pode ser `null` (importação). Só leitura.
+ */
+export interface ObservacaoProcessoApi {
+  data: string;
+  autor_id: number | null;
+  autor_nome: string | null;
+  texto: string;
+}
+
 /** `ProcessoResumoResponse` — uma linha da listagem (só escalares, sem as coleções). */
 export interface ProcessoResumoApi {
   id: number;
@@ -130,6 +141,7 @@ export interface ProcessoApi {
   orgaos_processantes: string[];
   escritorios_anteriores: string[];
   tags: string[];
+  observacoes_previas: ObservacaoProcessoApi[];
 
   ativo: boolean;
   atualizado_em: string | null;

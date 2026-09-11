@@ -188,6 +188,89 @@
   padding: 0 $spacing-xs !important;
 }
 
+// Histórico de "Observações gerais" — entradas datadas, arquivadas pelo backend a cada troca de
+// texto salva; mais recente primeiro.
+.processo-observacoes-historico {
+  @include thin-scrollbar;
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-xs;
+  max-height: 220px;
+  margin: 0;
+  padding: $spacing-xs;
+  border: 1px solid $color-border;
+  border-radius: $border-radius-sm;
+  background-color: $color-neutral-light;
+  overflow-y: auto;
+  list-style: none;
+
+  li {
+    padding: $spacing-xs $spacing-sm;
+    border-radius: $border-radius-sm;
+    background-color: $color-surface;
+
+    &:not(:last-child) {
+      margin-bottom: $spacing-xs;
+    }
+  }
+
+  time {
+    display: block;
+    color: $color-text-secondary;
+    font-size: $font-size-xs;
+    font-weight: $font-weight-bold;
+  }
+
+  p {
+    margin: $spacing-xs 0 0;
+    color: $color-text-primary;
+    font-size: $font-size-xs;
+    font-weight: $font-weight-regular;
+    white-space: pre-wrap;
+  }
+}
+
+.processo-observacoes-historico__autor {
+  color: $color-text-muted;
+  font-weight: $font-weight-regular;
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+.processo-observacoes-historico__paginacao {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: $spacing-md;
+  margin-top: $spacing-xs;
+  font-size: $font-size-xs;
+  color: $color-text-muted;
+
+  button {
+    display: inline-flex;
+    align-items: center;
+    gap: $spacing-xs;
+    min-height: 30px;
+    padding: 0 $spacing-sm;
+    border: 1px solid $color-border;
+    border-radius: $border-radius-sm;
+    background-color: $color-surface;
+    color: $color-text-primary;
+    cursor: pointer;
+    font: inherit;
+    transition: background-color $transition-fast;
+
+    &:hover:not(:disabled) {
+      background-color: rgba($burgundy-deep, 0.05);
+    }
+
+    &:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+  }
+}
+
 @include respond-below($breakpoint-sm) {
   .processo-form__row {
     grid-template-columns: 1fr;

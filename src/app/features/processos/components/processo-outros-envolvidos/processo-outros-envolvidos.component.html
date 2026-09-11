@@ -252,4 +252,74 @@
       <li class="processo-outros__vazio">Nenhuma testemunha adicionada.</li>
     }
   </ul>
+
+  <!-- ============ Perito Judicial ============ -->
+  <div class="processo-form__group-title">Perito Judicial</div>
+
+  <div class="processo-form__row" [formGroup]="peritoForm">
+    <label class="processo-field">
+      <span>Perito</span>
+      <input type="text" formControlName="perito" maxlength="255" />
+    </label>
+    <label class="processo-field">
+      <span>CPF</span>
+      <input
+        type="text"
+        formControlName="cpf"
+        appCpfMask
+        inputmode="numeric"
+        placeholder="000.000.000-00"
+      />
+    </label>
+  </div>
+
+  <div class="processo-form__row processo-form__row--full">
+    <div class="processo-field">
+      <span>Resultado</span>
+      <app-combobox
+        ariaLabel="Resultado da decisão (perito)"
+        placeholder="Buscar resultado..."
+        emptyLabel="— Sem resultado —"
+        noResultsText="Nenhum resultado encontrado"
+        itemNoun="resultado"
+        [options]="nomesDeResultado()"
+        [value]="resultadoRascunhoPerito()"
+        [adicionar]="true"
+        (valueChange)="resultadoRascunhoPerito.set($event)"
+        (aoAdicionar)="criarResultadoPerito($event)"
+      />
+    </div>
+  </div>
+
+  <div class="processo-outros__acoes">
+    <button type="button" class="processo-outros__botao" (click)="adicionarPerito()">
+      <i class="fa-solid fa-plus" aria-hidden="true"></i> Adicionar
+    </button>
+    <button
+      type="button"
+      class="processo-outros__botao"
+      [disabled]="peritoSelecionado() < 0"
+      (click)="removerPerito()"
+    >
+      <i class="fa-solid fa-trash-can" aria-hidden="true"></i> Remover
+    </button>
+  </div>
+
+  <ul class="processo-outros__lista" role="listbox" aria-label="Peritos adicionados">
+    @for (linha of peritos(); track $index) {
+      <li>
+        <button
+          type="button"
+          role="option"
+          [attr.aria-selected]="peritoSelecionado() === $index"
+          [class.is-selected]="peritoSelecionado() === $index"
+          (click)="selecionarPerito($index)"
+        >
+          {{ rotuloPerito(linha) }}
+        </button>
+      </li>
+    } @empty {
+      <li class="processo-outros__vazio">Nenhum perito adicionado.</li>
+    }
+  </ul>
 </div>

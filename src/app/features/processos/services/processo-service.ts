@@ -10,6 +10,7 @@ import {
   ClienteSecundarioApi,
   OutroEnvolvidoAdvogadoApi,
   OutroEnvolvidoMagistradoWriteApi,
+  OutroEnvolvidoPeritoApi,
   OutroEnvolvidoTestemunhaApi,
   PaginaApi,
   ParteContrariaApi,
@@ -79,6 +80,8 @@ export interface ProcessoEditavel {
   outrosEnvolvidosMagistrados: OutroEnvolvidoMagistradoWriteApi[];
   /** Testemunhas "outros envolvidos" (aba "Outros envolvidos"). */
   outrosEnvolvidosTestemunhas: OutroEnvolvidoTestemunhaApi[];
+  /** Peritos judiciais "outros envolvidos" (aba "Outros envolvidos"). */
+  outrosEnvolvidosPeritos: OutroEnvolvidoPeritoApi[];
   /** Preservados como vieram — ainda sem UI de edição nesta fatia. */
   clientesSecundarios: ClienteSecundarioApi[];
   partesContrarias: ParteContrariaApi[];
@@ -179,6 +182,7 @@ export class ProcessoService {
       outros_envolvidos_advogados: processo.outrosEnvolvidosAdvogados,
       outros_envolvidos_magistrados: processo.outrosEnvolvidosMagistrados,
       outros_envolvidos_testemunhas: processo.outrosEnvolvidosTestemunhas,
+      outros_envolvidos_peritos: processo.outrosEnvolvidosPeritos,
       orgao_processante_id: processo.orgaoProcessanteId,
       escritorios_anteriores: processo.escritoriosAnteriores,
       tags: processo.tags,

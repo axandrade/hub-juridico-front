@@ -13,6 +13,7 @@ import { TribunalService } from '../../services/tribunal.service';
 import {
   OutroEnvolvidoAdvogadoApi,
   OutroEnvolvidoMagistradoApi,
+  OutroEnvolvidoPeritoApi,
   OutroEnvolvidoTestemunhaApi,
   ProcessoApi,
 } from '../../services/processo-api.model';
@@ -21,11 +22,14 @@ import { ProcessoEditavel } from '../../services/processo-service';
 /** O que esta aba entrega pro `save()` do shell (junta no `ProcessoEditavel`). */
 export type OutrosEnvolvidosValores = Pick<
   ProcessoEditavel,
-  'outrosEnvolvidosAdvogados' | 'outrosEnvolvidosMagistrados' | 'outrosEnvolvidosTestemunhas'
+  | 'outrosEnvolvidosAdvogados'
+  | 'outrosEnvolvidosMagistrados'
+  | 'outrosEnvolvidosTestemunhas'
+  | 'outrosEnvolvidosPeritos'
 >;
 
 /**
- * Aba "Outros envolvidos" do painel de processo. Três seções, mesmo padrão (mini-form +
+ * Aba "Outros envolvidos" do painel de processo. Quatro seções, mesmo padrão (mini-form +
  * Adicionar/Remover + listbox), cada uma dona de um array estruturado:
  * <ul>
  *   <li><b>Advogados</b> — advogado / posição (catálogo PosicaoCliente) / OAB / UF.</li>
@@ -33,6 +37,8 @@ export type OutrosEnvolvidosValores = Pick<
  *       / órgão (catálogo OrgaoJulgador).</li>
  *   <li><b>Testemunhas</b> — testemunha + parte interessada (catálogo ParteInteressada), os dois
  *       obrigatórios.</li>
+ *   <li><b>Perito Judicial</b> — perito (obrigatório) / CPF (opcional) / resultado (catálogo
+ *       ResultadoDecisao, mesmo catálogo de Magistrados).</li>
  * </ul>
  *
  * <p>O shell (`app-processo-form`) orquestra via `viewChild`: `carregar` / `limpar` / `coletar`,
@@ -138,6 +144,22 @@ export class ProcessoOutrosEnvolvidosComponent {
   /** Índice selecionado no listbox de testemunhas (`-1` = nenhum). */
   protected readonly testSelecionado = signal(-1);
 
+  // ===================== Perito Judicial =====================
+
+  /** Campos de texto da linha de perito em edição (resultado é combobox → signal). */
+  protected readonly peritoForm: FormGroup<{
+    perito: FormControl<string>;
+    cpf: FormControl<string>;
+  }> = new FormGroup({
+    perito: new FormControl('', { nonNullable: true }),
+    cpf: new FormControl('', { nonNullable: true, validators: [cpfValidator] }),
+  });
+  protected readonly resultadoRascunhoPerito = signal('');
+
+  protected readonly peritos = signal<OutroEnvolvidoPeritoApi[]>([]);
+  /** Índice selecionado no listbox de peritos (`-1` = nenhum). */
+  protected readonly peritoSelecionado = signal(-1);
+
   constructor() {
     this.posicaoService.carregar();
     this.resultadoService.carregar();
@@ -153,9 +175,11 @@ export class ProcessoOutrosEnvolvidosComponent {
     this.advogados.set(p.outros_envolvidos_advogados.map((o) => ({ ...o })));
     this.magistrados.set(p.outros_envolvidos_magistrados.map((o) => ({ ...o })));
     this.testemunhas.set(p.outros_envolvidos_testemunhas.map((o) => ({ ...o })));
+    this.peritos.set(p.outros_envolvidos_peritos.map((o) => ({ ...o })));
     this.advSelecionado.set(-1);
     this.magSelecionado.set(-1);
     this.testSelecionado.set(-1);
+    this.peritoSelecionado.set(-1);
     this.limparRascunhos();
   }
 
@@ -164,13 +188,15 @@ export class ProcessoOutrosEnvolvidosComponent {
     this.advogados.set([]);
     this.magistrados.set([]);
     this.testemunhas.set([]);
+    this.peritos.set([]);
     this.advSelecionado.set(-1);
     this.magSelecionado.set(-1);
     this.testSelecionado.set(-1);
+    this.peritoSelecionado.set(-1);
     this.limparRascunhos();
   }
 
-  /** Entrega as três listas pro payload de escrita. */
+  /** Entrega as quatro listas pro payload de escrita. */
   coletar(): OutrosEnvolvidosValores {
     return {
       outrosEnvolvidosAdvogados: this.advogados(),
@@ -181,6 +207,7 @@ export class ProcessoOutrosEnvolvidosComponent {
         data: m.data,
       })),
       outrosEnvolvidosTestemunhas: this.testemunhas(),
+      outrosEnvolvidosPeritos: this.peritos(),
     };
   }
 
@@ -297,6 +324,40 @@ export class ProcessoOutrosEnvolvidosComponent {
     this.testSelecionado.update((atual) => (atual === indice ? -1 : indice));
   }
 
+  // ===================== lista de peritos =====================
+
+  /** Linha do listbox: "PERITO | CPF | RESULTADO" (campo vazio vira "—"). */
+  protected rotuloPerito(o: OutroEnvolvidoPeritoApi): string {
+    return `${o.perito} | ${o.cpf ? maskCpf(o.cpf) : '—'} | ${o.resultado?.trim() || '—'}`;
+  }
+
+  protected adicionarPerito(): void {
+    const perito = this.peritoForm.controls.perito.value.trim();
+    if (!perito || this.peritoForm.controls.cpf.invalid) {
+      this.peritoForm.markAllAsTouched();
+      return;
+    }
+    const cpf = onlyDigits(this.peritoForm.controls.cpf.value) || null;
+    this.peritos.update((atual) => [
+      ...atual,
+      { perito, cpf, resultado: this.resultadoRascunhoPerito().trim() || null },
+    ]);
+    this.limparRascunhoPerito();
+  }
+
+  protected removerPerito(): void {
+    const i = this.peritoSelecionado();
+    if (i < 0) {
+      return;
+    }
+    this.peritos.update((atual) => atual.filter((_, idx) => idx !== i));
+    this.peritoSelecionado.set(-1);
+  }
+
+  protected selecionarPerito(indice: number): void {
+    this.peritoSelecionado.update((atual) => (atual === indice ? -1 : indice));
+  }
+
   // ===================== catálogos (só "adicionar" aqui) =====================
 
   protected criarPosicao(nome: string): void {
@@ -309,6 +370,13 @@ export class ProcessoOutrosEnvolvidosComponent {
   protected criarResultado(nome: string): void {
     this.resultadoService.criar(nome).subscribe({
       next: (r) => this.resultadoRascunho.set(r.nome),
+      error: (err: unknown) => this.erro.emit(this.mensagemErroHttp(err)),
+    });
+  }
+
+  protected criarResultadoPerito(nome: string): void {
+    this.resultadoService.criar(nome).subscribe({
+      next: (r) => this.resultadoRascunhoPerito.set(r.nome),
       error: (err: unknown) => this.erro.emit(this.mensagemErroHttp(err)),
     });
   }
@@ -420,6 +488,7 @@ export class ProcessoOutrosEnvolvidosComponent {
     this.limparRascunhoAdvogado();
     this.limparRascunhoMagistrado();
     this.limparRascunhoTestemunha();
+    this.limparRascunhoPerito();
   }
 
   private limparRascunhoAdvogado(): void {
@@ -438,6 +507,11 @@ export class ProcessoOutrosEnvolvidosComponent {
   private limparRascunhoTestemunha(): void {
     this.testForm.reset();
     this.parteRascunho.set('');
+  }
+
+  private limparRascunhoPerito(): void {
+    this.peritoForm.reset();
+    this.resultadoRascunhoPerito.set('');
   }
 
   /** ISO `yyyy-MM-dd` → `dd/MM/yyyy` pra exibição no listbox. */

@@ -67,6 +67,17 @@ export interface OutroEnvolvidoTestemunhaApi {
 }
 
 /**
+ * Um perito judicial "outro envolvido" (aba "Outros envolvidos", seção "Perito Judicial").
+ * `perito` é obrigatório; `cpf` é opcional, só dígitos (sem CNPJ — perito é sempre pessoa física);
+ * `resultado` é opcional, texto do catálogo `ResultadoDecisao`.
+ */
+export interface OutroEnvolvidoPeritoApi {
+  perito: string;
+  cpf: string | null;
+  resultado: string | null;
+}
+
+/**
  * Um cenário de risco da aba "Objeto" (provável / possível / remoto). `valor`/`percentual` são
  * número (BRL / %) ou `null` (cenário não informado); `percentual` é snapshot de
  * `valor / valor_pedido * 100`. `provisionar` = se o escritório provisiona esse cenário.
@@ -174,6 +185,7 @@ export interface ProcessoApi {
   outros_envolvidos_advogados: OutroEnvolvidoAdvogadoApi[];
   outros_envolvidos_magistrados: OutroEnvolvidoMagistradoApi[];
   outros_envolvidos_testemunhas: OutroEnvolvidoTestemunhaApi[];
+  outros_envolvidos_peritos: OutroEnvolvidoPeritoApi[];
   /** Órgão processante atual — `null` se ainda não definido. Trocar arquiva o anterior no histórico. */
   orgao_processante: OrgaoProcessanteApi | null;
   escritorios_anteriores: string[];
@@ -223,6 +235,7 @@ export interface ProcessoWriteApi {
   outros_envolvidos_advogados: OutroEnvolvidoAdvogadoApi[];
   outros_envolvidos_magistrados: OutroEnvolvidoMagistradoWriteApi[];
   outros_envolvidos_testemunhas: OutroEnvolvidoTestemunhaApi[];
+  outros_envolvidos_peritos: OutroEnvolvidoPeritoApi[];
   /** Id do catálogo `orgao_julgador` (chave estrangeira) — `null` = sem órgão processante. */
   orgao_processante_id: number | null;
   escritorios_anteriores: string[];

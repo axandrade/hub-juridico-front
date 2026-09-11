@@ -325,6 +325,38 @@ export class ProcessoOutrosEnvolvidosComponent {
     });
   }
 
+  protected renomearTribunalMagistrado({ de, para }: { de: string; para: string }): void {
+    const alvo = this.tribunalService.tribunais().find((t) => t.nome === de);
+    if (!alvo) {
+      return;
+    }
+    this.tribunalService.alterar(alvo.id, para).subscribe({
+      next: (t) => {
+        if (this.tribunalRascunhoMag() === de) {
+          this.tribunalRascunhoMag.set(t.nome);
+        }
+        // "TRIBUNAL - descrição" dos órgãos embutia o nome antigo — recarrega pra atualizar.
+        this.orgaoService.recarregar();
+      },
+      error: (err: unknown) => this.erro.emit(this.mensagemErroHttp(err)),
+    });
+  }
+
+  protected excluirTribunalMagistrado(nome: string): void {
+    const alvo = this.tribunalService.tribunais().find((t) => t.nome === nome);
+    if (!alvo) {
+      return;
+    }
+    this.tribunalService.excluir(alvo.id).subscribe({
+      next: () => {
+        if (this.tribunalRascunhoMag() === nome) {
+          this.onTribunalRascunhoMagChange('');
+        }
+      },
+      error: (err: unknown) => this.erro.emit(this.mensagemErroHttp(err)),
+    });
+  }
+
   protected criarOrgaoDoTribunalRascunhoMag(descricao: string): void {
     const tribunal = this.tribunalRascunhoMag().trim();
     if (!tribunal || !descricao.trim()) {
@@ -336,6 +368,40 @@ export class ProcessoOutrosEnvolvidosComponent {
         this.orgaoRascunhoMag.set(
           criado.nome.startsWith(prefixo) ? criado.nome.slice(prefixo.length) : criado.nome,
         );
+      },
+      error: (err: unknown) => this.erro.emit(this.mensagemErroHttp(err)),
+    });
+  }
+
+  protected renomearOrgaoDoTribunalRascunhoMag({ de, para }: { de: string; para: string }): void {
+    const item = this.orgaosDoTribunalRascunhoMag().find((o) => o.descricao === de);
+    const tribunal = this.tribunalRascunhoMag().trim();
+    if (!item || !tribunal) {
+      return;
+    }
+    this.orgaoService.alterar(item.id, `${tribunal} - ${para.trim()}`).subscribe({
+      next: (atualizado) => {
+        if (this.orgaoRascunhoMag() === de) {
+          const prefixo = `${tribunal} - `;
+          this.orgaoRascunhoMag.set(
+            atualizado.nome.startsWith(prefixo) ? atualizado.nome.slice(prefixo.length) : atualizado.nome,
+          );
+        }
+      },
+      error: (err: unknown) => this.erro.emit(this.mensagemErroHttp(err)),
+    });
+  }
+
+  protected excluirOrgaoDoTribunalRascunhoMag(descricao: string): void {
+    const item = this.orgaosDoTribunalRascunhoMag().find((o) => o.descricao === descricao);
+    if (!item) {
+      return;
+    }
+    this.orgaoService.excluir(item.id).subscribe({
+      next: () => {
+        if (this.orgaoRascunhoMag() === descricao) {
+          this.orgaoRascunhoMag.set('');
+        }
       },
       error: (err: unknown) => this.erro.emit(this.mensagemErroHttp(err)),
     });

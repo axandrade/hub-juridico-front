@@ -695,6 +695,38 @@ export class ProcessoDadosGeraisComponent {
     });
   }
 
+  protected renomearTribunalProcessante({ de, para }: { de: string; para: string }): void {
+    const alvo = this.tribunalService.tribunais().find((t) => t.nome === de);
+    if (!alvo) {
+      return;
+    }
+    this.tribunalService.alterar(alvo.id, para).subscribe({
+      next: (t) => {
+        if (this.tribunalAtual() === de) {
+          this.tribunalAtual.set(t.nome);
+        }
+        // "TRIBUNAL - descrição" dos órgãos embutia o nome antigo — recarrega pra atualizar.
+        this.orgaoJulgadorService.recarregar();
+      },
+      error: (err: unknown) => this.erro.emit(this.mensagemErroHttp(err)),
+    });
+  }
+
+  protected excluirTribunalProcessante(nome: string): void {
+    const alvo = this.tribunalService.tribunais().find((t) => t.nome === nome);
+    if (!alvo) {
+      return;
+    }
+    this.tribunalService.excluir(alvo.id).subscribe({
+      next: () => {
+        if (this.tribunalAtual() === nome) {
+          this.onTribunalAtualChange('');
+        }
+      },
+      error: (err: unknown) => this.erro.emit(this.mensagemErroHttp(err)),
+    });
+  }
+
   /** Escolher o órgão JÁ define o "órgão processante" atual — sem passo de "Adicionar". */
   protected onOrgaoAtualChange(descricao: string): void {
     this.orgaoAtual.set(descricao);
@@ -711,6 +743,39 @@ export class ProcessoDadosGeraisComponent {
       next: (criado) => {
         this.orgaoAtual.set(this.descricaoDoOrgao(criado.nome, tribunal));
         this.orgaoProcessanteId.set(criado.id);
+      },
+      error: (err: unknown) => this.erro.emit(this.mensagemErroHttp(err)),
+    });
+  }
+
+  protected renomearOrgaoDoTribunalAtual({ de, para }: { de: string; para: string }): void {
+    const item = this.orgaosDoTribunalAtual().find((o) => o.descricao === de);
+    const tribunal = this.tribunalAtual().trim();
+    if (!item || !tribunal) {
+      return;
+    }
+    this.orgaoJulgadorService.alterar(item.id, `${tribunal} - ${para.trim()}`).subscribe({
+      next: (atualizado) => {
+        if (this.orgaoAtual() === de) {
+          this.orgaoAtual.set(this.descricaoDoOrgao(atualizado.nome, tribunal));
+          this.orgaoProcessanteId.set(atualizado.id);
+        }
+      },
+      error: (err: unknown) => this.erro.emit(this.mensagemErroHttp(err)),
+    });
+  }
+
+  protected excluirOrgaoDoTribunalAtual(descricao: string): void {
+    const item = this.orgaosDoTribunalAtual().find((o) => o.descricao === descricao);
+    if (!item) {
+      return;
+    }
+    this.orgaoJulgadorService.excluir(item.id).subscribe({
+      next: () => {
+        if (this.orgaoAtual() === descricao) {
+          this.orgaoAtual.set('');
+          this.orgaoProcessanteId.set(null);
+        }
       },
       error: (err: unknown) => this.erro.emit(this.mensagemErroHttp(err)),
     });

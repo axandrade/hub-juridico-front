@@ -296,8 +296,12 @@
         [options]="nomesDeTribunal()"
         [value]="tribunalAtual()"
         [adicionar]="true"
+        [editar]="true"
+        [excluir]="true"
         (valueChange)="onTribunalAtualChange($event)"
         (aoAdicionar)="criarTribunalProcessante($event)"
+        (aoEditar)="renomearTribunalProcessante($event)"
+        (aoExcluir)="excluirTribunalProcessante($event)"
       />
     </div>
   </div>
@@ -313,8 +317,12 @@
         [options]="nomesDeOrgaoDoTribunal()"
         [value]="orgaoAtual()"
         [adicionar]="!!tribunalAtual()"
+        [editar]="!!tribunalAtual()"
+        [excluir]="!!tribunalAtual()"
         (valueChange)="onOrgaoAtualChange($event)"
         (aoAdicionar)="criarOrgaoDoTribunalAtual($event)"
+        (aoEditar)="renomearOrgaoDoTribunalAtual($event)"
+        (aoExcluir)="excluirOrgaoDoTribunalAtual($event)"
       />
     </div>
   </div>

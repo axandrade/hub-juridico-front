@@ -112,8 +112,12 @@
         [options]="nomesDeTribunal()"
         [value]="tribunalRascunhoMag()"
         [adicionar]="true"
+        [editar]="true"
+        [excluir]="true"
         (valueChange)="onTribunalRascunhoMagChange($event)"
         (aoAdicionar)="criarTribunalMagistrado($event)"
+        (aoEditar)="renomearTribunalMagistrado($event)"
+        (aoExcluir)="excluirTribunalMagistrado($event)"
       />
     </div>
   </div>
@@ -130,8 +134,12 @@
         [options]="nomesDeOrgaoDoTribunalMag()"
         [value]="orgaoRascunhoMag()"
         [adicionar]="!!tribunalRascunhoMag()"
+        [editar]="!!tribunalRascunhoMag()"
+        [excluir]="!!tribunalRascunhoMag()"
         (valueChange)="orgaoRascunhoMag.set($event)"
         (aoAdicionar)="criarOrgaoDoTribunalRascunhoMag($event)"
+        (aoEditar)="renomearOrgaoDoTribunalRascunhoMag($event)"
+        (aoExcluir)="excluirOrgaoDoTribunalRascunhoMag($event)"
       />
     </div>
   </div>

@@ -37,6 +37,19 @@ export class OrgaoJulgadorService {
     if (this.carregado || this.carregando) {
       return;
     }
+    this.buscar();
+  }
+
+  /**
+   * Força um novo fetch, ignorando o cache — usado depois de renomear um `Tribunal`, já que
+   * `nome` aqui embute o código dele ("TRIBUNAL - descrição") e ficaria desatualizado.
+   */
+  recarregar(): void {
+    this.carregado = false;
+    this.buscar();
+  }
+
+  private buscar(): void {
     this.carregando = true;
     this.http.get<OrgaoJulgador[]>(this.url).subscribe({
       next: (lista) => {

@@ -81,6 +81,28 @@
   }
 }
 
+// Wrapper com prefixo "R$" fixo pros campos de valor monetário (não usado nos campos de %).
+.processo-objeto__moeda-campo {
+  position: relative;
+  display: block;
+
+  .processo-objeto__moeda {
+    width: 100%;
+    padding-left: 2.1em;
+  }
+}
+
+.processo-objeto__moeda-prefixo {
+  position: absolute;
+  top: 50%;
+  left: $spacing-sm;
+  transform: translateY(-50%);
+  color: $color-text-muted;
+  font-size: $font-size-xs;
+  font-weight: $font-weight-medium;
+  pointer-events: none;
+}
+
 // Linha do "Objeto secundário": combobox + Adicionar + Remover.
 .processo-objeto__sec-linha {
   display: flex;

@@ -75,28 +75,34 @@
   </label>
 
   <label class="processo-field processo-field--full">
-    <span>Valor pedido</span>
-    <input
-      type="text"
-      class="processo-objeto__moeda"
-      formControlName="valorPedido"
-      appMoedaMask
-      placeholder="0,00"
-    />
+    <span>Valor pedido (R$)</span>
+    <span class="processo-objeto__moeda-campo">
+      <span class="processo-objeto__moeda-prefixo" aria-hidden="true">R$</span>
+      <input
+        type="text"
+        class="processo-objeto__moeda"
+        formControlName="valorPedido"
+        appMoedaMask
+        placeholder="0,00"
+      />
+    </span>
   </label>
 
   <div class="processo-form__group-title">Cenários de risco</div>
 
   <div class="processo-objeto__cenario">
     <label class="processo-field">
-      <span>Valor provável</span>
-      <input
-        type="text"
-        class="processo-objeto__moeda"
-        formControlName="valorProvavel"
-        appMoedaMask
-        placeholder="0,00"
-      />
+      <span>Valor provável (R$)</span>
+      <span class="processo-objeto__moeda-campo">
+        <span class="processo-objeto__moeda-prefixo" aria-hidden="true">R$</span>
+        <input
+          type="text"
+          class="processo-objeto__moeda"
+          formControlName="valorProvavel"
+          appMoedaMask
+          placeholder="0,00"
+        />
+      </span>
     </label>
     <label class="processo-field">
       <span>% provável</span>
@@ -110,14 +116,17 @@
 
   <div class="processo-objeto__cenario">
     <label class="processo-field">
-      <span>Valor possível</span>
-      <input
-        type="text"
-        class="processo-objeto__moeda"
-        formControlName="valorPossivel"
-        appMoedaMask
-        placeholder="0,00"
-      />
+      <span>Valor possível (R$)</span>
+      <span class="processo-objeto__moeda-campo">
+        <span class="processo-objeto__moeda-prefixo" aria-hidden="true">R$</span>
+        <input
+          type="text"
+          class="processo-objeto__moeda"
+          formControlName="valorPossivel"
+          appMoedaMask
+          placeholder="0,00"
+        />
+      </span>
     </label>
     <label class="processo-field">
       <span>% possível</span>
@@ -131,14 +140,17 @@
 
   <div class="processo-objeto__cenario">
     <label class="processo-field">
-      <span>Valor remoto</span>
-      <input
-        type="text"
-        class="processo-objeto__moeda"
-        formControlName="valorRemoto"
-        appMoedaMask
-        placeholder="0,00"
-      />
+      <span>Valor remoto (R$)</span>
+      <span class="processo-objeto__moeda-campo">
+        <span class="processo-objeto__moeda-prefixo" aria-hidden="true">R$</span>
+        <input
+          type="text"
+          class="processo-objeto__moeda"
+          formControlName="valorRemoto"
+          appMoedaMask
+          placeholder="0,00"
+        />
+      </span>
     </label>
     <label class="processo-field">
       <span>% remoto</span>
@@ -151,13 +163,16 @@
   </div>
 
   <label class="processo-field processo-field--full">
-    <span>Valor deferido</span>
-    <input
-      type="text"
-      class="processo-objeto__moeda"
-      formControlName="valorDeferido"
-      appMoedaMask
-      placeholder="0,00"
-    />
+    <span>Valor deferido (R$)</span>
+    <span class="processo-objeto__moeda-campo">
+      <span class="processo-objeto__moeda-prefixo" aria-hidden="true">R$</span>
+      <input
+        type="text"
+        class="processo-objeto__moeda"
+        formControlName="valorDeferido"
+        appMoedaMask
+        placeholder="0,00"
+      />
+    </span>
   </label>
 </div>

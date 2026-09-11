@@ -104,7 +104,7 @@
   }
 }
 
-.processo-form__section input,
+.processo-form__section input:not([type="checkbox"]),
 .processo-form__section textarea {
   width: 100%;
   min-height: 36px;
@@ -197,6 +197,14 @@
   font-weight: $font-weight-medium;
   cursor: pointer;
   user-select: none;
+
+  input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    margin: 0;
+    accent-color: $color-primary;
+    cursor: pointer;
+  }
 }
 
 // Histórico de "Observações gerais" — entradas datadas, arquivadas pelo backend a cada troca de

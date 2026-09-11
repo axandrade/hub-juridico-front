@@ -12,6 +12,7 @@ import { ResultadoDecisaoService } from '../../services/resultado-decisao.servic
 import { TribunalService } from '../../services/tribunal.service';
 import {
   OutroEnvolvidoAdvogadoApi,
+  OutroEnvolvidoAssistenteTecnicoApi,
   OutroEnvolvidoMagistradoApi,
   OutroEnvolvidoPeritoApi,
   OutroEnvolvidoTestemunhaApi,
@@ -26,10 +27,11 @@ export type OutrosEnvolvidosValores = Pick<
   | 'outrosEnvolvidosMagistrados'
   | 'outrosEnvolvidosTestemunhas'
   | 'outrosEnvolvidosPeritos'
+  | 'outrosEnvolvidosAssistentesTecnicos'
 >;
 
 /**
- * Aba "Outros envolvidos" do painel de processo. Quatro seções, mesmo padrão (mini-form +
+ * Aba "Outros envolvidos" do painel de processo. Cinco seções, mesmo padrão (mini-form +
  * Adicionar/Remover + listbox), cada uma dona de um array estruturado:
  * <ul>
  *   <li><b>Advogados</b> — advogado / posição (catálogo PosicaoCliente) / OAB / UF.</li>
@@ -39,6 +41,8 @@ export type OutrosEnvolvidosValores = Pick<
  *       obrigatórios.</li>
  *   <li><b>Perito Judicial</b> — perito (obrigatório) / CPF (opcional) / resultado (catálogo
  *       ResultadoDecisao, mesmo catálogo de Magistrados).</li>
+ *   <li><b>Assistente Técnico</b> — assistente técnico + parte interessada (catálogo
+ *       ParteInteressada, mesmo de Testemunhas), os dois obrigatórios / CPF (opcional).</li>
  * </ul>
  *
  * <p>O shell (`app-processo-form`) orquestra via `viewChild`: `carregar` / `limpar` / `coletar`,
@@ -160,6 +164,22 @@ export class ProcessoOutrosEnvolvidosComponent {
   /** Índice selecionado no listbox de peritos (`-1` = nenhum). */
   protected readonly peritoSelecionado = signal(-1);
 
+  // ===================== Assistente Técnico =====================
+
+  /** Campos de texto da linha de assistente técnico em edição (parte interessada é combobox → signal). */
+  protected readonly assistTecForm: FormGroup<{
+    assistenteTecnico: FormControl<string>;
+    cpf: FormControl<string>;
+  }> = new FormGroup({
+    assistenteTecnico: new FormControl('', { nonNullable: true }),
+    cpf: new FormControl('', { nonNullable: true, validators: [cpfValidator] }),
+  });
+  protected readonly parteRascunhoAssistTec = signal('');
+
+  protected readonly assistentesTecnicos = signal<OutroEnvolvidoAssistenteTecnicoApi[]>([]);
+  /** Índice selecionado no listbox de assistentes técnicos (`-1` = nenhum). */
+  protected readonly assistTecSelecionado = signal(-1);
+
   constructor() {
     this.posicaoService.carregar();
     this.resultadoService.carregar();
@@ -176,10 +196,12 @@ export class ProcessoOutrosEnvolvidosComponent {
     this.magistrados.set(p.outros_envolvidos_magistrados.map((o) => ({ ...o })));
     this.testemunhas.set(p.outros_envolvidos_testemunhas.map((o) => ({ ...o })));
     this.peritos.set(p.outros_envolvidos_peritos.map((o) => ({ ...o })));
+    this.assistentesTecnicos.set(p.outros_envolvidos_assistentes_tecnicos.map((o) => ({ ...o })));
     this.advSelecionado.set(-1);
     this.magSelecionado.set(-1);
     this.testSelecionado.set(-1);
     this.peritoSelecionado.set(-1);
+    this.assistTecSelecionado.set(-1);
     this.limparRascunhos();
   }
 
@@ -189,14 +211,16 @@ export class ProcessoOutrosEnvolvidosComponent {
     this.magistrados.set([]);
     this.testemunhas.set([]);
     this.peritos.set([]);
+    this.assistentesTecnicos.set([]);
     this.advSelecionado.set(-1);
     this.magSelecionado.set(-1);
     this.testSelecionado.set(-1);
     this.peritoSelecionado.set(-1);
+    this.assistTecSelecionado.set(-1);
     this.limparRascunhos();
   }
 
-  /** Entrega as quatro listas pro payload de escrita. */
+  /** Entrega as cinco listas pro payload de escrita. */
   coletar(): OutrosEnvolvidosValores {
     return {
       outrosEnvolvidosAdvogados: this.advogados(),
@@ -208,6 +232,7 @@ export class ProcessoOutrosEnvolvidosComponent {
       })),
       outrosEnvolvidosTestemunhas: this.testemunhas(),
       outrosEnvolvidosPeritos: this.peritos(),
+      outrosEnvolvidosAssistentesTecnicos: this.assistentesTecnicos(),
     };
   }
 
@@ -358,6 +383,41 @@ export class ProcessoOutrosEnvolvidosComponent {
     this.peritoSelecionado.update((atual) => (atual === indice ? -1 : indice));
   }
 
+  // ===================== lista de assistentes técnicos =====================
+
+  /** Linha do listbox: "ASSISTENTE TÉCNICO | CPF | PARTE INTERESSADA" (CPF vazio vira "—"). */
+  protected rotuloAssistenteTecnico(o: OutroEnvolvidoAssistenteTecnicoApi): string {
+    return `${o.assistente_tecnico} | ${o.cpf ? maskCpf(o.cpf) : '—'} | ${o.parte_interessada}`;
+  }
+
+  protected adicionarAssistenteTecnico(): void {
+    const assistenteTecnico = this.assistTecForm.controls.assistenteTecnico.value.trim();
+    const parte = this.parteRascunhoAssistTec().trim();
+    if (!assistenteTecnico || !parte || this.assistTecForm.controls.cpf.invalid) {
+      this.assistTecForm.markAllAsTouched();
+      return;
+    }
+    const cpf = onlyDigits(this.assistTecForm.controls.cpf.value) || null;
+    this.assistentesTecnicos.update((atual) => [
+      ...atual,
+      { assistente_tecnico: assistenteTecnico, cpf, parte_interessada: parte },
+    ]);
+    this.limparRascunhoAssistenteTecnico();
+  }
+
+  protected removerAssistenteTecnico(): void {
+    const i = this.assistTecSelecionado();
+    if (i < 0) {
+      return;
+    }
+    this.assistentesTecnicos.update((atual) => atual.filter((_, idx) => idx !== i));
+    this.assistTecSelecionado.set(-1);
+  }
+
+  protected selecionarAssistenteTecnico(indice: number): void {
+    this.assistTecSelecionado.update((atual) => (atual === indice ? -1 : indice));
+  }
+
   // ===================== catálogos (só "adicionar" aqui) =====================
 
   protected criarPosicao(nome: string): void {
@@ -482,6 +542,13 @@ export class ProcessoOutrosEnvolvidosComponent {
     });
   }
 
+  protected criarParteAssistTec(nome: string): void {
+    this.parteService.criar(nome).subscribe({
+      next: (p) => this.parteRascunhoAssistTec.set(p.nome),
+      error: (err: unknown) => this.erro.emit(this.mensagemErroHttp(err)),
+    });
+  }
+
   // ===================== helpers =====================
 
   private limparRascunhos(): void {
@@ -489,6 +556,7 @@ export class ProcessoOutrosEnvolvidosComponent {
     this.limparRascunhoMagistrado();
     this.limparRascunhoTestemunha();
     this.limparRascunhoPerito();
+    this.limparRascunhoAssistenteTecnico();
   }
 
   private limparRascunhoAdvogado(): void {
@@ -512,6 +580,11 @@ export class ProcessoOutrosEnvolvidosComponent {
   private limparRascunhoPerito(): void {
     this.peritoForm.reset();
     this.resultadoRascunhoPerito.set('');
+  }
+
+  private limparRascunhoAssistenteTecnico(): void {
+    this.assistTecForm.reset();
+    this.parteRascunhoAssistTec.set('');
   }
 
   /** ISO `yyyy-MM-dd` → `dd/MM/yyyy` pra exibição no listbox. */

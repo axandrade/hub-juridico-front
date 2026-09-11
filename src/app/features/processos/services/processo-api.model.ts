@@ -78,6 +78,18 @@ export interface OutroEnvolvidoPeritoApi {
 }
 
 /**
+ * Um assistente técnico "outro envolvido" (aba "Outros envolvidos", seção "Assistente Técnico").
+ * `assistente_tecnico` e `parte_interessada` são obrigatórios (`parte_interessada` é o texto do
+ * catálogo `ParteInteressada`, mesmo de "Testemunhas"); `cpf` é opcional, só dígitos (sem CNPJ —
+ * assistente técnico é sempre pessoa física).
+ */
+export interface OutroEnvolvidoAssistenteTecnicoApi {
+  assistente_tecnico: string;
+  cpf: string | null;
+  parte_interessada: string;
+}
+
+/**
  * Um cenário de risco da aba "Objeto" (provável / possível / remoto). `valor`/`percentual` são
  * número (BRL / %) ou `null` (cenário não informado); `percentual` é snapshot de
  * `valor / valor_pedido * 100`. `provisionar` = se o escritório provisiona esse cenário.
@@ -186,6 +198,7 @@ export interface ProcessoApi {
   outros_envolvidos_magistrados: OutroEnvolvidoMagistradoApi[];
   outros_envolvidos_testemunhas: OutroEnvolvidoTestemunhaApi[];
   outros_envolvidos_peritos: OutroEnvolvidoPeritoApi[];
+  outros_envolvidos_assistentes_tecnicos: OutroEnvolvidoAssistenteTecnicoApi[];
   /** Órgão processante atual — `null` se ainda não definido. Trocar arquiva o anterior no histórico. */
   orgao_processante: OrgaoProcessanteApi | null;
   escritorios_anteriores: string[];
@@ -236,6 +249,7 @@ export interface ProcessoWriteApi {
   outros_envolvidos_magistrados: OutroEnvolvidoMagistradoWriteApi[];
   outros_envolvidos_testemunhas: OutroEnvolvidoTestemunhaApi[];
   outros_envolvidos_peritos: OutroEnvolvidoPeritoApi[];
+  outros_envolvidos_assistentes_tecnicos: OutroEnvolvidoAssistenteTecnicoApi[];
   /** Id do catálogo `orgao_julgador` (chave estrangeira) — `null` = sem órgão processante. */
   orgao_processante_id: number | null;
   escritorios_anteriores: string[];

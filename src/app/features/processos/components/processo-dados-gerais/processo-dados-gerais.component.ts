@@ -55,6 +55,7 @@ export type DadosGeraisValores = Omit<
   | 'outrosEnvolvidosMagistrados'
   | 'outrosEnvolvidosTestemunhas'
   | 'outrosEnvolvidosPeritos'
+  | 'outrosEnvolvidosAssistentesTecnicos'
   | 'objetoPrincipal'
   | 'objetosSecundarios'
   | 'observacoesObjeto'

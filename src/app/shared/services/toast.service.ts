@@ -6,6 +6,8 @@ export interface Toast {
   id: number;
   tipo: ToastTipo;
   mensagem: string;
+  /** Duração do auto-fechamento — o template usa pra animar a barrinha de contagem. */
+  duracaoMs: number;
 }
 
 const DURACAO_MS: Record<ToastTipo, number> = {
@@ -74,8 +76,8 @@ export class ToastService {
 
   private mostrar(tipo: ToastTipo, mensagem: string): void {
     const id = this.proximoId++;
-    this.toasts.update((atual) => [...atual, { id, tipo, mensagem }]);
     const duracaoMs = DURACAO_MS[tipo];
+    this.toasts.update((atual) => [...atual, { id, tipo, mensagem, duracaoMs }]);
     this.timers.set(id, {
       timeoutId: setTimeout(() => this.fechar(id), duracaoMs),
       restanteMs: duracaoMs,

@@ -1,0 +1,106 @@
+@use 'variables' as *;
+@use 'mixins' as *;
+
+.toast-container {
+  position: fixed;
+  top: calc(#{$header-height} + #{$spacing-lg});
+  right: $spacing-lg;
+  z-index: $z-toast;
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-sm;
+  max-width: 360px;
+  pointer-events: none;
+}
+
+.toast {
+  display: flex;
+  align-items: flex-start;
+  gap: $spacing-sm;
+  padding: $spacing-sm $spacing-md;
+  border: 1px solid $color-border;
+  border-left: 3px solid $color-primary;
+  border-radius: $border-radius-md;
+  background-color: $color-surface;
+  box-shadow: $shadow-lg;
+  color: $color-text-primary;
+  font-size: $font-size-base;
+  line-height: $line-height-base;
+  pointer-events: auto;
+  animation: toast-entrada $transition-normal ease-out;
+
+  &--sucesso {
+    border-left-color: $color-success;
+
+    i {
+      color: $color-success;
+    }
+  }
+
+  &--erro {
+    border-left-color: $color-error;
+
+    i {
+      color: $color-error;
+    }
+  }
+
+  &--info {
+    border-left-color: $color-primary;
+
+    i {
+      color: $color-primary;
+    }
+  }
+
+  i {
+    margin-top: 2px;
+  }
+
+  span {
+    flex: 1;
+    min-width: 0;
+  }
+}
+
+.toast__fechar {
+  flex-shrink: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: $color-text-muted;
+  cursor: pointer;
+  font-size: $font-size-lg;
+  line-height: 1;
+  transition: color $transition-fast;
+
+  &:hover {
+    color: $color-text-primary;
+  }
+}
+
+@keyframes toast-entrada {
+  from {
+    opacity: 0;
+    transform: translateX(24px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .toast {
+    animation: none;
+  }
+}
+
+@include respond-below($breakpoint-sm) {
+  .toast-container {
+    left: $spacing-lg;
+    right: $spacing-lg;
+    max-width: none;
+  }
+}

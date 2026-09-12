@@ -19,6 +19,8 @@ import { PanelLayoutSwitcherComponent } from '../../../shared/components/panel-l
 import { PAINEL_LAYOUT_PADRAO, PainelLayout } from '../../../shared/models/panel-layout';
 import { CepMaskDirective } from '../../../shared/directives/cep-mask.directive';
 import { CpfMaskDirective } from '../../../shared/directives/cpf-mask.directive';
+import { ToastService } from '../../../shared/services/toast.service';
+import { mensagensCamposInvalidos } from '../../../shared/utils/form-validacao';
 import {
   AdvogadoForm,
   createAdvogadoForm,
@@ -28,24 +30,11 @@ import {
 import { AdvogadoApi } from '../services/advogado-api.model';
 import { AdvogadoService } from '../services/advogado-service';
 
-type NoticeKey =
-  | 'idle'
-  | 'saving'
-  | 'saved'
-  | 'saveError'
-  | 'requiredFields'
-  | 'confirmInactivate'
-  | 'statusChanged'
-  | 'statusError'
-  | 'panelCleared'
-  | 'panelLockedSelection'
-  | 'favoriteAdded'
-  | 'favoriteRemoved';
-
-interface EditorNotice {
-  key: NoticeKey;
-  subject?: string;
-}
+const ROTULOS_CAMPOS: Record<string, string> = {
+  nome: 'Nome',
+  cpf: 'CPF',
+  email: 'E-mail',
+};
 
 export const ESTADO_CIVIL_LABELS: Record<string, string> = {
   SOLTEIRO: 'Solteiro(a)',
@@ -75,6 +64,7 @@ export const ESTADO_CIVIL_LABELS: Record<string, string> = {
 })
 export class AdvogadoFormComponent {
   private readonly advogadoService = inject(AdvogadoService);
+  private readonly toast = inject(ToastService);
 
   /** Id do registro a editar; `null` = novo cadastro. */
   readonly advogadoId = input<number | null>(null);
@@ -104,7 +94,8 @@ export class AdvogadoFormComponent {
   protected readonly entityId = signal(0);
   protected readonly favorite = signal(false);
   protected readonly ativo = signal(true);
-  protected readonly notice = signal<EditorNotice>({ key: 'idle' });
+  protected readonly salvando = signal(false);
+  protected readonly confirmandoInativacao = signal(false);
 
   protected readonly panelTitle = computed(() => this.nomeValue().trim());
   protected readonly isInactive = computed(() => !this.ativo());
@@ -126,21 +117,19 @@ export class AdvogadoFormComponent {
           this.advogadoService.buscarCompleto(id).subscribe((found) => {
             if (found) {
               this.loadIntoForm(found);
-              this.notice.set({ key: 'idle' });
             }
           });
           return;
         }
         this.resetToEmpty();
         this.locked.set(false);
-        this.notice.set({ key: 'idle' });
       });
     });
   }
 
   /** Chamado pela página quando o lock impede carregar outra ficha. */
   notifyLockedSelection(): void {
-    this.notice.set({ key: 'panelLockedSelection' });
+    this.toast.info('Painel travado: destrave para carregar outro advogado.');
   }
 
   protected isPersisted(): boolean {
@@ -165,10 +154,11 @@ export class AdvogadoFormComponent {
     } else {
       this.favorite.update((value) => !value);
     }
-    this.notice.set({
-      key: this.favorite() ? 'favoriteAdded' : 'favoriteRemoved',
-      subject: this.panelTitle(),
-    });
+    this.toast.sucesso(
+      this.favorite()
+        ? `${this.panelTitle()} marcado como favorito.`
+        : `${this.panelTitle()} removido dos favoritos.`,
+    );
   }
 
   protected save(event?: Event): void {
@@ -176,7 +166,8 @@ export class AdvogadoFormComponent {
 
     if (this.form.invalid) {
       this.form.markAllAsTouched();
-      this.notice.set({ key: 'requiredFields' });
+      const mensagens = mensagensCamposInvalidos(this.form, ROTULOS_CAMPOS);
+      this.toast.erro(`Preencha corretamente: ${mensagens.join('; ')}`);
       return;
     }
 
@@ -187,16 +178,18 @@ export class AdvogadoFormComponent {
       nome: editable.nome.trim().toLocaleUpperCase('pt-BR'),
     };
 
-    this.notice.set({ key: 'saving' });
+    this.salvando.set(true);
     this.advogadoService.salvar(payload).subscribe({
       next: (savedAdvogado) => {
+        this.salvando.set(false);
         this.loadIntoForm(savedAdvogado);
         this.lastLoadedKey = `id:${savedAdvogado.id}`;
-        this.notice.set({ key: 'saved', subject: savedAdvogado.nome });
+        this.toast.sucesso(`Advogado salvo: ${savedAdvogado.nome}.`);
         this.saved.emit(savedAdvogado);
       },
       error: (err: unknown) => {
-        this.notice.set({ key: 'saveError', subject: this.httpErrorMessage(err) });
+        this.salvando.set(false);
+        this.toast.erro(`Não foi possível salvar: ${this.httpErrorMessage(err)}`);
       },
     });
   }
@@ -206,10 +199,11 @@ export class AdvogadoFormComponent {
       this.applyStatusChange(true);
       return;
     }
-    this.notice.set({ key: 'confirmInactivate', subject: this.panelTitle() });
+    this.confirmandoInativacao.set(true);
   }
 
   protected confirmInactivate(): void {
+    this.confirmandoInativacao.set(false);
     this.applyStatusChange(false);
   }
 
@@ -217,11 +211,11 @@ export class AdvogadoFormComponent {
     this.advogadoService.alterarStatus(this.entityId(), ativo).subscribe({
       next: (updated) => {
         this.loadIntoForm(updated);
-        this.notice.set({ key: 'statusChanged', subject: ativo ? 'ativado' : 'inativado' });
+        this.toast.sucesso(`Advogado ${ativo ? 'ativado' : 'inativado'}.`);
         this.statusChanged.emit(updated);
       },
       error: (err: unknown) => {
-        this.notice.set({ key: 'statusError', subject: this.httpErrorMessage(err) });
+        this.toast.erro(`Não foi possível alterar o status: ${this.httpErrorMessage(err)}`);
       },
     });
   }
@@ -230,7 +224,7 @@ export class AdvogadoFormComponent {
     this.resetToEmpty();
     this.lastLoadedKey = 'new';
     this.locked.set(false);
-    this.notice.set({ key: 'panelCleared' });
+    this.toast.info('Painel limpo.');
     this.cleared.emit();
   }
 

@@ -120,40 +120,8 @@
 
     <footer class="advogado-panel__footer">
       <span>
-        @switch (notice().key) {
-          @case ('saving') {
-            Salvando...
-          }
-          @case ('saved') {
-            Advogado salvo: {{ notice().subject }}.
-          }
-          @case ('saveError') {
-            Não foi possível salvar: {{ notice().subject }}
-          }
-          @case ('requiredFields') {
-            Informe ao menos o nome (e um e-mail/CPF válidos, se preenchidos).
-          }
-          @case ('confirmInactivate') {
-            Confirme para inativar {{ notice().subject }}.
-          }
-          @case ('statusChanged') {
-            Advogado {{ notice().subject }}.
-          }
-          @case ('statusError') {
-            Não foi possível alterar o status: {{ notice().subject }}
-          }
-          @case ('panelCleared') {
-            Painel limpo.
-          }
-          @case ('panelLockedSelection') {
-            Painel travado: destrave para carregar outro advogado.
-          }
-          @case ('favoriteAdded') {
-            {{ notice().subject }} marcado como favorito.
-          }
-          @case ('favoriteRemoved') {
-            {{ notice().subject }} removido dos favoritos.
-          }
+        @if (confirmandoInativacao()) {
+          Confirme para inativar {{ panelTitle() }}.
         }
       </span>
       <div>
@@ -173,7 +141,7 @@
             (clicked)="requestStatusChange()"
           />
         }
-        @if (notice().key === 'confirmInactivate') {
+        @if (confirmandoInativacao()) {
           <app-button
             variant="secondary"
             size="sm"
@@ -187,7 +155,8 @@
           variant="primary"
           size="sm"
           icon="fa-solid fa-floppy-disk"
-          label="Salvar"
+          [label]="salvando() ? 'Salvando...' : 'Salvar'"
+          [disabled]="salvando()"
         />
       </div>
     </footer>

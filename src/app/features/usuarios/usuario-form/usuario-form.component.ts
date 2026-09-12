@@ -19,10 +19,19 @@ import {
 } from '../../../core/auth/password-policy';
 import { ButtonComponent } from '../../../shared/components/button/button.component';
 import { CpfMaskDirective } from '../../../shared/directives/cpf-mask.directive';
+import { ToastService } from '../../../shared/services/toast.service';
+import { mensagensCamposInvalidos } from '../../../shared/utils/form-validacao';
 import { UserRole, USER_ROLE_LABEL, UsuarioApi } from '../services/usuario-api.model';
 import { UsuarioService } from '../services/usuario-service';
 
-type NoticeKey = 'idle' | 'saving' | 'saveError' | 'requiredFields' | 'statusError' | 'senhaOk' | 'senhaError';
+const ROTULOS_CAMPOS: Record<string, string> = {
+  cpf: 'CPF',
+  name: 'Nome',
+  email: 'E-mail',
+  role: 'Papel',
+  senha: 'Senha inicial',
+  confirmarSenha: 'Confirmar senha',
+};
 
 /**
  * Formulário de cadastro/edição de usuário — vive dentro do `app-modal` da tela de Usuários.
@@ -38,6 +47,7 @@ type NoticeKey = 'idle' | 'saving' | 'saveError' | 'requiredFields' | 'statusErr
 })
 export class UsuarioFormComponent {
   private readonly usuarioService = inject(UsuarioService);
+  private readonly toast = inject(ToastService);
 
   readonly usuarioId = input<number | null>(null);
   /** Id do admin logado — trava a auto-inativação na UI (o back também barra). */
@@ -52,8 +62,7 @@ export class UsuarioFormComponent {
   protected readonly roleLabel = USER_ROLE_LABEL;
 
   protected readonly carregado = signal<UsuarioApi | null>(null);
-  protected readonly notice = signal<NoticeKey>('idle');
-  protected readonly noticeMsg = signal('');
+  protected readonly salvando = signal(false);
   protected readonly confirmandoInativacao = signal(false);
   protected readonly resetAberto = signal(false);
 
@@ -90,7 +99,6 @@ export class UsuarioFormComponent {
     effect(() => {
       const id = this.usuarioId();
       untracked(() => {
-        this.notice.set('idle');
         this.confirmandoInativacao.set(false);
         this.resetAberto.set(false);
         this.resetForm.reset();
@@ -143,11 +151,12 @@ export class UsuarioFormComponent {
   protected salvar(): void {
     if (this.form.invalid) {
       this.form.markAllAsTouched();
-      this.notice.set('requiredFields');
+      const mensagens = mensagensCamposInvalidos(this.form, ROTULOS_CAMPOS);
+      this.toast.erro(`Preencha corretamente: ${mensagens.join('; ')}`);
       return;
     }
     const raw = this.form.getRawValue();
-    this.notice.set('saving');
+    this.salvando.set(true);
 
     const id = this.usuarioId();
     const req$ =
@@ -166,10 +175,13 @@ export class UsuarioFormComponent {
           });
 
     req$.subscribe({
-      next: (u) => this.salvo.emit(u),
+      next: (u) => {
+        this.salvando.set(false);
+        this.salvo.emit(u);
+      },
       error: (err: unknown) => {
-        this.notice.set('saveError');
-        this.noticeMsg.set(this.httpErro(err));
+        this.salvando.set(false);
+        this.toast.erro(this.httpErro(err));
       },
     });
   }
@@ -190,8 +202,7 @@ export class UsuarioFormComponent {
         this.statusAlterado.emit(u);
       },
       error: (err: unknown) => {
-        this.notice.set('statusError');
-        this.noticeMsg.set(this.httpErro(err));
+        this.toast.erro(this.httpErro(err));
       },
     });
   }
@@ -204,14 +215,12 @@ export class UsuarioFormComponent {
     }
     this.usuarioService.redefinirSenha(id, this.resetForm.getRawValue().senha).subscribe({
       next: () => {
-        this.notice.set('senhaOk');
-        this.noticeMsg.set('Senha redefinida. O usuário deve trocá-la no próximo login.');
+        this.toast.sucesso('Senha redefinida. O usuário deve trocá-la no próximo login.');
         this.resetAberto.set(false);
         this.resetForm.reset();
       },
       error: (err: unknown) => {
-        this.notice.set('senhaError');
-        this.noticeMsg.set(this.httpErro(err));
+        this.toast.erro(this.httpErro(err));
       },
     });
   }

@@ -15,6 +15,7 @@ import { maskNumeroCnj, numeroCnjCompleto } from '../../../../core/auth/document
 import { ComboboxComponent } from '../../../../shared/components/combobox/combobox.component';
 import { CnjMaskDirective } from '../../../../shared/directives/cnj-mask.directive';
 import { DocumentoMaskDirective } from '../../../../shared/directives/documento-mask.directive';
+import { mensagensCamposInvalidos } from '../../../../shared/utils/form-validacao';
 import {
   ObservacaoProcessoApi,
   OrgaoProcessanteApi,
@@ -41,8 +42,12 @@ import {
 
 const TIPOS_PROCESSO: TipoProcesso[] = ['JUDICIAL', 'ADMINISTRATIVO', 'ARBITRAL'];
 
-/** Resultado da validação da aba — o shell mapeia pro `notice` do rodapé. */
-export type DadosGeraisValidacao = 'ok' | 'requiredFields' | 'cnjInvalido';
+const ROTULOS_CAMPOS: Record<string, string> = {
+  contrarioPrincipalDocumento: 'CPF/CNPJ da parte contrária',
+};
+
+/** Resultado da validação da aba — o shell mostra `mensagem` no toast quando `ok` é `false`. */
+export type DadosGeraisValidacao = { ok: true } | { ok: false; mensagem: string };
 
 /**
  * Campos desta aba — o shell junta com `id` e com o que vem da aba "Outros envolvidos"
@@ -338,17 +343,21 @@ export class ProcessoDadosGeraisComponent {
     this.mostrarHistoricoTribunais.set(false);
   }
 
-  /** Valida antes de salvar; marca os campos e devolve o motivo pro shell. */
+  /** Valida antes de salvar; marca os campos e devolve o motivo pro shell mostrar no toast. */
   validar(): DadosGeraisValidacao {
     if (this.form.invalid) {
       this.form.markAllAsTouched();
-      return 'requiredFields';
+      const mensagens = mensagensCamposInvalidos(this.form, ROTULOS_CAMPOS);
+      return { ok: false, mensagem: `Preencha corretamente: ${mensagens.join('; ')}` };
     }
     if (this.ehJudicial() && !numeroCnjCompleto(this.form.controls.numeroCnj.value)) {
       this.form.controls.numeroCnj.markAsTouched();
-      return 'cnjInvalido';
+      return {
+        ok: false,
+        mensagem: 'Informe o número CNJ completo (0000000-00.0000.0.00.0000).',
+      };
     }
-    return 'ok';
+    return { ok: true };
   }
 
   /** Junta FormGroup + signals no payload de escrita (sem o `id`, que é do shell). */

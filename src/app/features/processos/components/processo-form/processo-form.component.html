@@ -71,43 +71,8 @@
 
     <footer class="processo-panel__footer">
       <span>
-        @switch (notice().key) {
-          @case ('saving') {
-            Salvando...
-          }
-          @case ('saved') {
-            Processo salvo: {{ notice().subject }}.
-          }
-          @case ('saveError') {
-            Não foi possível salvar: {{ notice().subject }}
-          }
-          @case ('requiredFields') {
-            Revise os campos destacados.
-          }
-          @case ('cnjInvalido') {
-            Informe o número CNJ completo (0000000-00.0000.0.00.0000).
-          }
-          @case ('confirmInactivate') {
-            Confirme para inativar {{ notice().subject }}.
-          }
-          @case ('statusChanged') {
-            Processo {{ notice().subject }}.
-          }
-          @case ('statusError') {
-            Não foi possível alterar o status: {{ notice().subject }}
-          }
-          @case ('panelCleared') {
-            Painel limpo.
-          }
-          @case ('panelLockedSelection') {
-            Painel travado: destrave para carregar outro processo.
-          }
-          @case ('favoriteAdded') {
-            {{ notice().subject }} marcado como favorito.
-          }
-          @case ('favoriteRemoved') {
-            {{ notice().subject }} removido dos favoritos.
-          }
+        @if (confirmandoInativacao()) {
+          Confirme para inativar {{ panelTitle() }}.
         }
       </span>
       <div>
@@ -127,7 +92,7 @@
             (clicked)="requestStatusChange()"
           />
         }
-        @if (notice().key === 'confirmInactivate') {
+        @if (confirmandoInativacao()) {
           <app-button
             variant="secondary"
             size="sm"
@@ -140,7 +105,8 @@
           variant="primary"
           size="sm"
           icon="fa-solid fa-floppy-disk"
-          label="Salvar"
+          [label]="salvando() ? 'Salvando...' : 'Salvar'"
+          [disabled]="salvando()"
           (clicked)="save()"
         />
       </div>

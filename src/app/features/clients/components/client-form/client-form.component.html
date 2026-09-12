@@ -141,59 +141,8 @@
           @case ('selectOrCreate') {
             Selecione um cliente na tabela ou cadastre um novo.
           }
-          @case ('panelLockedSelection') {
-            Painel travado: destrave para carregar outro cliente.
-          }
-          @case ('saving') {
-            Salvando...
-          }
-          @case ('saved') {
-            Cliente salvo: {{ notice().subject }}.
-          }
-          @case ('saveError') {
-            Não foi possível salvar: {{ notice().subject }}
-          }
-          @case ('statusError') {
-            Não foi possível alterar o status: {{ notice().subject }}
-          }
           @case ('confirmInactivate') {
             Confirme para inativar {{ notice().subject }}.
-          }
-          @case ('statusChanged') {
-            Cliente {{ notice().subject }}.
-          }
-          @case ('panelCleared') {
-            Painel limpo.
-          }
-          @case ('saveBeforeUpload') {
-            Salve o cliente antes de anexar arquivos.
-          }
-          @case ('uploadError') {
-            Não foi possível enviar: {{ notice().subject }}
-          }
-          @case ('fileRemoved') {
-            Arquivo removido: {{ notice().subject }}.
-          }
-          @case ('removeError') {
-            Não foi possível remover: {{ notice().subject }}
-          }
-          @case ('downloadError') {
-            Não foi possível baixar: {{ notice().subject }}
-          }
-          @case ('viewError') {
-            Não foi possível abrir: {{ notice().subject }}
-          }
-          @case ('naturalNameRequired') {
-            Informe nome e CPF da pessoa física.
-          }
-          @case ('legalNameRequired') {
-            Informe razão social e CNPJ da pessoa jurídica.
-          }
-          @case ('favoriteAdded') {
-            {{ notice().subject }} marcado como favorito.
-          }
-          @case ('favoriteRemoved') {
-            {{ notice().subject }} removido dos favoritos.
           }
         }
       </span>
@@ -228,7 +177,8 @@
           variant="primary"
           size="sm"
           icon="fa-solid fa-floppy-disk"
-          label="Salvar"
+          [label]="salvando() ? 'Salvando...' : 'Salvar'"
+          [disabled]="salvando()"
         />
       </div>
     </footer>

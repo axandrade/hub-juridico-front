@@ -139,32 +139,14 @@
     </div>
   }
 
-  @switch (notice()) {
-    @case ('requiredFields') {
-      <p class="usuario-form__msg is-erro">Revise os campos destacados.</p>
-    }
-    @case ('saveError') {
-      <p class="usuario-form__msg is-erro">{{ noticeMsg() }}</p>
-    }
-    @case ('statusError') {
-      <p class="usuario-form__msg is-erro">{{ noticeMsg() }}</p>
-    }
-    @case ('senhaError') {
-      <p class="usuario-form__msg is-erro">{{ noticeMsg() }}</p>
-    }
-    @case ('senhaOk') {
-      <p class="usuario-form__msg is-ok">{{ noticeMsg() }}</p>
-    }
-  }
-
   <div class="usuario-form__acoes">
     <app-button variant="tertiary" size="sm" label="Cancelar" (clicked)="cancelar()" />
     <app-button
       variant="primary"
       size="sm"
       icon="fa-solid fa-floppy-disk"
-      [label]="notice() === 'saving' ? 'Salvando...' : 'Salvar'"
-      [disabled]="notice() === 'saving'"
+      [label]="salvando() ? 'Salvando...' : 'Salvar'"
+      [disabled]="salvando()"
       (clicked)="salvar()"
     />
   </div>

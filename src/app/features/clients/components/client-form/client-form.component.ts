@@ -22,13 +22,19 @@ import {
 } from '../../../../core/models';
 import { AuthService } from '../../../../core/services/auth.service';
 import { ButtonComponent } from '../../../../shared/components/button/button.component';
+import { ToastService } from '../../../../shared/services/toast.service';
+import { mensagensCamposInvalidos } from '../../../../shared/utils/form-validacao';
 import {
   ClientForm,
   createClientForm,
   patchClientForm,
   readClientForm,
 } from '../../forms/client-form.factory';
-import { PESSOA_FISICA_FIELDS, PESSOA_JURIDICA_FIELDS } from '../../models/client-form.model';
+import {
+  CLIENT_FIELD_LABELS,
+  PESSOA_FISICA_FIELDS,
+  PESSOA_JURIDICA_FIELDS,
+} from '../../models/client-form.model';
 import { StatusVinculoApi } from '../../services/client-api.model';
 import { ClientService } from '../../services/client-service';
 import { ClientAddressComponent } from '../client-address/client-address.component';
@@ -42,28 +48,11 @@ import { PAINEL_LAYOUT_PADRAO, PainelLayout } from '../../../../shared/models/pa
 
 type PanelTab = 'person' | 'admin' | 'records';
 
-type NoticeKey =
-  | 'selectOrCreate'
-  | 'panelLockedSelection'
-  | 'idle'
-  | 'saved'
-  | 'confirmInactivate'
-  | 'statusChanged'
-  | 'panelCleared'
-  | 'saveBeforeUpload'
-  | 'uploadOk'
-  | 'uploadError'
-  | 'fileRemoved'
-  | 'removeError'
-  | 'downloadError'
-  | 'viewError'
-  | 'naturalNameRequired'
-  | 'legalNameRequired'
-  | 'favoriteAdded'
-  | 'favoriteRemoved'
-  | 'saving'
-  | 'saveError'
-  | 'statusError';
+/**
+ * `selectOrCreate` (placeholder de painel vazio) e `confirmInactivate` (exige o botão Confirmar
+ * ao lado) continuam no rodapé do painel — o resto das notificações agora é `ToastService`.
+ */
+type NoticeKey = 'selectOrCreate' | 'idle' | 'confirmInactivate';
 
 interface EditorNotice {
   key: NoticeKey;
@@ -96,6 +85,7 @@ interface EditorNotice {
 export class ClientFormComponent {
   private readonly clientService = inject(ClientService);
   private readonly auth = inject(AuthService);
+  private readonly toast = inject(ToastService);
 
   /** Nome do usuário logado — preenche "Cadastrado por" (campo do sistema). */
   private usuarioLogado(): string {
@@ -134,6 +124,7 @@ export class ClientFormComponent {
   private readonly loadedProgress = signal('');
   protected readonly activePanelTab = signal<PanelTab>('person');
   protected readonly notice = signal<EditorNotice>({ key: 'selectOrCreate' });
+  protected readonly salvando = signal(false);
 
   protected readonly panelTabs: readonly PanelTab[] = ['person', 'admin', 'records'];
 
@@ -195,7 +186,7 @@ export class ClientFormComponent {
 
   /** Chamado pela página quando o lock impede carregar outra ficha. */
   notifyLockedSelection(): void {
-    this.notice.set({ key: 'panelLockedSelection' });
+    this.toast.info('Painel travado: destrave para carregar outro cliente.');
   }
 
   protected setPanelTab(tab: PanelTab): void {
@@ -213,10 +204,11 @@ export class ClientFormComponent {
     } else {
       this.favorite.update((value) => !value);
     }
-    this.notice.set({
-      key: this.favorite() ? 'favoriteAdded' : 'favoriteRemoved',
-      subject: this.panelTitle(),
-    });
+    this.toast.sucesso(
+      this.favorite()
+        ? `${this.panelTitle()} marcado como favorito.`
+        : `${this.panelTitle()} removido dos favoritos.`,
+    );
   }
 
   protected save(event?: Event): void {
@@ -224,26 +216,27 @@ export class ClientFormComponent {
 
     if (this.form.invalid) {
       this.form.markAllAsTouched();
-      this.notice.set({
-        key: this.tipoPessoaAtual() === 'JURIDICA' ? 'legalNameRequired' : 'naturalNameRequired',
-      });
+      const mensagens = mensagensCamposInvalidos(this.form.controls.pessoa, CLIENT_FIELD_LABELS);
+      this.toast.erro(`Preencha corretamente: ${mensagens.join('; ')}`);
       this.activePanelTab.set('person');
       return;
     }
 
     const prepared = this.prepareClientForSave(this.assembleClient());
-    this.notice.set({ key: 'saving' });
+    this.salvando.set(true);
     this.clientService.salvar(prepared).subscribe({
       next: (savedClient) => {
+        this.salvando.set(false);
         this.tipoNovoEscolhido.set(null);
         this.loadIntoForm(savedClient);
         this.lastLoadedKey = `id:${savedClient.id}`;
         this.activePanelTab.set('person');
-        this.notice.set({ key: 'saved', subject: this.clientDisplayName(savedClient) });
+        this.toast.sucesso(`Cliente salvo: ${this.clientDisplayName(savedClient)}.`);
         this.saved.emit(savedClient);
       },
       error: (err: unknown) => {
-        this.notice.set({ key: 'saveError', subject: this.httpErrorMessage(err) });
+        this.salvando.set(false);
+        this.toast.erro(`Não foi possível salvar: ${this.httpErrorMessage(err)}`);
       },
     });
   }
@@ -270,14 +263,11 @@ export class ClientFormComponent {
     this.clientService.alterarStatus(id, status).subscribe({
       next: (updated) => {
         this.loadIntoForm(updated);
-        this.notice.set({
-          key: 'statusChanged',
-          subject: status === 'ATIVO' ? 'ativado' : 'inativado',
-        });
+        this.toast.sucesso(`Cliente ${status === 'ATIVO' ? 'ativado' : 'inativado'}.`);
         this.statusChanged.emit(updated);
       },
       error: (err: unknown) => {
-        this.notice.set({ key: 'statusError', subject: this.httpErrorMessage(err) });
+        this.toast.erro(`Não foi possível alterar o status: ${this.httpErrorMessage(err)}`);
       },
     });
   }
@@ -288,7 +278,7 @@ export class ClientFormComponent {
     this.lastLoadedKey = `new:${this.novoTipo()}`;
     this.locked.set(false);
     this.activePanelTab.set('person');
-    this.notice.set({ key: 'panelCleared' });
+    this.toast.info('Painel limpo.');
     this.cleared.emit();
   }
 

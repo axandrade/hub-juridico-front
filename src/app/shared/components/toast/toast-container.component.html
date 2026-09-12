@@ -1,0 +1,27 @@
+<div class="toast-container" aria-live="polite">
+  @for (toast of toastService.toasts(); track toast.id) {
+    <div
+      class="toast"
+      [class]="'toast--' + toast.tipo"
+      (mouseenter)="toastService.pausar(toast.id)"
+      (mouseleave)="toastService.retomar(toast.id)"
+    >
+      <i
+        class="fa-solid"
+        [class.fa-circle-check]="toast.tipo === 'sucesso'"
+        [class.fa-circle-exclamation]="toast.tipo === 'erro'"
+        [class.fa-circle-info]="toast.tipo === 'info'"
+        aria-hidden="true"
+      ></i>
+      <span>{{ toast.mensagem }}</span>
+      <button
+        type="button"
+        class="toast__fechar"
+        aria-label="Fechar aviso"
+        (click)="toastService.fechar(toast.id)"
+      >
+        &times;
+      </button>
+    </div>
+  }
+</div>

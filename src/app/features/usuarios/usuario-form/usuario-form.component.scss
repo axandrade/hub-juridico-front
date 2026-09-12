@@ -94,19 +94,6 @@
   font-size: $font-size-xs;
 }
 
-.usuario-form__msg {
-  margin: 0;
-  font-size: $font-size-xs;
-
-  &.is-erro {
-    color: $color-error;
-  }
-
-  &.is-ok {
-    color: $color-success;
-  }
-}
-
 .usuario-form__acoes {
   display: flex;
   justify-content: flex-end;

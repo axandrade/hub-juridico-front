@@ -14,34 +14,15 @@ import {
 import { ButtonComponent } from '../../../../shared/components/button/button.component';
 import { PanelLayoutSwitcherComponent } from '../../../../shared/components/panel-layout-switcher/panel-layout-switcher.component';
 import { PAINEL_LAYOUT_PADRAO, PainelLayout } from '../../../../shared/models/panel-layout';
+import { ToastService } from '../../../../shared/services/toast.service';
 import { ProcessoApi } from '../../services/processo-api.model';
 import { ProcessoService } from '../../services/processo-service';
 import { ProcessoObjetoComponent } from '../processo-objeto/processo-objeto.component';
 import { ProcessoOutrosEnvolvidosComponent } from '../processo-outros-envolvidos/processo-outros-envolvidos.component';
 import { ProcessoDadosGeraisComponent } from '../processo-dados-gerais/processo-dados-gerais.component';
 
-type NoticeKey =
-  | 'idle'
-  | 'saving'
-  | 'saved'
-  | 'saveError'
-  | 'requiredFields'
-  | 'cnjInvalido'
-  | 'confirmInactivate'
-  | 'statusChanged'
-  | 'statusError'
-  | 'panelCleared'
-  | 'panelLockedSelection'
-  | 'favoriteAdded'
-  | 'favoriteRemoved';
-
 /** Abas do painel de processo. */
 type ProcessoAba = 'gerais' | 'outrosEnvolvidos' | 'objeto';
-
-interface EditorNotice {
-  key: NoticeKey;
-  subject?: string;
-}
 
 /**
  * Shell do painel de cadastro/edição de processo: header (favorito/lock/layout), abas, rodapé
@@ -64,6 +45,7 @@ interface EditorNotice {
 })
 export class ProcessoFormComponent {
   private readonly processoService = inject(ProcessoService);
+  private readonly toast = inject(ToastService);
 
   /** Id do registro a editar; `null` = novo cadastro. */
   readonly processoId = input<number | null>(null);
@@ -89,7 +71,8 @@ export class ProcessoFormComponent {
   protected readonly favorite = signal(false);
   protected readonly ativo = signal(true);
   protected readonly pasta = signal('');
-  protected readonly notice = signal<EditorNotice>({ key: 'idle' });
+  protected readonly salvando = signal(false);
+  protected readonly confirmandoInativacao = signal(false);
 
   /** Título do painel: número (da aba) ou a pasta como fallback. */
   protected readonly panelTitle = () => this.dadosGerais()?.numeroValue().trim() || this.pasta();
@@ -115,20 +98,18 @@ export class ProcessoFormComponent {
           this.processoService.buscarCompleto(id).subscribe((found) => {
             if (found) {
               this.aplicarProcesso(found);
-              this.notice.set({ key: 'idle' });
             }
           });
           return;
         }
         this.limparPainel();
         this.locked.set(false);
-        this.notice.set({ key: 'idle' });
       });
     });
   }
 
   notifyLockedSelection(): void {
-    this.notice.set({ key: 'panelLockedSelection' });
+    this.toast.info('Painel travado: destrave para carregar outro processo.');
   }
 
   protected isPersisted(): boolean {
@@ -152,7 +133,7 @@ export class ProcessoFormComponent {
   }
 
   protected notificarErro(mensagem: string): void {
-    this.notice.set({ key: 'saveError', subject: mensagem });
+    this.toast.erro(mensagem);
   }
 
   protected toggleFavorite(): void {
@@ -165,10 +146,11 @@ export class ProcessoFormComponent {
     } else {
       this.favorite.update((value) => !value);
     }
-    this.notice.set({
-      key: this.favorite() ? 'favoriteAdded' : 'favoriteRemoved',
-      subject: this.panelTitle(),
-    });
+    this.toast.sucesso(
+      this.favorite()
+        ? `${this.panelTitle()} marcado como favorito.`
+        : `${this.panelTitle()} removido dos favoritos.`,
+    );
   }
 
   protected save(): void {
@@ -179,23 +161,25 @@ export class ProcessoFormComponent {
       return;
     }
     const validacao = gerais.validar();
-    if (validacao !== 'ok') {
-      this.notice.set({ key: validacao });
+    if (!validacao.ok) {
+      this.toast.erro(validacao.mensagem);
       return;
     }
 
-    this.notice.set({ key: 'saving' });
+    this.salvando.set(true);
     this.processoService
       .salvar({ id: this.entityId(), ...gerais.coletar(), ...outros.coletar(), ...objeto.coletar() })
       .subscribe({
         next: (salvo) => {
+          this.salvando.set(false);
           this.aplicarProcesso(salvo);
           this.lastLoadedKey = `id:${salvo.id}`;
-          this.notice.set({ key: 'saved', subject: this.rotuloDe(salvo) });
+          this.toast.sucesso(`Processo salvo: ${this.rotuloDe(salvo)}.`);
           this.saved.emit(salvo);
         },
         error: (err: unknown) => {
-          this.notice.set({ key: 'saveError', subject: this.mensagemErroHttp(err) });
+          this.salvando.set(false);
+          this.toast.erro(`Não foi possível salvar: ${this.mensagemErroHttp(err)}`);
         },
       });
   }
@@ -205,10 +189,11 @@ export class ProcessoFormComponent {
       this.applyStatusChange(true);
       return;
     }
-    this.notice.set({ key: 'confirmInactivate', subject: this.panelTitle() });
+    this.confirmandoInativacao.set(true);
   }
 
   protected confirmInactivate(): void {
+    this.confirmandoInativacao.set(false);
     this.applyStatusChange(false);
   }
 
@@ -216,11 +201,11 @@ export class ProcessoFormComponent {
     this.processoService.alterarStatus(this.entityId(), ativo).subscribe({
       next: (updated) => {
         this.aplicarProcesso(updated);
-        this.notice.set({ key: 'statusChanged', subject: ativo ? 'ativado' : 'inativado' });
+        this.toast.sucesso(`Processo ${ativo ? 'ativado' : 'inativado'}.`);
         this.statusChanged.emit(updated);
       },
       error: (err: unknown) => {
-        this.notice.set({ key: 'statusError', subject: this.mensagemErroHttp(err) });
+        this.toast.erro(`Não foi possível alterar o status: ${this.mensagemErroHttp(err)}`);
       },
     });
   }
@@ -229,7 +214,7 @@ export class ProcessoFormComponent {
     this.limparPainel();
     this.lastLoadedKey = 'new';
     this.locked.set(false);
-    this.notice.set({ key: 'panelCleared' });
+    this.toast.info('Painel limpo.');
     this.cleared.emit();
   }
 

@@ -180,6 +180,36 @@ export class ProcessoOutrosEnvolvidosComponent {
   /** Índice selecionado no listbox de assistentes técnicos (`-1` = nenhum). */
   protected readonly assistTecSelecionado = signal(-1);
 
+  // ===================== Visibilidade das seções =====================
+  // Preferência do usuário, não dado do processo — cada seção começa fechada e só abre/fecha no
+  // clique do próprio usuário; `carregar`/`limpar` não mexem aqui, então persiste entre saves e
+  // ao trocar de processo (mesmo padrão dos históricos de observações/tribunais).
+  protected readonly mostrarAdvogados = signal(false);
+  protected readonly mostrarMagistrados = signal(false);
+  protected readonly mostrarTestemunhas = signal(false);
+  protected readonly mostrarPeritos = signal(false);
+  protected readonly mostrarAssistentesTecnicos = signal(false);
+
+  protected toggleAdvogados(): void {
+    this.mostrarAdvogados.update((v) => !v);
+  }
+
+  protected toggleMagistrados(): void {
+    this.mostrarMagistrados.update((v) => !v);
+  }
+
+  protected toggleTestemunhas(): void {
+    this.mostrarTestemunhas.update((v) => !v);
+  }
+
+  protected togglePeritos(): void {
+    this.mostrarPeritos.update((v) => !v);
+  }
+
+  protected toggleAssistentesTecnicos(): void {
+    this.mostrarAssistentesTecnicos.update((v) => !v);
+  }
+
   constructor() {
     this.posicaoService.carregar();
     this.resultadoService.carregar();

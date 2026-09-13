@@ -32,6 +32,30 @@
   letter-spacing: 0.02em;
 }
 
+// O título de cada seção É o botão de abrir/fechar (sem link "Visualizar X" separado) — reseta
+// só o que o navegador aplica de padrão a um <button>, mantendo a fonte/cor/uppercase acima.
+button.processo-form__group-title--toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: $spacing-xs;
+  align-self: flex-start;
+  width: 100%;
+  border: 0;
+  background: none;
+  padding: 0;
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+
+  i {
+    font-size: 10px;
+  }
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
 .processo-form__row {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

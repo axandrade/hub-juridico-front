@@ -261,6 +261,39 @@
   }
 }
 
+// Tooltip customizado da linha (rowTitle): `position: fixed` em coordenadas de
+// viewport, calculadas no mouseenter — evita o corte que um `position: absolute`
+// sofreria por causa do `overflow` do `.table-wrap`.
+.data-table__tooltip {
+  position: fixed;
+  z-index: $z-toast;
+  max-width: 320px;
+  padding: $spacing-sm $spacing-md;
+  border: 1px solid $color-border;
+  border-radius: $border-radius-md;
+  background-color: $color-surface;
+  box-shadow: $shadow-lg;
+  pointer-events: none;
+}
+
+.data-table__tooltip-label {
+  display: block;
+  margin-bottom: 2px;
+  color: $color-primary;
+  font-family: $font-family-heading;
+  font-size: $font-size-lg;
+  font-weight: $font-weight-bold;
+}
+
+.data-table__tooltip-text {
+  margin: 0;
+  color: $color-text-primary;
+  font-size: $font-size-base;
+  line-height: $line-height-base;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
 .data-table-pagination {
   // Fixa o paginador no rodapé do container que rola (mesmo padrão do `thead th` sticky),
   // senão ele fica preso no fim da área rolável e some atrás do rodapé do pai.

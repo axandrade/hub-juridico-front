@@ -90,8 +90,9 @@
         @for (row of rows(); track trackRow($index, row)) {
           <tr
             [class]="rowClass() ? rowClass()!(row) : null"
-            [attr.title]="rowTitle() ? rowTitle()!(row) : null"
             (click)="rowClick.emit(row)"
+            (mouseenter)="onRowMouseEnter($event, row)"
+            (mouseleave)="onRowMouseLeave()"
           >
             @if (pinAction(); as pin) {
               <td class="data-table__pin">
@@ -156,5 +157,12 @@
       Próxima
       <i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
     </button>
+  </div>
+}
+
+@if (hoveredTooltip(); as tooltip) {
+  <div class="data-table__tooltip" [style.top.px]="tooltip.top + 6" [style.left.px]="tooltip.left">
+    <span class="data-table__tooltip-label">Observação</span>
+    <p class="data-table__tooltip-text">{{ tooltip.text }}</p>
   </div>
 }

@@ -61,7 +61,7 @@ export class DataTableComponent<T extends object> {
   readonly pinFirst = input<((row: T) => boolean) | null>(null);
   /** Classes extras por linha (ex.: `is-selected`, `is-inactive`). */
   readonly rowClass = input<((row: T) => Record<string, boolean>) | null>(null);
-  /** `title` nativo da linha (tooltip no hover); `null`/vazio = sem tooltip nessa linha. */
+  /** Tooltip customizado no hover da linha; `null`/vazio = sem tooltip nessa linha. */
   readonly rowTitle = input<((row: T) => string | null) | null>(null);
   /** Coluna de ação fixa (ex.: favoritar) desenhada pela própria tabela. */
   readonly pinAction = input<TablePinAction<T> | null>(null);
@@ -78,6 +78,8 @@ export class DataTableComponent<T extends object> {
 
   private readonly sortOverride = signal<TableSort | null>(null);
   private readonly visibleKeysOverride = signal<Set<string> | null>(null);
+  /** Tooltip customizado atualmente exibido (linha sob o mouse), com posição em coordenadas de viewport. */
+  protected readonly hoveredTooltip = signal<{ text: string; top: number; left: number } | null>(null);
   /** Público: o pai pode ler/fechar o menu quando desenha o próprio botão (`columnsToolbar=false`). */
   readonly columnsMenuOpen = signal(false);
 
@@ -228,6 +230,20 @@ export class DataTableComponent<T extends object> {
 
   protected badgeTone(row: T, column: TableColumn<T>): 'primary' | 'success' | 'warning' | 'danger' | 'neutral' {
     return column.badgeTone?.(this.cellValue(row, column), row) ?? 'primary';
+  }
+
+  protected onRowMouseEnter(event: MouseEvent, row: T): void {
+    const text = this.rowTitle()?.(row);
+    if (!text) {
+      this.hoveredTooltip.set(null);
+      return;
+    }
+    const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
+    this.hoveredTooltip.set({ text, top: rect.bottom, left: rect.left });
+  }
+
+  protected onRowMouseLeave(): void {
+    this.hoveredTooltip.set(null);
   }
 
   protected trackRow = (index: number, row: T): unknown => {

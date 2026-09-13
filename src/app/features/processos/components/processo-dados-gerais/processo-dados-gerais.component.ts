@@ -692,11 +692,21 @@ export class ProcessoDadosGeraisComponent {
 
   // --- "Órgão processante" atual: cascata Tribunal → Órgão (ver signals/computed acima) ---
 
-  /** Troca de tribunal invalida o órgão escolhido antes (lista de opções muda). */
+  /**
+   * Troca de tribunal invalida o órgão escolhido antes (lista de opções muda). Quando o tribunal
+   * tem um único órgão (caso comum: CCBC, INSS, STF, STJ, TST…), escolhe-o automaticamente — sem
+   * isso, escolher só o tribunal não definia nada e o "Salvar" gravava órgão processante vazio.
+   */
   protected onTribunalAtualChange(nome: string): void {
     this.tribunalAtual.set(nome);
-    this.orgaoAtual.set('');
-    this.orgaoProcessanteId.set(null);
+    const orgaos = this.orgaosDoTribunalAtual();
+    if (orgaos.length === 1) {
+      this.orgaoAtual.set(orgaos[0].descricao);
+      this.orgaoProcessanteId.set(orgaos[0].id);
+    } else {
+      this.orgaoAtual.set('');
+      this.orgaoProcessanteId.set(null);
+    }
   }
 
   protected criarTribunalProcessante(nome: string): void {

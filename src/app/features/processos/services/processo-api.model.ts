@@ -41,15 +41,21 @@ export interface OutroEnvolvidoAdvogadoApi {
  * `ResultadoDecisao`; `orgao` já vem resolvido (id + "TRIBUNAL - descrição"), `null` = sem órgão.
  */
 export interface OutroEnvolvidoMagistradoApi {
-  magistrado: string;
+  magistrado: MagistradoAtualApi | null;
   resultado: string | null;
   orgao: OrgaoProcessanteApi | null;
   data: string;
 }
 
-/** Corpo de um magistrado no `PUT`/`POST` — `orgao_id` é chave estrangeira (`orgao_julgador`). */
+/** Item do catálogo `magistrados` já resolvido (id + nome) — devolvido dentro da ficha do processo. */
+export interface MagistradoAtualApi {
+  id: number;
+  nome: string;
+}
+
+/** Corpo de um magistrado no `PUT`/`POST` — `magistrado_id`/`orgao_id` são chave estrangeira. */
 export interface OutroEnvolvidoMagistradoWriteApi {
-  magistrado: string;
+  magistrado_id: number;
   resultado: string | null;
   orgao_id: number | null;
   data: string;

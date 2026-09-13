@@ -107,11 +107,22 @@
   </button>
 
   @if (mostrarMagistrados()) {
-  <div class="processo-form__row" [formGroup]="magForm">
-    <label class="processo-field">
+  <div class="processo-form__row">
+    <div class="processo-field">
       <span>Magistrado</span>
-      <input type="text" formControlName="magistrado" maxlength="255" />
-    </label>
+      <app-combobox
+        ariaLabel="Magistrado"
+        placeholder="Buscar magistrado..."
+        emptyLabel="— Sem magistrado —"
+        noResultsText="Nenhum magistrado encontrado"
+        itemNoun="magistrado"
+        [options]="nomesDeMagistrado()"
+        [value]="magistradoRascunho()"
+        [adicionar]="true"
+        (valueChange)="magistradoRascunho.set($event)"
+        (aoAdicionar)="criarMagistrado($event)"
+      />
+    </div>
     <div class="processo-field">
       <span>Resultado</span>
       <app-combobox

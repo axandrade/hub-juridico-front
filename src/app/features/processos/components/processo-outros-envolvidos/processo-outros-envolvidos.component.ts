@@ -5,6 +5,7 @@ import { cpfValidator, maskCpf, onlyDigits } from '../../../../core/auth/documen
 import { BRAZILIAN_STATES } from '../../../../core/models/pessoa.model';
 import { ComboboxComponent } from '../../../../shared/components/combobox/combobox.component';
 import { CpfMaskDirective } from '../../../../shared/directives/cpf-mask.directive';
+import { MagistradoService } from '../../services/magistrado.service';
 import { OrgaoJulgadorService } from '../../services/orgao-julgador.service';
 import { ParteInteressadaService } from '../../services/parte-interessada.service';
 import { PosicaoClienteService } from '../../services/posicao-cliente.service';
@@ -57,6 +58,7 @@ export type OutrosEnvolvidosValores = Pick<
 })
 export class ProcessoOutrosEnvolvidosComponent {
   private readonly posicaoService = inject(PosicaoClienteService);
+  private readonly magistradoService = inject(MagistradoService);
   private readonly resultadoService = inject(ResultadoDecisaoService);
   private readonly orgaoService = inject(OrgaoJulgadorService);
   private readonly tribunalService = inject(TribunalService);
@@ -93,15 +95,17 @@ export class ProcessoOutrosEnvolvidosComponent {
   protected readonly nomesDeResultado = computed(() =>
     this.resultadoService.resultados().map((r) => r.nome),
   );
+  protected readonly nomesDeMagistrado = computed(() =>
+    this.magistradoService.magistrados().map((m) => m.nome),
+  );
 
-  /** Campos de texto da linha de magistrado em edição (resultado e tribunal/órgão são combobox → signals). */
+  /** Campo de texto da linha de magistrado em edição (magistrado/resultado/tribunal/órgão são combobox → signals). */
   protected readonly magForm: FormGroup<{
-    magistrado: FormControl<string>;
     data: FormControl<string>;
   }> = new FormGroup({
-    magistrado: new FormControl('', { nonNullable: true }),
     data: new FormControl('', { nonNullable: true }),
   });
+  protected readonly magistradoRascunho = signal('');
   protected readonly resultadoRascunho = signal('');
 
   // --- cascata Tribunal → Órgão do magistrado em edição (mesmo padrão de "Órgão processante") ---
@@ -212,6 +216,7 @@ export class ProcessoOutrosEnvolvidosComponent {
 
   constructor() {
     this.posicaoService.carregar();
+    this.magistradoService.carregar();
     this.resultadoService.carregar();
     this.orgaoService.carregar();
     this.tribunalService.carregar();
@@ -255,7 +260,7 @@ export class ProcessoOutrosEnvolvidosComponent {
     return {
       outrosEnvolvidosAdvogados: this.advogados(),
       outrosEnvolvidosMagistrados: this.magistrados().map((m) => ({
-        magistrado: m.magistrado,
+        magistrado_id: m.magistrado!.id,
         resultado: m.resultado,
         orgao_id: m.orgao?.id ?? null,
         data: m.data,
@@ -308,16 +313,21 @@ export class ProcessoOutrosEnvolvidosComponent {
 
   /** Linha do listbox: "MAGISTRADO | RESULTADO | ÓRGÃO | DATA" (campo vazio vira "—"). */
   protected rotuloMagistrado(o: OutroEnvolvidoMagistradoApi): string {
-    return [o.magistrado, o.resultado, o.orgao?.nome, this.dataBr(o.data)]
+    return [o.magistrado?.nome, o.resultado, o.orgao?.nome, this.dataBr(o.data)]
       .map((v) => v?.trim() || '—')
       .join(' | ');
   }
 
   protected adicionarMagistrado(): void {
-    const magistrado = this.magForm.controls.magistrado.value.trim();
+    const nomeMagistrado = this.magistradoRascunho().trim();
     const data = this.magForm.controls.data.value.trim();
-    if (!magistrado || !data) {
+    if (!nomeMagistrado || !data) {
       this.magForm.markAllAsTouched();
+      return;
+    }
+    const magistrado = this.magistradoService.magistrados().find((m) => m.nome === nomeMagistrado);
+    if (!magistrado) {
+      this.erro.emit('Selecione um magistrado do catálogo (use o "+" pra cadastrar um novo).');
       return;
     }
     const item = this.orgaosDoTribunalRascunhoMag().find((o) => o.descricao === this.orgaoRascunhoMag());
@@ -325,7 +335,7 @@ export class ProcessoOutrosEnvolvidosComponent {
     this.magistrados.update((atual) => [
       ...atual,
       {
-        magistrado,
+        magistrado: { id: magistrado.id, nome: magistrado.nome },
         resultado: this.resultadoRascunho().trim() || null,
         orgao: orgao ? { id: orgao.id, nome: orgao.nome, tribunal_id: orgao.tribunal_id } : null,
         data,
@@ -453,6 +463,13 @@ export class ProcessoOutrosEnvolvidosComponent {
   protected criarPosicao(nome: string): void {
     this.posicaoService.criar(nome).subscribe({
       next: (p) => this.posicaoRascunho.set(p.nome),
+      error: (err: unknown) => this.erro.emit(this.mensagemErroHttp(err)),
+    });
+  }
+
+  protected criarMagistrado(nome: string): void {
+    this.magistradoService.criar(nome).subscribe({
+      next: (m) => this.magistradoRascunho.set(m.nome),
       error: (err: unknown) => this.erro.emit(this.mensagemErroHttp(err)),
     });
   }
@@ -597,6 +614,7 @@ export class ProcessoOutrosEnvolvidosComponent {
 
   private limparRascunhoMagistrado(): void {
     this.magForm.reset();
+    this.magistradoRascunho.set('');
     this.resultadoRascunho.set('');
     this.tribunalRascunhoMag.set('');
     this.orgaoRascunhoMag.set('');

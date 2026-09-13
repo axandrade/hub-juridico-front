@@ -1,12 +1,8 @@
 import { HttpEventType } from '@angular/common/http';
-import { Injectable, computed, inject, signal } from '@angular/core';
+import { Injectable, computed, signal } from '@angular/core';
 import { Observable, Subscription, last, switchMap, takeWhile, tap, timer } from 'rxjs';
 
-import {
-  DocumentsService,
-  UploadEvento,
-  ZipJobApi,
-} from '../../features/documents/services/documents.service';
+import { DocumentsPort, UploadEvento, ZipJobApi } from '../../features/documents/services/documents-port';
 import { Documento } from '../../features/documents/models/document-explorer.model';
 
 export type TransferDirection = 'download' | 'upload';
@@ -44,42 +40,50 @@ const ATIVA = (t: TransferTask): boolean =>
 
 /**
  * Bandeja de transferências no canto inferior direito (estilo Google Drive), com percentual real.
- * Reúne downloads e uploads:
+ * Uma bandeja só pra qualquer dono de pasta (cliente ou magistrado — ver {@link DocumentsPort});
+ * cada chamada recebe o `DocumentsPort` de quem a disparou, porque os jobs de zip vivem em
+ * backends separados por dono. Reúne downloads e uploads:
  *
  * <ul>
  *   <li><b>Download de zip</b> (`baixarZip`): o zip é montado no servidor (job assíncrono) — cria-se
  *   o job, faz-se polling da compactação e, quando fica pronto, baixa-se o arquivo já completo
  *   (com `Content-Length`, então essa fase também tem %).</li>
  *   <li><b>Upload</b> (`enviar`): acompanha o envio direto pro armazenamento (PUT único ou sessão em
- *   blocos, ver `DocumentsService.enviar`), com o percentual vindo dos eventos de progresso.</li>
+ *   blocos, ver `DocumentsPort.enviar`), com o percentual vindo dos eventos de progresso — não
+ *   precisa do `DocumentsPort` aqui, o Observable já vem pronto de quem chamou.</li>
  * </ul>
  *
  * Nada disso trava a tela, e a bandeja sobrevive à navegação entre telas.
  */
 @Injectable({ providedIn: 'root' })
 export class TransfersService {
-  private readonly docs = inject(DocumentsService);
-
   private readonly _tarefas = signal<TransferTask[]>([]);
   readonly tarefas = this._tarefas.asReadonly();
   readonly quantidadeAtivas = computed(() => this._tarefas().filter(ATIVA).length);
 
-  /** Assinatura viva + id do job no servidor, por tarefa — pra cancelar dos dois lados. */
-  private readonly registro = new Map<string, { sub: Subscription | null; jobId: string | null }>();
+  /**
+   * Assinatura viva + id do job no servidor + o `DocumentsPort` de quem criou a tarefa (cliente ou
+   * magistrado — a bandeja é uma só pros dois donos, mas cada job vive num backend diferente).
+   */
+  private readonly registro = new Map<
+    string,
+    { sub: Subscription | null; jobId: string | null; docs?: DocumentsPort }
+  >();
 
   /**
    * Inicia o download de um zip (pasta e/ou documentos) e o acompanha numa tarefa da bandeja.
-   * `nome` é o nome do arquivo final (`.zip` incluso).
+   * `nome` é o nome do arquivo final (`.zip` incluso). `docs` é o `DocumentsPort` de quem chamou
+   * (cliente ou magistrado) — os jobs de download vivem em backends separados por dono.
    */
-  baixarZip(nome: string, pastaIds: string[], documentoIds: string[]): string {
+  baixarZip(nome: string, pastaIds: string[], documentoIds: string[], docs: DocumentsPort): string {
     const id = this.novoId();
     this._tarefas.update((tarefas) => [
       this.tarefaNova(id, 'download', nome, 'preparando'),
       ...tarefas,
     ]);
-    this.registro.set(id, { sub: null, jobId: null });
+    this.registro.set(id, { sub: null, jobId: null, docs });
 
-    const sub = this.docs.iniciarDownloadZip(pastaIds, documentoIds).subscribe({
+    const sub = docs.iniciarDownloadZip(pastaIds, documentoIds).subscribe({
       next: (job) => {
         const reg = this.registro.get(id);
         if (!reg) {
@@ -131,8 +135,8 @@ export class TransfersService {
   cancelar(id: string): void {
     const reg = this.registro.get(id);
     reg?.sub?.unsubscribe();
-    if (reg?.jobId) {
-      this.docs.cancelarDownloadZip(reg.jobId).subscribe({ error: () => undefined });
+    if (reg?.jobId && reg.docs) {
+      reg.docs.cancelarDownloadZip(reg.jobId).subscribe({ error: () => undefined });
     }
     this.registro.delete(id);
     this.atualizar(id, { status: 'cancelado', progresso: null });
@@ -154,9 +158,13 @@ export class TransfersService {
   // ------------------------------------------------------------------
 
   private acompanharCompactacao(id: string, jobId: string): void {
+    const docs = this.registro.get(id)?.docs;
+    if (!docs) {
+      return;
+    }
     const sub = timer(POLL_MS, POLL_MS)
       .pipe(
-        switchMap(() => this.docs.statusDownloadZip(jobId)),
+        switchMap(() => docs.statusDownloadZip(jobId)),
         tap((job) => this.aplicarCompactacao(id, job)),
         takeWhile((job) => job.status === 'compactando', true),
         last(),
@@ -183,7 +191,11 @@ export class TransfersService {
   private baixarPronto(id: string, jobId: string): void {
     this.atualizar(id, { status: 'baixando', progresso: 0 });
 
-    const sub = this.docs.baixarZipPronto(jobId).subscribe({
+    const docs = this.registro.get(id)?.docs;
+    if (!docs) {
+      return;
+    }
+    const sub = docs.baixarZipPronto(jobId).subscribe({
       next: (evento) => {
         if (evento.type === HttpEventType.DownloadProgress) {
           this.atualizar(id, {
@@ -193,7 +205,7 @@ export class TransfersService {
           const tarefa = this._tarefas().find((t) => t.id === id);
           this.salvarBlob(evento.body ?? new Blob(), tarefa?.nome ?? 'download.zip');
           this.atualizar(id, { status: 'concluido', progresso: 1 });
-          this.docs.cancelarDownloadZip(jobId).subscribe({ error: () => undefined }); // limpa o temp
+          docs.cancelarDownloadZip(jobId).subscribe({ error: () => undefined }); // limpa o temp
           this.registro.delete(id);
         }
       },

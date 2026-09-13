@@ -217,6 +217,17 @@
         >
           {{ rotuloMagistrado(linha) }}
         </button>
+        @if (linha.magistrado; as magistrado) {
+          <button
+            type="button"
+            class="processo-outros__pasta"
+            title="Pasta de arquivos do magistrado"
+            [attr.aria-label]="'Pasta de arquivos de ' + magistrado.nome"
+            (click)="abrirPastaMagistrado(magistrado)"
+          >
+            <i class="fa-solid fa-folder-open" aria-hidden="true"></i>
+          </button>
+        }
       </li>
     } @empty {
       <li class="processo-outros__vazio">Nenhum magistrado adicionado.</li>

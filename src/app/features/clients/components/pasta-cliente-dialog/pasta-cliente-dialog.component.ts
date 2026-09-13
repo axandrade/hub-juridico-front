@@ -13,6 +13,8 @@ import {
   DocumentExplorerNotice,
   DocumentExplorerNoticeKey,
 } from '../../../documents/components/document-explorer/document-explorer.component';
+import { DOCUMENTS_PORT } from '../../../documents/services/documents-port';
+import { DocumentsService } from '../../../documents/services/documents.service';
 import { ClientePastaResumo } from '../../services/cliente-pasta-resumo.model';
 import { PastaClienteService } from '../../services/pasta-cliente.service';
 import { ClientesComArquivosComponent } from '../clientes-com-arquivos/clientes-com-arquivos.component';
@@ -27,6 +29,9 @@ import { ClientesComArquivosComponent } from '../clientes-com-arquivos/clientes-
   selector: 'app-pasta-cliente-dialog',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [ModalComponent, DocumentExplorerComponent, ClientesComArquivosComponent],
+  // `DocumentExplorerComponent` (aninhado no template) resolve DOCUMENTS_PORT daqui — é assim que
+  // o mesmo explorador serve cliente e magistrado sem duplicar a tela (ver `documents-port.ts`).
+  providers: [{ provide: DOCUMENTS_PORT, useExisting: DocumentsService }],
   templateUrl: './pasta-cliente-dialog.component.html',
   styleUrl: './pasta-cliente-dialog.component.scss',
 })

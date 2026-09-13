@@ -8,6 +8,7 @@ import { CpfMaskDirective } from '../../../../shared/directives/cpf-mask.directi
 import { MagistradoService } from '../../services/magistrado.service';
 import { OrgaoJulgadorService } from '../../services/orgao-julgador.service';
 import { ParteInteressadaService } from '../../services/parte-interessada.service';
+import { PastaMagistradoService } from '../../services/pasta-magistrado.service';
 import { PosicaoClienteService } from '../../services/posicao-cliente.service';
 import { ResultadoDecisaoService } from '../../services/resultado-decisao.service';
 import { TribunalService } from '../../services/tribunal.service';
@@ -63,6 +64,7 @@ export class ProcessoOutrosEnvolvidosComponent {
   private readonly orgaoService = inject(OrgaoJulgadorService);
   private readonly tribunalService = inject(TribunalService);
   private readonly parteService = inject(ParteInteressadaService);
+  private readonly pastaMagistradoService = inject(PastaMagistradoService);
 
   /** Erro numa operação de catálogo (criar/renomear/excluir) — o shell mostra no rodapé. */
   readonly erro = output<string>();
@@ -355,6 +357,11 @@ export class ProcessoOutrosEnvolvidosComponent {
 
   protected selecionarMagistrado(indice: number): void {
     this.magSelecionado.update((atual) => (atual === indice ? -1 : indice));
+  }
+
+  /** Abre o diálogo de arquivos daquele magistrado (botão na própria linha, não depende de seleção). */
+  protected abrirPastaMagistrado(magistrado: { id: number; nome: string }): void {
+    this.pastaMagistradoService.abrir(magistrado);
   }
 
   // ===================== lista de testemunhas =====================

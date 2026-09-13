@@ -5,7 +5,8 @@ import { Subject } from 'rxjs';
 
 import { environment } from '../../../environments/environment';
 import { Documento } from '../../features/documents/models/document-explorer.model';
-import { UploadEvento } from '../../features/documents/services/documents.service';
+import { DocumentsPort, UploadEvento } from '../../features/documents/services/documents-port';
+import { DocumentsService } from '../../features/documents/services/documents.service';
 import { TransfersService, POLL_MS } from './transfers.service';
 
 const BASE = environment.apiBaseUrl;
@@ -32,14 +33,17 @@ const doc: Documento = {
 describe('TransfersService', () => {
   let service: TransfersService;
   let http: HttpTestingController;
+  /** `baixarZip` agora exige o `DocumentsPort` de quem chamou — nos testes é sempre o de cliente. */
+  let docs: DocumentsPort;
 
   beforeEach(() => {
     vi.useFakeTimers();
     TestBed.configureTestingModule({
-      providers: [provideHttpClient(), provideHttpClientTesting(), TransfersService],
+      providers: [provideHttpClient(), provideHttpClientTesting(), TransfersService, DocumentsService],
     });
     service = TestBed.inject(TransfersService);
     http = TestBed.inject(HttpTestingController);
+    docs = TestBed.inject(DocumentsService);
 
     const u = URL as unknown as Record<string, unknown>;
     u['createObjectURL'] ??= () => '';
@@ -56,7 +60,7 @@ describe('TransfersService', () => {
   });
 
   it('cria o job, faz polling da compactação e baixa o zip pronto', () => {
-    service.baixarZip('Processo.zip', ['p1'], []);
+    service.baixarZip('Processo.zip', ['p1'], [], docs);
 
     expect(service.tarefas()[0].tipo).toBe('download');
     expect(service.tarefas()[0].status).toBe('preparando');
@@ -89,7 +93,7 @@ describe('TransfersService', () => {
   });
 
   it('status "erro" no polling marca a tarefa como erro', () => {
-    service.baixarZip('x.zip', ['p1'], []);
+    service.baixarZip('x.zip', ['p1'], [], docs);
     http.expectOne(`${BASE}/pastas/download-job`).flush(jobBase);
 
     vi.advanceTimersByTime(POLL_MS);
@@ -100,7 +104,7 @@ describe('TransfersService', () => {
   });
 
   it('cancelar aborta o polling e manda DELETE do job', () => {
-    service.baixarZip('x.zip', ['p1'], []);
+    service.baixarZip('x.zip', ['p1'], [], docs);
     http.expectOne(`${BASE}/pastas/download-job`).flush(jobBase);
 
     service.cancelar(service.tarefas()[0].id);
@@ -114,10 +118,10 @@ describe('TransfersService', () => {
   });
 
   it('limparEncerradas mantém só as tarefas ativas', () => {
-    service.baixarZip('a.zip', ['p1'], []);
+    service.baixarZip('a.zip', ['p1'], [], docs);
     http.expectOne(`${BASE}/pastas/download-job`).flush({ ...jobBase, job_id: 'ja' });
 
-    service.baixarZip('b.zip', ['p2'], []);
+    service.baixarZip('b.zip', ['p2'], [], docs);
     http.expectOne(`${BASE}/pastas/download-job`).flush({ ...jobBase, job_id: 'jb' });
 
     vi.advanceTimersByTime(POLL_MS);

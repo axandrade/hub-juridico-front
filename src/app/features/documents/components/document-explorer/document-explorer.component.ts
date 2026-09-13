@@ -23,7 +23,8 @@ import { TransfersService } from '../../../../shared/transfers/transfers.service
 import { formatFileSize } from '../../../../shared/utils/format-file-size';
 import { TipoAnexoService } from '../../../clients/services/tipo-anexo.service';
 import { DocxRenderDirective } from '../../directives/docx-render.directive';
-import { DocumentsService, resolverTipoAceito } from '../../services/documents.service';
+import { resolverTipoAceito } from '../../services/documents.service';
+import { DOCUMENTS_PORT } from '../../services/documents-port';
 import {
   BreadcrumbItem,
   Documento,
@@ -97,11 +98,11 @@ const PROTOCOLO_DESKTOP_POR_CONTENT_TYPE: Record<string, string> = {
 };
 
 /**
- * Explorador de arquivos (pastas + documentos) de uma pessoa (cliente) — estilo gerenciador de
- * arquivos: navegação por pastas com breadcrumb, criar/renomear/excluir pasta, enviar/renomear/
- * mover/excluir/baixar documento, arrastar-e-soltar (mover item existente sobre uma pasta/
- * breadcrumb, ou soltar arquivos do SO para enviar). O binário nunca passa por aqui — só a URL
- * pré-assinada (`DocumentsService.enviar`/`downloadUrl`).
+ * Explorador de arquivos (pastas + documentos) de um "dono" — cliente ou magistrado, ver
+ * {@code DocumentsPort} — estilo gerenciador de arquivos: navegação por pastas com breadcrumb,
+ * criar/renomear/excluir pasta, enviar/renomear/mover/excluir/baixar documento, arrastar-e-soltar
+ * (mover item existente sobre uma pasta/breadcrumb, ou soltar arquivos do SO para enviar). O
+ * binário nunca passa por aqui — só a URL pré-assinada (`DocumentsPort.enviar`/`downloadUrl`).
  */
 @Component({
   selector: 'app-document-explorer',
@@ -120,13 +121,18 @@ const PROTOCOLO_DESKTOP_POR_CONTENT_TYPE: Record<string, string> = {
   },
 })
 export class DocumentExplorerComponent {
-  private readonly documentsService = inject(DocumentsService);
+  /**
+   * Cliente ou magistrado — quem hospeda este explorador provê a implementação certa via
+   * `DOCUMENTS_PORT` no próprio `@Component` (ver `pasta-cliente-dialog`/`pasta-magistrado-dialog`).
+   */
+  private readonly documentsService = inject(DOCUMENTS_PORT);
   private readonly transferencias = inject(TransfersService);
   private readonly sanitizer = inject(DomSanitizer);
   protected readonly tipoAnexoService = inject(TipoAnexoService);
 
+  /** Id do dono (cliente ou magistrado, conforme o `DOCUMENTS_PORT` provido). Nome mantido por conveniência (não renomeado). */
   readonly pessoaId = input.required<number>();
-  /** Nome do cliente — rotula a raiz do breadcrumb (a "raiz" aqui é a pasta-mãe desse cliente, não algo global). */
+  /** Nome do dono — rotula a raiz do breadcrumb (a "raiz" aqui é a pasta-mãe desse dono, não algo global). */
   readonly pessoaNome = input<string>('');
   readonly notify = output<DocumentExplorerNotice>();
 
@@ -673,7 +679,7 @@ export class DocumentExplorerComponent {
    */
   protected baixarPastaZip(pasta: Pasta): void {
     this.fecharMenu();
-    this.transferencias.baixarZip(`${pasta.nome}.zip`, [pasta.id], []);
+    this.transferencias.baixarZip(`${pasta.nome}.zip`, [pasta.id], [], this.documentsService);
   }
 
   /** Baixa a seleção (pastas e/ou documentos) como um único `.zip`, também via bandeja. */
@@ -685,7 +691,7 @@ export class DocumentExplorerComponent {
       return;
     }
     const nome = pastaIds.length === 1 && documentoIds.length === 0 ? itens[0].nome : 'arquivos';
-    this.transferencias.baixarZip(`${nome}.zip`, pastaIds, documentoIds);
+    this.transferencias.baixarZip(`${nome}.zip`, pastaIds, documentoIds, this.documentsService);
   }
 
   /**

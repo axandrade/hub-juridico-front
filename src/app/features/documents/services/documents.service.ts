@@ -16,26 +16,9 @@ import {
   documentoFromApi,
   pastaFromApi,
 } from '../models/document-explorer.model';
+import { DocumentsPort, UploadEvento, ZipJobApi } from './documents-port';
 
-/** Estado de um job de download de zip com percentual (`ZipDownloadJobResponse` no backend). */
-export interface ZipJobApi {
-  job_id: string;
-  status: 'compactando' | 'pronto' | 'erro' | 'cancelado';
-  nome_arquivo: string;
-  total_arquivos: number;
-  arquivos_processados: number;
-  bytes_totais: number;
-  bytes_processados: number;
-}
-
-/**
- * Progresso de um upload em andamento (`DocumentsService.enviar`). `progresso` repete a cada pedaço
- * enviado (`enviados`/`total` em bytes); `concluido` fecha o fluxo com o `Documento` já criado no
- * `confirmar`.
- */
-export type UploadEvento =
-  | { tipo: 'progresso'; enviados: number; total: number }
-  | { tipo: 'concluido'; documento: Documento };
+export type { UploadEvento, ZipJobApi };
 
 /** Espelha `storage.allowed-content-types` do backend (ver `application.yml`) — mantido em sync manualmente. */
 export const TIPOS_ACEITOS = [
@@ -79,7 +62,7 @@ export function resolverTipoAceito(arquivo: File): string | null {
  * uma URL pronta pra navegação direta — nunca busca o binário via `HttpClient`.
  */
 @Injectable({ providedIn: 'root' })
-export class DocumentsService {
+export class DocumentsService implements DocumentsPort {
   private readonly http = inject(HttpClient);
   private readonly base = environment.apiBaseUrl;
 

@@ -145,6 +145,12 @@ button.processo-form__group-title--toggle {
   max-height: 200px;
   overflow: auto;
 
+  li {
+    display: flex;
+    align-items: stretch;
+    gap: 2px;
+  }
+
   button {
     width: 100%;
     padding: $spacing-xs $spacing-sm;
@@ -165,6 +171,18 @@ button.processo-form__group-title--toggle {
       background-color: rgba($color-primary-pale, 0.7);
       color: $color-primary;
       font-weight: $font-weight-medium;
+    }
+  }
+
+  // Botão "pasta de arquivos" ao lado do nome do magistrado — não estica igual o botão da opção.
+  .processo-outros__pasta {
+    flex: 0 0 auto;
+    width: auto;
+    text-align: center;
+    color: $color-text-secondary;
+
+    &:hover {
+      color: $color-primary;
     }
   }
 }

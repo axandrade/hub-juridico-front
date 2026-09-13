@@ -1,0 +1,7 @@
+@use 'variables' as *;
+
+.pasta-dialog__notice {
+  margin: $spacing-sm 0 0;
+  color: $color-text-secondary;
+  font-size: $font-size-xs;
+}

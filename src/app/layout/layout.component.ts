@@ -5,6 +5,7 @@ import { ROUTES } from '../core/constants/app-constants';
 import { AuthService } from '../core/services/auth.service';
 import { PastaClienteDialogComponent } from '../features/clients/components/pasta-cliente-dialog/pasta-cliente-dialog.component';
 import { PastaMagistradoDialogComponent } from '../features/processos/components/pasta-magistrado-dialog/pasta-magistrado-dialog.component';
+import { PastaPeritoDialogComponent } from '../features/processos/components/pasta-perito-dialog/pasta-perito-dialog.component';
 import { TransfersTrayComponent } from '../shared/transfers/transfers-tray.component';
 import { FooterComponent } from './components/footer/footer.component';
 import { HeaderComponent } from './components/header/header.component';
@@ -22,6 +23,7 @@ import { SidebarComponent } from './components/sidebar/sidebar.component';
     TransfersTrayComponent,
     PastaClienteDialogComponent,
     PastaMagistradoDialogComponent,
+    PastaPeritoDialogComponent,
   ],
   templateUrl: './layout.component.html',
   styleUrl: './layout.component.scss',

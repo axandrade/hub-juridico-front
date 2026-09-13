@@ -10,6 +10,7 @@ import { MagistradoService } from '../../services/magistrado.service';
 import { OrgaoJulgadorService } from '../../services/orgao-julgador.service';
 import { ParteInteressadaService } from '../../services/parte-interessada.service';
 import { PastaMagistradoService } from '../../services/pasta-magistrado.service';
+import { PastaPeritoService } from '../../services/pasta-perito.service';
 import { PeritoService } from '../../services/perito.service';
 import { PosicaoClienteService } from '../../services/posicao-cliente.service';
 import { ResultadoDecisaoService } from '../../services/resultado-decisao.service';
@@ -69,6 +70,7 @@ export class ProcessoOutrosEnvolvidosComponent {
   private readonly parteService = inject(ParteInteressadaService);
   private readonly pastaMagistradoService = inject(PastaMagistradoService);
   private readonly peritoService = inject(PeritoService);
+  private readonly pastaPeritoService = inject(PastaPeritoService);
 
   /** Erro numa operação de catálogo (criar/renomear/excluir) — o shell mostra no rodapé. */
   readonly erro = output<string>();
@@ -452,6 +454,11 @@ export class ProcessoOutrosEnvolvidosComponent {
 
   protected selecionarPerito(indice: number): void {
     this.peritoSelecionado.update((atual) => (atual === indice ? -1 : indice));
+  }
+
+  /** Abre o diálogo de arquivos daquele perito (botão na própria linha, não depende de seleção). */
+  protected abrirPastaPerito(perito: { id: number; nome: string }): void {
+    this.pastaPeritoService.abrir(perito);
   }
 
   // ===================== lista de assistentes técnicos =====================

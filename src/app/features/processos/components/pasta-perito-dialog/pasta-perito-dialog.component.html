@@ -1,0 +1,10 @@
+@if (pastaPerito.aberto()) {
+  @if (pastaPerito.perito(); as alvo) {
+    <app-modal [open]="true" [large]="true" [title]="'Pasta — ' + (alvo.nome || 'perito')" (closed)="fechar()">
+      <app-document-explorer [pessoaId]="alvo.id" [pessoaNome]="alvo.nome" (notify)="onPastaNotice($event)" />
+      @if (pastaNotice()) {
+        <p class="pasta-dialog__notice">{{ pastaNotice() }}</p>
+      }
+    </app-modal>
+  }
+}

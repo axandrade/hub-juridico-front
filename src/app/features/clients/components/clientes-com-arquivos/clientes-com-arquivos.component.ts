@@ -19,8 +19,8 @@ import { ClientePastaResumo } from '../../services/cliente-pasta-resumo.model';
 import { ClientesComArquivosService } from '../../services/clientes-com-arquivos.service';
 
 /**
- * Tabela paginada dos clientes que já têm arquivos — mostrada no diálogo "Abrir pasta do
- * cliente" quando nenhum cliente está selecionado. Busca por nome/CPF/CNPJ no servidor;
+ * Tabela paginada de todos os clientes (com ou sem arquivo ainda) — mostrada no diálogo "Abrir
+ * pasta do cliente" quando nenhum cliente está selecionado. Busca por nome/CPF/CNPJ no servidor;
  * ordenada por último envio (mais recente primeiro). Clicar numa linha emite `rowOpen`.
  */
 @Component({

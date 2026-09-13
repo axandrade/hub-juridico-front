@@ -21,7 +21,7 @@ import { ClientesComArquivosComponent } from '../clientes-com-arquivos/clientes-
  * Diálogo "Abrir pasta do cliente" — global, montado uma vez pelo `layout`, então acessível de
  * qualquer tela pelo botão do header. Com um cliente publicado no `PastaClienteService` (a tela
  * de clientes faz isso ao selecionar uma linha) abre direto no explorador dele; sem nenhum,
- * mostra a tabela de visão geral (clientes que já têm arquivos).
+ * mostra a tabela de visão geral (todos os clientes, com ou sem arquivo ainda).
  */
 @Component({
   selector: 'app-pasta-cliente-dialog',

@@ -11,9 +11,9 @@ import {
 } from './cliente-pasta-resumo.model';
 
 /**
- * Fonte da lista de clientes que já têm arquivos (`GET /api/v1/pastas/clientes`, paginado de 10
- * em 10 no backend). Só apresentação — o componente pede uma página, o serviço guarda o estado de
- * paginação. Mesma forma do `ClientService`.
+ * Fonte da lista de todos os clientes, com ou sem arquivo (`GET /api/v1/pastas/clientes`,
+ * paginado de 10 em 10 no backend). Só apresentação — o componente pede uma página, o serviço
+ * guarda o estado de paginação. Mesma forma do `ClientService`.
  */
 @Injectable({ providedIn: 'root' })
 export class ClientesComArquivosService {

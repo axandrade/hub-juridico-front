@@ -12,7 +12,7 @@ export interface ClientePasta {
  * publica o cliente selecionado; o header dispara `abrir()`.
  *
  * O diálogo abre sempre: com um cliente selecionado ele mostra o explorador daquele
- * cliente; sem nenhum, mostra a tabela de visão geral (clientes que já têm arquivos).
+ * cliente; sem nenhum, mostra a tabela de visão geral (todos os clientes, com ou sem arquivo ainda).
  */
 @Injectable({ providedIn: 'root' })
 export class PastaClienteService {

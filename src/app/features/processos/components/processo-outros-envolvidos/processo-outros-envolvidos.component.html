@@ -337,24 +337,22 @@
   </button>
 
   @if (mostrarPeritos()) {
-  <div class="processo-form__row" [formGroup]="peritoForm">
-    <label class="processo-field">
+  <div class="processo-form__row">
+    <div class="processo-field">
       <span>Perito</span>
-      <input type="text" formControlName="perito" maxlength="255" />
-    </label>
-    <label class="processo-field">
-      <span>CPF</span>
-      <input
-        type="text"
-        formControlName="cpf"
-        appCpfMask
-        inputmode="numeric"
-        placeholder="000.000.000-00"
+      <app-combobox
+        ariaLabel="Perito"
+        placeholder="Buscar perito..."
+        emptyLabel="— Sem perito —"
+        noResultsText="Nenhum perito encontrado"
+        itemNoun="perito"
+        [options]="nomesDePerito()"
+        [value]="peritoRascunho()"
+        [adicionar]="true"
+        (valueChange)="peritoRascunho.set($event)"
+        (aoAdicionar)="abrirNovoPerito($event)"
       />
-    </label>
-  </div>
-
-  <div class="processo-form__row processo-form__row--full">
+    </div>
     <div class="processo-field">
       <span>Resultado</span>
       <app-combobox
@@ -490,3 +488,31 @@
   </ul>
   }
 </div>
+
+<!-- ============ Novo perito (nome + CPF) ============ -->
+<app-modal [open]="novoPeritoAberto()" title="Novo perito" (closed)="cancelarNovoPerito()">
+  <div class="processo-form__row" [formGroup]="novoPeritoForm">
+    <label class="processo-field">
+      <span>Nome</span>
+      <input type="text" formControlName="nome" maxlength="255" />
+    </label>
+    <label class="processo-field">
+      <span>CPF</span>
+      <input
+        type="text"
+        formControlName="cpf"
+        appCpfMask
+        inputmode="numeric"
+        placeholder="000.000.000-00"
+      />
+    </label>
+  </div>
+  <div modalFooter class="processo-outros__acoes">
+    <button type="button" class="processo-outros__botao" (click)="cancelarNovoPerito()">
+      Cancelar
+    </button>
+    <button type="button" class="processo-outros__botao" (click)="confirmarNovoPerito()">
+      <i class="fa-solid fa-plus" aria-hidden="true"></i> Cadastrar
+    </button>
+  </div>
+</app-modal>

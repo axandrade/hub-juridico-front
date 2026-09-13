@@ -4,11 +4,13 @@ import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { cpfValidator, maskCpf, onlyDigits } from '../../../../core/auth/documentos-br';
 import { BRAZILIAN_STATES } from '../../../../core/models/pessoa.model';
 import { ComboboxComponent } from '../../../../shared/components/combobox/combobox.component';
+import { ModalComponent } from '../../../../shared/components/modal/modal.component';
 import { CpfMaskDirective } from '../../../../shared/directives/cpf-mask.directive';
 import { MagistradoService } from '../../services/magistrado.service';
 import { OrgaoJulgadorService } from '../../services/orgao-julgador.service';
 import { ParteInteressadaService } from '../../services/parte-interessada.service';
 import { PastaMagistradoService } from '../../services/pasta-magistrado.service';
+import { PeritoService } from '../../services/perito.service';
 import { PosicaoClienteService } from '../../services/posicao-cliente.service';
 import { ResultadoDecisaoService } from '../../services/resultado-decisao.service';
 import { TribunalService } from '../../services/tribunal.service';
@@ -41,7 +43,8 @@ export type OutrosEnvolvidosValores = Pick<
  *       / órgão (catálogo OrgaoJulgador).</li>
  *   <li><b>Testemunhas</b> — testemunha + parte interessada (catálogo ParteInteressada), os dois
  *       obrigatórios.</li>
- *   <li><b>Perito Judicial</b> — perito (obrigatório) / CPF (opcional) / resultado (catálogo
+ *   <li><b>Perito Judicial</b> — perito (catálogo Perito, com nome + CPF opcional; "+" abre um
+ *       mini-formulário em vez de criar direto, já que tem 2 campos) / resultado (catálogo
  *       ResultadoDecisao, mesmo catálogo de Magistrados).</li>
  *   <li><b>Assistente Técnico</b> — assistente técnico + parte interessada (catálogo
  *       ParteInteressada, mesmo de Testemunhas), os dois obrigatórios / CPF (opcional).</li>
@@ -53,7 +56,7 @@ export type OutrosEnvolvidosValores = Pick<
 @Component({
   selector: 'app-processo-outros-envolvidos',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ReactiveFormsModule, ComboboxComponent, CpfMaskDirective],
+  imports: [ReactiveFormsModule, ComboboxComponent, CpfMaskDirective, ModalComponent],
   templateUrl: './processo-outros-envolvidos.component.html',
   styleUrl: './processo-outros-envolvidos.component.scss',
 })
@@ -65,6 +68,7 @@ export class ProcessoOutrosEnvolvidosComponent {
   private readonly tribunalService = inject(TribunalService);
   private readonly parteService = inject(ParteInteressadaService);
   private readonly pastaMagistradoService = inject(PastaMagistradoService);
+  private readonly peritoService = inject(PeritoService);
 
   /** Erro numa operação de catálogo (criar/renomear/excluir) — o shell mostra no rodapé. */
   readonly erro = output<string>();
@@ -156,19 +160,28 @@ export class ProcessoOutrosEnvolvidosComponent {
 
   // ===================== Perito Judicial =====================
 
-  /** Campos de texto da linha de perito em edição (resultado é combobox → signal). */
-  protected readonly peritoForm: FormGroup<{
-    perito: FormControl<string>;
-    cpf: FormControl<string>;
-  }> = new FormGroup({
-    perito: new FormControl('', { nonNullable: true }),
-    cpf: new FormControl('', { nonNullable: true, validators: [cpfValidator] }),
-  });
+  protected readonly nomesDePerito = computed(() => this.peritoService.peritos().map((p) => p.nome));
+
+  /** Perito e resultado são combobox → signals; não há mais campo de texto nesta linha. */
+  protected readonly peritoRascunho = signal('');
   protected readonly resultadoRascunhoPerito = signal('');
 
   protected readonly peritos = signal<OutroEnvolvidoPeritoApi[]>([]);
   /** Índice selecionado no listbox de peritos (`-1` = nenhum). */
   protected readonly peritoSelecionado = signal(-1);
+
+  /**
+   * Cadastro de um perito novo no catálogo — o "+" do combobox só pede um texto (nome), mas o
+   * catálogo de perito tem nome E cpf, então abre este mini-formulário em vez de criar direto.
+   */
+  protected readonly novoPeritoAberto = signal(false);
+  protected readonly novoPeritoForm: FormGroup<{
+    nome: FormControl<string>;
+    cpf: FormControl<string>;
+  }> = new FormGroup({
+    nome: new FormControl('', { nonNullable: true }),
+    cpf: new FormControl('', { nonNullable: true, validators: [cpfValidator] }),
+  });
 
   // ===================== Assistente Técnico =====================
 
@@ -223,6 +236,7 @@ export class ProcessoOutrosEnvolvidosComponent {
     this.orgaoService.carregar();
     this.tribunalService.carregar();
     this.parteService.carregar();
+    this.peritoService.carregar();
   }
 
   // ===================== API pro shell =====================
@@ -268,7 +282,10 @@ export class ProcessoOutrosEnvolvidosComponent {
         data: m.data,
       })),
       outrosEnvolvidosTestemunhas: this.testemunhas(),
-      outrosEnvolvidosPeritos: this.peritos(),
+      outrosEnvolvidosPeritos: this.peritos().map((pe) => ({
+        perito_id: pe.perito!.id,
+        resultado: pe.resultado,
+      })),
       outrosEnvolvidosAssistentesTecnicos: this.assistentesTecnicos(),
     };
   }
@@ -400,19 +417,26 @@ export class ProcessoOutrosEnvolvidosComponent {
 
   /** Linha do listbox: "PERITO | CPF | RESULTADO" (campo vazio vira "—"). */
   protected rotuloPerito(o: OutroEnvolvidoPeritoApi): string {
-    return `${o.perito} | ${o.cpf ? maskCpf(o.cpf) : '—'} | ${o.resultado?.trim() || '—'}`;
+    const cpf = o.perito?.cpf;
+    return `${o.perito?.nome ?? '—'} | ${cpf ? maskCpf(cpf) : '—'} | ${o.resultado?.trim() || '—'}`;
   }
 
   protected adicionarPerito(): void {
-    const perito = this.peritoForm.controls.perito.value.trim();
-    if (!perito || this.peritoForm.controls.cpf.invalid) {
-      this.peritoForm.markAllAsTouched();
+    const nomePerito = this.peritoRascunho().trim();
+    if (!nomePerito) {
       return;
     }
-    const cpf = onlyDigits(this.peritoForm.controls.cpf.value) || null;
+    const perito = this.peritoService.peritos().find((p) => p.nome === nomePerito);
+    if (!perito) {
+      this.erro.emit('Selecione um perito do catálogo (use o "+" pra cadastrar um novo).');
+      return;
+    }
     this.peritos.update((atual) => [
       ...atual,
-      { perito, cpf, resultado: this.resultadoRascunhoPerito().trim() || null },
+      {
+        perito: { id: perito.id, nome: perito.nome, cpf: perito.cpf },
+        resultado: this.resultadoRascunhoPerito().trim() || null,
+      },
     ]);
     this.limparRascunhoPerito();
   }
@@ -491,6 +515,35 @@ export class ProcessoOutrosEnvolvidosComponent {
   protected criarResultadoPerito(nome: string): void {
     this.resultadoService.criar(nome).subscribe({
       next: (r) => this.resultadoRascunhoPerito.set(r.nome),
+      error: (err: unknown) => this.erro.emit(this.mensagemErroHttp(err)),
+    });
+  }
+
+  /** O "+" do combobox de perito abre este mini-formulário (nome + CPF) em vez de criar direto. */
+  protected abrirNovoPerito(nomeSugerido: string): void {
+    this.novoPeritoForm.reset();
+    this.novoPeritoForm.controls.nome.setValue(nomeSugerido);
+    this.novoPeritoAberto.set(true);
+  }
+
+  protected cancelarNovoPerito(): void {
+    this.novoPeritoAberto.set(false);
+    this.novoPeritoForm.reset();
+  }
+
+  protected confirmarNovoPerito(): void {
+    const nome = this.novoPeritoForm.controls.nome.value.trim();
+    if (!nome || this.novoPeritoForm.controls.cpf.invalid) {
+      this.novoPeritoForm.markAllAsTouched();
+      return;
+    }
+    const cpf = onlyDigits(this.novoPeritoForm.controls.cpf.value) || null;
+    this.peritoService.criar(nome, cpf).subscribe({
+      next: (p) => {
+        this.peritoRascunho.set(p.nome);
+        this.novoPeritoAberto.set(false);
+        this.novoPeritoForm.reset();
+      },
       error: (err: unknown) => this.erro.emit(this.mensagemErroHttp(err)),
     });
   }
@@ -633,7 +686,7 @@ export class ProcessoOutrosEnvolvidosComponent {
   }
 
   private limparRascunhoPerito(): void {
-    this.peritoForm.reset();
+    this.peritoRascunho.set('');
     this.resultadoRascunhoPerito.set('');
   }
 

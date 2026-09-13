@@ -73,13 +73,25 @@ export interface OutroEnvolvidoTestemunhaApi {
 }
 
 /**
- * Um perito judicial "outro envolvido" (aba "Outros envolvidos", seção "Perito Judicial").
- * `perito` é obrigatório; `cpf` é opcional, só dígitos (sem CNPJ — perito é sempre pessoa física);
- * `resultado` é opcional, texto do catálogo `ResultadoDecisao`.
+ * Um perito "outro envolvido" (aba "Outros envolvidos", seção "Perito Judicial") — resposta.
+ * `perito` já vem resolvido (id + nome + cpf, catálogo `peritos`); `resultado` é o texto do
+ * catálogo `ResultadoDecisao`.
  */
 export interface OutroEnvolvidoPeritoApi {
-  perito: string;
+  perito: PeritoAtualApi | null;
+  resultado: string | null;
+}
+
+/** Item do catálogo `peritos` já resolvido (id + nome + cpf) — devolvido dentro da ficha do processo. */
+export interface PeritoAtualApi {
+  id: number;
+  nome: string;
   cpf: string | null;
+}
+
+/** Corpo de um perito no `PUT`/`POST` — `perito_id` é chave estrangeira. */
+export interface OutroEnvolvidoPeritoWriteApi {
+  perito_id: number;
   resultado: string | null;
 }
 
@@ -266,7 +278,7 @@ export interface ProcessoWriteApi {
   outros_envolvidos_advogados: OutroEnvolvidoAdvogadoApi[];
   outros_envolvidos_magistrados: OutroEnvolvidoMagistradoWriteApi[];
   outros_envolvidos_testemunhas: OutroEnvolvidoTestemunhaApi[];
-  outros_envolvidos_peritos: OutroEnvolvidoPeritoApi[];
+  outros_envolvidos_peritos: OutroEnvolvidoPeritoWriteApi[];
   outros_envolvidos_assistentes_tecnicos: OutroEnvolvidoAssistenteTecnicoApi[];
   /** Id do catálogo `tribunais` — `null` = sem tribunal escolhido. */
   tribunal_atual_id: number | null;

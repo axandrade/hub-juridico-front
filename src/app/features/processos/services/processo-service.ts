@@ -11,7 +11,7 @@ import {
   OutroEnvolvidoAdvogadoApi,
   OutroEnvolvidoAssistenteTecnicoApi,
   OutroEnvolvidoMagistradoWriteApi,
-  OutroEnvolvidoPeritoApi,
+  OutroEnvolvidoPeritoWriteApi,
   OutroEnvolvidoTestemunhaApi,
   PaginaApi,
   ParteContrariaApi,
@@ -84,7 +84,7 @@ export interface ProcessoEditavel {
   /** Testemunhas "outros envolvidos" (aba "Outros envolvidos"). */
   outrosEnvolvidosTestemunhas: OutroEnvolvidoTestemunhaApi[];
   /** Peritos judiciais "outros envolvidos" (aba "Outros envolvidos"). */
-  outrosEnvolvidosPeritos: OutroEnvolvidoPeritoApi[];
+  outrosEnvolvidosPeritos: OutroEnvolvidoPeritoWriteApi[];
   /** Assistentes técnicos "outros envolvidos" (aba "Outros envolvidos"). */
   outrosEnvolvidosAssistentesTecnicos: OutroEnvolvidoAssistenteTecnicoApi[];
   /** Preservados como vieram — ainda sem UI de edição nesta fatia. */

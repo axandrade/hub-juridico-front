@@ -23,6 +23,7 @@ import {
   ProcessoTribunalHistoricoApi,
   TIPO_PROCESSO_LABEL,
   TipoProcesso,
+  TribunalAtualApi,
 } from '../../services/processo-api.model';
 import { AcaoProcessoService } from '../../services/acao-processo.service';
 import { CidadeService } from '../../services/cidade-service';
@@ -126,6 +127,8 @@ export class ProcessoDadosGeraisComponent {
   /** Tribunal/órgão exibidos nos dois combobox — o valor escolhido JÁ É o "órgão processante" atual. */
   protected readonly tribunalAtual = signal('');
   protected readonly orgaoAtual = signal('');
+  /** Id do catálogo `tribunais` que vai no `PUT` — independente do órgão (dá pra ter só tribunal). */
+  protected readonly tribunalAtualId = signal<number | null>(null);
   /** Id do catálogo `orgao_julgador` que vai no `PUT` — `null` = sem órgão processante definido. */
   protected readonly orgaoProcessanteId = signal<number | null>(null);
   /**
@@ -284,7 +287,7 @@ export class ProcessoDadosGeraisComponent {
     this.cidadeId.set(p.cidade_id);
     this.cidadeLabel.set(p.cidade_id !== null ? `${p.cidade ?? ''} — ${p.uf ?? ''}` : '');
     this.tags.set([...p.tags]);
-    this.aplicarOrgaoProcessante(p.orgao_processante);
+    this.aplicarTribunalProcessante(p.tribunal_atual, p.orgao_processante);
     this.escritoriosAnteriores.set([...p.escritorios_anteriores]);
     this.clientesSecundarios = p.clientes_secundarios;
     this.partesContrarias = p.partes_contrarias;
@@ -293,7 +296,8 @@ export class ProcessoDadosGeraisComponent {
     this.mostrarHistoricoObservacoes.set(false);
     this.tribunaisHistorico.set(p.tribunais_historico);
     this.paginaTribunais.set(0);
-    this.mostrarHistoricoTribunais.set(false);
+    // `mostrarHistoricoTribunais` não é resetado aqui de propósito: é preferência do usuário, não
+    // dado do processo — fica aberto entre saves e ao trocar de processo, só fecha se ele fechar.
 
     this.clientePrincipalId.set(p.cliente_principal_id);
     this.clientePrincipalLabel.set('');
@@ -331,7 +335,7 @@ export class ProcessoDadosGeraisComponent {
     this.advogadoResponsavelId.set(null);
     this.advogadoResponsavelLabel.set('');
     this.tags.set([]);
-    this.aplicarOrgaoProcessante(null);
+    this.aplicarTribunalProcessante(null, null);
     this.escritoriosAnteriores.set([]);
     this.clientesSecundarios = [];
     this.partesContrarias = [];
@@ -340,7 +344,7 @@ export class ProcessoDadosGeraisComponent {
     this.mostrarHistoricoObservacoes.set(false);
     this.tribunaisHistorico.set([]);
     this.paginaTribunais.set(0);
-    this.mostrarHistoricoTribunais.set(false);
+    // Mesmo motivo do `carregar`: preferência do usuário, não reseta ao limpar o painel.
   }
 
   /** Valida antes de salvar; marca os campos e devolve o motivo pro shell mostrar no toast. */
@@ -383,6 +387,7 @@ export class ProcessoDadosGeraisComponent {
       observacoesGerais: raw.observacoesGerais,
       destacarObservacao: raw.destacarObservacao,
       tags: this.tags(),
+      tribunalAtualId: this.tribunalAtualId(),
       orgaoProcessanteId: this.orgaoProcessanteId(),
       escritoriosAnteriores: this.escritoriosAnteriores(),
       clientesSecundarios: this.clientesSecundarios,
@@ -699,6 +704,7 @@ export class ProcessoDadosGeraisComponent {
    */
   protected onTribunalAtualChange(nome: string): void {
     this.tribunalAtual.set(nome);
+    this.tribunalAtualId.set(this.tribunalService.tribunais().find((t) => t.nome === nome)?.id ?? null);
     const orgaos = this.orgaosDoTribunalAtual();
     if (orgaos.length === 1) {
       this.orgaoAtual.set(orgaos[0].descricao);
@@ -807,18 +813,32 @@ export class ProcessoDadosGeraisComponent {
     return nomeCompleto.startsWith(prefixo) ? nomeCompleto.slice(prefixo.length) : nomeCompleto;
   }
 
-  /** Deriva tribunal/órgão exibidos nos dois combobox a partir do "órgão processante" da ficha. */
-  private aplicarOrgaoProcessante(orgao: OrgaoProcessanteApi | null): void {
-    if (!orgao) {
-      this.tribunalAtual.set('');
+  /**
+   * Deriva tribunal/órgão exibidos nos dois combobox a partir do "tribunal atual" e do "órgão
+   * processante" da ficha — independentes: pode ter só tribunal, sem nenhum órgão específico.
+   */
+  private aplicarTribunalProcessante(
+    tribunalAtual: TribunalAtualApi | null, orgao: OrgaoProcessanteApi | null,
+  ): void {
+    if (orgao) {
+      const separador = orgao.nome.indexOf(' - ');
+      this.tribunalAtual.set(separador >= 0 ? orgao.nome.slice(0, separador) : orgao.nome);
+      this.orgaoAtual.set(separador >= 0 ? orgao.nome.slice(separador + 3) : '');
+      this.tribunalAtualId.set(orgao.tribunal_id);
+      this.orgaoProcessanteId.set(orgao.id);
+      return;
+    }
+    if (tribunalAtual) {
+      this.tribunalAtual.set(tribunalAtual.nome);
       this.orgaoAtual.set('');
+      this.tribunalAtualId.set(tribunalAtual.id);
       this.orgaoProcessanteId.set(null);
       return;
     }
-    const separador = orgao.nome.indexOf(' - ');
-    this.tribunalAtual.set(separador >= 0 ? orgao.nome.slice(0, separador) : orgao.nome);
-    this.orgaoAtual.set(separador >= 0 ? orgao.nome.slice(separador + 3) : '');
-    this.orgaoProcessanteId.set(orgao.id);
+    this.tribunalAtual.set('');
+    this.orgaoAtual.set('');
+    this.tribunalAtualId.set(null);
+    this.orgaoProcessanteId.set(null);
   }
 
   // --- listas de texto livre (tags / escritórios) ---
@@ -853,6 +873,15 @@ export class ProcessoDadosGeraisComponent {
   /** `data` da observação (ISO, `Instant`) formatada como data e hora pt-BR. */
   protected formatarDataHora(data: string): string {
     return new Date(data).toLocaleString('pt-BR');
+  }
+
+  /**
+   * Rótulo de uma linha do histórico de tribunais — "TRIBUNAL — órgão", ou só "TRIBUNAL" quando
+   * não havia órgão (não é "excluído": pode simplesmente nunca ter sido definido).
+   */
+  protected rotuloHistoricoTribunal(h: ProcessoTribunalHistoricoApi): string {
+    const tribunal = h.tribunal_nome ?? 'Tribunal excluído';
+    return h.orgao_nome ? `${tribunal} — ${h.orgao_nome}` : tribunal;
   }
 
   protected toggleHistoricoObservacoes(): void {

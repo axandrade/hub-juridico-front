@@ -347,7 +347,7 @@
           @for (h of tribunaisPagina(); track h.data) {
             <li>
               <time>{{ formatarDataHora(h.data) }}</time>
-              <p>{{ h.tribunal_nome || 'Tribunal excluído' }} — {{ h.orgao_nome || 'Órgão excluído' }}</p>
+              <p>{{ rotuloHistoricoTribunal(h) }}</p>
             </li>
           }
         </ul>

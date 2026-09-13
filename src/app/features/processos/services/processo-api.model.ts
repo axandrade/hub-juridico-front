@@ -123,6 +123,16 @@ export interface OrgaoProcessanteApi {
 }
 
 /**
+ * Tribunal "atual" do processo (`ProcessoResponse.tribunalAtual`) — independente do órgão: pode
+ * vir preenchido mesmo sem nenhum órgão específico escolhido ainda (tribunal novo, sem órgão
+ * cadastrado no catálogo). Mesma forma do catálogo `Tribunal` (`tribunal.service.ts`).
+ */
+export interface TribunalAtualApi {
+  id: number;
+  nome: string;
+}
+
+/**
  * Uma entrada do histórico de tribunais responsáveis pelo processo — registrada automaticamente
  * quando um órgão novo entra em "Órgãos processantes". Nomes resolvidos ao vivo (podem ser `null`
  * se o tribunal/órgão foi excluído do catálogo depois). Só leitura.
@@ -199,7 +209,9 @@ export interface ProcessoApi {
   outros_envolvidos_testemunhas: OutroEnvolvidoTestemunhaApi[];
   outros_envolvidos_peritos: OutroEnvolvidoPeritoApi[];
   outros_envolvidos_assistentes_tecnicos: OutroEnvolvidoAssistenteTecnicoApi[];
-  /** Órgão processante atual — `null` se ainda não definido. Trocar arquiva o anterior no histórico. */
+  /** Tribunal atual — `null` só se nunca houve tribunal nenhum (nem no histórico). */
+  tribunal_atual: TribunalAtualApi | null;
+  /** Órgão processante atual — `null` se ainda não definido (pode ter só o tribunal). Trocar arquiva o anterior no histórico. */
   orgao_processante: OrgaoProcessanteApi | null;
   escritorios_anteriores: string[];
   tags: string[];
@@ -250,6 +262,8 @@ export interface ProcessoWriteApi {
   outros_envolvidos_testemunhas: OutroEnvolvidoTestemunhaApi[];
   outros_envolvidos_peritos: OutroEnvolvidoPeritoApi[];
   outros_envolvidos_assistentes_tecnicos: OutroEnvolvidoAssistenteTecnicoApi[];
+  /** Id do catálogo `tribunais` — `null` = sem tribunal escolhido. */
+  tribunal_atual_id: number | null;
   /** Id do catálogo `orgao_julgador` (chave estrangeira) — `null` = sem órgão processante. */
   orgao_processante_id: number | null;
   escritorios_anteriores: string[];

@@ -72,6 +72,8 @@ export interface ProcessoEditavel {
   cenarioRemoto: CenarioRiscoApi;
 
   tags: string[];
+  /** Id do catálogo `tribunais` — independente do órgão (dá pra ter só o tribunal). */
+  tribunalAtualId: number | null;
   /** Id do catálogo `orgao_julgador` (chave estrangeira) — escolhido via cascata Tribunal→Órgão. */
   orgaoProcessanteId: number | null;
   escritoriosAnteriores: string[];
@@ -187,6 +189,7 @@ export class ProcessoService {
       outros_envolvidos_testemunhas: processo.outrosEnvolvidosTestemunhas,
       outros_envolvidos_peritos: processo.outrosEnvolvidosPeritos,
       outros_envolvidos_assistentes_tecnicos: processo.outrosEnvolvidosAssistentesTecnicos,
+      tribunal_atual_id: processo.tribunalAtualId,
       orgao_processante_id: processo.orgaoProcessanteId,
       escritorios_anteriores: processo.escritoriosAnteriores,
       tags: processo.tags,

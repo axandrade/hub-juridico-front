@@ -293,11 +293,11 @@ export class ProcessoDadosGeraisComponent {
     this.partesContrarias = p.partes_contrarias;
     this.observacoesPrevias.set(p.observacoes_previas);
     this.paginaObservacoes.set(0);
-    this.mostrarHistoricoObservacoes.set(false);
     this.tribunaisHistorico.set(p.tribunais_historico);
     this.paginaTribunais.set(0);
-    // `mostrarHistoricoTribunais` não é resetado aqui de propósito: é preferência do usuário, não
-    // dado do processo — fica aberto entre saves e ao trocar de processo, só fecha se ele fechar.
+    // `mostrarHistoricoObservacoes`/`mostrarHistoricoTribunais` não são resetados aqui de
+    // propósito: são preferência do usuário, não dado do processo — ficam abertos entre saves e
+    // ao trocar de processo, só fecham se ele fechar.
 
     this.clientePrincipalId.set(p.cliente_principal_id);
     this.clientePrincipalLabel.set('');
@@ -341,7 +341,6 @@ export class ProcessoDadosGeraisComponent {
     this.partesContrarias = [];
     this.observacoesPrevias.set([]);
     this.paginaObservacoes.set(0);
-    this.mostrarHistoricoObservacoes.set(false);
     this.tribunaisHistorico.set([]);
     this.paginaTribunais.set(0);
     // Mesmo motivo do `carregar`: preferência do usuário, não reseta ao limpar o painel.

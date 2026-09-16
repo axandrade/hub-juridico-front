@@ -6,6 +6,8 @@ import {
   IEndereco,
   IRepresentanteLegal,
   StatusCliente,
+  TipoContato,
+  TipoPessoa,
   emptyDossie,
   emptyEndereco,
 } from '../../../core/models';
@@ -99,6 +101,228 @@ export function clientRespToClient(res: ClientRespApi, currentUser: CurrentUser 
       progressEntry: res.registro_andamento ?? '',
       progressHistory: res.historico_andamentos ?? '',
     },
+  };
+}
+
+// ===================== /domain/pessoa/{id} -> IPessoa =====================
+
+/**
+ * Shape cru de `GET /domain/pessoa/{id}` (ddd-noap) — camelCase, nome literal do campo Java
+ * (ver `DomainService`), bem diferente do `ClientRespApi` (snake_case, DTO escrito à mão).
+ * Usado só pra carregar a ficha completa no painel (`ClientFormComponent`) — igual ao padrão
+ * já validado em `AdvogadoFormComponent`. `favorito`/`cadastrado_por_nome` não existem aqui
+ * (não são campos literais da entidade): favorito vem de `DomainFavoritoService` à parte;
+ * "cadastrado por" cai no fallback de `resolveCadastradoPor` (usuário atual ou `Usuário #id`).
+ */
+export interface EmailDomain {
+  endereco: string;
+  principal: boolean;
+}
+
+export interface ContatoDomain {
+  valor: string;
+  tipo: TipoContato;
+  principal: boolean;
+}
+
+export interface EnderecoDomain {
+  logradouro?: string;
+  numero?: string;
+  complemento?: string;
+  bairro?: string;
+  cidade?: string;
+  cep?: string;
+  uf?: string;
+}
+
+export interface RepresentanteDomain {
+  id: number;
+  nome: string;
+  documento: string;
+  cargo?: string;
+  endereco?: EnderecoDomain;
+  emails?: EmailDomain[];
+  contatos?: ContatoDomain[];
+}
+
+export interface PessoaDomain {
+  id: number;
+  status?: StatusVinculoApi;
+  endereco?: EnderecoDomain;
+  emails?: EmailDomain[];
+  contatos?: ContatoDomain[];
+  numeroContrato?: string;
+  dataContrato?: string | null;
+  responsavelInterno?: string;
+  indicadoPor?: string | null;
+  observacoes?: string | null;
+  caminhoArquivo?: string | null;
+  registroAndamento?: string | null;
+  historicoAndamentos?: string | null;
+  cadastradoPorId?: number | null;
+  criadoEm?: string;
+  representantes?: RepresentanteDomain[];
+  representantesFinanceiros?: RepresentanteDomain[];
+  // PessoaFisica
+  nome?: string;
+  cpf?: string;
+  rg?: string;
+  estadoCivil?: EstadoCivil | null;
+  nacionalidade?: string;
+  // PessoaJuridica
+  razaoSocial?: string;
+  nomeFantasia?: string;
+  cnpj?: string;
+  inscricaoEstadual?: string;
+  inscricaoMunicipal?: string;
+}
+
+/**
+ * Também usado direto (não só como prefixo `representantes.*`) pra alimentar o
+ * `DomainModelDropdownComponent` de "buscar representante existente" no dialog — ver
+ * `REPRESENTANTE_STANDALONE_DOMAIN_FIELDS`.
+ */
+const REPRESENTANTE_DOMAIN_FIELDS = [
+  'id',
+  'nome',
+  'documento',
+  'cargo',
+  'endereco.logradouro',
+  'endereco.numero',
+  'endereco.complemento',
+  'endereco.bairro',
+  'endereco.cidade',
+  'endereco.cep',
+  'endereco.uf',
+  'emails.endereco',
+  'emails.principal',
+  'contatos.valor',
+  'contatos.tipo',
+  'contatos.principal',
+];
+
+/** `fields=` pro `DomainModelDropdownComponent` de "buscar representante existente" (dialog). */
+export const REPRESENTANTE_STANDALONE_DOMAIN_FIELDS = REPRESENTANTE_DOMAIN_FIELDS.join(',');
+
+/** Passado como `fields=` pro `DomainService.get()` — cobre tudo que o painel usa. */
+export const PESSOA_DOMAIN_FIELDS = [
+  'id',
+  'status',
+  'nome',
+  'cpf',
+  'rg',
+  'estadoCivil',
+  'nacionalidade',
+  'razaoSocial',
+  'nomeFantasia',
+  'cnpj',
+  'inscricaoEstadual',
+  'inscricaoMunicipal',
+  'endereco.logradouro',
+  'endereco.numero',
+  'endereco.complemento',
+  'endereco.bairro',
+  'endereco.cidade',
+  'endereco.cep',
+  'endereco.uf',
+  'emails.endereco',
+  'emails.principal',
+  'contatos.valor',
+  'contatos.tipo',
+  'contatos.principal',
+  'numeroContrato',
+  'dataContrato',
+  'responsavelInterno',
+  'indicadoPor',
+  'observacoes',
+  'caminhoArquivo',
+  'registroAndamento',
+  'historicoAndamentos',
+  'cadastradoPorId',
+  'criadoEm',
+  ...REPRESENTANTE_DOMAIN_FIELDS.map((f) => `representantes.${f}`),
+  ...REPRESENTANTE_DOMAIN_FIELDS.map((f) => `representantesFinanceiros.${f}`),
+].join(',');
+
+/** `cpf` só existe em `PessoaFisica` — discrimina o tipo igual `clients.component.ts`. */
+export function pessoaDomainToClient(
+  dom: PessoaDomain,
+  favorite: boolean,
+  currentUser: CurrentUser | null,
+): IPessoa {
+  const tipo: TipoPessoa = dom.cpf != null ? 'FISICA' : 'JURIDICA';
+  return {
+    id: dom.id,
+    registeredAt: dom.criadoEm ? new Date(dom.criadoEm) : new Date(),
+    favorite,
+    pessoa: {
+      tipo,
+      endereco: enderecoFromDomain(dom.endereco),
+      emails: principalPrimeiro(
+        (dom.emails ?? []).map((e) => ({ endereco: e.endereco, principal: e.principal })),
+      ),
+      contatos: principalPrimeiro(
+        (dom.contatos ?? []).map((c) => ({ valor: c.valor, tipo: c.tipo, principal: c.principal })),
+      ),
+      nome: dom.nome ?? '',
+      cpf: maskCpf(dom.cpf ?? ''),
+      rg: dom.rg ?? '',
+      profissao: '',
+      nacionalidade: dom.nacionalidade ?? '',
+      estadoCivil: (dom.estadoCivil ?? '') as EstadoCivil | '',
+      representantesFinanceiros: (dom.representantesFinanceiros ?? []).map(representanteFromDomain),
+      razaoSocial: dom.razaoSocial ?? '',
+      nomeFantasia: dom.nomeFantasia ?? '',
+      cnpj: maskCnpj(dom.cnpj ?? ''),
+      inscricaoEstadual: dom.inscricaoEstadual ?? '',
+      inscricaoMunicipal: dom.inscricaoMunicipal ?? '',
+      representantes: (dom.representantes ?? []).map(representanteFromDomain),
+    },
+    dossier: {
+      ...emptyDossie(),
+      file: dom.caminhoArquivo ?? '',
+      status: statusVinculoFromApi(dom.status ?? null),
+      hiringMode: '',
+      contractNumber: dom.numeroContrato ?? '',
+      contractDate: dom.dataContrato ?? '',
+      referredBy: dom.indicadoPor ?? '',
+      internalOwner: dom.responsavelInterno ?? '',
+      registeredBy: resolveCadastradoPor(dom.cadastradoPorId, currentUser),
+      notes: dom.observacoes ?? '',
+      progressEntry: dom.registroAndamento ?? '',
+      progressHistory: dom.historicoAndamentos ?? '',
+    },
+  };
+}
+
+function enderecoFromDomain(e: EnderecoDomain | null | undefined): IEndereco {
+  if (!e) {
+    return emptyEndereco();
+  }
+  return {
+    logradouro: e.logradouro ?? '',
+    numero: e.numero ?? '',
+    complemento: e.complemento ?? '',
+    bairro: e.bairro ?? '',
+    cidade: e.cidade ?? '',
+    cep: e.cep ?? '',
+    uf: e.uf ?? '',
+  };
+}
+
+/** Também usado pra converter a escolha do `DomainModelDropdownComponent` no dialog de representante. */
+export function representanteFromDomain(r: RepresentanteDomain): IRepresentanteLegal {
+  return {
+    nome: r.nome ?? '',
+    documento: maskDocumento(r.documento ?? ''),
+    cargo: r.cargo ?? '',
+    endereco: enderecoFromDomain(r.endereco),
+    emails: principalPrimeiro(
+      (r.emails ?? []).map((e) => ({ endereco: e.endereco, principal: e.principal })),
+    ),
+    contatos: principalPrimeiro(
+      (r.contatos ?? []).map((c) => ({ valor: c.valor, tipo: c.tipo, principal: c.principal })),
+    ),
   };
 }
 

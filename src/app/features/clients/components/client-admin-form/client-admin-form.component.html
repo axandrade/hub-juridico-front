@@ -2,7 +2,26 @@
   @for (row of rows; track $index) {
     <div class="clients-form__row" [class.clients-form__row--cols-3]="row.length === 3">
       @for (field of row; track field.key) {
-        <app-client-field [config]="field" [control]="control(field.key)" />
+        @if (field.key === 'internalOwner') {
+          <div class="clients-field">
+            <span>Responsável interno</span>
+            <app-domain-model-dropdown
+              entityName="advogado"
+              fields="id,nome"
+              [searchFields]="['nome']"
+              filter="ativo eq true"
+              sort="nome"
+              [displayFormatter]="rotuloAdvogado"
+              [valueLabel]="control('internalOwner').value"
+              placeholder="Buscar advogado..."
+              ariaLabel="Responsável interno"
+              noResultsText="Nenhum advogado encontrado"
+              (itemSelected)="onResponsavelSelecionado($event)"
+            />
+          </div>
+        } @else {
+          <app-client-field [config]="field" [control]="control(field.key)" />
+        }
       }
     </div>
   }

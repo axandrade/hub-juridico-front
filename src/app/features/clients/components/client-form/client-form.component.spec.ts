@@ -3,33 +3,33 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { of } from 'rxjs';
 
-import { IPessoa, emptyDadosPessoa, emptyDossie } from '../../../../core/models';
 import { AuthService } from '../../../../core/services/auth.service';
-import { ClientService } from '../../services/client-service';
+import { DomainFavoritoService } from '../../../../core/services/domain-favorito.service';
+import { DomainService } from '../../../../core/services/domain.service';
+import { PessoaDomain } from '../../services/client-mapper';
 import { ClientFormComponent } from './client-form.component';
 
-function makePessoa(over: Partial<IPessoa> = {}): IPessoa {
+/** Shape cru de `/domain/pessoa/{id}` (ver `client-mapper.ts`) — não `IPessoa` direto. */
+function makePessoaDomain(): PessoaDomain {
   return {
     id: 7,
-    registeredAt: new Date('2026-02-02'),
-    favorite: false,
-    pessoa: {
-      ...emptyDadosPessoa('FISICA'),
-      nome: 'MARIA SOUZA',
-      cpf: '111.444.777-35',
-      emails: [{ endereco: 'maria@x.com', principal: true }],
-      contatos: [{ valor: '81999', tipo: 'WHATSAPP', principal: true }],
-    },
-    dossier: { ...emptyDossie(), folder: 'Pasta - 000007 - MARIA SOUZA' },
-    ...over,
+    status: 'ATIVO',
+    nome: 'MARIA SOUZA',
+    cpf: '11144477735',
+    emails: [{ endereco: 'maria@x.com', principal: true }],
+    contatos: [{ valor: '81999', tipo: 'WHATSAPP', principal: true }],
   };
 }
 
 describe('ClientFormComponent — carregar ficha ao trocar pessoaId', () => {
   let fixture: ComponentFixture<ClientFormComponent>;
   let ref: ComponentRef<ClientFormComponent>;
-  const store = {
-    buscarCompleto: (id: number) => of(id === 7 ? makePessoa() : null),
+  const domainStore = {
+    get: (command: { entityId?: string | number }) =>
+      of(command.entityId === 7 ? makePessoaDomain() : null),
+  };
+  const domainFavoritoStore = {
+    listarFavoritos: () => of(new Map<number, number>()),
   };
 
   beforeEach(() => {
@@ -37,7 +37,8 @@ describe('ClientFormComponent — carregar ficha ao trocar pessoaId', () => {
       imports: [ClientFormComponent],
       providers: [
         provideHttpClient(),
-        { provide: ClientService, useValue: store },
+        { provide: DomainService, useValue: domainStore },
+        { provide: DomainFavoritoService, useValue: domainFavoritoStore },
         { provide: AuthService, useValue: { user: () => ({ id: 1, name: 'Tester', role: 'admin' }) } },
       ],
     });
@@ -54,7 +55,6 @@ describe('ClientFormComponent — carregar ficha ao trocar pessoaId', () => {
     const raw = (fixture.componentInstance as unknown as { form: ClientFormComponent['form'] }).form.getRawValue();
     expect(raw.pessoa.nome).toBe('MARIA SOUZA');
     expect(raw.pessoa.emails).toEqual([{ endereco: 'maria@x.com', principal: true }]);
-    expect(raw.dossier.folder).toBe('Pasta - 000007 - MARIA SOUZA');
   });
 
   it('reflete o nome no <input> renderizado da aba Dados pessoais', () => {

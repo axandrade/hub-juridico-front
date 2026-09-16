@@ -4,6 +4,19 @@
     <button type="button" (click)="openNew()">Adicionar representante</button>
   </div>
 
+  <div class="clients-representatives__picker">
+    <app-domain-model-dropdown
+      [entityName]="entityName()"
+      [fields]="camposExistente"
+      [searchFields]="camposBusca"
+      [displayFormatter]="rotuloExistente"
+      placeholder="Buscar representante já cadastrado..."
+      noResultsText="Nenhum representante encontrado"
+      [ariaLabel]="titulo()"
+      (itemSelected)="onExistenteSelecionado($event)"
+    />
+  </div>
+
   @for (group of array().controls; track group) {
     @let rep = group.getRawValue();
     <div class="clients-representative-row">

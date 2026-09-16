@@ -1,1 +1,6 @@
 @use 'client-form';
+@use 'variables' as *;
+
+.clients-representatives__picker {
+  margin-bottom: $spacing-sm;
+}

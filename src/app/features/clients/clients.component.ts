@@ -177,7 +177,7 @@ export class ClientsComponent {
     const termo = busca.trim().replace(/'/g, '');
     const clausulas: string[] = [];
     if (termo) {
-      clausulas.push(CAMPOS_BUSCA.map((campo) => `${campo} ilike '*${termo}*'`).join(' or'));
+      clausulas.push(CAMPOS_BUSCA.map((campo) => `${campo} ilike '*${termo}*'`).join(' or '));
     }
     if (tipo === 'FISICA') {
       clausulas.push('cpf ne null');

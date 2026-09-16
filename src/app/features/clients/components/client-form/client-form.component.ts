@@ -11,7 +11,7 @@ import {
 } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
-import { map, startWith } from 'rxjs';
+import { catchError, forkJoin, map, of, startWith } from 'rxjs';
 
 import {
   IPessoa,
@@ -21,6 +21,8 @@ import {
   emptyDadosPessoa,
 } from '../../../../core/models';
 import { AuthService } from '../../../../core/services/auth.service';
+import { DomainFavoritoService } from '../../../../core/services/domain-favorito.service';
+import { DomainService } from '../../../../core/services/domain.service';
 import { ButtonComponent } from '../../../../shared/components/button/button.component';
 import { ToastService } from '../../../../shared/services/toast.service';
 import { mensagensCamposInvalidos } from '../../../../shared/utils/form-validacao';
@@ -37,6 +39,7 @@ import {
 } from '../../models/client-form.model';
 import { StatusVinculoApi } from '../../services/client-api.model';
 import { ClientService } from '../../services/client-service';
+import { PESSOA_DOMAIN_FIELDS, PessoaDomain, pessoaDomainToClient } from '../../services/client-mapper';
 import { ClientAddressComponent } from '../client-address/client-address.component';
 import { ClientAdminFormComponent } from '../client-admin-form/client-admin-form.component';
 import { ClientContactListComponent } from '../client-contact-list/client-contact-list.component';
@@ -84,6 +87,8 @@ interface EditorNotice {
 })
 export class ClientFormComponent {
   private readonly clientService = inject(ClientService);
+  private readonly domainService = inject(DomainService);
+  private readonly domainFavoritoService = inject(DomainFavoritoService);
   private readonly auth = inject(AuthService);
   private readonly toast = inject(ToastService);
 
@@ -169,7 +174,7 @@ export class ClientFormComponent {
         if (id !== null) {
           this.tipoNovoEscolhido.set(null);
           // Ficha completa à parte — a lista da tabela só carrega os campos que ela exibe.
-          this.clientService.buscarCompleto(id).subscribe((found) => {
+          this.buscarCompleto(id).subscribe((found) => {
             if (found) {
               this.loadIntoForm(found);
               this.notice.set({ key: 'idle' });
@@ -305,6 +310,28 @@ export class ClientFormComponent {
 
   protected formatClientId(id: number): string {
     return id.toString().padStart(6, '0');
+  }
+
+  /**
+   * Ficha completa por id direto do `/domain/pessoa/{id}` (ddd-noap) — mesmo padrão já validado
+   * em `AdvogadoFormComponent`. `favorito` não é campo da entidade, então vem à parte via
+   * `DomainFavoritoService` (mesma tabela `Favorito` que `ClientService.alternarFavorito`
+   * grava, só a leitura muda). "Cadastrado por" perde a resolução do nome vinda do backend
+   * (`cadastrado_por_nome` era join no `PessoaService` antigo) — cai no fallback já existente
+   * de `resolveCadastradoPor` (usuário atual ou "Usuário #id").
+   */
+  private buscarCompleto(id: number) {
+    return forkJoin({
+      pessoa: this.domainService.get<PessoaDomain>({
+        entityName: 'pessoa',
+        entityId: id,
+        fields: PESSOA_DOMAIN_FIELDS,
+      }),
+      favoritos: this.domainFavoritoService.listarFavoritos('pessoa', [id]),
+    }).pipe(
+      map(({ pessoa, favoritos }) => pessoaDomainToClient(pessoa, favoritos.has(id), this.auth.user())),
+      catchError(() => of(null)),
+    );
   }
 
   private loadIntoForm(client: IPessoa): void {

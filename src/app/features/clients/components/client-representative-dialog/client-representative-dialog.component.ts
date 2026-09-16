@@ -29,7 +29,9 @@ import { ClientFieldComponent } from '../client-field/client-field.component';
  * distinção de natureza no formulário.
  *
  * Trabalha sobre uma cópia destacada: só devolve o valor (`saved`) quando o
- * usuário confirma em "Salvar"; fechar/cancelar descarta tudo.
+ * usuário confirma em "Salvar"; fechar/cancelar descarta tudo. Reaproveitar um representante já
+ * cadastrado em outro cliente é feito ANTES de abrir este dialog — busca direto no painel
+ * (`ClientRepresentativesComponent`), não aqui.
  */
 @Component({
   selector: 'app-client-representative-dialog',

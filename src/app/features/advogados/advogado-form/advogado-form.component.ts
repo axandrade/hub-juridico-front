@@ -13,7 +13,7 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule, ValidatorFn, Validators } from '@angular/forms';
 import { Observable, catchError, map, of, startWith, switchMap } from 'rxjs';
 
-import { cpfValidator } from '../../../core/auth/documentos-br';
+import { cpfValidator, onlyDigits } from '../../../core/auth/documentos-br';
 import { ESTADOS_CIVIS, EstadoCivil } from '../../../core/models';
 import { DomainFavoritoService } from '../../../core/services/domain-favorito.service';
 import { DomainService } from '../../../core/services/domain.service';
@@ -234,6 +234,11 @@ export class AdvogadoFormComponent {
       ...raw,
       id: this.entityId(),
       nome: raw.nome.trim().toLocaleUpperCase('pt-BR'),
+      // CpfMaskDirective guarda o valor mascarado no FormControl de propósito (pra manter o
+      // <input> sincronizado) — quem manda pro backend precisa tirar a formatação, mesmo
+      // padrão do AuthService.login. Sem isso, "017.869.783-42" (14 chars) estoura o
+      // varchar(11) da coluna cpf no banco.
+      cpf: onlyDigits(raw.cpf),
       estadoCivil: (raw.estadoCivil || '') as EstadoCivil | '',
     };
 

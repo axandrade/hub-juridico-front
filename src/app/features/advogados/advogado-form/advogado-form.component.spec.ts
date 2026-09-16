@@ -133,8 +133,10 @@ describe('AdvogadoFormComponent', () => {
     domainService.get.mockReturnValue(of(makeAdvogado({ id: 50 })));
 
     form().controls.nome.setValue('fulano de tal');
-    // Dígitos "crus" — é o que o FormControl guarda depois da CpfMaskDirective processar o input.
-    form().controls.cpf.setValue('11144477735');
+    // Mascarado, exatamente o que a CpfMaskDirective deixa no FormControl de propósito
+    // (mantém o <input> sincronizado) — save() precisa tirar a formatação antes de mandar
+    // (senão "111.444.777-35", 14 chars, estoura o varchar(11) da coluna cpf no banco).
+    form().controls.cpf.setValue('111.444.777-35');
     form().controls.email.setValue('fulano@exemplo.com');
 
     (fixture.componentInstance as unknown as { save: () => void }).save();

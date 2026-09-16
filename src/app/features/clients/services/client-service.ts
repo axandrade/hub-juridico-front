@@ -1,6 +1,6 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject, signal } from '@angular/core';
-import { Observable, catchError, map, of, tap } from 'rxjs';
+import { Observable, map, tap } from 'rxjs';
 
 import { environment } from '../../../../environments/environment';
 import { IPessoa } from '../../../core/models';
@@ -14,9 +14,10 @@ import {
 } from './client-mapper';
 
 /**
- * CRUD de uma pessoa (cliente) por vez — criar/atualizar/buscar ficha completa/ativar-inativar/
- * favoritar, via `/api/v1/pessoas` (Spring). A listagem da tabela não passa mais por aqui: usa
- * `/domain/pessoa` direto (`DomainModelTableComponent`, ver `ClientsComponent`).
+ * CRUD de uma pessoa (cliente) por vez — criar/atualizar/ativar-inativar/favoritar, via
+ * `/api/v1/pessoas` (Spring). A listagem da tabela e a busca da ficha completa não passam mais
+ * por aqui: usam `/domain/pessoa` direto (`DomainModelTableComponent` em `ClientsComponent`;
+ * `ClientFormComponent` tem seu próprio `buscarCompleto` via `DomainService`).
  */
 @Injectable({ providedIn: 'root' })
 export class ClientService {
@@ -35,18 +36,6 @@ export class ClientService {
 
   private toClient(res: ClientRespApi): IPessoa {
     return clientRespToClient(res, this.auth.user());
-  }
-
-  /**
-   * Ficha completa por id, direto do backend (`GET /api/v1/pessoas/{id}`) — a tabela
-   * (`/domain/pessoa`) só traz os campos que a grade exibe, então quem for editar a ficha
-   * (`ClientFormComponent`) precisa desse fetch à parte.
-   */
-  buscarCompleto(id: number): Observable<IPessoa | null> {
-    return this.http.get<ClientRespApi>(`${this.base}/${id}`).pipe(
-      map((res) => this.toClient(res)),
-      catchError(() => of(null)),
-    );
   }
 
   /** `POST` (id 0) ou `PUT` (id existente); devolve o registro do backend. */
@@ -95,9 +84,9 @@ export class ClientService {
    * Devolve o estado desejado (pós-clique).
    *
    * Recebe o favorito atual explícito (não lê de `_clients`): a ficha aberta no painel vem de
-   * `buscarCompleto`, que não passa pelo cache local — só quem chegou aqui via `salvar`/
-   * `alterarStatus` está nele. Achado real: antes lia `_clients`, então favoritar um cliente
-   * que não tinha acabado de ser salvo/reativado nesta sessão virava um no-op silencioso (nunca
+   * `/domain/pessoa` (via `ClientFormComponent`), que não passa pelo cache local — só quem
+   * chegou aqui via `salvar`/`alterarStatus` está nele. Achado real: antes lia `_clients`, então
+   * favoritar um cliente que não tinha acabado de ser salvo/reativado nesta sessão virava um no-op silencioso (nunca
    * chamava a API) desde que a listagem passou a vir de `/domain/pessoa` em vez de `carregar()`.
    */
   alternarFavorito(id: number, favoritoAtual: boolean): boolean {

@@ -53,26 +53,6 @@ describe('ClientService', () => {
     },
   };
 
-  it('buscarCompleto busca a ficha inteira em GET /pessoas/{id}', () => {
-    let resultado: unknown;
-    store.buscarCompleto(42).subscribe((r) => (resultado = r));
-
-    const req = http.expectOne(`${BASE}/42`);
-    req.flush(registro);
-
-    expect((resultado as { pessoa: { nome: string } } | null)?.pessoa.nome).toBe('Maria');
-  });
-
-  it('buscarCompleto devolve null quando o backend não acha o registro', () => {
-    let resultado: unknown;
-    store.buscarCompleto(999).subscribe((r) => (resultado = r));
-
-    const req = http.expectOne(`${BASE}/999`);
-    req.flush('not found', { status: 404, statusText: 'Not Found' });
-
-    expect(resultado).toBeNull();
-  });
-
   it('alterarStatus manda {ativo: true} pra ATIVO', () => {
     store.alterarStatus(42, 'ATIVO').subscribe();
     const req = http.expectOne(`${BASE}/42/status`);

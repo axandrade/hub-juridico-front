@@ -53,50 +53,6 @@ describe('ClientService', () => {
     },
   };
 
-  it('carregar busca a página no backend com tipo/incluirInativos e popula clients()/buscar()', () => {
-    let resultado: unknown;
-    store.carregar({ page: 0, tipo: 'FISICA', incluirInativos: true }).subscribe((r) => (resultado = r));
-
-    const req = http.expectOne((r) => r.url === BASE);
-    expect(req.request.params.get('page')).toBe('0');
-    expect(req.request.params.get('tipo')).toBe('FISICA');
-    expect(req.request.params.get('incluirInativos')).toBe('true');
-    req.flush({
-      conteudo: [registro],
-      pagina: 0,
-      tamanho: 10,
-      total_elementos: 1,
-      total_paginas: 1,
-      ultima: true,
-    });
-
-    expect((resultado as unknown[]).length).toBe(1);
-    expect(store.clients()).toHaveLength(1);
-    expect(store.totalElements()).toBe(1);
-    const cliente = store.buscar(42);
-    expect(cliente?.pessoa.nome).toBe('Maria');
-    expect(cliente?.favorite).toBe(true);
-    expect(cliente?.dossier.status).toBe('active');
-  });
-
-  it('carregar sem tipo/incluirInativos/busca não manda esses params', () => {
-    store.carregar({ page: 0, tipo: null, incluirInativos: false }).subscribe();
-
-    const req = http.expectOne((r) => r.url === BASE);
-    expect(req.request.params.has('tipo')).toBe(false);
-    expect(req.request.params.has('incluirInativos')).toBe(false);
-    expect(req.request.params.has('busca')).toBe(false);
-    req.flush({ conteudo: [], pagina: 0, tamanho: 10, total_elementos: 0, total_paginas: 1, ultima: true });
-  });
-
-  it('carregar manda busca (trim) como query param', () => {
-    store.carregar({ page: 0, tipo: null, incluirInativos: false, busca: '  maria  ' }).subscribe();
-
-    const req = http.expectOne((r) => r.url === BASE);
-    expect(req.request.params.get('busca')).toBe('maria');
-    req.flush({ conteudo: [], pagina: 0, tamanho: 10, total_elementos: 0, total_paginas: 1, ultima: true });
-  });
-
   it('buscarCompleto busca a ficha inteira em GET /pessoas/{id}', () => {
     let resultado: unknown;
     store.buscarCompleto(42).subscribe((r) => (resultado = r));
@@ -118,16 +74,6 @@ describe('ClientService', () => {
   });
 
   it('alterarStatus manda {ativo: true} pra ATIVO', () => {
-    store.carregar({ page: 0, tipo: null, incluirInativos: false }).subscribe();
-    http.expectOne((r) => r.url === BASE).flush({
-      conteudo: [registro],
-      pagina: 0,
-      tamanho: 10,
-      total_elementos: 1,
-      total_paginas: 1,
-      ultima: true,
-    });
-
     store.alterarStatus(42, 'ATIVO').subscribe();
     const req = http.expectOne(`${BASE}/42/status`);
     expect(req.request.body).toEqual({ ativo: true });

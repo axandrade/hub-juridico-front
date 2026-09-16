@@ -10,72 +10,103 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
-import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop';
-import { EMPTY, catchError, debounceTime, distinctUntilChanged, skip, switchMap } from 'rxjs';
+import { toObservable, toSignal } from '@angular/core/rxjs-interop';
+import { debounceTime, distinctUntilChanged } from 'rxjs';
 
-import { ModalidadeCliente, IPessoa, TipoPessoa } from '../../core/models';
+import { contatoPrincipal, emailPrincipal, IContato, IEmail, IPessoa, TipoPessoa } from '../../core/models';
 import { ButtonComponent } from '../../shared/components/button/button.component';
+import { DomainModelTableComponent } from '../../shared/components/domain-table/domain-model-table.component';
 import { PanelShellController } from '../../shared/panel-shell/panel-shell.controller';
 import { PastaClienteService } from './services/pasta-cliente.service';
-import { ClientService, ClientListQuery } from './services/client-service';
-import { ClientFormComponent } from './components/client-form/client-form.component';
-import { emailPrincipal, contatoPrincipal } from '../../core/models';
-import { DataTableComponent } from '../../shared/components/table/data-table.component';
 import { TableColumn } from '../../shared/components/table/table-column.model';
-import { TablePagination, TablePinAction } from '../../shared/components/table/table.model';
+import { ClientFormComponent } from './components/client-form/client-form.component';
 
-type PageNotice = '' | 'loadError';
+/**
+ * Linha crua de `/domain/pessoa` (camelCase, ver `DomainService`) — `Pessoa` é
+ * `@Inheritance(JOINED)` (`PessoaFisica`/`PessoaJuridica`), e o ddd-noap mescla os campos do
+ * subtipo concreto direto no mesmo objeto (marcados por `instanceOf`, que não pedimos aqui —
+ * discriminamos física/jurídica pelo próprio filtro RQL, ver `buildFilter`). Só os campos que
+ * a grade usa — não é o `IDadosPessoa` completo do formulário.
+ *
+ * `emails`/`contatos` pedem só `principal`/`endereco`/`valor` — o suficiente pra achar o
+ * principal com `emailPrincipal()`/`contatoPrincipal()` (mesma lógica de
+ * `Pessoa.getEmailPrincipal()`/`getContatoPrincipal()` no backend). Eram `@ElementCollection`
+ * de `@Embeddable` sem `@Id`, o que quebrava o dedup de coleção do ddd-noap
+ * (`ResultProcessor`/`PropertyId.getIdFieldName`) — corrigido lá lendo a coleção direto da
+ * entidade raiz em vez de tentar consolidar por um id inexistente.
+ */
+interface PessoaListRow {
+  id: number;
+  status: 'ATIVO' | 'INATIVO';
+  nome?: string | null;
+  cpf?: string | null;
+  razaoSocial?: string | null;
+  nomeFantasia?: string | null;
+  cnpj?: string | null;
+  emails?: IEmail[];
+  contatos?: IContato[];
+}
 
+/** Campos livremente buscáveis pela caixa de busca — dobrados em RQL (`or`) na buildFilter(). */
+const CAMPOS_BUSCA = ['nome', 'razaoSocial', 'nomeFantasia', 'cpf', 'cnpj'] as const;
+
+/**
+ * Listagem de Clientes (`Pessoa` no backend) via `/domain/pessoa` (ddd-noap) — igual ao piloto
+ * de Advogados. O painel de criar/editar (`client-form`, com abas/endereço/representantes/
+ * arquivos) e o `PessoaController`/`PessoaService` continuam exatamente como estavam: são
+ * regra de negócio complexa demais pra esse CRUD genérico, migrar só a grade já prova o ponto.
+ *
+ * "Cadastrado por" saiu da grade: era um nome resolvido via join no backend
+ * (`PessoaService.listarPagina`), não um campo literal da entidade — o genérico só devolve o
+ * que está de fato na entidade (`cadastradoPorId`, um id cru, não o nome).
+ */
 @Component({
   selector: 'app-clients',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ButtonComponent, ClientFormComponent, DataTableComponent],
+  imports: [ButtonComponent, ClientFormComponent, DomainModelTableComponent],
   templateUrl: './clients.component.html',
   styleUrl: './clients.component.scss',
 })
 export class ClientsComponent {
-  private readonly clientService = inject(ClientService);
   private readonly document = inject(DOCUMENT);
   private readonly destroyRef = inject(DestroyRef);
   private readonly pastaCliente = inject(PastaClienteService);
 
   private readonly editor = viewChild(ClientFormComponent);
   /** A grade de clientes — o botão "Colunas" da barra de ações comanda esta instância. */
-  protected readonly clientsTable = viewChild(DataTableComponent);
+  protected readonly clientsTable = viewChild(DomainModelTableComponent<PessoaListRow>);
 
   protected readonly selectedPersonId = signal<number | null>(null);
   /** Posição/tamanho/visibilidade do painel — ver `PanelShellController`. */
   protected readonly panelShell = new PanelShellController(this.document, {
     storagePrefix: 'hub-juridico.clients',
   });
-  protected readonly pageNotice = signal<PageNotice>('');
-  protected readonly loading = signal(false);
 
-  /** Página pedida ao backend (0-based) e gatilho de recarregamento manual. */
-  private readonly page = signal(0);
-  private readonly reloadTick = signal(0);
   /** `true` traz também clientes inativos — reflete exatamente o `incluirInativos` do backend. */
   protected readonly incluirInativos = signal(false);
-  /** Busca livre (nome/razão, CPF/CNPJ, e-mail) — resolvida no servidor, com debounce. */
+  /** Busca livre (nome/razão, CPF/CNPJ) — resolvida no servidor, com debounce. */
   protected readonly busca = signal('');
-  /** Filtro de natureza (chips) — `''` = todos. Resolvido no servidor. */
+  /** Filtro de natureza (chips) — `''` = todos. Física/jurídica discriminado por `cpf eq/ne null`. */
   protected readonly tipoFiltro = signal<TipoPessoa | ''>('');
 
-  protected readonly clients = this.clientService.clients;
-  protected readonly totalClients = this.clientService.totalElements;
-  protected readonly pagination = computed<TablePagination>(() => ({
-    page: this.clientService.page(),
-    totalPages: this.clientService.totalPages(),
-    totalElements: this.clientService.totalElements(),
-    last: this.clientService.last(),
-  }));
+  /** Última página carregada pela grade — usado só pra resolver o nome no diálogo "pasta do cliente". */
+  private readonly lastLoadedRows = signal<PessoaListRow[]>([]);
 
-  protected readonly clientColumns: TableColumn<IPessoa>[] = [
+  private readonly buscaDebounced = toSignal(
+    toObservable(this.busca).pipe(debounceTime(300), distinctUntilChanged()),
+    { initialValue: this.busca() },
+  );
+
+  protected readonly filtro = computed(() =>
+    this.buildFilter(this.buscaDebounced(), this.tipoFiltro(), this.incluirInativos()),
+  );
+
+  protected readonly clientColumns: TableColumn<PessoaListRow>[] = [
     {
-      key: 'tipo',
+      key: 'natureza',
       header: 'Natureza',
       width: '138px',
-      formatter: (_value, row) => (row.pessoa.tipo === 'FISICA' ? 'Pessoa física' : 'Pessoa jurídica'),
+      formatter: (_value, row) => (row.cpf ? 'Pessoa física' : 'Pessoa jurídica'),
     },
     {
       key: 'nome',
@@ -84,22 +115,22 @@ export class ClientsComponent {
       formatter: (_value, row) => this.clientDisplayName(row) || '-',
     },
     {
-      key: 'cpf_cnpj',
+      key: 'documento',
       header: 'CPF / CNPJ',
       width: '170px',
-      formatter: (_value, row) => (row.pessoa.tipo === 'FISICA' ? row.pessoa.cpf : row.pessoa.cnpj) || '-',
+      formatter: (_value, row) => (row.cpf || row.cnpj) || '-',
     },
     {
       key: 'email',
       header: 'E-mail',
-      width: '230px',
-      formatter: (_value, row) => emailPrincipal(row.pessoa.emails) || '-',
+      width: '220px',
+      formatter: (_value, row) => emailPrincipal(row.emails ?? []) || '-',
     },
     {
-      key: 'telefone',
+      key: 'contato',
       header: 'Telefone',
       width: '160px',
-      formatter: (_value, row) => contatoPrincipal(row.pessoa.contatos) || '-',
+      formatter: (_value, row) => contatoPrincipal(row.contatos ?? []) || '-',
     },
     {
       key: 'status',
@@ -108,79 +139,24 @@ export class ClientsComponent {
       align: 'center',
       format: 'badge',
       badgeDot: true,
-      formatter: (_value, row) => (row.dossier.status === 'active' ? 'Ativo' : 'Inativo'),
-      badgeTone: (_value, row) => (row.dossier.status === 'active' ? 'success' : 'neutral'),
+      formatter: (_value, row) => (row.status === 'ATIVO' ? 'Ativo' : 'Inativo'),
+      badgeTone: (_value, row) => (row.status === 'ATIVO' ? 'success' : 'neutral'),
     },
-    {
-      key: 'cadastrado_por_nome',
-      header: 'Cadastrado por',
-      width: '150px',
-      formatter: (_value, row) => row.dossier.registeredBy || '-',
-    }
-
   ];
 
-  protected readonly clientPinFirst = (row: IPessoa): boolean => row.favorite;
-
-  protected readonly clientRowClass = (row: IPessoa): Record<string, boolean> => ({
+  protected readonly clientRowClass = (row: PessoaListRow): Record<string, boolean> => ({
     'is-selected': this.selectedPersonId() === row.id,
-    'is-favorite': row.favorite,
-    'is-inactive': row.dossier.status === 'inactive',
+    'is-inactive': row.status !== 'ATIVO',
   });
 
-  protected readonly clientPinAction: TablePinAction<IPessoa> = {
-    isActive: (row) => row.favorite,
-    onToggle: (row, event) => this.toggleClientFavorite(row, event),
-    ariaLabel: 'Favoritar cliente',
-  };
-
   constructor() {
-    // Busca com debounce: só dispara requisição 300ms depois de parar de digitar.
-    const buscaDebounced = toSignal(
-      toObservable(this.busca).pipe(debounceTime(300), distinctUntilChanged()),
-      { initialValue: this.busca() },
-    );
-    // Nova busca sempre volta pra primeira página.
-    toObservable(buscaDebounced)
-      .pipe(skip(1), takeUntilDestroyed(this.destroyRef))
-      .subscribe(() => this.page.set(0));
-
-    const query = computed<ClientListQuery & { tick: number }>(() => ({
-      page: this.page(),
-      tipo: this.tipoFiltro() || null,
-      incluirInativos: this.incluirInativos(),
-      busca: buscaDebounced(),
-      tick: this.reloadTick(),
-    }));
-
-    toObservable(query)
-      .pipe(
-        switchMap((q) => {
-          this.loading.set(true);
-          return this.clientService.carregar(q).pipe(
-            catchError(() => {
-              this.loading.set(false);
-              this.pageNotice.set('loadError');
-              return EMPTY;
-            }),
-          );
-        }),
-        takeUntilDestroyed(this.destroyRef),
-      )
-      .subscribe(() => {
-        this.loading.set(false);
-        if (this.pageNotice() === 'loadError') {
-          this.pageNotice.set('');
-        }
-      });
-
     // Publica o cliente selecionado para o diálogo "Abrir pasta do cliente" (global, no layout).
     effect(() => {
       const id = this.selectedPersonId();
-      const cliente = id !== null ? this.clientService.buscar(id) : null;
+      const row = id !== null ? this.lastLoadedRows().find((r) => r.id === id) : null;
       this.pastaCliente.definirCliente(
-        cliente
-          ? { id: cliente.id, nome: this.clientDisplayName(cliente) }
+        row
+          ? { id: row.id, nome: this.clientDisplayName(row) }
           : id !== null && id > 0
             ? { id, nome: '' }
             : null,
@@ -191,17 +167,31 @@ export class ClientsComponent {
     this.destroyRef.onDestroy(() => this.pastaCliente.definirCliente(null));
   }
 
-  private goToFirstPage(): void {
-    this.page.set(0);
-    this.reloadTick.update((tick) => tick + 1);
+  /**
+   * Monta o filtro RQL: `campo1 ilike '*x*' or campo2 ilike '*x*' ... and (cpf eq|ne null)
+   * and status eq 'ATIVO'`. RQL do ddd-noap não tem parênteses/precedência — avaliação
+   * estrita da esquerda pra direita — então todos os `or` vêm primeiro, os `and` por último,
+   * pra virar `((ORs) AND tipo) AND status`, não o contrário.
+   */
+  private buildFilter(busca: string, tipo: TipoPessoa | '', incluirInativos: boolean): string {
+    const termo = busca.trim().replace(/'/g, '');
+    const clausulas: string[] = [];
+    if (termo) {
+      clausulas.push(CAMPOS_BUSCA.map((campo) => `${campo} ilike '*${termo}*'`).join(' or'));
+    }
+    if (tipo === 'FISICA') {
+      clausulas.push('cpf ne null');
+    } else if (tipo === 'JURIDICA') {
+      clausulas.push('cpf eq null');
+    }
+    if (!incluirInativos) {
+      clausulas.push("status eq 'ATIVO'");
+    }
+    return clausulas.join(' and ');
   }
 
-  private refreshList(): void {
-    this.reloadTick.update((tick) => tick + 1);
-  }
-
-  protected onPageChange(page: number): void {
-    this.page.set(page);
+  protected onDataLoaded(rows: PessoaListRow[]): void {
+    this.lastLoadedRows.set(rows);
   }
 
   protected onBuscaInput(event: Event): void {
@@ -214,26 +204,15 @@ export class ClientsComponent {
 
   /** Chip de natureza (`''` = Todos). Seleção direta, estilo rádio. */
   protected selecionarTipo(tipo: TipoPessoa | ''): void {
-    // Ignora troca de aba enquanto a lista carrega — evita a rajada de requisições canceladas
-    // quando o usuário clica repetido esperando a grade responder (banco lento).
-    if (this.loading() || this.tipoFiltro() === tipo) {
-      return;
-    }
     this.tipoFiltro.set(tipo);
-    this.page.set(0);
   }
 
   protected onToggleIncluirInativos(event: Event): void {
     this.incluirInativos.set((event.target as HTMLInputElement).checked);
-    this.page.set(0);
-  }
-
-  protected onLoadError(): void {
-    this.pageNotice.set('loadError');
   }
 
   protected reloadList(): void {
-    this.refreshList();
+    this.clientsTable()?.reload();
   }
 
   /** No modo diálogo, Esc esconde o painel (mantém o cliente selecionado). */
@@ -253,17 +232,12 @@ export class ClientsComponent {
     return !!this.document.querySelector('app-modal .modal__dialog');
   }
 
-  protected toggleClientFavorite(row: IPessoa, event: MouseEvent): void {
-    event.stopPropagation();
-    this.clientService.alternarFavorito(row.id);
-  }
-
   protected newRecord(): void {
     this.selectedPersonId.set(null);
     this.panelShell.setPanelVisible(true);
   }
 
-  protected selectClient(row: IPessoa | null): void {
+  protected selectClient(row: PessoaListRow | null): void {
     const id = row ? row.id : null;
 
     const editor = this.editor();
@@ -303,42 +277,21 @@ export class ClientsComponent {
 
   protected onSaved(client: IPessoa): void {
     this.selectedPersonId.set(client.id);
-    this.goToFirstPage();
+    this.clientsTable()?.reload();
   }
 
   protected onCleared(): void {
     this.selectedPersonId.set(null);
-    this.refreshList();
+    this.clientsTable()?.reload();
   }
 
   /** Ativação/inativação: o registro continua existindo, então mantém a seleção. */
   protected onStatusChanged(client: IPessoa): void {
     this.selectedPersonId.set(client.id);
-    this.refreshList();
+    this.clientsTable()?.reload();
   }
 
-  private hiringModeLabel(mode: ModalidadeCliente | ''): string {
-    switch (mode) {
-      case 'oneOff':
-        return 'Avulso';
-      case 'monthly':
-        return 'Mensalista';
-      case 'successFee':
-        return 'Êxito';
-      case 'advisory':
-        return 'Consultivo';
-      case 'litigation':
-        return 'Contencioso';
-      case 'mixed':
-        return 'Misto';
-      default:
-        return '-';
-    }
-  }
-
-  private clientDisplayName(client: IPessoa): string {
-    return client.pessoa.tipo === 'FISICA'
-      ? client.pessoa.nome.trim()
-      : (client.pessoa.razaoSocial || client.pessoa.nomeFantasia).trim();
+  private clientDisplayName(row: PessoaListRow): string {
+    return row.cpf ? (row.nome ?? '').trim() : (row.razaoSocial || row.nomeFantasia || '').trim();
   }
 }

@@ -200,7 +200,7 @@ export class ClientFormComponent {
   protected toggleFavorite(): void {
     const id = this.entityId();
     if (id > 0) {
-      this.favorite.set(this.clientService.alternarFavorito(id));
+      this.favorite.set(this.clientService.alternarFavorito(id, this.favorite()));
     } else {
       this.favorite.update((value) => !value);
     }

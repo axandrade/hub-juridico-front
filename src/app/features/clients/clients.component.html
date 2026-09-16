@@ -62,20 +62,20 @@
           <button
             type="button"
             class="clients-menu-button"
-            [class.is-active]="gradeClientes.columnsMenuOpen()"
-            (click)="gradeClientes.toggleColumnsMenu()"
+            [class.is-active]="clientsTable()?.columnsMenuOpen()"
+            (click)="clientsTable()?.toggleColumnsMenu()"
           >
             <i class="fa-solid fa-table-columns" aria-hidden="true"></i>
             Colunas
           </button>
-          @if (gradeClientes.columnsMenuOpen()) {
+          @if (clientsTable()?.columnsMenuOpen()) {
             <div class="clients-dropdown clients-columns__menu" role="menu">
-              @for (col of gradeClientes.columns(); track col.key) {
+              @for (col of clientColumns; track col.key) {
                 <label>
                   <input
                     type="checkbox"
-                    [checked]="gradeClientes.isColumnVisible(col.key)"
-                    (change)="gradeClientes.toggleColumnVisibility(col.key)"
+                    [checked]="clientsTable()?.isColumnVisible(col.key)"
+                    (change)="clientsTable()?.toggleColumnVisibility(col.key)"
                   />
                   {{ col.header }}
                 </label>
@@ -121,7 +121,6 @@
         type="button"
         [class.is-active]="tipoFiltro() === ''"
         [attr.aria-pressed]="tipoFiltro() === ''"
-        [disabled]="loading()"
         (click)="selecionarTipo('')"
       >
         Todos
@@ -130,7 +129,6 @@
         type="button"
         [class.is-active]="tipoFiltro() === 'FISICA'"
         [attr.aria-pressed]="tipoFiltro() === 'FISICA'"
-        [disabled]="loading()"
         (click)="selecionarTipo('FISICA')"
       >
         Pessoa física
@@ -139,7 +137,6 @@
         type="button"
         [class.is-active]="tipoFiltro() === 'JURIDICA'"
         [attr.aria-pressed]="tipoFiltro() === 'JURIDICA'"
-        [disabled]="loading()"
         (click)="selecionarTipo('JURIDICA')"
       >
         Pessoa jurídica
@@ -149,7 +146,6 @@
         <input
           type="checkbox"
           [checked]="incluirInativos()"
-          [disabled]="loading()"
           (change)="onToggleIncluirInativos($event)"
         />
         Mostrar inativos
@@ -157,23 +153,20 @@
     </div>
 
     <div class="clients-table-wrap">
-      <app-data-table
-        #gradeClientes
+      <app-domain-model-table
+        entityName="pessoa"
+        fields="id,status,nome,cpf,razaoSocial,nomeFantasia,cnpj,emails.principal,emails.endereco,contatos.principal,contatos.valor"
         [columnsToolbar]="false"
         [columns]="clientColumns"
-        [data]="clients()"
-        [loading]="loading()"
+        [filter]="filtro()"
+        sort="nome"
         trackKey="id"
         emptyMessage="Nenhum cliente encontrado."
         [sortable]="true"
-        [initialSort]="{ key: 'nome', direction: 'asc' }"
         [columnVisibility]="true"
-        [defaultVisibleColumns]="['tipo','nome','cpf_cnpj','email','telefone','status','cadastrado_por_nome']"
-        [pinFirst]="clientPinFirst"
+        [defaultVisibleColumns]="['natureza','nome','documento','email','contato','status']"
         [rowClass]="clientRowClass"
-        [pinAction]="clientPinAction"
-        [pagination]="pagination()"
-        (pageChange)="onPageChange($event)"
+        (dataLoaded)="onDataLoaded($event)"
         (rowClick)="selectClient($event)"
       />
     </div>
@@ -182,13 +175,13 @@
       <div class="clients-summary-line">
         <span>
           @if (busca().trim()) {
-            {{ totalClients() }} resultado(s) para "{{ busca().trim() }}"
+            {{ clientsTable()?.pagination()?.totalElements ?? 0 }} resultado(s) para "{{ busca().trim() }}"
           } @else {
-            {{ totalClients() }} cliente(s) cadastrado(s)
+            {{ clientsTable()?.pagination()?.totalElements ?? 0 }} cliente(s) cadastrado(s)
           }
         </span>
       </div>
-      @if (pageNotice() === 'loadError') {
+      @if (clientsTable()?.loadError()) {
         <span>
           · Não foi possível carregar a lista.
           <button type="button" class="clients-link-button" (click)="reloadList()">

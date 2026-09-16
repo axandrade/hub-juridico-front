@@ -1,12 +1,12 @@
-import { HttpClient, HttpParams } from '@angular/common/http';
+import { HttpClient } from '@angular/common/http';
 import { Injectable, inject, signal } from '@angular/core';
 import { Observable, catchError, map, of, tap } from 'rxjs';
 
 import { environment } from '../../../../environments/environment';
-import { IPessoa, TipoPessoa } from '../../../core/models';
+import { IPessoa } from '../../../core/models';
 import { AuthService } from '../../../core/services/auth.service';
 import { FavoritoService } from '../../../shared/services/favorito.service';
-import { PaginaApi, ClientRespApi, StatusVinculoApi } from './client-api.model';
+import { ClientRespApi, StatusVinculoApi } from './client-api.model';
 import {
   clientToAtualizarRequest,
   clientToCriarRequest,
@@ -14,25 +14,9 @@ import {
 } from './client-mapper';
 
 /**
- * Página pedida ao backend. Filtros do endpoint: `tipo` e `incluirInativos`
- * (`GET /api/v1/pessoas?page&size&tipo&incluirInativos`). Por padrão
- * (`incluirInativos: false`) só vêm pessoas ativas. Os demais filtros da tabela
- * (nome, CPF/CNPJ, e-mail) são aplicados client-side pelo `app-data-table`, só
- * sobre a página de 10 linhas já carregada — o endpoint não tem esses filtros.
- */
-export interface ClientListQuery {
-  page: number;
-  tipo: TipoPessoa | null;
-  /** `true` traz também os clientes inativos; padrão é só ativos. */
-  incluirInativos: boolean;
-  /** Busca livre no servidor: nome/razão/fantasia, CPF/CNPJ e e-mail (parcial, sem acento-fold). */
-  busca?: string;
-}
-
-/**
- * Fonte única da lista de pessoas (clientes) para a feature. Fala com a API
- * `/api/v1/pessoas` (Spring), que pagina de 10 em 10; os componentes só falam
- * com este serviço. `favorite` é por usuário (`PATCH /pessoas/{id}/favorito`).
+ * CRUD de uma pessoa (cliente) por vez — criar/atualizar/buscar ficha completa/ativar-inativar/
+ * favoritar, via `/api/v1/pessoas` (Spring). A listagem da tabela não passa mais por aqui: usa
+ * `/domain/pessoa` direto (`DomainModelTableComponent`, ver `ClientsComponent`).
  */
 @Injectable({ providedIn: 'root' })
 export class ClientService {
@@ -41,69 +25,22 @@ export class ClientService {
   private readonly favoritoService = inject(FavoritoService);
   private readonly base = `${environment.apiBaseUrl}/pessoas`;
 
-  /** Tamanho de página fixo do backend (`max-page-size: 10`). */
-  static readonly PAGE_SIZE = 10;
-
+  /**
+   * Cache local das pessoas já vistas nesta sessão (só o que `salvar`/`alterarStatus` devolveram)
+   * — usado só pra refletir otimisticamente o favorito/status logo após uma ação, não é fonte de
+   * listagem (isso é `/domain/pessoa`).
+   */
   private readonly _clients = signal<IPessoa[]>([]);
   readonly clients = this._clients.asReadonly();
-
-  private readonly _page = signal(0);
-  private readonly _totalPages = signal(1);
-  private readonly _totalElements = signal(0);
-  private readonly _last = signal(true);
-
-  /** Índice da página atual (0-based). */
-  readonly page = this._page.asReadonly();
-  /** Total de páginas do filtro atual. */
-  readonly totalPages = this._totalPages.asReadonly();
-  /** Total de clientes do filtro atual (base inteira quando sem filtro). */
-  readonly totalElements = this._totalElements.asReadonly();
-  /** `true` quando não há próxima página. */
-  readonly last = this._last.asReadonly();
 
   private toClient(res: ClientRespApi): IPessoa {
     return clientRespToClient(res, this.auth.user());
   }
 
-  /** Carrega uma página da lista (`tipo` opcional; `FISICA`/`JURIDICA` como no backend). */
-  carregar(query: ClientListQuery): Observable<IPessoa[]> {
-    let params = new HttpParams()
-      .set('page', query.page)
-      .set('size', ClientService.PAGE_SIZE);
-    if (query.tipo) {
-      params = params.set('tipo', query.tipo);
-    }
-    if (query.incluirInativos) {
-      params = params.set('incluirInativos', true);
-    }
-    if (query.busca?.trim()) {
-      params = params.set('busca', query.busca.trim());
-    }
-
-    return this.http.get<PaginaApi<ClientRespApi>>(this.base, { params }).pipe(
-      tap((page) => {
-        this._page.set(page.pagina ?? 0);
-        this._totalPages.set(page.total_paginas ?? 1);
-        this._totalElements.set(page.total_elementos ?? 0);
-        this._last.set(page.ultima ?? true);
-      }),
-      map((page) => (page.conteudo ?? []).map((res) => this.toClient(res))),
-      tap((clients) => this._clients.set(clients)),
-    );
-  }
-
-  /** Cliente já carregado, por id (ou `null`). */
-  buscar(id: number | null): IPessoa | null {
-    if (id === null) {
-      return null;
-    }
-    return this._clients().find((client) => client.id === id) ?? null;
-  }
-
   /**
-   * Ficha completa por id, direto do backend (`GET /api/v1/pessoas/{id}`) — a lista mantida por
-   * `carregar` só tem a página atual, então quem for editar a ficha (`ClientFormComponent`)
-   * precisa desse fetch à parte pra não depender do cliente estar na página carregada.
+   * Ficha completa por id, direto do backend (`GET /api/v1/pessoas/{id}`) — a tabela
+   * (`/domain/pessoa`) só traz os campos que a grade exibe, então quem for editar a ficha
+   * (`ClientFormComponent`) precisa desse fetch à parte.
    */
   buscarCompleto(id: number): Observable<IPessoa | null> {
     return this.http.get<ClientRespApi>(`${this.base}/${id}`).pipe(
@@ -156,13 +93,15 @@ export class ClientService {
    * Alterna o favorito da pessoa para o usuário logado. Atualiza a lista na hora
    * (otimista), dispara `PATCH /pessoas/{id}/favorito` e desfaz se a API falhar.
    * Devolve o estado desejado (pós-clique).
+   *
+   * Recebe o favorito atual explícito (não lê de `_clients`): a ficha aberta no painel vem de
+   * `buscarCompleto`, que não passa pelo cache local — só quem chegou aqui via `salvar`/
+   * `alterarStatus` está nele. Achado real: antes lia `_clients`, então favoritar um cliente
+   * que não tinha acabado de ser salvo/reativado nesta sessão virava um no-op silencioso (nunca
+   * chamava a API) desde que a listagem passou a vir de `/domain/pessoa` em vez de `carregar()`.
    */
-  alternarFavorito(id: number): boolean {
-    const atual = this._clients().find((client) => client.id === id);
-    if (!atual) {
-      return false;
-    }
-    const desejado = !atual.favorite;
+  alternarFavorito(id: number, favoritoAtual: boolean): boolean {
+    const desejado = !favoritoAtual;
     this.setFavoritoLocal(id, desejado);
 
     this.favoritoService

@@ -1,22 +1,66 @@
 import { HttpClient, HttpEvent, HttpEventType, HttpUploadProgressEvent } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
-import { Observable, concat, filter, firstValueFrom, map, startWith, switchMap } from 'rxjs';
+import { Observable, concat, filter, firstValueFrom, forkJoin, map, of, startWith, switchMap } from 'rxjs';
 
+import { DomainService } from '../../../core/services/domain.service';
 import { environment } from '../../../../environments/environment';
 import {
+  BreadcrumbItem,
   Documento,
   DocumentoApi,
   DownloadUrlApi,
   Pasta,
   PastaApi,
   PastaConteudo,
-  PastaConteudoApi,
   UploadUrlApi,
-  conteudoFromApi,
   documentoFromApi,
   pastaFromApi,
 } from '../models/document-explorer.model';
 import { DocumentsPort, UploadEvento, ZipJobApi } from './documents-port';
+
+/**
+ * Shape cru de `/domain/pasta-pessoa` e `/domain/documento-pessoa` (ddd-noap) — camelCase, nome
+ * literal do campo Java, diferente do `PastaApi`/`DocumentoApi` (snake_case, DTO do
+ * `PastaPessoaController`/`DocumentoPessoaController` escritos à mão, ainda usados pelas
+ * operações de escrita abaixo — só a LEITURA (`raiz`/`conteudo`) migrou pro genérico).
+ */
+interface PastaDomain {
+  id: string;
+  pastaPaiId?: string | null;
+  nome: string;
+  criadoEm: string;
+  atualizadoEm: string;
+}
+
+interface DocumentoDomain {
+  id: string;
+  pastaId?: string | null;
+  nomeOriginal: string;
+  contentType?: string | null;
+  tamanhoBytes?: number | null;
+  enviadoEm: string;
+}
+
+function pastaFromDomain(d: PastaDomain): Pasta {
+  return {
+    id: d.id,
+    pastaPaiId: d.pastaPaiId ?? null,
+    nome: d.nome,
+    criadoEm: new Date(d.criadoEm),
+    atualizadoEm: new Date(d.atualizadoEm),
+  };
+}
+
+function documentoFromDomain(d: DocumentoDomain): Documento {
+  return {
+    id: d.id,
+    pastaId: d.pastaId ?? null,
+    nome: d.nomeOriginal,
+    contentType: d.contentType ?? null,
+    tamanhoBytes: d.tamanhoBytes ?? null,
+    enviadoEm: new Date(d.enviadoEm),
+  };
+}
 
 export type { UploadEvento, ZipJobApi };
 
@@ -64,18 +108,100 @@ export function resolverTipoAceito(arquivo: File): string | null {
 @Injectable({ providedIn: 'root' })
 export class DocumentsService implements DocumentsPort {
   private readonly http = inject(HttpClient);
+  private readonly domainService = inject(DomainService);
   private readonly base = environment.apiBaseUrl;
 
+  private static readonly CAMPOS_PASTA = 'id,pastaPaiId,nome,criadoEm,atualizadoEm';
+  private static readonly CAMPOS_DOCUMENTO = 'id,pastaId,nomeOriginal,contentType,tamanhoBytes,enviadoEm';
+
+  /**
+   * Raiz de uma pessoa: sem breadcrumb (não tem "pasta atual" — mesma semântica de
+   * `FolderPessoaService.listRootContent`). Migrado pro `/domain/pasta-pessoa` +
+   * `/domain/documento-pessoa` — leitura pura, sem regra de negócio, então dá pra genericizar
+   * com segurança (diferente do upload/mover/renomear, que ficam no `PastaPessoaController`/
+   * `DocumentoPessoaController` escritos à mão — ver decisão nessa sessão). `all: true` porque
+   * o endpoint original devolve a lista inteira sem paginação (`findByXxx` puro).
+   */
   raiz(pessoaId: number): Observable<PastaConteudo> {
-    return this.http
-      .get<PastaConteudoApi>(`${this.base}/pessoas/${pessoaId}/pastas/raiz`)
-      .pipe(map(conteudoFromApi));
+    return forkJoin({
+      subpastas: this.domainService.get<PastaDomain[]>({
+        entityName: 'pasta-pessoa',
+        all: true,
+        fields: DocumentsService.CAMPOS_PASTA,
+        filter: `pessoaId eq ${pessoaId} and pastaPaiId eq null and excluidoEm eq null`,
+        sort: 'nome',
+      }),
+      documentos: this.domainService.get<DocumentoDomain[]>({
+        entityName: 'documento-pessoa',
+        all: true,
+        fields: DocumentsService.CAMPOS_DOCUMENTO,
+        filter: `pessoaId eq ${pessoaId} and pastaId eq null and excluidoEm eq null`,
+        sort: 'nomeOriginal',
+      }),
+    }).pipe(
+      map(({ subpastas, documentos }) => ({
+        breadcrumb: [],
+        subpastas: subpastas.map(pastaFromDomain),
+        documentos: documentos.map(documentoFromDomain),
+      })),
+    );
   }
 
+  /**
+   * Conteúdo de uma pasta: breadcrumb (raiz→atual, inclusive) + subpastas + documentos diretos.
+   * `pessoaId` não precisa entrar no filtro de subpastas/documentos — `pastaId` já identifica a
+   * pasta-mãe de forma única, então filtrar só por ela já é equivalente ao
+   * `findByPessoaIdAndPastaPaiId...` original (a integridade pessoa_id/pasta_pai_id é garantida
+   * na criação, nunca haveria filho com pessoa_id diferente do pai).
+   */
   conteudo(pastaId: string): Observable<PastaConteudo> {
-    return this.http
-      .get<PastaConteudoApi>(`${this.base}/pastas/${pastaId}/conteudo`)
-      .pipe(map(conteudoFromApi));
+    return forkJoin({
+      breadcrumb: this.buscarBreadcrumb(pastaId),
+      subpastas: this.domainService.get<PastaDomain[]>({
+        entityName: 'pasta-pessoa',
+        all: true,
+        fields: DocumentsService.CAMPOS_PASTA,
+        filter: `pastaPaiId eq ${pastaId} and excluidoEm eq null`,
+        sort: 'nome',
+      }),
+      documentos: this.domainService.get<DocumentoDomain[]>({
+        entityName: 'documento-pessoa',
+        all: true,
+        fields: DocumentsService.CAMPOS_DOCUMENTO,
+        filter: `pastaId eq ${pastaId} and excluidoEm eq null`,
+        sort: 'nomeOriginal',
+      }),
+    }).pipe(
+      map(({ breadcrumb, subpastas, documentos }) => ({
+        breadcrumb,
+        subpastas: subpastas.map(pastaFromDomain),
+        documentos: documentos.map(documentoFromDomain),
+      })),
+    );
+  }
+
+  /**
+   * Caminho raiz→`pastaId` (inclusive) subindo por `pastaPaiId`, um `GET` por nível — equivalente
+   * à CTE recursiva `PastaPessoaRepository.buscarBreadcrumb`, que o `/domain` genérico não sabe
+   * fazer (sem suporte a recursão). Pastas raramente passam de 3-4 níveis, então isso continua
+   * poucas chamadas sequenciais, não um problema de performance.
+   */
+  private buscarBreadcrumb(pastaId: string): Observable<BreadcrumbItem[]> {
+    return this.domainService
+      .get<{ id: string; nome: string; pastaPaiId: string | null }>({
+        entityName: 'pasta-pessoa',
+        entityId: pastaId,
+        fields: 'id,nome,pastaPaiId',
+      })
+      .pipe(
+        switchMap((pasta) => {
+          const item: BreadcrumbItem = { id: pasta.id, nome: pasta.nome };
+          if (!pasta.pastaPaiId) {
+            return of([item]);
+          }
+          return this.buscarBreadcrumb(pasta.pastaPaiId).pipe(map((acumulado) => [...acumulado, item]));
+        }),
+      );
   }
 
   criarPasta(pessoaId: number, pastaPaiId: string | null, nome: string): Observable<Pasta> {

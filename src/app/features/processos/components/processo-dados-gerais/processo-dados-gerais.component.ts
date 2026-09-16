@@ -9,9 +9,14 @@ import {
   signal,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { ReactiveFormsModule } from '@angular/forms';
+import { FormControl, FormGroup, ReactiveFormsModule, ValidatorFn } from '@angular/forms';
 
-import { maskNumeroCnj, numeroCnjCompleto } from '../../../../core/auth/documentos-br';
+import {
+  documentoValidator,
+  maskDocumento,
+  maskNumeroCnj,
+  numeroCnjCompleto,
+} from '../../../../core/auth/documentos-br';
 import { ComboboxComponent } from '../../../../shared/components/combobox/combobox.component';
 import { CnjMaskDirective } from '../../../../shared/directives/cnj-mask.directive';
 import { DocumentoMaskDirective } from '../../../../shared/directives/documento-mask.directive';
@@ -35,17 +40,32 @@ import { ProcedimentoProcessoService } from '../../services/procedimento-process
 import { ProcessoEditavel, ProcessoService } from '../../services/processo-service';
 import { StatusProcessoService } from '../../services/status-processo.service';
 import { TribunalService } from '../../services/tribunal.service';
-import {
-  ProcessoForm,
-  createProcessoForm,
-  patchProcessoForm,
-} from '../../forms/processo-form.factory';
 
 const TIPOS_PROCESSO: TipoProcesso[] = ['JUDICIAL', 'ADMINISTRATIVO', 'ARBITRAL'];
 
 const ROTULOS_CAMPOS: Record<string, string> = {
   contrarioPrincipalDocumento: 'CPF/CNPJ da parte contrária',
 };
+
+/**
+ * `FormGroup` dos campos de texto/data/textarea desta aba — sem arquivo de "factory" separado
+ * (mesmo padrão de `AdvogadoFormComponent`/cev-front: geração e leitura do form ficam direto no
+ * componente, não num arquivo à parte). Os campos que usam `<app-combobox>` e as listas ficam
+ * em signals na classe, porque o combobox trabalha por `[value]`/`(valueChange)`, não por
+ * `formControlName`.
+ */
+type ProcessoForm = FormGroup<{
+  numeroCnj: FormControl<string>;
+  contrarioPrincipalNome: FormControl<string>;
+  contrarioPrincipalDocumento: FormControl<string>;
+  dataDistribuicao: FormControl<string>;
+  observacoesGerais: FormControl<string>;
+  destacarObservacao: FormControl<boolean>;
+}>;
+
+function text(validators: ValidatorFn[] = []): FormControl<string> {
+  return new FormControl('', { nonNullable: true, validators });
+}
 
 /** Resultado da validação da aba — o shell mostra `mensagem` no toast quando `ok` é `false`. */
 export type DadosGeraisValidacao = { ok: true } | { ok: false; mensagem: string };
@@ -151,7 +171,14 @@ export class ProcessoDadosGeraisComponent {
     this.orgaosDoTribunalAtual().map((o) => o.descricao),
   );
 
-  protected readonly form: ProcessoForm = createProcessoForm();
+  protected readonly form: ProcessoForm = new FormGroup({
+    numeroCnj: text(),
+    contrarioPrincipalNome: text(),
+    contrarioPrincipalDocumento: text([documentoValidator]),
+    dataDistribuicao: text(),
+    observacoesGerais: text(),
+    destacarObservacao: new FormControl(false, { nonNullable: true }),
+  });
   /**
    * Valor atual do campo de número — segue o que o usuário digita **e** o que é carregado por
    * `patchProcessoForm` (que roda com `emitEvent: false`, então `valueChanges` não cobre a carga;
@@ -273,7 +300,20 @@ export class ProcessoDadosGeraisComponent {
 
   /** Preenche a aba com uma ficha carregada. */
   carregar(p: ProcessoApi): void {
-    patchProcessoForm(this.form, p);
+    this.form.patchValue(
+      {
+        numeroCnj: p.numero_cnj ?? '',
+        contrarioPrincipalNome: p.contrario_principal_nome ?? '',
+        contrarioPrincipalDocumento: maskDocumento(p.contrario_principal_documento),
+        dataDistribuicao: p.data_distribuicao ?? '',
+        observacoesGerais: p.observacoes_gerais ?? '',
+        destacarObservacao: p.destacar_observacao,
+      },
+      { emitEvent: false },
+    );
+    this.form.markAsPristine();
+    this.form.markAsUntouched();
+    this.form.updateValueAndValidity({ emitEvent: false });
     this.numeroValue.set(p.numero_cnj ?? '');
     this.tipo.set(p.tipo);
     this.statusNome.set(p.status ?? '');

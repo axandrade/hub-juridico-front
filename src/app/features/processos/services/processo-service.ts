@@ -1,9 +1,11 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject, signal } from '@angular/core';
-import { Observable, catchError, map, of, tap } from 'rxjs';
+import { Observable, catchError, map, of, switchMap, tap } from 'rxjs';
 
 import { environment } from '../../../../environments/environment';
 import { ComboPagina } from '../../../shared/components/combobox/combobox.component';
+import { DomainFavoritoService } from '../../../core/services/domain-favorito.service';
+import { DomainService, IDomainPage } from '../../../core/services/domain.service';
 import { FavoritoService } from '../../../shared/services/favorito.service';
 import {
   CenarioRiscoApi,
@@ -94,16 +96,82 @@ export interface ProcessoEditavel {
 
 const vazioParaNull = (valor: string): string | null => valor.trim() || null;
 
+/** Campos livremente buscáveis pela caixa de busca — mesmos de `ProcessoRepository.listarComFiltros`. */
+const CAMPOS_BUSCA = ['numeroCnj', 'status', 'natureza', 'acao', 'cidade'] as const;
+
+/** Linha crua de `/domain/processo` (camelCase) — só os escalares que `ProcessoResumoApi` usa. */
+interface ProcessoResumoDomain {
+  id: number;
+  tipo: TipoProcesso;
+  numeroCnj: string | null;
+  status: string | null;
+  pasta: string | null;
+  clientePrincipalId: number | null;
+  advogadoResponsavelId: number | null;
+  natureza: string | null;
+  fase: string | null;
+  uf: string | null;
+  cidade: string | null;
+  cidadeId: number | null;
+  dataDistribuicao: string | null;
+  observacoesGerais: string | null;
+  destacarObservacao: boolean;
+  ativo: boolean;
+  atualizadoEm: string | null;
+}
+
+const PROCESSO_RESUMO_FIELDS = [
+  'id', 'tipo', 'numeroCnj', 'status', 'pasta', 'clientePrincipalId', 'advogadoResponsavelId',
+  'natureza', 'fase', 'uf', 'cidade', 'cidadeId', 'dataDistribuicao', 'observacoesGerais',
+  'destacarObservacao', 'ativo', 'atualizadoEm',
+].join(',');
+
+function processoResumoFromDomain(p: ProcessoResumoDomain, favorito: boolean): ProcessoResumoApi {
+  return {
+    id: p.id,
+    favorito,
+    tipo: p.tipo,
+    numero_cnj: p.numeroCnj,
+    status: p.status,
+    pasta: p.pasta,
+    cliente_principal_id: p.clientePrincipalId,
+    advogado_responsavel_id: p.advogadoResponsavelId,
+    natureza: p.natureza,
+    fase: p.fase,
+    uf: p.uf,
+    cidade: p.cidade,
+    cidade_id: p.cidadeId,
+    data_distribuicao: p.dataDistribuicao,
+    observacoes_gerais: p.observacoesGerais,
+    destacar_observacao: p.destacarObservacao,
+    ativo: p.ativo,
+    atualizado_em: p.atualizadoEm,
+  };
+}
+
 /**
- * Fonte da lista de processos. Fala com `/api/v1/processos` (Spring), paginado de 10 em 10, e faz
- * o CRUD de escrita (criar/editar/status) consumido pelo painel `app-processo-form`. Também
- * resolve os pickers de Cliente principal / Advogado responsável — busca paginada no servidor
- * (`buscarPessoas` / `buscarAdvogados`), pra alimentar o `<app-combobox>` sem `findAll`.
+ * Fonte da lista de processos. A listagem (`carregar`) busca em `/domain/processo` (ddd-noap),
+ * página a página, exatamente como `ProcessoRepository.listarComFiltros` filtrava (mesmos campos
+ * de busca livre, `ativo eq true` por padrão, ordenação por `id` — igual ao
+ * `@PageableDefault(sort = "id")` que o `AbstractController` usava) — `ProcessosComponent` e o
+ * `<app-data-table>` continuam iguais, sem nenhuma mudança visível (tooltip de observação
+ * destacada, favoritos fixados no topo da página e a ordenação por clique de coluna são recursos
+ * só do `DataTableComponent`, que o `DomainModelTableComponent` genérico não tem — por isso aqui
+ * só a fonte dos dados mudou, não o componente). Favoritar já usa `tipo_entidade = "processo"`
+ * desde sempre (ver `ProcessoService.TIPO_FAVORITO` no backend), então bate 1:1 com o que
+ * `/domain/favorito` espera — nenhum favorito existente fica "órfão".
+ *
+ * O CRUD de escrita (criar/editar/status) continua em `/api/v1/processos` (Spring), consumido
+ * pelo painel `app-processo-form`. Também resolve os pickers de Cliente principal / Advogado
+ * responsável — busca paginada no servidor (`buscarPessoas` / `buscarAdvogados`), pra alimentar o
+ * `<app-combobox>` sem `findAll`.
  */
 @Injectable({ providedIn: 'root' })
 export class ProcessoService {
   private readonly http = inject(HttpClient);
   private readonly favoritoService = inject(FavoritoService);
+  private readonly domainService = inject(DomainService);
+  private readonly domainFavoritoService = inject(DomainFavoritoService);
   private readonly base = `${environment.apiBaseUrl}/processos`;
   private readonly pessoasUrl = `${environment.apiBaseUrl}/pessoas`;
   private readonly advogadosUrl = `${environment.apiBaseUrl}/advogados`;
@@ -125,27 +193,51 @@ export class ProcessoService {
 
   /** Carrega uma página da lista com os filtros informados. */
   carregar(query: ProcessoListQuery): Observable<ProcessoResumoApi[]> {
-    let params = new HttpParams().set('page', query.page).set('size', ProcessoService.PAGE_SIZE);
-    if (query.busca?.trim()) {
-      params = params.set('busca', query.busca.trim());
-    }
-    if (query.tipo) {
-      params = params.set('tipo', query.tipo);
-    }
-    if (query.incluirInativos) {
-      params = params.set('incluirInativos', true);
-    }
+    return this.domainService
+      .get<IDomainPage<ProcessoResumoDomain>>({
+        entityName: 'processo',
+        page: query.page,
+        size: ProcessoService.PAGE_SIZE,
+        fields: PROCESSO_RESUMO_FIELDS,
+        filter: this.buildFilter(query.busca, query.tipo, query.incluirInativos) || undefined,
+        sort: 'id',
+      })
+      .pipe(
+        tap((pagina) => {
+          this._page.set(pagina.number ?? 0);
+          this._totalPages.set(pagina.total_pages ?? 1);
+          this._totalElements.set(pagina.total_elements ?? 0);
+          this._last.set(pagina.last ?? true);
+        }),
+        switchMap((pagina) => {
+          const ids = pagina.content.map((p) => p.id);
+          return this.domainFavoritoService
+            .listarFavoritos('processo', ids)
+            .pipe(map((favoritos) => pagina.content.map((p) => processoResumoFromDomain(p, favoritos.has(p.id)))));
+        }),
+        tap((processos) => this._processos.set(processos)),
+      );
+  }
 
-    return this.http.get<PaginaApi<ProcessoResumoApi>>(this.base, { params }).pipe(
-      tap((pagina) => {
-        this._page.set(pagina.pagina ?? 0);
-        this._totalPages.set(pagina.total_paginas ?? 1);
-        this._totalElements.set(pagina.total_elementos ?? 0);
-        this._last.set(pagina.ultima ?? true);
-      }),
-      map((pagina) => pagina.conteudo ?? []),
-      tap((processos) => this._processos.set(processos)),
-    );
+  /**
+   * Monta o filtro RQL equivalente a `ProcessoRepository.listarComFiltros`: `busca` casa
+   * parcialmente (case-insensitive) em número CNJ / status / natureza / ação / cidade; `tipo` é
+   * igualdade; sem `incluirInativos`, só `ativo eq true`. RQL não tem parênteses — todos os `or`
+   * vêm primeiro, os `and` por último (mesma regra de `ClientsComponent.buildFilter`).
+   */
+  private buildFilter(busca: string | undefined, tipo: TipoProcesso | null | undefined, incluirInativos: boolean): string {
+    const termo = (busca ?? '').trim().replace(/'/g, '');
+    const clausulas: string[] = [];
+    if (termo) {
+      clausulas.push(CAMPOS_BUSCA.map((campo) => `${campo} ilike '*${termo}*'`).join(' or '));
+    }
+    if (tipo) {
+      clausulas.push(`tipo eq '${tipo}'`);
+    }
+    if (!incluirInativos) {
+      clausulas.push('ativo eq true');
+    }
+    return clausulas.join(' and ');
   }
 
   /** Ficha completa por id (`GET /processos/{id}`) — pro painel não depender da página carregada. */

@@ -1,0 +1,131 @@
+@if (columnVisibility() && columnsToolbar()) {
+  <div class="data-table-toolbar">
+    <div class="data-table-columns">
+      <button type="button" class="data-table-columns__toggle" (click)="toggleColumnsMenu()">
+        <i class="fa-solid fa-table-columns" aria-hidden="true"></i>
+        Colunas
+      </button>
+      @if (columnsMenuOpen()) {
+        <div class="data-table-columns__menu" role="menu">
+          @for (column of columns(); track column.key) {
+            <label>
+              <input
+                type="checkbox"
+                [checked]="isColumnVisible(column.key)"
+                (change)="toggleColumnVisibility(column.key)"
+              />
+              <span>{{ column.header }}</span>
+            </label>
+          }
+        </div>
+      }
+    </div>
+  </div>
+}
+
+<div class="table-wrap">
+  <table class="data-table">
+    <thead>
+      <tr>
+        @if (favoritable()) {
+          <th class="data-table__pin"></th>
+        }
+        @for (column of visibleColumns(); track column.key) {
+          <th [style.width]="column.width" [class]="'align-' + (column.align ?? 'left')">
+            @if (sortable()) {
+              <button type="button" class="data-table__sort" (click)="sortBy(column.key)">
+                {{ column.header }}
+                <i [class]="sortIcon(column.key)" aria-hidden="true"></i>
+              </button>
+            } @else {
+              {{ column.header }}
+            }
+          </th>
+        }
+      </tr>
+    </thead>
+
+    <tbody>
+      @if (loading()) {
+        <tr class="data-table__state">
+          <td [attr.colspan]="colspan()">
+            <i class="fa-solid fa-seedling fa-spin" aria-hidden="true"></i> Carregando…
+          </td>
+        </tr>
+      } @else if (loadError()) {
+        <tr class="data-table__state">
+          <td [attr.colspan]="colspan()">Não foi possível carregar a lista.</td>
+        </tr>
+      } @else if (displayRows().length === 0) {
+        <tr class="data-table__state">
+          <td [attr.colspan]="colspan()">{{ emptyMessage() }}</td>
+        </tr>
+      } @else {
+        @for (row of displayRows(); track trackRow($index, row)) {
+          <tr [class]="rowClasses(row)" (click)="rowClick.emit(row)">
+            @if (favoritable()) {
+              <td class="data-table__pin">
+                <button
+                  type="button"
+                  class="data-table__pin-button"
+                  [class.is-active]="isFavorito(row)"
+                  [disabled]="isFavoritoBusy(row)"
+                  aria-label="Favoritar"
+                  (click)="toggleFavorito(row, $event)"
+                >
+                  <i class="fa-solid fa-star" aria-hidden="true"></i>
+                </button>
+              </td>
+            }
+            @for (column of visibleColumns(); track column.key) {
+              <td [class]="'align-' + (column.align ?? 'left')">
+                @switch (column.format) {
+                  @case ('date') {
+                    {{ dateValue(row, column) | dateFormat }}
+                  }
+                  @case ('currency') {
+                    {{ numberValue(row, column) | currencyFormat }}
+                  }
+                  @case ('badge') {
+                    <app-badge
+                      [tone]="badgeTone(row, column)"
+                      [dot]="column.badgeDot ?? false"
+                      [label]="displayValue(row, column)"
+                    />
+                  }
+                  @default {
+                    {{ displayValue(row, column) }}
+                  }
+                }
+              </td>
+            }
+          </tr>
+        }
+      }
+    </tbody>
+  </table>
+</div>
+
+@if (pagination(); as p) {
+  <div class="data-table-pagination">
+    <button
+      type="button"
+      class="data-table-pagination__button"
+      [disabled]="p.page <= 0"
+      (click)="requestPage(-1)"
+    >
+      <i class="fa-solid fa-chevron-left" aria-hidden="true"></i>
+      Anterior
+    </button>
+    <span>Página {{ p.page + 1 }} de {{ pageCountLabel(p) }} · {{ p.totalElements }} registro(s)</span>
+    <button
+      type="button"
+      class="data-table-pagination__button"
+      [disabled]="p.last"
+      (click)="requestPage(1)"
+    >
+      Próxima
+      <i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
+    </button>
+  </div>
+}

@@ -8,4 +8,6 @@ export const environment = {
   production: false,
   /** Base da API do hub-juridico-api (Spring Boot). */
   apiBaseUrl: 'http://localhost:8080/api/v1',
+  /** Base do CRUD genérico do ddd-noap (`/domain/{entidade}`) — não fica sob `/api/v1`. */
+  domainBaseUrl: 'http://localhost:8080/domain',
 } as const;

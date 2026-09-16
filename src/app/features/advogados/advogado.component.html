@@ -61,20 +61,20 @@
           <button
             type="button"
             class="advogados-menu-button"
-            [class.is-active]="gradeAdvogados.columnsMenuOpen()"
-            (click)="gradeAdvogados.toggleColumnsMenu()"
+            [class.is-active]="grade()?.columnsMenuOpen()"
+            (click)="grade()?.toggleColumnsMenu()"
           >
             <i class="fa-solid fa-table-columns" aria-hidden="true"></i>
             Colunas
           </button>
-          @if (gradeAdvogados.columnsMenuOpen()) {
+          @if (grade()?.columnsMenuOpen()) {
             <div class="advogados-dropdown advogados-columns__menu" role="menu">
-              @for (col of gradeAdvogados.columns(); track col.key) {
+              @for (col of advogadoColumns; track col.key) {
                 <label>
                   <input
                     type="checkbox"
-                    [checked]="gradeAdvogados.isColumnVisible(col.key)"
-                    (change)="gradeAdvogados.toggleColumnVisibility(col.key)"
+                    [checked]="grade()?.isColumnVisible(col.key)"
+                    (change)="grade()?.toggleColumnVisibility(col.key)"
                   />
                   {{ col.header }}
                 </label>
@@ -120,7 +120,6 @@
         <input
           type="checkbox"
           [checked]="incluirInativos()"
-          [disabled]="loading()"
           (change)="onToggleIncluirInativos($event)"
         />
         Mostrar inativos
@@ -128,22 +127,18 @@
     </div>
 
     <div class="advogados-table-wrap">
-      <app-data-table
-        #gradeAdvogados
+      <app-domain-model-table
+        entityName="advogado"
+        fields="id,nome,oab,cpf,email,cidadeProfissional,ativo"
         [columnsToolbar]="false"
         [columns]="advogadoColumns"
-        [data]="advogados()"
-        [loading]="loading()"
+        [filter]="filtro()"
+        sort="nome"
         trackKey="id"
         emptyMessage="Nenhum advogado encontrado."
         [sortable]="true"
-        [initialSort]="{ key: 'nome', direction: 'asc' }"
         [columnVisibility]="true"
         [rowClass]="advogadoRowClass"
-        [pinFirst]="advogadoPinFirst"
-        [pinAction]="advogadoPinAction"
-        [pagination]="pagination()"
-        (pageChange)="onPageChange($event)"
         (rowClick)="selectAdvogado($event)"
       />
     </div>
@@ -152,13 +147,13 @@
       <div class="advogados-summary-line">
         <span>
           @if (busca().trim()) {
-            {{ totalAdvogados() }} resultado(s) para "{{ busca().trim() }}"
+            {{ grade()?.pagination()?.totalElements ?? 0 }} resultado(s) para "{{ busca().trim() }}"
           } @else {
-            {{ totalAdvogados() }} advogado(s) cadastrado(s)
+            {{ grade()?.pagination()?.totalElements ?? 0 }} advogado(s) cadastrado(s)
           }
         </span>
       </div>
-      @if (loadError()) {
+      @if (grade()?.loadError()) {
         <span>
           · Não foi possível carregar a lista.
           <button type="button" class="advogados-link-button" (click)="reloadList()">

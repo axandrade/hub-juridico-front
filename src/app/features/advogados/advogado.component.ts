@@ -2,47 +2,49 @@ import { DOCUMENT } from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
-  DestroyRef,
   HostListener,
   computed,
   inject,
   signal,
   viewChild,
 } from '@angular/core';
-import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop';
-import { EMPTY, catchError, debounceTime, distinctUntilChanged, skip, switchMap } from 'rxjs';
+import { toObservable, toSignal } from '@angular/core/rxjs-interop';
+import { debounceTime, distinctUntilChanged } from 'rxjs';
 
 import { ButtonComponent } from '../../shared/components/button/button.component';
-import { DataTableComponent } from '../../shared/components/table/data-table.component';
+import { DomainModelTableComponent } from '../../shared/components/domain-table/domain-model-table.component';
 import { TableColumn } from '../../shared/components/table/table-column.model';
-import { TablePagination, TablePinAction } from '../../shared/components/table/table.model';
 import { PanelShellController } from '../../shared/panel-shell/panel-shell.controller';
 import { maskCpf } from '../../core/auth/documentos-br';
-import { AdvogadoApi } from './services/advogado-api.model';
-import { AdvogadoListQuery, AdvogadoService } from './services/advogado-service';
+import { AdvogadoDomain } from './services/advogado-api.model';
 import { AdvogadoFormComponent } from './advogado-form/advogado-form.component';
+
+/** Campos livremente buscáveis pela caixa de busca — dobrados em RQL (`or`) na filter(). */
+const CAMPOS_BUSCA = ['nome', 'oab', 'email', 'cpf'] as const;
 
 /**
  * Tela de Advogados — mesmo conceito de "Clientes": tabela + painel lateral posicionável, e o
  * painel é um formulário de criar/editar (`app-advogado-form`). "Novo" abre o painel limpo;
  * clicar numa linha abre o advogado em edição. Posição do painel, redimensionamento e
  * mostrar/ocultar vêm do `PanelShellController` (ver o JSDoc dele).
+ *
+ * A listagem em si é o `app-domain-model-table` (`entityName="advogado"`), que busca sozinho
+ * em `/domain/advogado` (ddd-noap) — esta classe só monta o filtro RQL (busca + incluir
+ * inativos) e reage aos eventos (linha clicada, salvar, etc.), sem orquestrar HTTP.
  */
 @Component({
   selector: 'app-advogado',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [DataTableComponent, ButtonComponent, AdvogadoFormComponent],
+  imports: [DomainModelTableComponent, ButtonComponent, AdvogadoFormComponent],
   templateUrl: './advogado.component.html',
   styleUrl: './advogado.component.scss',
 })
 export class AdvogadoComponent {
   private readonly document = inject(DOCUMENT);
-  private readonly destroyRef = inject(DestroyRef);
-  private readonly advogadoService = inject(AdvogadoService);
 
   private readonly form = viewChild(AdvogadoFormComponent);
   /** A grade — o botão "Colunas" da barra de ações comanda esta instância. */
-  protected readonly grade = viewChild(DataTableComponent);
+  protected readonly grade = viewChild(DomainModelTableComponent<AdvogadoDomain>);
 
   protected readonly panelShell = new PanelShellController(this.document, {
     storagePrefix: 'hub-juridico.advogados',
@@ -51,26 +53,12 @@ export class AdvogadoComponent {
 
   /** Id do advogado aberto no painel; `null` = cadastro novo. */
   protected readonly selectedId = signal<number | null>(null);
-  protected readonly loading = signal(false);
-  protected readonly loadError = signal(false);
-
-  private readonly page = signal(0);
-  private readonly reloadTick = signal(0);
   /** `true` traz também advogados inativos — reflete o `incluirInativos` real do backend. */
   protected readonly incluirInativos = signal(false);
-  /** Busca livre (nome / OAB / e-mail / CPF) — resolvida no servidor, com debounce. */
+  /** Busca livre (nome / OAB / e-mail / CPF) — vira RQL, resolvida no servidor, com debounce. */
   protected readonly busca = signal('');
 
-  protected readonly advogados = this.advogadoService.advogados;
-  protected readonly totalAdvogados = this.advogadoService.totalElements;
-  protected readonly pagination = computed<TablePagination>(() => ({
-    page: this.advogadoService.page(),
-    totalPages: this.advogadoService.totalPages(),
-    totalElements: this.advogadoService.totalElements(),
-    last: this.advogadoService.last(),
-  }));
-
-  protected readonly advogadoColumns: TableColumn<AdvogadoApi>[] = [
+  protected readonly advogadoColumns: TableColumn<AdvogadoDomain>[] = [
     { key: 'nome', header: 'Nome', width: '220px' },
     { key: 'oab', header: 'OAB', width: '150px' },
     {
@@ -80,7 +68,7 @@ export class AdvogadoComponent {
       formatter: (value) => (value ? maskCpf(String(value)) : '-'),
     },
     { key: 'email', header: 'E-mail', width: '220px' },
-    { key: 'cidade_profissional', header: 'Cidade', width: '160px' },
+    { key: 'cidadeProfissional', header: 'Cidade', width: '160px' },
     {
       key: 'ativo',
       header: 'Status',
@@ -93,60 +81,36 @@ export class AdvogadoComponent {
     },
   ];
 
-  protected readonly advogadoRowClass = (row: AdvogadoApi): Record<string, boolean> => ({
+  protected readonly advogadoRowClass = (row: AdvogadoDomain): Record<string, boolean> => ({
     'is-selected': this.selectedId() === row.id,
-    'is-favorite': row.favorito,
     'is-inactive': !row.ativo,
   });
 
-  protected readonly advogadoPinFirst = (row: AdvogadoApi): boolean => row.favorito;
+  /** Busca com debounce (300ms) + `incluirInativos`, combinados em RQL — ver `buildFilter`. */
+  private readonly buscaDebounced = toSignal(
+    toObservable(this.busca).pipe(debounceTime(300), distinctUntilChanged()),
+    { initialValue: this.busca() },
+  );
 
-  protected readonly advogadoPinAction: TablePinAction<AdvogadoApi> = {
-    isActive: (row) => row.favorito,
-    onToggle: (row, event) => this.toggleFavorito(row, event),
-    ariaLabel: 'Favoritar advogado',
-  };
+  protected readonly filtro = computed(() => this.buildFilter(this.buscaDebounced(), this.incluirInativos()));
 
-  constructor() {
-    // Busca com debounce: só dispara requisição 300ms depois de parar de digitar.
-    const buscaDebounced = toSignal(
-      toObservable(this.busca).pipe(debounceTime(300), distinctUntilChanged()),
-      { initialValue: this.busca() },
-    );
-    // Nova busca sempre volta pra primeira página.
-    toObservable(buscaDebounced)
-      .pipe(skip(1), takeUntilDestroyed(this.destroyRef))
-      .subscribe(() => this.page.set(0));
-
-    const query = computed<AdvogadoListQuery & { tick: number }>(() => ({
-      page: this.page(),
-      busca: buscaDebounced(),
-      incluirInativos: this.incluirInativos(),
-      tick: this.reloadTick(),
-    }));
-
-    toObservable(query)
-      .pipe(
-        switchMap((q) => {
-          this.loading.set(true);
-          return this.advogadoService.carregar(q).pipe(
-            catchError(() => {
-              this.loading.set(false);
-              this.loadError.set(true);
-              return EMPTY;
-            }),
-          );
-        }),
-        takeUntilDestroyed(this.destroyRef),
-      )
-      .subscribe(() => {
-        this.loading.set(false);
-        this.loadError.set(false);
-      });
-  }
-
-  protected onPageChange(page: number): void {
-    this.page.set(page);
+  /**
+   * Monta o filtro RQL: `campo1 ilike '*x*' or campo2 ilike '*x*' ... and ativo eq true`.
+   * A avaliação é estritamente da esquerda pra direita (RQL do ddd-noap não tem
+   * parênteses/precedência — ver docs/ANALISE-ARQUITETURA.md do backend), então o `and`
+   * final se aplica ao resultado acumulado de todos os `or` anteriores, não só ao último
+   * termo — é exatamente o comportamento que queremos aqui.
+   */
+  private buildFilter(busca: string, incluirInativos: boolean): string {
+    const termo = busca.trim().replace(/'/g, '');
+    const clausulas: string[] = [];
+    if (termo) {
+      clausulas.push(CAMPOS_BUSCA.map((campo) => `${campo} ilike '*${termo}*'`).join(' or '));
+    }
+    if (!incluirInativos) {
+      clausulas.push('ativo eq true');
+    }
+    return clausulas.join(' and ');
   }
 
   protected onBuscaInput(event: Event): void {
@@ -159,21 +123,10 @@ export class AdvogadoComponent {
 
   protected onToggleIncluirInativos(event: Event): void {
     this.incluirInativos.set((event.target as HTMLInputElement).checked);
-    this.page.set(0);
-  }
-
-  protected toggleFavorito(row: AdvogadoApi, event: MouseEvent): void {
-    event.stopPropagation();
-    this.advogadoService.alternarFavorito(row.id);
   }
 
   protected reloadList(): void {
-    this.loadError.set(false);
-    this.reloadTick.update((tick) => tick + 1);
-  }
-
-  private refreshList(): void {
-    this.reloadTick.update((tick) => tick + 1);
+    this.grade()?.reload();
   }
 
   /** Botão "Novo" — abre o painel limpo pra cadastrar (mesmo papel de `clients.newRecord`). */
@@ -182,7 +135,7 @@ export class AdvogadoComponent {
     this.panelShell.setPanelVisible(true);
   }
 
-  protected selectAdvogado(row: AdvogadoApi): void {
+  protected selectAdvogado(row: AdvogadoDomain): void {
     const form = this.form();
     if (form?.locked() && this.selectedId() !== row.id) {
       form.notifyLockedSelection();
@@ -192,19 +145,19 @@ export class AdvogadoComponent {
     this.panelShell.setPanelVisible(true);
   }
 
-  protected onSaved(advogado: AdvogadoApi): void {
+  protected onSaved(advogado: AdvogadoDomain): void {
     this.selectedId.set(advogado.id);
-    this.refreshList();
+    this.grade()?.reload();
   }
 
-  protected onStatusChanged(advogado: AdvogadoApi): void {
+  protected onStatusChanged(advogado: AdvogadoDomain): void {
     this.selectedId.set(advogado.id);
-    this.refreshList();
+    this.grade()?.reload();
   }
 
   protected onCleared(): void {
     this.selectedId.set(null);
-    this.refreshList();
+    this.grade()?.reload();
   }
 
   /** No modo diálogo, Esc esconde o painel (mantém o advogado selecionado). */

@@ -6,4 +6,5 @@
 export const environment = {
   production: true,
   apiBaseUrl: '/api/v1',
+  domainBaseUrl: '/domain',
 } as const;

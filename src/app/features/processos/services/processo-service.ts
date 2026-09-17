@@ -23,9 +23,9 @@ import {
 import { onlyDigits } from '../../../core/auth/documentos-br';
 
 /**
- * Filtros do `GET /api/v1/processos` — todos reais no servidor: `busca` casa parcialmente em
- * número CNJ / status / natureza / ação / cidade; `tipo` é igualdade; `incluirInativos` (`false`
- * padrão) traz só `ativo = true`.
+ * Filtros de `carregar()` (via `/domain/processo`) — `busca` casa parcialmente em número CNJ /
+ * status / natureza / ação / cidade; `tipo` é igualdade; `incluirInativos` (`false` padrão) traz
+ * só `ativo = true`.
  */
 export interface ProcessoListQuery {
   page: number;

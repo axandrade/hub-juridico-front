@@ -1,6 +1,7 @@
 /**
- * Formas de `/api/v1/users` (Spring, só-admin). JSON snake_case (ver `JacksonConfig`). A mesma
- * forma (`UsuarioApi`) na listagem e no `GET /{id}`.
+ * `UsuarioApi` é a mesma forma pra listagem/`GET /{id}` (via `/domain/user`, mapeada em
+ * `usuarioFromDomain` — ver `usuario-service.ts`) e a escrita (`/api/v1/users`, Spring, JSON
+ * snake_case, ver `JacksonConfig`).
  */
 
 export type UserRole = 'ADMIN' | 'USER';
@@ -42,14 +43,4 @@ export interface UsuarioAtualizarApi {
   email: string;
   name: string;
   role: UserRole;
-}
-
-/** Envelope de `PaginaResponse`. */
-export interface PaginaApi<T> {
-  conteudo: T[];
-  pagina: number;
-  tamanho: number;
-  total_elementos: number;
-  total_paginas: number;
-  ultima: boolean;
 }

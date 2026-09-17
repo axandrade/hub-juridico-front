@@ -11,7 +11,7 @@ import {
 } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
-import { catchError, forkJoin, map, of, startWith } from 'rxjs';
+import { Observable, catchError, forkJoin, map, of, startWith, switchMap } from 'rxjs';
 
 import {
   IPessoa,
@@ -23,7 +23,7 @@ import {
 import { AuthService } from '../../../../core/services/auth.service';
 import { DomainFavoritoService } from '../../../../core/services/domain-favorito.service';
 import { DomainService } from '../../../../core/services/domain.service';
-import { ButtonComponent } from '../../../../shared/components/button/button.component';
+import { PanelFooterActionsComponent } from '../../../../shared/components/panel-footer-actions/panel-footer-actions.component';
 import { ToastService } from '../../../../shared/services/toast.service';
 import { mensagensCamposInvalidos } from '../../../../shared/utils/form-validacao';
 import {
@@ -39,7 +39,12 @@ import {
 } from '../../models/client-form.model';
 import { StatusVinculoApi } from '../../services/client-api.model';
 import { ClientService } from '../../services/client-service';
-import { PESSOA_DOMAIN_FIELDS, PessoaDomain, pessoaDomainToClient } from '../../services/client-mapper';
+import {
+  PESSOA_DOMAIN_FIELDS,
+  PessoaDomain,
+  clientToCriarPessoaDomainRequest,
+  pessoaDomainToClient,
+} from '../../services/client-mapper';
 import { ClientAddressComponent } from '../client-address/client-address.component';
 import { ClientAdminFormComponent } from '../client-admin-form/client-admin-form.component';
 import { ClientContactListComponent } from '../client-contact-list/client-contact-list.component';
@@ -65,14 +70,14 @@ interface EditorNotice {
 /**
  * Tela autônoma de cadastro/edição de pessoa (física ou jurídica). Dona do
  * `FormGroup` raiz; carrega a ficha por id (ou vazia para novo cadastro), valida,
- * e persiste via `ClientService`. O `clients` só decide qual `pessoaId` mostrar
- * e reage aos outputs.
+ * e persiste — criar via `DomainService` (`/domain/pessoa-fisica`/`/domain/pessoa-juridica`,
+ * mesmo padrão do `AdvogadoFormComponent`), atualizar via `ClientService` (`/api/v1/pessoas`).
+ * O `clients` só decide qual `pessoaId` mostrar e reage aos outputs.
  */
 @Component({
   selector: 'app-client-form',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
-    ButtonComponent,
     ReactiveFormsModule,
     ClientFieldComponent,
     ClientAddressComponent,
@@ -80,6 +85,7 @@ interface EditorNotice {
     ClientContactListComponent,
     ClientRepresentativesComponent,
     ClientAdminFormComponent,
+    PanelFooterActionsComponent,
     PanelLayoutSwitcherComponent,
   ],
   templateUrl: './client-form.component.html',
@@ -216,9 +222,7 @@ export class ClientFormComponent {
     );
   }
 
-  protected save(event?: Event): void {
-    event?.preventDefault();
-
+  protected save(): void {
     if (this.form.invalid) {
       this.form.markAllAsTouched();
       const mensagens = mensagensCamposInvalidos(this.form.controls.pessoa, CLIENT_FIELD_LABELS);
@@ -229,7 +233,11 @@ export class ClientFormComponent {
 
     const prepared = this.prepareClientForSave(this.assembleClient());
     this.salvando.set(true);
-    this.clientService.salvar(prepared).subscribe({
+    const request$ = this.isPersisted()
+      ? this.clientService.atualizar(prepared)
+      : this.criarPessoaDomain(prepared);
+
+    request$.subscribe({
       next: (savedClient) => {
         this.salvando.set(false);
         this.tipoNovoEscolhido.set(null);
@@ -244,6 +252,27 @@ export class ClientFormComponent {
         this.toast.erro(`Não foi possível salvar: ${this.httpErrorMessage(err)}`);
       },
     });
+  }
+
+  /**
+   * `POST /domain/pessoa-fisica` ou `/domain/pessoa-juridica` (ddd-noap, `@Create` em `Pessoa`)
+   * — mesmo padrão do `AdvogadoFormComponent.salvar`: o backend responde só `{id}`, então
+   * encadeia um `get()` por id pra devolver a ficha completa. Sem favorito ainda (registro
+   * novo não tem como já estar favoritado).
+   */
+  private criarPessoaDomain(client: IPessoa): Observable<IPessoa> {
+    const entityName = client.pessoa.tipo === 'FISICA' ? 'pessoa-fisica' : 'pessoa-juridica';
+    const body = clientToCriarPessoaDomainRequest(client);
+    return this.domainService.post({ entityName, body }).pipe(
+      switchMap((created) =>
+        this.domainService.get<PessoaDomain>({
+          entityName: 'pessoa',
+          entityId: created.id,
+          fields: PESSOA_DOMAIN_FIELDS,
+        }),
+      ),
+      map((pessoa) => pessoaDomainToClient(pessoa, false, this.auth.user())),
+    );
   }
 
   /**

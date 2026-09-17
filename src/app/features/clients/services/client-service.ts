@@ -7,17 +7,15 @@ import { IPessoa } from '../../../core/models';
 import { AuthService } from '../../../core/services/auth.service';
 import { FavoritoService } from '../../../shared/services/favorito.service';
 import { ClientRespApi, StatusVinculoApi } from './client-api.model';
-import {
-  clientToAtualizarRequest,
-  clientToCriarRequest,
-  clientRespToClient,
-} from './client-mapper';
+import { clientToAtualizarRequest, clientRespToClient } from './client-mapper';
 
 /**
- * CRUD de uma pessoa (cliente) por vez — criar/atualizar/ativar-inativar/favoritar, via
- * `/api/v1/pessoas` (Spring). A listagem da tabela e a busca da ficha completa não passam mais
- * por aqui: usam `/domain/pessoa` direto (`DomainModelTableComponent` em `ClientsComponent`;
- * `ClientFormComponent` tem seu próprio `buscarCompleto` via `DomainService`).
+ * Atualizar/ativar-inativar/favoritar uma pessoa (cliente) já existente, via `/api/v1/pessoas`
+ * (Spring). Criar saiu daqui — vai por `/domain/pessoa-fisica`/`/domain/pessoa-juridica` (ddd-noap,
+ * `@Create` em `Pessoa`), direto no `ClientFormComponent` (mesmo padrão do `AdvogadoFormComponent`).
+ * A listagem da tabela e a busca da ficha completa também não passam mais por aqui: usam
+ * `/domain/pessoa` direto (`DomainModelTableComponent` em `ClientsComponent`; `ClientFormComponent`
+ * tem seu próprio `buscarCompleto` via `DomainService`).
  */
 @Injectable({ providedIn: 'root' })
 export class ClientService {
@@ -38,15 +36,12 @@ export class ClientService {
     return clientRespToClient(res, this.auth.user());
   }
 
-  /** `POST` (id 0) ou `PUT` (id existente); devolve o registro do backend. */
-  salvar(client: IPessoa): Observable<IPessoa> {
-    const request$ =
-      client.id > 0
-        ? this.http.put<ClientRespApi>(
-            `${this.base}/${client.id}`,
-            clientToAtualizarRequest(client),
-          )
-        : this.http.post<ClientRespApi>(this.base, clientToCriarRequest(client));
+  /** `PUT /pessoas/{id}` — só pra registro já existente; devolve o registro atualizado. */
+  atualizar(client: IPessoa): Observable<IPessoa> {
+    const request$ = this.http.put<ClientRespApi>(
+      `${this.base}/${client.id}`,
+      clientToAtualizarRequest(client),
+    );
 
     return request$.pipe(
       map((res) => this.toClient(res)),

@@ -92,6 +92,41 @@ export type CriarClientApi = CriarClientFisicaApi | CriarClientJuridicaApi;
 export type AtualizarClientApi =
   Omit<CriarClientFisicaApi, 'cpf'> | Omit<CriarClientJuridicaApi, 'cnpj'>;
 
+// ---------- criação via /domain/pessoa-fisica, /domain/pessoa-juridica (ddd-noap) ----------
+
+/**
+ * Corpo do `POST /domain/pessoa-fisica` / `/domain/pessoa-juridica` — bind direto nos campos da
+ * entidade (sem DTO, sem o wrapper `dados_administrativos` do `/api/v1/pessoas`: os campos
+ * administrativos são flat, igual estão em `Pessoa`). Sem `tipo` (implícito na URL) e sem
+ * `cadastrado_por_id` (quem preenche é o `@Create` — mandar isso pelo corpo faz
+ * `Pessoa.registrarCadastro` lançar `IllegalStateException`, ver `Pessoa.criarPessoa`).
+ */
+type PessoaDomainWriteComum = {
+  endereco: EnderecoApi | null;
+  contatos: ContatoApi[];
+  emails: EmailApi[];
+  representantes: RepresentanteApi[];
+  representantes_financeiros: RepresentanteApi[];
+} & DadosAdministrativosApi;
+
+export interface PessoaFisicaDomainWriteApi extends PessoaDomainWriteComum {
+  nome: string;
+  cpf: string;
+  rg: string | null;
+  estado_civil: EstadoCivil | null;
+  nacionalidade: string | null;
+}
+
+export interface PessoaJuridicaDomainWriteApi extends PessoaDomainWriteComum {
+  razao_social: string;
+  nome_fantasia: string | null;
+  cnpj: string;
+  inscricao_estadual: string | null;
+  inscricao_municipal: string | null;
+}
+
+export type PessoaDomainWriteApi = PessoaFisicaDomainWriteApi | PessoaJuridicaDomainWriteApi;
+
 // ---------- resposta ----------
 
 export interface RepresentanteRespApi extends RepresentanteApi {

@@ -2,7 +2,9 @@ import { maskCnpj, maskCpf, maskDocumento, onlyDigits } from '../../../core/auth
 import {
   EstadoCivil,
   IPessoa,
+  IContato,
   IDossie,
+  IEmail,
   IEndereco,
   IRepresentanteLegal,
   StatusCliente,
@@ -13,10 +15,13 @@ import {
 } from '../../../core/models';
 import {
   AtualizarClientApi,
+  ContatoApi,
   CriarClientApi,
   DadosAdministrativosApi,
+  EmailApi,
   EnderecoApi,
   ClientRespApi,
+  PessoaDomainWriteApi,
   RepresentanteApi,
   RepresentanteRespApi,
   StatusVinculoApi,
@@ -417,16 +422,62 @@ export function clientToAtualizarRequest(client: IPessoa): AtualizarClientApi {
   return rest;
 }
 
+/**
+ * Corpo do `POST /domain/pessoa-fisica` / `/domain/pessoa-juridica` (create via `@Create` do
+ * ddd-noap — ver `PessoaController`/`Pessoa.criarPessoa`) — mesmos blocos de `clientToCriarRequest`,
+ * só que flat (sem `tipo`, sem o wrapper `dados_administrativos`): os campos administrativos vão
+ * direto na raiz, porque é isso que bate com os campos de `Pessoa` no bind por reflection.
+ */
+export function clientToCriarPessoaDomainRequest(client: IPessoa): PessoaDomainWriteApi {
+  const p = client.pessoa;
+  const comum = {
+    endereco: enderecoToApi(p.endereco),
+    contatos: contatosToApi(p.contatos),
+    emails: emailsToApi(p.emails),
+    representantes: p.representantes.map(representanteToApi),
+    representantes_financeiros: p.representantesFinanceiros.map(representanteToApi),
+    ...dadosAdmFromDossier(client.dossier),
+  };
+
+  if (p.tipo === 'FISICA') {
+    return {
+      nome: p.nome.trim(),
+      cpf: onlyDigits(p.cpf),
+      rg: nullif(p.rg),
+      estado_civil: p.estadoCivil || null,
+      nacionalidade: nullif(p.nacionalidade),
+      ...comum,
+    };
+  }
+
+  return {
+    razao_social: p.razaoSocial.trim(),
+    nome_fantasia: nullif(p.nomeFantasia),
+    cnpj: onlyDigits(p.cnpj),
+    inscricao_estadual: nullif(p.inscricaoEstadual),
+    inscricao_municipal: nullif(p.inscricaoMunicipal),
+    ...comum,
+  };
+}
+
+function contatosToApi(contatos: IContato[]): ContatoApi[] {
+  return contatos
+    .filter((c) => c.valor.trim())
+    .map((c) => ({ valor: c.valor.trim(), tipo: c.tipo, principal: c.principal }));
+}
+
+function emailsToApi(emails: IEmail[]): EmailApi[] {
+  return emails
+    .filter((e) => e.endereco.trim())
+    .map((e) => ({ endereco: e.endereco.trim(), principal: e.principal }));
+}
+
 function comumRequest(client: IPessoa) {
   const p = client.pessoa;
   return {
     endereco: enderecoToApi(p.endereco),
-    contatos: p.contatos
-      .filter((c) => c.valor.trim())
-      .map((c) => ({ valor: c.valor.trim(), tipo: c.tipo, principal: c.principal })),
-    emails: p.emails
-      .filter((e) => e.endereco.trim())
-      .map((e) => ({ endereco: e.endereco.trim(), principal: e.principal })),
+    contatos: contatosToApi(p.contatos),
+    emails: emailsToApi(p.emails),
     dados_administrativos: dadosAdmFromDossier(client.dossier),
   };
 }
@@ -472,12 +523,8 @@ function representanteToApi(r: IRepresentanteLegal): RepresentanteApi {
     documento: onlyDigits(r.documento),
     cargo: nullif(r.cargo),
     endereco: enderecoToApi(r.endereco),
-    contatos: r.contatos
-      .filter((c) => c.valor.trim())
-      .map((c) => ({ valor: c.valor.trim(), tipo: c.tipo, principal: c.principal })),
-    emails: r.emails
-      .filter((e) => e.endereco.trim())
-      .map((e) => ({ endereco: e.endereco.trim(), principal: e.principal })),
+    contatos: contatosToApi(r.contatos),
+    emails: emailsToApi(r.emails),
   };
 }
 

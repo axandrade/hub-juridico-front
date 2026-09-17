@@ -81,7 +81,7 @@
     }
   </nav>
 
-  <form class="clients-form" (submit)="save($event)">
+  <form class="clients-form">
     @switch (activePanelTab()) {
       @case ('person') {
         <div class="clients-form__section">
@@ -148,41 +148,16 @@
           }
         }
       </span>
-      <div>
-        <app-button
-          variant="tertiary"
-          size="sm"
-          icon="fa-solid fa-eraser"
-          label="Limpar painel"
-          (clicked)="clearPanel()"
-        />
-        @if (isPersisted()) {
-          <app-button
-            variant="secondary"
-            size="sm"
-            [icon]="isInactive() ? 'fa-solid fa-rotate-left' : 'fa-solid fa-ban'"
-            [label]="isInactive() ? 'Reativar' : 'Inativar'"
-            (clicked)="requestStatusChange()"
-          />
-        }
-        @if (notice().key === 'confirmInactivate') {
-          <app-button
-            variant="secondary"
-            size="sm"
-            icon="fa-solid fa-check"
-            label="Confirmar"
-            (clicked)="confirmInactivate()"
-          />
-        }
-        <app-button
-          nativeType="submit"
-          variant="primary"
-          size="sm"
-          icon="fa-solid fa-floppy-disk"
-          [label]="salvando() ? 'Salvando...' : 'Salvar'"
-          [disabled]="salvando()"
-        />
-      </div>
+      <app-panel-footer-actions
+        [persistido]="isPersisted()"
+        [inativo]="isInactive()"
+        [confirmandoInativacao]="notice().key === 'confirmInactivate'"
+        [salvando]="salvando()"
+        (limpar)="clearPanel()"
+        (alterarStatus)="requestStatusChange()"
+        (confirmarInativacao)="confirmInactivate()"
+        (salvar)="save()"
+      />
     </footer>
   </form>
 </section>

@@ -13,15 +13,15 @@ import {
   viewChild,
 } from '@angular/core';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
-import { Observable } from 'rxjs';
+import { Observable, switchMap } from 'rxjs';
 
 import { ButtonComponent } from '../../../../shared/components/button/button.component';
-import { ComboboxComponent } from '../../../../shared/components/combobox/combobox.component';
+import { DomainModelDropdownComponent } from '../../../../shared/components/domain-dropdown/domain-model-dropdown.component';
 import { ModalComponent } from '../../../../shared/components/modal/modal.component';
 import { AutoFocusSelectDirective } from '../../../../shared/directives/auto-focus-select.directive';
 import { TransfersService } from '../../../../shared/transfers/transfers.service';
 import { formatFileSize } from '../../../../shared/utils/format-file-size';
-import { TipoAnexoService } from '../../../clients/services/tipo-anexo.service';
+import { DomainService, IDomainPage } from '../../../../core/services/domain.service';
 import { DocxRenderDirective } from '../../directives/docx-render.directive';
 import { resolverTipoAceito } from '../../services/documents.service';
 import { DOCUMENTS_PORT } from '../../services/documents-port';
@@ -53,6 +53,12 @@ export type DocumentExplorerNoticeKey =
 export interface DocumentExplorerNotice {
   key: DocumentExplorerNoticeKey;
   subject?: string;
+}
+
+/** Item do catálogo "Tipo do anexo" (`id`, `nome`), via `/domain/tipo-anexo`. */
+interface TipoAnexoItem {
+  id: number;
+  nome: string;
 }
 
 type TipoItem = 'pasta' | 'documento';
@@ -109,7 +115,7 @@ const PROTOCOLO_DESKTOP_POR_CONTENT_TYPE: Record<string, string> = {
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     ButtonComponent,
-    ComboboxComponent,
+    DomainModelDropdownComponent,
     ModalComponent,
     AutoFocusSelectDirective,
     DocxRenderDirective,
@@ -128,7 +134,7 @@ export class DocumentExplorerComponent {
   private readonly documentsService = inject(DOCUMENTS_PORT);
   private readonly transferencias = inject(TransfersService);
   private readonly sanitizer = inject(DomSanitizer);
-  protected readonly tipoAnexoService = inject(TipoAnexoService);
+  private readonly domainService = inject(DomainService);
 
   /** Id do dono (cliente ou magistrado, conforme o `DOCUMENTS_PORT` provido). Nome mantido por conveniência (não renomeado). */
   readonly pessoaId = input.required<number>();
@@ -164,12 +170,16 @@ export class DocumentExplorerComponent {
   // --- painel "Enviar arquivo" (inline, abaixo da barra) ---
   protected readonly uploadPanelAberto = signal(false);
   protected readonly arquivosPendentes = signal<File[]>([]);
-  /** Nome do tipo do anexo escolhido (`''` = sem tipo). Persiste entre uploads na sessão. */
-  protected readonly tipoAnexoNome = signal<string>('');
-  /** Nomes dos tipos do catálogo — alimenta o `<app-combobox>` (busca por trechos). */
-  protected readonly nomesDeTipos = computed(() =>
-    this.tipoAnexoService.tipos().map((t) => t.nome),
-  );
+  /** Tipo do anexo escolhido no `<app-domain-model-dropdown>` (`null` = sem tipo). Persiste entre uploads na sessão. */
+  protected readonly tipoAnexoAtual = signal<TipoAnexoItem | null>(null);
+  protected readonly tipoAnexoValor = computed(() => {
+    const t = this.tipoAnexoAtual();
+    return t ? String(t.id) : '';
+  });
+  /** Nome do tipo escolhido — o que de fato é persistido no documento (texto solto, sem vínculo). */
+  protected readonly tipoAnexoNome = computed(() => this.tipoAnexoAtual()?.nome ?? '');
+  protected readonly rotuloTipoAnexo = (item: Record<string, unknown>): string =>
+    String(item['nome'] ?? '');
   protected readonly dragOverAlvo = signal<string>(''); // id da pasta/breadcrumb sob o arrasto, '' = raiz, null = nenhum
   protected readonly dragOverAlvoAtivo = signal(false);
   protected readonly dragOverFundo = signal(false);
@@ -221,7 +231,19 @@ export class DocumentExplorerComponent {
   protected readonly qtdSelecionada = computed(() => this.selecao().size);
 
   constructor() {
-    this.tipoAnexoService.carregar();
+    // Pré-seleciona o primeiro tipo (alfabético) se o usuário ainda não escolheu nenhum.
+    this.domainService
+      .get<IDomainPage<TipoAnexoItem>>({ entityName: 'tipo-anexo', size: 1, sort: 'nome', fields: 'id,nome' })
+      .subscribe({
+        next: (pagina) => {
+          if (pagina.content.length > 0 && !this.tipoAnexoAtual()) {
+            this.tipoAnexoAtual.set(pagina.content[0]);
+          }
+        },
+        error: () => {
+          // conveniência (pré-seleção) — falha aqui não deve bloquear o fluxo principal.
+        },
+      });
 
     // `untracked` é essencial aqui: sem ele, a leitura de `pastaAtualId()` dentro de
     // `carregar()` vira dependência do efeito (por ter sido lida durante a execução dele),
@@ -232,16 +254,6 @@ export class DocumentExplorerComponent {
       untracked(() => {
         this.pastaAtualId.set(null);
         this.carregar();
-      });
-    });
-
-    // Assim que o catálogo carrega, pré-seleciona o primeiro tipo (se o usuário ainda não escolheu).
-    effect(() => {
-      const tipos = this.tipoAnexoService.tipos();
-      untracked(() => {
-        if (tipos.length > 0 && !this.tipoAnexoNome()) {
-          this.tipoAnexoNome.set(tipos[0].nome);
-        }
       });
     });
 
@@ -592,41 +604,54 @@ export class DocumentExplorerComponent {
     this.fecharPainelUpload();
   }
 
-  // --- catálogo "Tipo do anexo": o `<app-combobox>` pede, aqui persiste (ver `TipoAnexoService`) ---
+  // --- catálogo "Tipo do anexo" — CRUD via `/domain/tipo-anexo` (ddd-noap) ---
+
+  /** `(itemSelected)` do dropdown — item cru (`/domain`, camelCase) ou `null` (limpou a seleção). */
+  protected onTipoSelected(item: Record<string, unknown> | null): void {
+    this.tipoAnexoAtual.set(item ? { id: Number(item['id']), nome: String(item['nome'] ?? '') } : null);
+  }
 
   protected criarTipo(nome: string): void {
-    this.tipoAnexoService.criar(nome).subscribe({
-      next: (tipo) => this.tipoAnexoNome.set(tipo.nome),
-      error: (err: unknown) =>
-        this.notify.emit({ key: 'tipoErro', subject: this.mensagemErro(err) }),
-    });
+    this.domainService
+      .post<{ nome: string }>({ entityName: 'tipo-anexo', body: { nome } })
+      .pipe(
+        switchMap((criado) =>
+          this.domainService.get<TipoAnexoItem>({ entityName: 'tipo-anexo', entityId: criado.id, fields: 'id,nome' }),
+        ),
+      )
+      .subscribe({
+        next: (tipo) => this.tipoAnexoAtual.set(tipo),
+        error: (err: unknown) =>
+          this.notify.emit({ key: 'tipoErro', subject: this.mensagemErro(err) }),
+      });
   }
 
   protected renomearTipo({ de, para }: { de: string; para: string }): void {
-    const alvo = this.tipoAnexoService.tipos().find((t) => t.nome === de);
-    if (!alvo) {
-      return;
-    }
-    this.tipoAnexoService.alterar(alvo.id, para).subscribe({
-      next: (tipo) => {
-        if (this.tipoAnexoNome() === de) {
-          this.tipoAnexoNome.set(tipo.nome);
-        }
-      },
-      error: (err: unknown) =>
-        this.notify.emit({ key: 'tipoErro', subject: this.mensagemErro(err) }),
-    });
+    const id = Number(de);
+    this.domainService
+      .patch({ entityName: 'tipo-anexo', entityId: id, body: { nome: para } })
+      .pipe(
+        switchMap(() =>
+          this.domainService.get<TipoAnexoItem>({ entityName: 'tipo-anexo', entityId: id, fields: 'id,nome' }),
+        ),
+      )
+      .subscribe({
+        next: (tipo) => {
+          if (this.tipoAnexoAtual()?.id === id) {
+            this.tipoAnexoAtual.set(tipo);
+          }
+        },
+        error: (err: unknown) =>
+          this.notify.emit({ key: 'tipoErro', subject: this.mensagemErro(err) }),
+      });
   }
 
-  protected excluirTipo(nome: string): void {
-    const alvo = this.tipoAnexoService.tipos().find((t) => t.nome === nome);
-    if (!alvo) {
-      return;
-    }
-    this.tipoAnexoService.excluir(alvo.id).subscribe({
+  protected excluirTipo(valor: string): void {
+    const id = Number(valor);
+    this.domainService.delete({ entityName: 'tipo-anexo', entityId: id }).subscribe({
       next: () => {
-        if (this.tipoAnexoNome() === nome) {
-          this.tipoAnexoNome.set('');
+        if (this.tipoAnexoAtual()?.id === id) {
+          this.tipoAnexoAtual.set(null);
         }
       },
       error: (err: unknown) =>

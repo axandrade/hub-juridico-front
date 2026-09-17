@@ -63,20 +63,24 @@
     <section class="doc-upload" aria-label="Enviar arquivo">
       <div class="doc-upload__linha">
         <span class="doc-upload__rotulo">Tipo do anexo</span>
-        <app-combobox
+        <app-domain-model-dropdown
           class="doc-upload__combo"
           ariaLabel="Tipo do anexo"
           placeholder="Buscar tipo..."
           emptyLabel="— Sem tipo —"
           noResultsText="Nenhum tipo encontrado"
           itemNoun="tipo"
-          [options]="nomesDeTipos()"
-          [value]="tipoAnexoNome()"
-          [pesquisavel]="true"
+          entityName="tipo-anexo"
+          fields="id,nome"
+          [searchFields]="['nome']"
+          sort="nome"
+          [displayFormatter]="rotuloTipoAnexo"
+          [value]="tipoAnexoValor()"
+          [valueLabel]="tipoAnexoNome()"
           [adicionar]="true"
           [editar]="true"
           [excluir]="true"
-          (valueChange)="tipoAnexoNome.set($event)"
+          (itemSelected)="onTipoSelected($event)"
           (aoAdicionar)="criarTipo($event)"
           (aoEditar)="renomearTipo($event)"
           (aoExcluir)="excluirTipo($event)"

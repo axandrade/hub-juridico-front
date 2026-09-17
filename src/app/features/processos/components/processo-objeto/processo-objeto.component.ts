@@ -9,13 +9,20 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
+import { Observable, map, switchMap } from 'rxjs';
 
 import { maskMoeda, parseMoeda } from '../../../../core/auth/documentos-br';
-import { ComboboxComponent } from '../../../../shared/components/combobox/combobox.component';
+import { DomainService, IDomainPage } from '../../../../core/services/domain.service';
+import { DomainModelDropdownComponent } from '../../../../shared/components/domain-dropdown/domain-model-dropdown.component';
 import { MoedaMaskDirective } from '../../../../shared/directives/moeda-mask.directive';
-import { ObjetoProcessoService } from '../../services/objeto-processo.service';
 import { CenarioRiscoApi, ProcessoApi } from '../../services/processo-api.model';
 import { ProcessoEditavel } from '../../services/processo-service';
+
+/** Item do catálogo "Objeto" (`id`, `nome`), via `/domain/objeto-processo`. */
+interface CatalogoItem {
+  id: number;
+  nome: string;
+}
 
 /** O que a aba "Objeto" entrega pro `save()` do shell (junta no `ProcessoEditavel`). */
 export type ObjetoValores = Pick<
@@ -44,20 +51,20 @@ export type ObjetoValores = Pick<
 @Component({
   selector: 'app-processo-objeto',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ReactiveFormsModule, ComboboxComponent, MoedaMaskDirective],
+  imports: [ReactiveFormsModule, DomainModelDropdownComponent, MoedaMaskDirective],
   templateUrl: './processo-objeto.component.html',
   styleUrl: './processo-objeto.component.scss',
 })
 export class ProcessoObjetoComponent {
-  private readonly objetoService = inject(ObjetoProcessoService);
+  private readonly domainService = inject(DomainService);
   private readonly destroyRef = inject(DestroyRef);
 
   /** Erro numa operação de catálogo (criar/renomear/excluir) — o shell mostra no rodapé. */
   readonly erro = output<string>();
 
-  protected readonly nomesDeObjeto = computed(() =>
-    this.objetoService.objetos().map((o) => o.nome),
-  );
+  /** `displayFormatter` do `<app-domain-model-dropdown>` — o catálogo só tem `nome`. */
+  protected readonly rotuloCatalogo = (item: Record<string, unknown>): string =>
+    String(item['nome'] ?? '');
 
   protected readonly form = new FormGroup({
     observacoesObjeto: new FormControl('', { nonNullable: true }),
@@ -91,7 +98,6 @@ export class ProcessoObjetoComponent {
   );
 
   constructor() {
-    this.objetoService.carregar();
     this.form.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((v) => {
       this.valores.set({
         pedido: parseMoeda(v.valorPedido) ?? 0,
@@ -185,47 +191,74 @@ export class ProcessoObjetoComponent {
     return v === null ? '' : v.toFixed(2).replace('.', ',');
   }
 
-  // ===================== catálogo "Objeto" =====================
+  // ===================== catálogo "Objeto" — CRUD via `/domain/objeto-processo` =====================
 
   protected criarObjeto(nome: string, alvo: 'principal' | 'secundario'): void {
-    this.objetoService.criar(nome).subscribe({
-      next: (o) =>
-        alvo === 'principal'
-          ? this.objetoPrincipal.set(o.nome)
-          : this.objetoSecundarioDraft.set(o.nome),
-      error: (err: unknown) => this.erro.emit(this.mensagemErroHttp(err)),
-    });
+    this.domainService
+      .post<{ nome: string }>({ entityName: 'objeto-processo', body: { nome } })
+      .pipe(
+        switchMap((criado) =>
+          this.domainService.get<CatalogoItem>({ entityName: 'objeto-processo', entityId: criado.id, fields: 'id,nome' }),
+        ),
+      )
+      .subscribe({
+        next: (o) =>
+          alvo === 'principal'
+            ? this.objetoPrincipal.set(o.nome)
+            : this.objetoSecundarioDraft.set(o.nome),
+        error: (err: unknown) => this.erro.emit(this.mensagemErroHttp(err)),
+      });
   }
 
   protected renomearObjeto({ de, para }: { de: string; para: string }): void {
-    const alvo = this.objetoService.objetos().find((o) => o.nome === de);
-    if (!alvo) {
-      return;
-    }
-    this.objetoService.alterar(alvo.id, para).subscribe({
-      next: (o) => {
-        if (this.objetoPrincipal() === de) {
-          this.objetoPrincipal.set(o.nome);
+    this.buscarIdPorNome(de).subscribe({
+      next: (id) => {
+        if (id === null) {
+          return;
         }
-        this.objetosSecundarios.update((l) => l.map((x) => (x === de ? o.nome : x)));
+        this.domainService.patch({ entityName: 'objeto-processo', entityId: id, body: { nome: para } }).subscribe({
+          next: () => {
+            if (this.objetoPrincipal() === de) {
+              this.objetoPrincipal.set(para);
+            }
+            this.objetosSecundarios.update((l) => l.map((x) => (x === de ? para : x)));
+          },
+          error: (err: unknown) => this.erro.emit(this.mensagemErroHttp(err)),
+        });
       },
       error: (err: unknown) => this.erro.emit(this.mensagemErroHttp(err)),
     });
   }
 
   protected excluirObjeto(nome: string): void {
-    const alvo = this.objetoService.objetos().find((o) => o.nome === nome);
-    if (!alvo) {
-      return;
-    }
-    this.objetoService.excluir(alvo.id).subscribe({
-      next: () => {
-        if (this.objetoPrincipal() === nome) {
-          this.objetoPrincipal.set('');
+    this.buscarIdPorNome(nome).subscribe({
+      next: (id) => {
+        if (id === null) {
+          return;
         }
+        this.domainService.delete({ entityName: 'objeto-processo', entityId: id }).subscribe({
+          next: () => {
+            if (this.objetoPrincipal() === nome) {
+              this.objetoPrincipal.set('');
+            }
+          },
+          error: (err: unknown) => this.erro.emit(this.mensagemErroHttp(err)),
+        });
       },
       error: (err: unknown) => this.erro.emit(this.mensagemErroHttp(err)),
     });
+  }
+
+  /**
+   * Resolve o id do catálogo a partir do nome exato — `renomear`/`excluir` só recebem o nome (o
+   * dropdown trabalha em modo texto-livre aqui, `valueField` não é `id`; ao contrário de
+   * Magistrado/Perito nesta app, não há FK persistida no processo pra já ter o id à mão).
+   */
+  private buscarIdPorNome(nome: string): Observable<number | null> {
+    const nomeLimpo = nome.trim().replace(/'/g, '');
+    return this.domainService
+      .get<IDomainPage<CatalogoItem>>({ entityName: 'objeto-processo', filter: `nome eq '${nomeLimpo}'`, size: 1 })
+      .pipe(map((pagina) => pagina.content[0]?.id ?? null));
   }
 
   // ===================== helpers =====================

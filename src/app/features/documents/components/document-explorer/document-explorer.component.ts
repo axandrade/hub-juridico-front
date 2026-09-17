@@ -140,6 +140,12 @@ export class DocumentExplorerComponent {
   readonly pessoaId = input.required<number>();
   /** Nome do dono — rotula a raiz do breadcrumb (a "raiz" aqui é a pasta-mãe desse dono, não algo global). */
   readonly pessoaNome = input<string>('');
+  /**
+   * Pasta pra abrir já navegado nela (ex.: a subpasta de um processo específico na árvore de um
+   * magistrado — ver `pasta-magistrado-dialog`), em vez da raiz do dono. `null`/omitido = raiz
+   * (comportamento de sempre). Muda junto com `pessoaId` no efeito de reset abaixo.
+   */
+  readonly pastaInicialId = input<string | null>(null);
   readonly notify = output<DocumentExplorerNotice>();
 
   protected readonly rotuloRaiz = computed(() => this.pessoaNome().trim() || 'Início');
@@ -249,10 +255,13 @@ export class DocumentExplorerComponent {
     // `carregar()` vira dependência do efeito (por ter sido lida durante a execução dele),
     // e o efeito reagiria a toda navegação de pasta — resetando pastaAtualId pra null (raiz)
     // logo depois de `abrirPasta()` setá-lo, impedindo qualquer navegação pra dentro de pastas.
+    // `pastaInicialId()` também precisa ser lido FORA do untracked: é assim que trocar de
+    // processo (mesmo magistrado, `pessoaId` não muda) reabre navegado na nova subpasta.
     effect(() => {
       this.pessoaId();
+      const inicial = this.pastaInicialId();
       untracked(() => {
-        this.pastaAtualId.set(null);
+        this.pastaAtualId.set(inicial);
         this.carregar();
       });
     });

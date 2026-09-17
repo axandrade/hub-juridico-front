@@ -1,7 +1,8 @@
 /**
  * `UsuarioApi` é a mesma forma pra listagem/`GET /{id}` (via `/domain/user`, mapeada em
- * `usuarioFromDomain` — ver `usuario-service.ts`) e a escrita (`/api/v1/users`, Spring, JSON
- * snake_case, ver `JacksonConfig`).
+ * `usuarioFromDomain` — ver `usuario-service.ts`) e a escrita (`POST /domain/service/
+ * user-service/{método}`, resposta é o `UserResponse` de verdade — bean, JSON snake_case via
+ * `JacksonConfig` — não o `Map` cru de `/domain/user`).
  */
 
 export type UserRole = 'ADMIN' | 'USER';
@@ -29,7 +30,7 @@ export interface UsuarioApi {
   updated_at: string;
 }
 
-/** Corpo do `POST /api/v1/users`. */
+/** `args.request` do `POST /domain/service/user-service/criar`. */
 export interface UsuarioCriarApi {
   cpf: string;
   email: string;
@@ -38,7 +39,7 @@ export interface UsuarioCriarApi {
   senha: string;
 }
 
-/** Corpo do `PUT /api/v1/users/{id}`. */
+/** `args.request` do `POST /domain/service/user-service/atualizar`. */
 export interface UsuarioAtualizarApi {
   email: string;
   name: string;

@@ -1,15 +1,16 @@
-import { HttpClient } from '@angular/common/http';
 import { Injectable, inject, signal } from '@angular/core';
 import { Observable, catchError, map, of, tap } from 'rxjs';
 
 import { maskCpf } from '../../../core/auth/documentos-br';
 import { DomainService, IDomainPage } from '../../../core/services/domain.service';
-import { environment } from '../../../../environments/environment';
 import {
   UsuarioApi,
   UsuarioAtualizarApi,
   UsuarioCriarApi,
 } from './usuario-api.model';
+
+/** `UserService`, o bean por trás de `POST /domain/service/user-service/{método}`. */
+const SERVICE = 'user-service';
 
 export interface UsuarioListQuery {
   page: number;
@@ -54,15 +55,14 @@ function usuarioFromDomain(u: UsuarioDomain): UsuarioApi {
 /**
  * Fonte da lista de usuários. Listagem e busca por id via `/domain/user` (ddd-noap, só-admin,
  * `User.passwordHash` tem `@JsonIgnore` — nunca vaza), paginado de 10 em 10. Escrita (criar/
- * editar/status/senha) continua em `/api/v1/users` (Spring) — regra de negócio real (proteção
- * contra ficar sem admin, auto-inativação, política de senha). Sem exclusão — `alterarStatus`
- * ativa/inativa.
+ * editar/status/senha) vai por `POST /domain/service/user-service/{método}` — chama
+ * `UserService` (Spring) direto, sem `UserController` (removido): a regra de negócio real
+ * (proteção contra ficar sem admin, auto-inativação, política de senha, hash) mora só lá, esse
+ * mecanismo genérico só troca a porta de entrada. Sem exclusão — `alterarStatus` ativa/inativa.
  */
 @Injectable({ providedIn: 'root' })
 export class UsuarioService {
-  private readonly http = inject(HttpClient);
   private readonly domainService = inject(DomainService);
-  private readonly base = `${environment.apiBaseUrl}/users`;
 
   static readonly PAGE_SIZE = 10;
 
@@ -129,25 +129,51 @@ export class UsuarioService {
       .pipe(map(usuarioFromDomain), catchError(() => of(null)));
   }
 
+  /**
+   * `POST /domain/service/user-service/criar` — `args.request` casa com o parâmetro
+   * `CriarUserRequest request` de `UserService.criar` (nomes reais dos parâmetros, o projeto
+   * compila com `-parameters`). Resposta é o `UserResponse` de verdade (bean, não o `Map` cru
+   * de `/domain/user`) — já vem com o mesmo formato de `UsuarioApi`, `cpf` já formatado.
+   */
   criar(body: UsuarioCriarApi): Observable<UsuarioApi> {
-    return this.http.post<UsuarioApi>(this.base, body).pipe(tap((salvo) => this.mesclar(salvo)));
-  }
-
-  atualizar(id: number, body: UsuarioAtualizarApi): Observable<UsuarioApi> {
-    return this.http
-      .put<UsuarioApi>(`${this.base}/${id}`, body)
+    return this.domainService
+      .postServiceMethod<UsuarioApi>({ serviceName: SERVICE, method: 'criar', args: { request: body } })
       .pipe(tap((salvo) => this.mesclar(salvo)));
   }
 
+  atualizar(id: number, body: UsuarioAtualizarApi): Observable<UsuarioApi> {
+    return this.domainService
+      .postServiceMethod<UsuarioApi>({
+        serviceName: SERVICE,
+        method: 'atualizar',
+        args: { id, request: body },
+      })
+      .pipe(tap((salvo) => this.mesclar(salvo)));
+  }
+
+  /**
+   * `alterarStatus` não recebe mais o id do admin por parâmetro (`UserService` lê o usuário
+   * autenticado via `Context.getCurrentUser()`) — esse mecanismo genérico não injeta isso nos
+   * argumentos como o `@Create` de entidade injeta, então confiar num id vindo do cliente
+   * quebraria a proteção de auto-inativação.
+   */
   alterarStatus(id: number, ativo: boolean): Observable<UsuarioApi> {
-    return this.http
-      .patch<UsuarioApi>(`${this.base}/${id}/status`, { ativo })
+    return this.domainService
+      .postServiceMethod<UsuarioApi>({
+        serviceName: SERVICE,
+        method: 'alterar-status',
+        args: { id, ativo },
+      })
       .pipe(tap((salvo) => this.mesclar(salvo)));
   }
 
   redefinirSenha(id: number, novaSenha: string): Observable<void> {
-    return this.http
-      .patch<void>(`${this.base}/${id}/senha`, { nova_senha: novaSenha })
+    return this.domainService
+      .postServiceMethod<void>({
+        serviceName: SERVICE,
+        method: 'redefinir-senha',
+        args: { id, request: { nova_senha: novaSenha } },
+      })
       .pipe(map(() => undefined));
   }
 

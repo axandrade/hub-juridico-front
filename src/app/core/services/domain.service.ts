@@ -78,6 +78,21 @@ export interface IDeleteDomainCommand extends IDomainCommandBase {
 }
 
 /**
+ * Comando pro `POST /domain/service/{service}/{método}` — invocação genérica de método de bean
+ * `@Service` (não amarrado a nenhuma entidade), usado quando a regra de negócio é grande demais
+ * pra caber num `@Create`/`@Update` de entidade (ex.: `UserService` — hash de senha, proteção de
+ * último admin). `args` é um mapa nome-do-parâmetro → valor, casando com os nomes reais dos
+ * parâmetros do método Java (o projeto compila com `-parameters`, preserva os nomes).
+ */
+export interface IPostServiceMethodCommand {
+  /** Nome da classe do service em kebab-case (`UserService` -> `user-service`). */
+  serviceName: string;
+  /** Nome do método em kebab-case (`redefinirSenha` -> `redefinir-senha`). */
+  method: string;
+  args?: Record<string, unknown>;
+}
+
+/**
  * Cliente genérico do CRUD por reflection do ddd-noap (`/domain/{entidade}`) — mesmo conceito
  * e mesma forma de API do `DomainService` do `@b2software/domain-ng` usado no cev-front
  * (um método por verbo, recebendo um "comando" único com `entityName` + o resto), mas escrito
@@ -164,5 +179,17 @@ export class DomainService {
   /** `DELETE /domain/{entidade}/{id}`. */
   delete(command: IDeleteDomainCommand): Observable<void> {
     return this.http.delete<void>(`${this.base}/${command.entityName}/${command.entityId}`);
+  }
+
+  /**
+   * `POST /domain/service/{service}/{método}` — chama um método de um bean `@Service` direto
+   * (ver `IPostServiceMethodCommand`). Diferente de `post()`/`patch()`: a resposta aqui é o que
+   * o método Java devolver, serializado normal (bean de verdade, `JacksonConfig` snake_case) —
+   * não o `Map` cru em camelCase que `/domain/{entidade}` devolve. `T` é o tipo dessa resposta.
+   */
+  postServiceMethod<T>(command: IPostServiceMethodCommand): Observable<T> {
+    return this.http.post<T>(`${this.base}/service/${command.serviceName}/${command.method}`, {
+      args: command.args ?? {},
+    });
   }
 }

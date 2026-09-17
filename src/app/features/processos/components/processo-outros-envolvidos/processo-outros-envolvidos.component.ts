@@ -1,5 +1,6 @@
-import { ChangeDetectionStrategy, Component, computed, inject, output, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, WritableSignal, computed, inject, output, signal } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
+import { switchMap } from 'rxjs';
 
 import { cpfValidator, maskCpf, onlyDigits } from '../../../../core/auth/documentos-br';
 import { BRAZILIAN_STATES } from '../../../../core/models/pessoa.model';
@@ -7,13 +8,9 @@ import { DomainService } from '../../../../core/services/domain.service';
 import { ComboboxComponent } from '../../../../shared/components/combobox/combobox.component';
 import { ModalComponent } from '../../../../shared/components/modal/modal.component';
 import { CpfMaskDirective } from '../../../../shared/directives/cpf-mask.directive';
-import { MagistradoService } from '../../services/magistrado.service';
 import { OrgaoJulgadorService } from '../../services/orgao-julgador.service';
-import { ParteInteressadaService } from '../../services/parte-interessada.service';
 import { PastaMagistradoService } from '../../services/pasta-magistrado.service';
 import { PastaPeritoService } from '../../services/pasta-perito.service';
-import { PeritoService } from '../../services/perito.service';
-import { ResultadoDecisaoService } from '../../services/resultado-decisao.service';
 import { TribunalService } from '../../services/tribunal.service';
 import {
   OutroEnvolvidoAdvogadoApi,
@@ -24,6 +21,17 @@ import {
   ProcessoApi,
 } from '../../services/processo-api.model';
 import { ProcessoEditavel, ProcessoService } from '../../services/processo-service';
+
+/** Item de um catálogo simples (`id`, `nome`) — Magistrado/ResultadoDecisao/ParteInteressada, via `/domain`. */
+interface CatalogoItem {
+  id: number;
+  nome: string;
+}
+
+/** Item do catálogo Perito — igual a `CatalogoItem`, com `cpf` opcional a mais. */
+interface PeritoItem extends CatalogoItem {
+  cpf: string | null;
+}
 
 /** O que esta aba entrega pro `save()` do shell (junta no `ProcessoEditavel`). */
 export type OutrosEnvolvidosValores = Pick<
@@ -64,13 +72,9 @@ export type OutrosEnvolvidosValores = Pick<
 export class ProcessoOutrosEnvolvidosComponent {
   private readonly domainService = inject(DomainService);
   private readonly processoService = inject(ProcessoService);
-  private readonly magistradoService = inject(MagistradoService);
-  private readonly resultadoService = inject(ResultadoDecisaoService);
   private readonly orgaoService = inject(OrgaoJulgadorService);
   private readonly tribunalService = inject(TribunalService);
-  private readonly parteService = inject(ParteInteressadaService);
   private readonly pastaMagistradoService = inject(PastaMagistradoService);
-  private readonly peritoService = inject(PeritoService);
   private readonly pastaPeritoService = inject(PastaPeritoService);
 
   /** Erro numa operação de catálogo (criar/renomear/excluir) — o shell mostra no rodapé. */
@@ -86,7 +90,7 @@ export class ProcessoOutrosEnvolvidosComponent {
    * backend (ao contrário de "Posição do cliente"/"Posição da parte contrária" no processo
    * principal, ver `ProcessoDadosGeraisComponent`), então não é um `<app-domain-model-dropdown>`.
    */
-  private readonly posicoesCatalogo = signal<{ id: number; nome: string }[]>([]);
+  private readonly posicoesCatalogo = signal<CatalogoItem[]>([]);
   protected readonly nomesDePosicao = computed(() => this.posicoesCatalogo().map((p) => p.nome));
 
   /** Campos de texto da linha de advogado em edição (posição e UF são `<app-combobox>` → signals). */
@@ -106,12 +110,13 @@ export class ProcessoOutrosEnvolvidosComponent {
 
   // ===================== Magistrados =====================
 
-  protected readonly nomesDeResultado = computed(() =>
-    this.resultadoService.resultados().map((r) => r.nome),
-  );
-  protected readonly nomesDeMagistrado = computed(() =>
-    this.magistradoService.magistrados().map((m) => m.nome),
-  );
+  /** Catálogo `resultado_decisao`, via `/domain` — mesmo padrão de `posicoesCatalogo` (texto
+   *  livre num item da lista, sem `*_id` no backend). Compartilhado com "Perito Judicial". */
+  private readonly resultadosCatalogo = signal<CatalogoItem[]>([]);
+  protected readonly nomesDeResultado = computed(() => this.resultadosCatalogo().map((r) => r.nome));
+  /** Catálogo `magistrado` — este sim tem `magistrado_id` real no backend (ver `coletar()`). */
+  private readonly magistradosCatalogo = signal<CatalogoItem[]>([]);
+  protected readonly nomesDeMagistrado = computed(() => this.magistradosCatalogo().map((m) => m.nome));
 
   /** Campo de texto da linha de magistrado em edição (magistrado/resultado/tribunal/órgão são combobox → signals). */
   protected readonly magForm: FormGroup<{
@@ -150,7 +155,9 @@ export class ProcessoOutrosEnvolvidosComponent {
 
   // ===================== Testemunhas =====================
 
-  protected readonly nomesDeParte = computed(() => this.parteService.partes().map((p) => p.nome));
+  /** Catálogo `parte_interessada`, via `/domain` — compartilhado com "Assistente Técnico". */
+  private readonly partesCatalogo = signal<CatalogoItem[]>([]);
+  protected readonly nomesDeParte = computed(() => this.partesCatalogo().map((p) => p.nome));
 
   /** Campos de texto da linha de testemunha em edição (parte interessada é combobox → signal). */
   protected readonly testForm: FormGroup<{
@@ -168,7 +175,9 @@ export class ProcessoOutrosEnvolvidosComponent {
 
   // ===================== Perito Judicial =====================
 
-  protected readonly nomesDePerito = computed(() => this.peritoService.peritos().map((p) => p.nome));
+  /** Catálogo `perito`, via `/domain` — `perito_id` real no backend, com `cpf` a mais (ver `coletar()`). */
+  private readonly peritosCatalogo = signal<PeritoItem[]>([]);
+  protected readonly nomesDePerito = computed(() => this.peritosCatalogo().map((p) => p.nome));
 
   /** Perito e resultado são combobox → signals; não há mais campo de texto nesta linha. */
   protected readonly peritoRascunho = signal('');
@@ -238,17 +247,22 @@ export class ProcessoOutrosEnvolvidosComponent {
   }
 
   constructor() {
+    this.carregarCatalogo('posicao-cliente', this.posicoesCatalogo);
+    this.carregarCatalogo('magistrado', this.magistradosCatalogo);
+    this.carregarCatalogo('resultado-decisao', this.resultadosCatalogo);
+    this.carregarCatalogo('parte-interessada', this.partesCatalogo);
     this.domainService
-      .get<{ id: number; nome: string }[]>({
-        entityName: 'posicao-cliente', all: true, fields: 'id,nome', sort: 'nome',
-      })
-      .subscribe((posicoes) => this.posicoesCatalogo.set(posicoes));
-    this.magistradoService.carregar();
-    this.resultadoService.carregar();
+      .get<PeritoItem[]>({ entityName: 'perito', all: true, fields: 'id,nome,cpf', sort: 'nome' })
+      .subscribe((peritos) => this.peritosCatalogo.set(peritos));
     this.orgaoService.carregar();
     this.tribunalService.carregar();
-    this.parteService.carregar();
-    this.peritoService.carregar();
+  }
+
+  /** Busca um catálogo simples (`id`, `nome`) inteiro via `/domain/{entityName}`, ordenado por nome. */
+  private carregarCatalogo(entityName: string, destino: WritableSignal<CatalogoItem[]>): void {
+    this.domainService
+      .get<CatalogoItem[]>({ entityName, all: true, fields: 'id,nome', sort: 'nome' })
+      .subscribe((itens) => destino.set(itens));
   }
 
   // ===================== API pro shell =====================
@@ -356,7 +370,7 @@ export class ProcessoOutrosEnvolvidosComponent {
       this.magForm.markAllAsTouched();
       return;
     }
-    const magistrado = this.magistradoService.magistrados().find((m) => m.nome === nomeMagistrado);
+    const magistrado = this.magistradosCatalogo().find((m) => m.nome === nomeMagistrado);
     if (!magistrado) {
       this.erro.emit('Selecione um magistrado do catálogo (use o "+" pra cadastrar um novo).');
       return;
@@ -438,7 +452,7 @@ export class ProcessoOutrosEnvolvidosComponent {
     if (!nomePerito) {
       return;
     }
-    const perito = this.peritoService.peritos().find((p) => p.nome === nomePerito);
+    const perito = this.peritosCatalogo().find((p) => p.nome === nomePerito);
     if (!perito) {
       this.erro.emit('Selecione um perito do catálogo (use o "+" pra cadastrar um novo).');
       return;
@@ -509,32 +523,35 @@ export class ProcessoOutrosEnvolvidosComponent {
   // ===================== catálogos (só "adicionar" aqui) =====================
 
   protected criarPosicao(nome: string): void {
-    this.processoService.criarCatalogo('posicao-cliente', nome).subscribe({
-      next: (p) => {
-        this.posicoesCatalogo.update((atual) => [...atual, p].sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR')));
-        this.posicaoRascunho.set(p.nome);
-      },
-      error: (err: unknown) => this.erro.emit(this.mensagemErroHttp(err)),
-    });
+    this.criarCatalogo('posicao-cliente', nome, this.posicoesCatalogo, (p) => this.posicaoRascunho.set(p.nome));
   }
 
   protected criarMagistrado(nome: string): void {
-    this.magistradoService.criar(nome).subscribe({
-      next: (m) => this.magistradoRascunho.set(m.nome),
-      error: (err: unknown) => this.erro.emit(this.mensagemErroHttp(err)),
-    });
+    this.criarCatalogo('magistrado', nome, this.magistradosCatalogo, (m) => this.magistradoRascunho.set(m.nome));
   }
 
   protected criarResultado(nome: string): void {
-    this.resultadoService.criar(nome).subscribe({
-      next: (r) => this.resultadoRascunho.set(r.nome),
-      error: (err: unknown) => this.erro.emit(this.mensagemErroHttp(err)),
-    });
+    this.criarCatalogo('resultado-decisao', nome, this.resultadosCatalogo, (r) => this.resultadoRascunho.set(r.nome));
   }
 
   protected criarResultadoPerito(nome: string): void {
-    this.resultadoService.criar(nome).subscribe({
-      next: (r) => this.resultadoRascunhoPerito.set(r.nome),
+    this.criarCatalogo(
+      'resultado-decisao', nome, this.resultadosCatalogo, (r) => this.resultadoRascunhoPerito.set(r.nome),
+    );
+  }
+
+  /** Cria um item num catálogo simples (`id`, `nome`) via `/domain/{entityName}` e o adiciona à lista local. */
+  private criarCatalogo(
+    entityName: string,
+    nome: string,
+    destino: WritableSignal<CatalogoItem[]>,
+    aoCriar: (item: CatalogoItem) => void,
+  ): void {
+    this.processoService.criarCatalogo(entityName, nome).subscribe({
+      next: (item) => {
+        destino.update((atual) => [...atual, item].sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR')));
+        aoCriar(item);
+      },
       error: (err: unknown) => this.erro.emit(this.mensagemErroHttp(err)),
     });
   }
@@ -558,14 +575,22 @@ export class ProcessoOutrosEnvolvidosComponent {
       return;
     }
     const cpf = onlyDigits(this.novoPeritoForm.controls.cpf.value) || null;
-    this.peritoService.criar(nome, cpf).subscribe({
-      next: (p) => {
-        this.peritoRascunho.set(p.nome);
-        this.novoPeritoAberto.set(false);
-        this.novoPeritoForm.reset();
-      },
-      error: (err: unknown) => this.erro.emit(this.mensagemErroHttp(err)),
-    });
+    this.domainService
+      .post<{ nome: string; cpf: string | null }>({ entityName: 'perito', body: { nome, cpf } })
+      .pipe(
+        switchMap((criado) =>
+          this.domainService.get<PeritoItem>({ entityName: 'perito', entityId: criado.id, fields: 'id,nome,cpf' }),
+        ),
+      )
+      .subscribe({
+        next: (p) => {
+          this.peritosCatalogo.update((atual) => [...atual, p].sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR')));
+          this.peritoRascunho.set(p.nome);
+          this.novoPeritoAberto.set(false);
+          this.novoPeritoForm.reset();
+        },
+        error: (err: unknown) => this.erro.emit(this.mensagemErroHttp(err)),
+      });
   }
 
   protected onTribunalRascunhoMagChange(nome: string): void {
@@ -663,17 +688,13 @@ export class ProcessoOutrosEnvolvidosComponent {
   }
 
   protected criarParte(nome: string): void {
-    this.parteService.criar(nome).subscribe({
-      next: (p) => this.parteRascunho.set(p.nome),
-      error: (err: unknown) => this.erro.emit(this.mensagemErroHttp(err)),
-    });
+    this.criarCatalogo('parte-interessada', nome, this.partesCatalogo, (p) => this.parteRascunho.set(p.nome));
   }
 
   protected criarParteAssistTec(nome: string): void {
-    this.parteService.criar(nome).subscribe({
-      next: (p) => this.parteRascunhoAssistTec.set(p.nome),
-      error: (err: unknown) => this.erro.emit(this.mensagemErroHttp(err)),
-    });
+    this.criarCatalogo(
+      'parte-interessada', nome, this.partesCatalogo, (p) => this.parteRascunhoAssistTec.set(p.nome),
+    );
   }
 
   // ===================== helpers =====================

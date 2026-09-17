@@ -215,7 +215,7 @@ export class ClientFormComponent {
 
   protected toggleFavorite(): void {
     const id = this.entityId();
-    if (id <= 0 || this.favoritoBusy()) {
+    if (id <= 0 || this.favoritoBusy() || this.isInactive()) {
       return;
     }
     this.favoritoBusy.set(true);

@@ -166,6 +166,7 @@
         [columnVisibility]="true"
         [defaultVisibleColumns]="['natureza','nome','documento','email','contato','status']"
         [rowClass]="clientRowClass"
+        [isRowActive]="clientIsActive"
         (dataLoaded)="onDataLoaded($event)"
         (rowClick)="selectClient($event)"
       />

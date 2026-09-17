@@ -14,7 +14,7 @@
           type="button"
           class="advogado-icon-button"
           [class.is-active]="favorite()"
-          [disabled]="favoritoBusy()"
+          [disabled]="favoritoBusy() || isInactive()"
           title="Favoritar"
           aria-label="Favoritar"
           (click)="toggleFavorite()"

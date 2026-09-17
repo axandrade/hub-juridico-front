@@ -9,7 +9,7 @@ import {
   signal,
   untracked,
 } from '@angular/core';
-import { EMPTY, catchError, map } from 'rxjs';
+import { EMPTY, Observable, catchError, map, of, switchMap } from 'rxjs';
 
 import { DomainFavoritoService } from '../../../core/services/domain-favorito.service';
 import { DomainService, IDomainPage } from '../../../core/services/domain.service';
@@ -34,6 +34,18 @@ import { TablePagination, TableSort } from '../table/table.model';
  * `tipoEntidade = entityName()` — nenhuma tela precisa fiar nada, só existe (a menos que
  * `favoritable` seja explicitamente desligado). Sem coluna de `id` visível nenhuma: o id da
  * linha vem de `trackKey` (ou `'id'` por padrão).
+ *
+ * Favorito sempre fica fixo no topo da listagem, mesmo vindo de outra página (achado real
+ * 2026-09-17: existia isso numa tela antiga de Clientes, comparador local, perdido na migração
+ * pra cá). Cada busca resolve TODOS os favoritos do tipo de entidade primeiro
+ * (`DomainFavoritoService.listarTodosFavoritos`, sem paginação — teto de 500), busca a ficha
+ * completa deles (`pinnedRows`) e exclui esses ids da busca paginada normal (`id ne X and id ne
+ * Y...`, seguro sob a avaliação estrita-da-esquerda-pra-direita do RQL porque só usa `and` —
+ * nunca duplica: um favorito aparece uma vez só, fixo). `total_elements`/`total_pages` refletem
+ * só o restante (não contam quem já está fixo). Favorito fixo NÃO respeita a busca livre
+ * (`filter`) — só o predicado `isRowActive`, se informado: um registro inativo nunca fixa, e o
+ * botão de favoritar fica desabilitado nele (não dá pra favoritar/manter favoritado algo
+ * inativo).
  *
  * Recursos do `DataTableComponent` que este componente NÃO tem (cortados por não serem
  * necessários no piloto de Advogados): busca client-side, filtro por coluna, tooltip de linha.
@@ -70,6 +82,8 @@ export class DomainModelTableComponent<T extends object> {
   readonly defaultVisibleColumns = input<readonly string[] | null>(null);
   /** Toda tabela tem favoritar por padrão — desligue só se a entidade genuinamente não fizer sentido favoritar. */
   readonly favoritable = input<boolean>(true);
+  /** Sem isso, todo registro é favoritável. Quando informado, um registro "inativo" nunca fixa como favorito e o botão de favoritar fica desabilitado nele. */
+  readonly isRowActive = input<((row: T) => boolean) | null>(null);
 
   readonly rowClick = output<T>();
   /** Emitido a cada busca bem-sucedida — espelha `getCurrentDataList` do cev-front. */
@@ -89,6 +103,8 @@ export class DomainModelTableComponent<T extends object> {
   /** entidadeId -> id da linha `Favorito` (precisa do id pra desfavoritar via DELETE). */
   private readonly favoritoMap = signal<Map<number, number>>(new Map());
   private readonly favoritoBusy = signal<Set<number>>(new Set());
+  /** Fichas completas de todos os favoritos do tipo de entidade — sempre fixos no topo. */
+  private readonly pinnedRows = signal<T[]>([]);
 
   protected readonly visibleColumns = computed(() => {
     if (!this.columnVisibility()) {
@@ -100,7 +116,8 @@ export class DomainModelTableComponent<T extends object> {
 
   protected readonly colspan = computed(() => this.visibleColumns().length + (this.favoritable() ? 1 : 0));
 
-  protected readonly displayRows = this.rows.asReadonly();
+  /** Favoritos fixos sempre primeiro, independente da paginação/ordenação do resto. */
+  protected readonly displayRows = computed(() => [...this.pinnedRows(), ...this.rows()]);
 
   private lastQueryKey: string | null = null;
   private requestSeq = 0;
@@ -236,30 +253,30 @@ export class DomainModelTableComponent<T extends object> {
     return this.favoritoBusy().has(this.rowId(row));
   }
 
+  /** Sem `isRowActive`, tudo é favoritável. Com ele, um registro inativo nunca é. */
+  protected isRowFavoritable(row: T): boolean {
+    const predicate = this.isRowActive();
+    return !predicate || predicate(row);
+  }
+
   protected toggleFavorito(row: T, event: MouseEvent): void {
     event.stopPropagation();
     const id = this.rowId(row);
-    if (this.favoritoBusy().has(id)) {
+    if (this.favoritoBusy().has(id) || !this.isRowFavoritable(row)) {
       return;
     }
     this.favoritoBusy.update((busy) => new Set(busy).add(id));
     const existingFavoritoId = this.favoritoMap().get(id);
     const request$ = existingFavoritoId != null
-      ? this.domainFavoritoService.desfavoritar(existingFavoritoId).pipe(map(() => null as number | null))
-      : this.domainFavoritoService.favoritar(this.entityName(), id).pipe(map((novoId) => novoId as number | null));
+      ? this.domainFavoritoService.desfavoritar(existingFavoritoId).pipe(map(() => undefined))
+      : this.domainFavoritoService.favoritar(this.entityName(), id).pipe(map(() => undefined));
 
+    // Refaz a busca inteira (pinned + página) em vez de só corrigir o Map local: é o jeito mais
+    // simples de manter `pinnedRows`/exclusão da paginação normal consistentes com o servidor.
     request$.subscribe({
-      next: (novoFavoritoId) => {
-        this.favoritoMap.update((current) => {
-          const next = new Map(current);
-          if (existingFavoritoId != null) {
-            next.delete(id);
-          } else if (novoFavoritoId != null) {
-            next.set(id, novoFavoritoId);
-          }
-          return next;
-        });
+      next: () => {
         this.clearFavoritoBusy(id);
+        this.reload();
       },
       error: () => this.clearFavoritoBusy(id),
     });
@@ -273,13 +290,42 @@ export class DomainModelTableComponent<T extends object> {
     });
   }
 
-  private loadFavoritos(rows: T[]): void {
-    if (!this.favoritable() || rows.length === 0) {
+  /**
+   * Busca todos os favoritos do tipo de entidade, fixa suas fichas completas em `pinnedRows` e
+   * devolve os ids — pra excluir da busca paginada normal logo em seguida (`fetch`), evitando
+   * duplicata. Um favorito reprovado por `isRowActive` (inativo) simplesmente não fixa.
+   */
+  private resolvePinned(entityName: string, fields: string): Observable<number[]> {
+    if (!this.favoritable()) {
+      this.pinnedRows.set([]);
       this.favoritoMap.set(new Map());
-      return;
+      return of([]);
     }
-    const ids = rows.map((row) => this.rowId(row));
-    this.domainFavoritoService.listarFavoritos(this.entityName(), ids).subscribe((map) => this.favoritoMap.set(map));
+    return this.domainFavoritoService.listarTodosFavoritos(entityName).pipe(
+      switchMap((favoritoMap) => {
+        this.favoritoMap.set(favoritoMap);
+        const ids = [...favoritoMap.keys()];
+        if (ids.length === 0) {
+          this.pinnedRows.set([]);
+          return of([]);
+        }
+        const filter = ids.map((id) => `id eq ${id}`).join(' or ');
+        return this.domainService
+          .get<IDomainPage<T>>({ entityName, filter, fields: fields || undefined, size: ids.length })
+          .pipe(
+            map((result) => {
+              const predicate = this.isRowActive();
+              const rows = predicate ? result.content.filter((row) => predicate(row)) : result.content;
+              this.pinnedRows.set(rows);
+              return rows.map((row) => this.rowId(row));
+            }),
+          );
+      }),
+      catchError(() => {
+        this.pinnedRows.set([]);
+        return of([]);
+      }),
+    );
   }
 
   private currentSort(): string {
@@ -294,16 +340,24 @@ export class DomainModelTableComponent<T extends object> {
   private fetch(entityName: string, page: number, sort: string, filter: string, fields: string, size: number): void {
     const seq = ++this.requestSeq;
     this.loading.set(true);
-    this.domainService
-      .get<IDomainPage<T>>({
-        entityName,
-        page,
-        size,
-        filter: filter || undefined,
-        sort: sort || undefined,
-        fields: fields || undefined,
-      })
+    this.resolvePinned(entityName, fields)
       .pipe(
+        switchMap((pinnedIds) => {
+          // `and` sempre estreita o que já foi acumulado, então anexar isso no fim de um
+          // `filter` que já tem seus próprios `or`s internos continua seguro sob a avaliação
+          // estrita-da-esquerda-pra-direita do RQL (sem parênteses) — diferente de um `or`
+          // anexado, que reabriria a expressão.
+          const exclusao = pinnedIds.map((id) => `id ne ${id}`).join(' and ');
+          const filtroEfetivo = [filter, exclusao].filter(Boolean).join(' and ');
+          return this.domainService.get<IDomainPage<T>>({
+            entityName,
+            page,
+            size,
+            filter: filtroEfetivo || undefined,
+            sort: sort || undefined,
+            fields: fields || undefined,
+          });
+        }),
         catchError(() => {
           if (seq === this.requestSeq) {
             this.loading.set(false);
@@ -327,7 +381,6 @@ export class DomainModelTableComponent<T extends object> {
           totalElements: result.total_elements,
           last: result.last,
         });
-        this.loadFavoritos(result.content);
         this.dataLoaded.emit(result.content);
       });
   }

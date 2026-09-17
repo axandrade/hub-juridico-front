@@ -149,6 +149,9 @@ export class ClientsComponent {
     'is-inactive': row.status !== 'ATIVO',
   });
 
+  /** Cliente inativo não favorita nem fixa no topo — ver `DomainModelTableComponent`. */
+  protected readonly clientIsActive = (row: PessoaListRow): boolean => row.status === 'ATIVO';
+
   constructor() {
     // Publica o cliente selecionado para o diálogo "Abrir pasta do cliente" (global, no layout).
     effect(() => {

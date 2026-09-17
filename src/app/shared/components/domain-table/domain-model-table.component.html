@@ -69,7 +69,7 @@
                   type="button"
                   class="data-table__pin-button"
                   [class.is-active]="isFavorito(row)"
-                  [disabled]="isFavoritoBusy(row)"
+                  [disabled]="isFavoritoBusy(row) || !isRowFavoritable(row)"
                   aria-label="Favoritar"
                   (click)="toggleFavorito(row, $event)"
                 >

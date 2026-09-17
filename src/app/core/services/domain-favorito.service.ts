@@ -47,6 +47,26 @@ export class DomainFavoritoService {
       .pipe(map((page) => new Map(page.content.map((f) => [f.entidadeId, f.id]))));
   }
 
+  /**
+   * Todos os favoritos do usuário pra um tipo de entidade — sem filtrar por id nenhum,
+   * diferente de {@link listarFavoritos}. Usado pra fixar favoritos no topo da listagem mesmo
+   * fora da página atual (`DomainModelTableComponent`). `size` é um teto pragmático: acima
+   * disso os favoritos excedentes simplesmente não fixam (limitação aceita, não paginamos
+   * favorito-a-favorito).
+   */
+  listarTodosFavoritos(tipoEntidade: string): Observable<Map<number, number>> {
+    const usuarioId = this.currentUserId();
+    const filter = `usuarioId eq ${usuarioId} and tipoEntidade eq '${tipoEntidade}'`;
+    return this.domainService
+      .get<IDomainPage<{ id: number; entidadeId: number }>>({
+        entityName: 'favorito',
+        filter,
+        fields: 'id,entidadeId',
+        size: 500,
+      })
+      .pipe(map((page) => new Map(page.content.map((f) => [f.entidadeId, f.id]))));
+  }
+
   favoritar(tipoEntidade: string, entidadeId: number): Observable<number> {
     const usuarioId = this.currentUserId();
     return this.domainService

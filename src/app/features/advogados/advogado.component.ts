@@ -86,6 +86,9 @@ export class AdvogadoComponent {
     'is-inactive': !row.ativo,
   });
 
+  /** Advogado inativo não favorita nem fixa no topo — ver `DomainModelTableComponent`. */
+  protected readonly advogadoIsActive = (row: AdvogadoDomain): boolean => row.ativo;
+
   /** Busca com debounce (300ms) + `incluirInativos`, combinados em RQL — ver `buildFilter`. */
   private readonly buscaDebounced = toSignal(
     toObservable(this.busca).pipe(debounceTime(300), distinctUntilChanged()),

@@ -39,7 +39,7 @@
           type="button"
           class="clients-icon-button"
           [class.is-active]="favorite()"
-          [disabled]="favoritoBusy()"
+          [disabled]="favoritoBusy() || isInactive()"
           title="Configurar favorito"
           aria-label="Configurar favorito"
           (click)="toggleFavorite()"

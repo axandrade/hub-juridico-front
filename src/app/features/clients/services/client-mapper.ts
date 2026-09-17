@@ -14,14 +14,15 @@ import {
   emptyEndereco,
 } from '../../../core/models';
 import {
-  AtualizarClientApi,
+  AtualizarPessoaDomainWriteApi,
   ContatoApi,
-  CriarClientApi,
   DadosAdministrativosApi,
   EmailApi,
   EnderecoApi,
   ClientRespApi,
   PessoaDomainWriteApi,
+  PessoaFisicaDomainWriteApi,
+  PessoaJuridicaDomainWriteApi,
   RepresentanteApi,
   RepresentanteRespApi,
   StatusVinculoApi,
@@ -37,14 +38,16 @@ export function statusClienteToApi(status: StatusCliente): StatusVinculoApi {
 }
 
 /**
- * Conversão entre `IPessoa` (frontend) e os DTOs da API `/pessoas`.
+ * Conversão entre `IPessoa` (frontend) e os DTOs/shapes da API — resposta de status/favorito
+ * (`/api/v1/pessoas`, DTO escrito à mão) e corpo de criar/atualizar (`/domain/pessoa-fisica`/
+ * `/domain/pessoa-juridica`, flat, ver `clientToCriarPessoaDomainRequest`).
  *
  * Lacunas conhecidas (sem campo no backend hoje): `pessoa.profissao`,
  * `dossier.folder`. O `dossier.hiringMode` não é enviado porque o enum
  * `modalidade` do backend (CLT/PJ/...) trata de vínculo trabalhista, não de
  * honorários. `dossier.progressEntry` ↔ `registro_andamento` e
- * `dossier.progressHistory` ↔ `historico_andamentos` (andamentos vêm na raiz do
- * response; vão dentro de `dados_administrativos` na requisição).
+ * `dossier.progressHistory` ↔ `historico_andamentos` (andamentos vêm na raiz em qualquer shape
+ * de resposta; na requisição de criar/atualizar são só mais dois campos flat, sem wrapper).
  * `favorite` vem do `favorito` do response (por usuário) e é alterado via
  * `PATCH /pessoas/{id}/favorito` — nunca no corpo de criar/atualizar.
  *
@@ -381,52 +384,12 @@ function principalPrimeiro<T extends { principal: boolean }>(items: T[]): T[] {
 
 // ===================== IPessoa -> Request =====================
 
-export function clientToCriarRequest(client: IPessoa): CriarClientApi {
-  const p = client.pessoa;
-  const comum = comumRequest(client);
-
-  if (p.tipo === 'FISICA') {
-    return {
-      tipo: 'FISICA',
-      nome: p.nome.trim(),
-      cpf: onlyDigits(p.cpf),
-      rg: nullif(p.rg),
-      estado_civil: p.estadoCivil || null,
-      nacionalidade: nullif(p.nacionalidade),
-      representantes: p.representantes.map(representanteToApi),
-      representantes_financeiros: p.representantesFinanceiros.map(representanteToApi),
-      ...comum,
-    };
-  }
-
-  return {
-    tipo: 'JURIDICA',
-    razao_social: p.razaoSocial.trim(),
-    nome_fantasia: nullif(p.nomeFantasia),
-    cnpj: onlyDigits(p.cnpj),
-    inscricao_estadual: nullif(p.inscricaoEstadual),
-    inscricao_municipal: nullif(p.inscricaoMunicipal),
-    representantes: p.representantes.map(representanteToApi),
-    representantes_financeiros: p.representantesFinanceiros.map(representanteToApi),
-    ...comum,
-  };
-}
-
-export function clientToAtualizarRequest(client: IPessoa): AtualizarClientApi {
-  const req = clientToCriarRequest(client);
-  if (req.tipo === 'FISICA') {
-    const { cpf: _cpf, ...rest } = req;
-    return rest;
-  }
-  const { cnpj: _cnpj, ...rest } = req;
-  return rest;
-}
-
 /**
  * Corpo do `POST /domain/pessoa-fisica` / `/domain/pessoa-juridica` (create via `@Create` do
- * ddd-noap — ver `PessoaController`/`Pessoa.criarPessoa`) — mesmos blocos de `clientToCriarRequest`,
- * só que flat (sem `tipo`, sem o wrapper `dados_administrativos`): os campos administrativos vão
- * direto na raiz, porque é isso que bate com os campos de `Pessoa` no bind por reflection.
+ * ddd-noap — ver `PessoaController`/`Pessoa.criarPessoa`) — reaproveitado também no `PATCH`
+ * (ver `clientToAtualizarPessoaDomainRequest`). Flat (sem `tipo`, sem o wrapper
+ * `dados_administrativos`): os campos administrativos vão direto na raiz, porque é isso que
+ * bate com os campos de `Pessoa` no bind por reflection.
  */
 export function clientToCriarPessoaDomainRequest(client: IPessoa): PessoaDomainWriteApi {
   const p = client.pessoa;
@@ -460,6 +423,21 @@ export function clientToCriarPessoaDomainRequest(client: IPessoa): PessoaDomainW
   };
 }
 
+/**
+ * Corpo do `PATCH /domain/pessoa-fisica` / `/domain/pessoa-juridica` (update genérico do
+ * ddd-noap, sem `@Update` — ver `PessoaController`) — mesmo corpo do create, só que sem
+ * cpf/cnpj (imutáveis por convenção, igual `AdvogadoWriteApi`).
+ */
+export function clientToAtualizarPessoaDomainRequest(client: IPessoa): AtualizarPessoaDomainWriteApi {
+  const body = clientToCriarPessoaDomainRequest(client);
+  if (client.pessoa.tipo === 'FISICA') {
+    const { cpf: _cpf, ...rest } = body as PessoaFisicaDomainWriteApi;
+    return rest;
+  }
+  const { cnpj: _cnpj, ...rest } = body as PessoaJuridicaDomainWriteApi;
+  return rest;
+}
+
 function contatosToApi(contatos: IContato[]): ContatoApi[] {
   return contatos
     .filter((c) => c.valor.trim())
@@ -470,16 +448,6 @@ function emailsToApi(emails: IEmail[]): EmailApi[] {
   return emails
     .filter((e) => e.endereco.trim())
     .map((e) => ({ endereco: e.endereco.trim(), principal: e.principal }));
-}
-
-function comumRequest(client: IPessoa) {
-  const p = client.pessoa;
-  return {
-    endereco: enderecoToApi(p.endereco),
-    contatos: contatosToApi(p.contatos),
-    emails: emailsToApi(p.emails),
-    dados_administrativos: dadosAdmFromDossier(client.dossier),
-  };
 }
 
 /** Mínimo válido: `numero_contrato` e `responsavel_interno` são `@NotBlank` no backend. */

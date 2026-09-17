@@ -1,6 +1,10 @@
 import { IPessoa, emptyDadosPessoa, emptyDossie, emptyEndereco } from '../../../core/models';
 import { ClientRespApi } from './client-api.model';
-import { clientRespToClient, clientToCriarPessoaDomainRequest } from './client-mapper';
+import {
+  clientRespToClient,
+  clientToAtualizarPessoaDomainRequest,
+  clientToCriarPessoaDomainRequest,
+} from './client-mapper';
 
 function resp(over: Partial<ClientRespApi> = {}): ClientRespApi {
   return {
@@ -230,6 +234,57 @@ describe('clientToCriarPessoaDomainRequest — corpo flat do POST /domain/pessoa
     expect(body['cnpj']).toBe('11222333000181');
     expect(body['nome']).toBeUndefined();
     expect(body['cpf']).toBeUndefined();
+  });
+});
+
+describe('clientToAtualizarPessoaDomainRequest — corpo flat do PATCH /domain/pessoa-fisica|juridica', () => {
+  it('pessoa física: mesmo corpo do create, sem cpf', () => {
+    const body = clientToAtualizarPessoaDomainRequest(
+      clientFisicaComRelacionamentos(),
+    ) as unknown as Record<string, unknown>;
+
+    expect(body['cpf']).toBeUndefined();
+    expect(body['nome']).toBe('Fulano de Tal');
+    expect(body['emails']).toEqual([
+      { endereco: 'a@x.com', principal: true },
+      { endereco: 'b@x.com', principal: false },
+    ]);
+    expect(body['representantes']).toEqual([
+      {
+        nome: 'representante legal',
+        documento: '11144477735',
+        cargo: 'Sócio',
+        endereco: null,
+        emails: [{ endereco: 'rep.legal@x.com', principal: true }],
+        contatos: [{ valor: '81988887777', tipo: 'WHATSAPP', principal: true }],
+      },
+    ]);
+  });
+
+  it('pessoa jurídica: mesmo corpo do create, sem cnpj', () => {
+    const client = clientFisicaComRelacionamentos();
+    client.pessoa = {
+      ...client.pessoa,
+      tipo: 'JURIDICA',
+      razaoSocial: 'ACME LTDA',
+      cnpj: '11222333000181',
+    };
+
+    const body = clientToAtualizarPessoaDomainRequest(client) as unknown as Record<
+      string,
+      unknown
+    >;
+
+    expect(body['cnpj']).toBeUndefined();
+    expect(body['razao_social']).toBe('ACME LTDA');
+  });
+
+  it('não manda `cadastrado_por_id`', () => {
+    const body = clientToAtualizarPessoaDomainRequest(
+      clientFisicaComRelacionamentos(),
+    ) as unknown as Record<string, unknown>;
+
+    expect(body['cadastrado_por_id']).toBeUndefined();
   });
 });
 

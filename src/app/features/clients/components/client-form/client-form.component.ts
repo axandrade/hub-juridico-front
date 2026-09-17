@@ -42,6 +42,7 @@ import { ClientService } from '../../services/client-service';
 import {
   PESSOA_DOMAIN_FIELDS,
   PessoaDomain,
+  clientToAtualizarPessoaDomainRequest,
   clientToCriarPessoaDomainRequest,
   pessoaDomainToClient,
 } from '../../services/client-mapper';
@@ -69,10 +70,10 @@ interface EditorNotice {
 
 /**
  * Tela autônoma de cadastro/edição de pessoa (física ou jurídica). Dona do
- * `FormGroup` raiz; carrega a ficha por id (ou vazia para novo cadastro), valida,
- * e persiste — criar via `DomainService` (`/domain/pessoa-fisica`/`/domain/pessoa-juridica`,
- * mesmo padrão do `AdvogadoFormComponent`), atualizar via `ClientService` (`/api/v1/pessoas`).
- * O `clients` só decide qual `pessoaId` mostrar e reage aos outputs.
+ * `FormGroup` raiz; carrega a ficha por id (ou vazia para novo cadastro), valida, e persiste —
+ * criar e atualizar via `DomainService` (`/domain/pessoa-fisica`/`/domain/pessoa-juridica`,
+ * mesmo padrão do `AdvogadoFormComponent`); status/favorito continuam via `ClientService`
+ * (`/api/v1/pessoas`). O `clients` só decide qual `pessoaId` mostrar e reage aos outputs.
  */
 @Component({
   selector: 'app-client-form',
@@ -234,7 +235,7 @@ export class ClientFormComponent {
     const prepared = this.prepareClientForSave(this.assembleClient());
     this.salvando.set(true);
     const request$ = this.isPersisted()
-      ? this.clientService.atualizar(prepared)
+      ? this.atualizarPessoaDomain(prepared)
       : this.criarPessoaDomain(prepared);
 
     request$.subscribe({
@@ -272,6 +273,27 @@ export class ClientFormComponent {
         }),
       ),
       map((pessoa) => pessoaDomainToClient(pessoa, false, this.auth.user())),
+    );
+  }
+
+  /**
+   * `PATCH /domain/pessoa-fisica` ou `/domain/pessoa-juridica` (ddd-noap, merge genérico — sem
+   * `@Update`, igual `Advogado`: CPF/CNPJ ficam de fora do corpo por convenção, ver
+   * `clientToAtualizarPessoaDomainRequest`) — devolve `204`, então encadeia um `get()` pra
+   * ficha completa. Favorito não muda aqui, então reaproveita o valor já carregado no painel.
+   */
+  private atualizarPessoaDomain(client: IPessoa): Observable<IPessoa> {
+    const entityName = client.pessoa.tipo === 'FISICA' ? 'pessoa-fisica' : 'pessoa-juridica';
+    const body = clientToAtualizarPessoaDomainRequest(client);
+    return this.domainService.patch({ entityName, entityId: client.id, body }).pipe(
+      switchMap(() =>
+        this.domainService.get<PessoaDomain>({
+          entityName: 'pessoa',
+          entityId: client.id,
+          fields: PESSOA_DOMAIN_FIELDS,
+        }),
+      ),
+      map((pessoa) => pessoaDomainToClient(pessoa, this.favorite(), this.auth.user())),
     );
   }
 

@@ -55,44 +55,7 @@ export interface DadosAdministrativosApi {
   historico_andamentos: string | null;
 }
 
-// ---------- requisição (POST / PUT) ----------
-
-interface ClientRequestComum {
-  endereco: EnderecoApi | null;
-  contatos: ContatoApi[];
-  emails: EmailApi[];
-  dados_administrativos: DadosAdministrativosApi;
-}
-
-export interface CriarClientFisicaApi extends ClientRequestComum {
-  tipo: 'FISICA';
-  nome: string;
-  cpf: string;
-  rg: string | null;
-  estado_civil: EstadoCivil | null;
-  nacionalidade: string | null;
-  representantes: RepresentanteApi[];
-  representantes_financeiros: RepresentanteApi[];
-}
-
-export interface CriarClientJuridicaApi extends ClientRequestComum {
-  tipo: 'JURIDICA';
-  razao_social: string;
-  nome_fantasia: string | null;
-  cnpj: string;
-  inscricao_estadual: string | null;
-  inscricao_municipal: string | null;
-  representantes: RepresentanteApi[];
-  representantes_financeiros: RepresentanteApi[];
-}
-
-export type CriarClientApi = CriarClientFisicaApi | CriarClientJuridicaApi;
-
-/** Atualização (PUT) — o backend não aceita alterar cpf/cnpj. */
-export type AtualizarClientApi =
-  Omit<CriarClientFisicaApi, 'cpf'> | Omit<CriarClientJuridicaApi, 'cnpj'>;
-
-// ---------- criação via /domain/pessoa-fisica, /domain/pessoa-juridica (ddd-noap) ----------
+// ---------- criação/atualização via /domain/pessoa-fisica, /domain/pessoa-juridica (ddd-noap) ----------
 
 /**
  * Corpo do `POST /domain/pessoa-fisica` / `/domain/pessoa-juridica` — bind direto nos campos da
@@ -126,6 +89,14 @@ export interface PessoaJuridicaDomainWriteApi extends PessoaDomainWriteComum {
 }
 
 export type PessoaDomainWriteApi = PessoaFisicaDomainWriteApi | PessoaJuridicaDomainWriteApi;
+
+/**
+ * Corpo do `PATCH /domain/pessoa-fisica` / `/domain/pessoa-juridica` — mesmo shape do create,
+ * sem cpf/cnpj (não editáveis; por convenção o front não manda, igual `AdvogadoWriteApi` — o
+ * backend não tem um `@Update` bloqueando isso, ver decisão em `Pessoa.criarPessoa`/`PessoaController`).
+ */
+export type AtualizarPessoaDomainWriteApi =
+  Omit<PessoaFisicaDomainWriteApi, 'cpf'> | Omit<PessoaJuridicaDomainWriteApi, 'cnpj'>;
 
 // ---------- resposta ----------
 

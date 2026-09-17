@@ -7,15 +7,15 @@ import { IPessoa } from '../../../core/models';
 import { AuthService } from '../../../core/services/auth.service';
 import { FavoritoService } from '../../../shared/services/favorito.service';
 import { ClientRespApi, StatusVinculoApi } from './client-api.model';
-import { clientToAtualizarRequest, clientRespToClient } from './client-mapper';
+import { clientRespToClient } from './client-mapper';
 
 /**
- * Atualizar/ativar-inativar/favoritar uma pessoa (cliente) já existente, via `/api/v1/pessoas`
- * (Spring). Criar saiu daqui — vai por `/domain/pessoa-fisica`/`/domain/pessoa-juridica` (ddd-noap,
- * `@Create` em `Pessoa`), direto no `ClientFormComponent` (mesmo padrão do `AdvogadoFormComponent`).
- * A listagem da tabela e a busca da ficha completa também não passam mais por aqui: usam
- * `/domain/pessoa` direto (`DomainModelTableComponent` em `ClientsComponent`; `ClientFormComponent`
- * tem seu próprio `buscarCompleto` via `DomainService`).
+ * Ativar/inativar/favoritar uma pessoa (cliente) já existente, via `/api/v1/pessoas` (Spring).
+ * Criar e atualizar saíram daqui — vão por `/domain/pessoa-fisica`/`/domain/pessoa-juridica`
+ * (ddd-noap, `@Create`/PATCH genérico em `Pessoa`), direto no `ClientFormComponent` (mesmo
+ * padrão do `AdvogadoFormComponent`). A listagem da tabela e a busca da ficha completa também
+ * não passam mais por aqui: usam `/domain/pessoa` direto (`DomainModelTableComponent` em
+ * `ClientsComponent`; `ClientFormComponent` tem seu próprio `buscarCompleto` via `DomainService`).
  */
 @Injectable({ providedIn: 'root' })
 export class ClientService {
@@ -25,8 +25,8 @@ export class ClientService {
   private readonly base = `${environment.apiBaseUrl}/pessoas`;
 
   /**
-   * Cache local das pessoas já vistas nesta sessão (só o que `salvar`/`alterarStatus` devolveram)
-   * — usado só pra refletir otimisticamente o favorito/status logo após uma ação, não é fonte de
+   * Cache local das pessoas já vistas nesta sessão (só o que `alterarStatus` devolveu) — usado
+   * só pra refletir otimisticamente o favorito/status logo após uma ação, não é fonte de
    * listagem (isso é `/domain/pessoa`).
    */
   private readonly _clients = signal<IPessoa[]>([]);
@@ -34,25 +34,6 @@ export class ClientService {
 
   private toClient(res: ClientRespApi): IPessoa {
     return clientRespToClient(res, this.auth.user());
-  }
-
-  /** `PUT /pessoas/{id}` — só pra registro já existente; devolve o registro atualizado. */
-  atualizar(client: IPessoa): Observable<IPessoa> {
-    const request$ = this.http.put<ClientRespApi>(
-      `${this.base}/${client.id}`,
-      clientToAtualizarRequest(client),
-    );
-
-    return request$.pipe(
-      map((res) => this.toClient(res)),
-      tap((salvo) =>
-        this._clients.update((clients) =>
-          clients.some((item) => item.id === salvo.id)
-            ? clients.map((item) => (item.id === salvo.id ? salvo : item))
-            : [salvo, ...clients],
-        ),
-      ),
-    );
   }
 
   /**
@@ -80,8 +61,8 @@ export class ClientService {
    *
    * Recebe o favorito atual explícito (não lê de `_clients`): a ficha aberta no painel vem de
    * `/domain/pessoa` (via `ClientFormComponent`), que não passa pelo cache local — só quem
-   * chegou aqui via `salvar`/`alterarStatus` está nele. Achado real: antes lia `_clients`, então
-   * favoritar um cliente que não tinha acabado de ser salvo/reativado nesta sessão virava um no-op silencioso (nunca
+   * chegou aqui via `alterarStatus` está nele. Achado real: antes lia `_clients`, então
+   * favoritar um cliente que não tinha acabado de ser reativado nesta sessão virava um no-op silencioso (nunca
    * chamava a API) desde que a listagem passou a vir de `/domain/pessoa` em vez de `carregar()`.
    */
   alternarFavorito(id: number, favoritoAtual: boolean): boolean {

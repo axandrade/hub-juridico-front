@@ -52,14 +52,10 @@
   }
 }
 
-.advogado-panel__tools,
-.advogado-panel__footer > div {
+.advogado-panel__tools {
   display: flex;
   align-items: center;
   gap: $spacing-xs;
-}
-
-.advogado-panel__tools {
   flex-wrap: nowrap;
   flex-shrink: 0;
   gap: 4px;

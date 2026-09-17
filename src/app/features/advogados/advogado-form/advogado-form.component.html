@@ -41,7 +41,7 @@
     </div>
   </header>
 
-  <form class="advogado-form" [formGroup]="form" (submit)="save($event)">
+  <form class="advogado-form" [formGroup]="form">
     <div class="advogado-form__section">
       <div class="advogado-form__row">
         <label class="advogado-field">
@@ -127,41 +127,16 @@
           Confirme para inativar {{ panelTitle() }}.
         }
       </span>
-      <div>
-        <app-button
-          variant="tertiary"
-          size="sm"
-          icon="fa-solid fa-eraser"
-          label="Limpar painel"
-          (clicked)="clearPanel()"
-        />
-        @if (isPersisted()) {
-          <app-button
-            variant="secondary"
-            size="sm"
-            [icon]="isInactive() ? 'fa-solid fa-rotate-left' : 'fa-solid fa-ban'"
-            [label]="isInactive() ? 'Reativar' : 'Inativar'"
-            (clicked)="requestStatusChange()"
-          />
-        }
-        @if (confirmandoInativacao()) {
-          <app-button
-            variant="secondary"
-            size="sm"
-            icon="fa-solid fa-check"
-            label="Confirmar"
-            (clicked)="confirmInactivate()"
-          />
-        }
-        <app-button
-          nativeType="submit"
-          variant="primary"
-          size="sm"
-          icon="fa-solid fa-floppy-disk"
-          [label]="salvando() ? 'Salvando...' : 'Salvar'"
-          [disabled]="salvando()"
-        />
-      </div>
+      <app-panel-footer-actions
+        [persistido]="isPersisted()"
+        [inativo]="isInactive()"
+        [confirmandoInativacao]="confirmandoInativacao()"
+        [salvando]="salvando()"
+        (limpar)="clearPanel()"
+        (alterarStatus)="requestStatusChange()"
+        (confirmarInativacao)="confirmInactivate()"
+        (salvar)="save()"
+      />
     </footer>
   </form>
 </section>

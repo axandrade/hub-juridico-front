@@ -17,7 +17,7 @@ import { cpfValidator, onlyDigits } from '../../../core/auth/documentos-br';
 import { ESTADOS_CIVIS, EstadoCivil } from '../../../core/models';
 import { DomainFavoritoService } from '../../../core/services/domain-favorito.service';
 import { DomainService } from '../../../core/services/domain.service';
-import { ButtonComponent } from '../../../shared/components/button/button.component';
+import { PanelFooterActionsComponent } from '../../../shared/components/panel-footer-actions/panel-footer-actions.component';
 import { PanelLayoutSwitcherComponent } from '../../../shared/components/panel-layout-switcher/panel-layout-switcher.component';
 import { PAINEL_LAYOUT_PADRAO, PainelLayout } from '../../../shared/models/panel-layout';
 import { CepMaskDirective } from '../../../shared/directives/cep-mask.directive';
@@ -83,7 +83,7 @@ export const ESTADO_CIVIL_LABELS: Record<string, string> = {
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     ReactiveFormsModule,
-    ButtonComponent,
+    PanelFooterActionsComponent,
     PanelLayoutSwitcherComponent,
     CpfMaskDirective,
     CepMaskDirective,

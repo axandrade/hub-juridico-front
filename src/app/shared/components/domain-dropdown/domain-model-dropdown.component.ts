@@ -119,9 +119,9 @@ export class DomainModelDropdownComponent<T extends Record<string, unknown>> {
 
   /**
    * Item completo por valor — do cache das páginas já vistas, ou `GET /domain/{entity}/{valor}`
-   * direto (mesmo papel do `CidadeService.resolver`/`ProcessoService.rotuloPessoa`, mas genérico
-   * pra qualquer entidade). Útil pra montar `valueLabel` ao carregar um valor já persistido, sem
-   * escrever um service por entidade.
+   * direto (mesmo papel do `ProcessoService.rotuloPessoa`, mas genérico pra qualquer entidade).
+   * Útil pra montar `valueLabel` ao carregar um valor já persistido, sem escrever um service por
+   * entidade.
    */
   resolver(valor: string): Observable<T | null> {
     if (!valor) {

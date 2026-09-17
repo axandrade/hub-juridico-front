@@ -2,11 +2,8 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { of } from 'rxjs';
 
-import { CidadeService } from '../../services/cidade-service';
-import { OrgaoJulgadorService } from '../../services/orgao-julgador.service';
 import { ProcessoApi } from '../../services/processo-api.model';
 import { ProcessoService } from '../../services/processo-service';
-import { TribunalService } from '../../services/tribunal.service';
 import { ProcessoDadosGeraisComponent } from './processo-dados-gerais.component';
 
 /**
@@ -74,16 +71,6 @@ function makeProcesso(over: Partial<ProcessoApi> = {}): ProcessoApi {
 describe('ProcessoDadosGeraisComponent — tribunal/órgão atuais (carregar/coletar)', () => {
   let fixture: ComponentFixture<ProcessoDadosGeraisComponent>;
 
-  // Catálogo com um tribunal "de único órgão" (STF) e um tribunal novo sem nenhum órgão
-  // cadastrado (TESTE-B) — cobre os dois cenários que o usuário pediu pra testar.
-  const tribunaisCatalogo = [
-    { id: 1, nome: 'STF' },
-    { id: 41, nome: 'TESTE-B' },
-  ];
-  const orgaosCatalogo = [
-    { id: 42, nome: 'STF - Supremo Tribunal Federal', tribunal_id: 1 },
-  ];
-
   beforeEach(() => {
     TestBed.configureTestingModule({
       imports: [ProcessoDadosGeraisComponent],
@@ -96,9 +83,6 @@ describe('ProcessoDadosGeraisComponent — tribunal/órgão atuais (carregar/col
             rotuloAdvogado: () => of(''),
           },
         },
-        { provide: CidadeService, useValue: { buscarPagina: () => of({ itens: [], ultima: true }), resolver: () => of('') } },
-        { provide: TribunalService, useValue: { carregar: () => {}, tribunais: () => tribunaisCatalogo } },
-        { provide: OrgaoJulgadorService, useValue: { carregar: () => {}, recarregar: () => {}, orgaos: () => orgaosCatalogo } },
       ],
     });
     fixture = TestBed.createComponent(ProcessoDadosGeraisComponent);

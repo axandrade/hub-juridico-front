@@ -143,7 +143,7 @@ export interface OrgaoProcessanteApi {
 /**
  * Tribunal "atual" do processo (`ProcessoResponse.tribunalAtual`) — independente do órgão: pode
  * vir preenchido mesmo sem nenhum órgão específico escolhido ainda (tribunal novo, sem órgão
- * cadastrado no catálogo). Mesma forma do catálogo `Tribunal` (`tribunal.service.ts`).
+ * cadastrado no catálogo). Mesma forma do catálogo `Tribunal` (`/domain/tribunal`).
  */
 export interface TribunalAtualApi {
   id: number;

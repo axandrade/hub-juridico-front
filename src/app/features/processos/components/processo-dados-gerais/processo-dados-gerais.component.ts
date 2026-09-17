@@ -10,6 +10,7 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule, ValidatorFn } from '@angular/forms';
+import { switchMap } from 'rxjs';
 
 import {
   documentoValidator,
@@ -22,6 +23,7 @@ import { DomainModelDropdownComponent } from '../../../../shared/components/doma
 import { CnjMaskDirective } from '../../../../shared/directives/cnj-mask.directive';
 import { DocumentoMaskDirective } from '../../../../shared/directives/documento-mask.directive';
 import { mensagensCamposInvalidos } from '../../../../shared/utils/form-validacao';
+import { DomainService, IDomainPage } from '../../../../core/services/domain.service';
 import {
   ObservacaoProcessoApi,
   OrgaoProcessanteApi,
@@ -31,10 +33,13 @@ import {
   TipoProcesso,
   TribunalAtualApi,
 } from '../../services/processo-api.model';
-import { CidadeService } from '../../services/cidade-service';
-import { OrgaoJulgadorService } from '../../services/orgao-julgador.service';
 import { ProcessoEditavel, ProcessoService } from '../../services/processo-service';
-import { TribunalService } from '../../services/tribunal.service';
+
+/** Item de um catálogo simples (`id`, `nome`) — Tribunal/OrgaoJulgador, via `/domain`. */
+interface CatalogoItem {
+  id: number;
+  nome: string;
+}
 
 const TIPOS_PROCESSO: TipoProcesso[] = ['JUDICIAL', 'ADMINISTRATIVO', 'ARBITRAL'];
 
@@ -108,9 +113,7 @@ export type DadosGeraisValores = Omit<
 })
 export class ProcessoDadosGeraisComponent {
   private readonly processoService = inject(ProcessoService);
-  private readonly cidadeService = inject(CidadeService);
-  private readonly tribunalService = inject(TribunalService);
-  private readonly orgaoJulgadorService = inject(OrgaoJulgadorService);
+  private readonly domainService = inject(DomainService);
   private readonly destroyRef = inject(DestroyRef);
 
   /** Erro numa operação de catálogo (criar/renomear/excluir) — o shell mostra no rodapé. */
@@ -118,10 +121,9 @@ export class ProcessoDadosGeraisComponent {
 
   /** Rótulos legíveis do tipo (o `<app-combobox>` estático mostra o texto que recebe). */
   protected readonly tipoOpcoes = TIPOS_PROCESSO.map((t) => TIPO_PROCESSO_LABEL[t]);
-  /** Picker paginado de município (`cidades`) — valor = id, rótulo = "Nome — UF". Ainda não é
-   *  `app-domain-model-dropdown`: a busca ignora acentos (ver `CidadeService`), não é um `ilike`
-   *  genérico direto. */
-  protected readonly buscarCidades = this.cidadeService.buscarPagina;
+  /** `displayFormatter` do picker de município (`/domain/cidade`) — "Nome — UF". */
+  protected readonly rotuloCidade = (item: Record<string, unknown>): string =>
+    `${item['nome'] ?? ''} — ${item['uf'] ?? ''}`;
   /**
    * `displayFormatter` dos `<app-domain-model-dropdown>` — tipados como `Record<string, unknown>`
    * (não o tipo real da entidade) por limitação de inferência do compilador de templates do
@@ -136,35 +138,20 @@ export class ProcessoDadosGeraisComponent {
     String(item['nome'] ?? '(sem nome)');
 
   // --- "Órgão processante" atual: cascata Tribunal → Órgão (filtrado pelo tribunal escolhido) ---
-  protected readonly nomesDeTribunal = computed(() =>
-    this.tribunalService.tribunais().map((t) => t.nome),
-  );
-  /** Tribunal/órgão exibidos nos dois combobox — o valor escolhido JÁ É o "órgão processante" atual. */
-  protected readonly tribunalAtual = signal('');
-  protected readonly orgaoAtual = signal('');
-  /** Id do catálogo `tribunais` que vai no `PUT` — independente do órgão (dá pra ter só tribunal). */
+  /** Id do catálogo `tribunal` que vai no `PUT` — independente do órgão (dá pra ter só tribunal). */
   protected readonly tribunalAtualId = signal<number | null>(null);
-  /** Id do catálogo `orgao_julgador` que vai no `PUT` — `null` = sem órgão processante definido. */
-  protected readonly orgaoProcessanteId = signal<number | null>(null);
-  /**
-   * Só os órgãos do tribunal escolhido — vazio até escolher um tribunal. Mostra só a descrição
-   * (sem repetir o código do tribunal, já escolhido no combobox anterior); `nome` do catálogo vem
-   * como "TRIBUNAL - descrição" (ver `OrgaoJulgadorService`).
-   */
-  protected readonly orgaosDoTribunalAtual = computed(() => {
-    const tribunal = this.tribunalService.tribunais().find((t) => t.nome === this.tribunalAtual());
-    if (!tribunal) {
-      return [];
-    }
-    const prefixo = `${tribunal.nome} - `;
-    return this.orgaoJulgadorService
-      .orgaos()
-      .filter((o) => o.tribunal_id === tribunal.id)
-      .map((o) => ({ id: o.id, descricao: o.nome.startsWith(prefixo) ? o.nome.slice(prefixo.length) : o.nome }));
-  });
-  protected readonly nomesDeOrgaoDoTribunal = computed(() =>
-    this.orgaosDoTribunalAtual().map((o) => o.descricao),
+  protected readonly tribunalAtualLabel = signal('');
+  protected readonly tribunalAtualValor = computed(() =>
+    this.tribunalAtualId() === null ? '' : String(this.tribunalAtualId()),
   );
+  /** Id do catálogo `orgao-julgador` que vai no `PUT` — `null` = sem órgão processante definido. */
+  protected readonly orgaoProcessanteId = signal<number | null>(null);
+  protected readonly orgaoAtualLabel = signal('');
+  protected readonly orgaoAtualValor = computed(() =>
+    this.orgaoProcessanteId() === null ? '' : String(this.orgaoProcessanteId()),
+  );
+  /** RQL do dropdown de órgão — escopado ao tribunal escolhido (`id eq -1` = nunca casa, sem tribunal). */
+  protected readonly orgaoAtualFiltro = computed(() => `tribunalId eq ${this.tribunalAtualId() ?? -1}`);
 
   protected readonly form: ProcessoForm = new FormGroup({
     numeroCnj: text(),
@@ -301,8 +288,6 @@ export class ProcessoDadosGeraisComponent {
   });
 
   constructor() {
-    this.tribunalService.carregar();
-    this.orgaoJulgadorService.carregar();
     this.destroyRef.onDestroy(() => clearTimeout(this.copiadoTimer));
 
     this.form.controls.numeroCnj.valueChanges
@@ -526,19 +511,17 @@ export class ProcessoDadosGeraisComponent {
     this.advogadoResponsavelLabel.set('');
   }
 
-  protected onCidadeChange(valor: string): void {
-    const id = valor ? Number(valor) : null;
-    this.cidadeId.set(id);
-    if (id === null) {
+  /** `(itemSelected)` do dropdown — item cru (`/domain`, camelCase) ou `null` (limpou a seleção). */
+  protected onCidadeSelected(item: Record<string, unknown> | null): void {
+    this.cidadeId.set(item ? Number(item['id']) : null);
+    if (!item) {
       this.cidadeLabel.set('');
       return;
     }
-    this.cidadeService.resolver(id).subscribe((c) => {
-      if (c) {
-        this.cidadeLabel.set(`${c.nome} — ${c.uf}`);
-        this.uf.set(c.uf);
-      }
-    });
+    const nome = String(item['nome'] ?? '');
+    const uf = String(item['uf'] ?? '');
+    this.cidadeLabel.set(`${nome} — ${uf}`);
+    this.uf.set(uf);
   }
 
   /** Copia o número (CNJ ou livre) pro clipboard e pisca o ✓ por ~1,5s. */
@@ -800,51 +783,59 @@ export class ProcessoDadosGeraisComponent {
    * tem um único órgão (caso comum: CCBC, INSS, STF, STJ, TST…), escolhe-o automaticamente — sem
    * isso, escolher só o tribunal não definia nada e o "Salvar" gravava órgão processante vazio.
    */
-  protected onTribunalAtualChange(nome: string): void {
-    this.tribunalAtual.set(nome);
-    this.tribunalAtualId.set(this.tribunalService.tribunais().find((t) => t.nome === nome)?.id ?? null);
-    const orgaos = this.orgaosDoTribunalAtual();
-    if (orgaos.length === 1) {
-      this.orgaoAtual.set(orgaos[0].descricao);
-      this.orgaoProcessanteId.set(orgaos[0].id);
-    } else {
-      this.orgaoAtual.set('');
-      this.orgaoProcessanteId.set(null);
+  protected onTribunalAtualChange(valor: string): void {
+    const id = valor ? Number(valor) : null;
+    this.tribunalAtualId.set(id);
+    this.tribunalAtualLabel.set('');
+    this.orgaoProcessanteId.set(null);
+    this.orgaoAtualLabel.set('');
+    if (id === null) {
+      return;
     }
+    this.domainService
+      .get<IDomainPage<CatalogoItem>>({
+        entityName: 'orgao-julgador',
+        filter: `tribunalId eq ${id}`,
+        fields: 'id,nome',
+        size: 2,
+      })
+      .subscribe({
+        next: (pagina) => {
+          if (pagina.content.length === 1 && this.tribunalAtualId() === id) {
+            this.orgaoProcessanteId.set(pagina.content[0].id);
+            this.orgaoAtualLabel.set(pagina.content[0].nome);
+          }
+        },
+        error: () => {
+          // conveniência (auto-seleção) — falha aqui não deve bloquear o fluxo principal.
+        },
+      });
   }
 
   protected criarTribunalProcessante(nome: string): void {
-    this.tribunalService.criar(nome).subscribe({
-      next: (t) => this.onTribunalAtualChange(t.nome),
+    this.processoService.criarCatalogo('tribunal', nome).subscribe({
+      next: (t) => this.onTribunalAtualChange(String(t.id)),
       error: (err: unknown) => this.erro.emit(this.mensagemErroHttp(err)),
     });
   }
 
   protected renomearTribunalProcessante({ de, para }: { de: string; para: string }): void {
-    const alvo = this.tribunalService.tribunais().find((t) => t.nome === de);
-    if (!alvo) {
-      return;
-    }
-    this.tribunalService.alterar(alvo.id, para).subscribe({
+    const id = Number(de);
+    this.processoService.renomearCatalogo('tribunal', id, para).subscribe({
       next: (t) => {
-        if (this.tribunalAtual() === de) {
-          this.tribunalAtual.set(t.nome);
+        if (this.tribunalAtualId() === id) {
+          this.tribunalAtualLabel.set(t.nome);
         }
-        // "TRIBUNAL - descrição" dos órgãos embutia o nome antigo — recarrega pra atualizar.
-        this.orgaoJulgadorService.recarregar();
       },
       error: (err: unknown) => this.erro.emit(this.mensagemErroHttp(err)),
     });
   }
 
-  protected excluirTribunalProcessante(nome: string): void {
-    const alvo = this.tribunalService.tribunais().find((t) => t.nome === nome);
-    if (!alvo) {
-      return;
-    }
-    this.tribunalService.excluir(alvo.id).subscribe({
+  protected excluirTribunalProcessante(valor: string): void {
+    const id = Number(valor);
+    this.processoService.excluirCatalogo('tribunal', id).subscribe({
       next: () => {
-        if (this.tribunalAtual() === nome) {
+        if (this.tribunalAtualId() === id) {
           this.onTribunalAtualChange('');
         }
       },
@@ -853,90 +844,89 @@ export class ProcessoDadosGeraisComponent {
   }
 
   /** Escolher o órgão JÁ define o "órgão processante" atual — sem passo de "Adicionar". */
-  protected onOrgaoAtualChange(descricao: string): void {
-    this.orgaoAtual.set(descricao);
-    const item = this.orgaosDoTribunalAtual().find((o) => o.descricao === descricao);
-    this.orgaoProcessanteId.set(item?.id ?? null);
+  protected onOrgaoAtualChange(valor: string): void {
+    this.orgaoProcessanteId.set(valor ? Number(valor) : null);
+    this.orgaoAtualLabel.set('');
   }
 
-  protected criarOrgaoDoTribunalAtual(descricao: string): void {
-    const tribunal = this.tribunalAtual().trim();
-    if (!tribunal || !descricao.trim()) {
+  protected criarOrgaoDoTribunalAtual(nome: string): void {
+    const tribunalId = this.tribunalAtualId();
+    if (!tribunalId) {
       return;
     }
-    this.orgaoJulgadorService.criar(`${tribunal} - ${descricao.trim()}`).subscribe({
-      next: (criado) => {
-        this.orgaoAtual.set(this.descricaoDoOrgao(criado.nome, tribunal));
-        this.orgaoProcessanteId.set(criado.id);
-      },
-      error: (err: unknown) => this.erro.emit(this.mensagemErroHttp(err)),
-    });
+    this.domainService
+      .post<{ tribunal_id: number; nome: string }>({
+        entityName: 'orgao-julgador',
+        body: { tribunal_id: tribunalId, nome },
+      })
+      .pipe(
+        switchMap((criado) =>
+          this.domainService.get<CatalogoItem>({ entityName: 'orgao-julgador', entityId: criado.id, fields: 'id,nome' }),
+        ),
+      )
+      .subscribe({
+        next: (o) => {
+          this.orgaoProcessanteId.set(o.id);
+          this.orgaoAtualLabel.set(o.nome);
+        },
+        error: (err: unknown) => this.erro.emit(this.mensagemErroHttp(err)),
+      });
   }
 
   protected renomearOrgaoDoTribunalAtual({ de, para }: { de: string; para: string }): void {
-    const item = this.orgaosDoTribunalAtual().find((o) => o.descricao === de);
-    const tribunal = this.tribunalAtual().trim();
-    if (!item || !tribunal) {
-      return;
-    }
-    this.orgaoJulgadorService.alterar(item.id, `${tribunal} - ${para.trim()}`).subscribe({
-      next: (atualizado) => {
-        if (this.orgaoAtual() === de) {
-          this.orgaoAtual.set(this.descricaoDoOrgao(atualizado.nome, tribunal));
-          this.orgaoProcessanteId.set(atualizado.id);
+    const id = Number(de);
+    this.processoService.renomearCatalogo('orgao-julgador', id, para).subscribe({
+      next: (o) => {
+        if (this.orgaoProcessanteId() === id) {
+          this.orgaoAtualLabel.set(o.nome);
         }
       },
       error: (err: unknown) => this.erro.emit(this.mensagemErroHttp(err)),
     });
   }
 
-  protected excluirOrgaoDoTribunalAtual(descricao: string): void {
-    const item = this.orgaosDoTribunalAtual().find((o) => o.descricao === descricao);
-    if (!item) {
-      return;
-    }
-    this.orgaoJulgadorService.excluir(item.id).subscribe({
+  protected excluirOrgaoDoTribunalAtual(valor: string): void {
+    const id = Number(valor);
+    this.processoService.excluirCatalogo('orgao-julgador', id).subscribe({
       next: () => {
-        if (this.orgaoAtual() === descricao) {
-          this.orgaoAtual.set('');
+        if (this.orgaoProcessanteId() === id) {
           this.orgaoProcessanteId.set(null);
+          this.orgaoAtualLabel.set('');
         }
       },
       error: (err: unknown) => this.erro.emit(this.mensagemErroHttp(err)),
     });
-  }
-
-  private descricaoDoOrgao(nomeCompleto: string, tribunalNome: string): string {
-    const prefixo = `${tribunalNome} - `;
-    return nomeCompleto.startsWith(prefixo) ? nomeCompleto.slice(prefixo.length) : nomeCompleto;
   }
 
   /**
-   * Deriva tribunal/órgão exibidos nos dois combobox a partir do "tribunal atual" e do "órgão
+   * Deriva tribunal/órgão exibidos nos dois dropdown a partir do "tribunal atual" e do "órgão
    * processante" da ficha — independentes: pode ter só tribunal, sem nenhum órgão específico.
+   * `orgao.nome`/`tribunalAtual.nome` já vêm resolvidos pelo back (ver `ProcessoService` Java,
+   * `OrgaoJulgadorResponse`/`TribunalResponse` — inalterados por esta migração), com o órgão no
+   * formato "TRIBUNAL - descrição" — por isso o split aqui, só pra exibição inicial.
    */
   private aplicarTribunalProcessante(
     tribunalAtual: TribunalAtualApi | null, orgao: OrgaoProcessanteApi | null,
   ): void {
     if (orgao) {
       const separador = orgao.nome.indexOf(' - ');
-      this.tribunalAtual.set(separador >= 0 ? orgao.nome.slice(0, separador) : orgao.nome);
-      this.orgaoAtual.set(separador >= 0 ? orgao.nome.slice(separador + 3) : '');
       this.tribunalAtualId.set(orgao.tribunal_id);
+      this.tribunalAtualLabel.set(separador >= 0 ? orgao.nome.slice(0, separador) : orgao.nome);
       this.orgaoProcessanteId.set(orgao.id);
+      this.orgaoAtualLabel.set(separador >= 0 ? orgao.nome.slice(separador + 3) : '');
       return;
     }
     if (tribunalAtual) {
-      this.tribunalAtual.set(tribunalAtual.nome);
-      this.orgaoAtual.set('');
       this.tribunalAtualId.set(tribunalAtual.id);
+      this.tribunalAtualLabel.set(tribunalAtual.nome);
       this.orgaoProcessanteId.set(null);
+      this.orgaoAtualLabel.set('');
       return;
     }
-    this.tribunalAtual.set('');
-    this.orgaoAtual.set('');
     this.tribunalAtualId.set(null);
+    this.tribunalAtualLabel.set('');
     this.orgaoProcessanteId.set(null);
+    this.orgaoAtualLabel.set('');
   }
 
   // --- listas de texto livre (tags / escritórios) ---

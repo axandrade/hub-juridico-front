@@ -289,15 +289,20 @@
     </div>
     <div class="processo-field">
       <span>Comarca / Cidade</span>
-      <app-combobox
+      <app-domain-model-dropdown
         ariaLabel="Comarca / Cidade"
         placeholder="Buscar cidade..."
         emptyLabel="— Sem cidade —"
         noResultsText="Nenhuma cidade encontrada"
-        [buscarPagina]="buscarCidades"
+        entityName="cidade"
+        fields="id,nome,uf"
+        [searchFields]="['nome']"
+        filter="ativo eq true"
+        sort="nome,uf"
+        [displayFormatter]="rotuloCidade"
         [value]="cidadeValor()"
         [valueLabel]="cidadeLabel()"
-        (valueChange)="onCidadeChange($event)"
+        (itemSelected)="onCidadeSelected($event)"
       />
     </div>
   </div>
@@ -328,14 +333,19 @@
   <div class="processo-form__row">
     <div class="processo-field">
       <span>Tribunal</span>
-      <app-combobox
+      <app-domain-model-dropdown
         ariaLabel="Tribunal"
         placeholder="Buscar tribunal..."
         emptyLabel="— Sem tribunal —"
         noResultsText="Nenhum tribunal encontrado"
         itemNoun="tribunal"
-        [options]="nomesDeTribunal()"
-        [value]="tribunalAtual()"
+        entityName="tribunal"
+        fields="id,nome"
+        [searchFields]="['nome']"
+        sort="nome"
+        [displayFormatter]="rotuloCatalogo"
+        [value]="tribunalAtualValor()"
+        [valueLabel]="tribunalAtualLabel()"
         [adicionar]="true"
         [editar]="true"
         [excluir]="true"
@@ -349,17 +359,24 @@
   <div class="processo-form__row processo-form__row--stack">
     <div class="processo-field">
       <span>Órgão</span>
-      <app-combobox
+      <app-domain-model-dropdown
         ariaLabel="Órgão do tribunal escolhido"
         placeholder="Buscar órgão..."
         emptyLabel="— Sem órgão —"
         noResultsText="Nenhum órgão encontrado"
         itemNoun="órgão"
-        [options]="nomesDeOrgaoDoTribunal()"
-        [value]="orgaoAtual()"
-        [adicionar]="!!tribunalAtual()"
-        [editar]="!!tribunalAtual()"
-        [excluir]="!!tribunalAtual()"
+        entityName="orgao-julgador"
+        fields="id,nome"
+        [searchFields]="['nome']"
+        [filter]="orgaoAtualFiltro()"
+        sort="nome"
+        [displayFormatter]="rotuloCatalogo"
+        [value]="orgaoAtualValor()"
+        [valueLabel]="orgaoAtualLabel()"
+        [disabled]="tribunalAtualId() === null"
+        [adicionar]="tribunalAtualId() !== null"
+        [editar]="tribunalAtualId() !== null"
+        [excluir]="tribunalAtualId() !== null"
         (valueChange)="onOrgaoAtualChange($event)"
         (aoAdicionar)="criarOrgaoDoTribunalAtual($event)"
         (aoEditar)="renomearOrgaoDoTribunalAtual($event)"

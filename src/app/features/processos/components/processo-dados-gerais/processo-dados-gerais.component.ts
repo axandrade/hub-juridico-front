@@ -30,15 +30,11 @@ import {
   TipoProcesso,
   TribunalAtualApi,
 } from '../../services/processo-api.model';
-import { AcaoProcessoService } from '../../services/acao-processo.service';
 import { CidadeService } from '../../services/cidade-service';
-import { FaseProcessoService } from '../../services/fase-processo.service';
-import { NaturezaProcessoService } from '../../services/natureza-processo.service';
 import { OrgaoJulgadorService } from '../../services/orgao-julgador.service';
 import { PosicaoClienteService } from '../../services/posicao-cliente.service';
 import { ProcedimentoProcessoService } from '../../services/procedimento-processo.service';
 import { ProcessoEditavel, ProcessoService } from '../../services/processo-service';
-import { StatusProcessoService } from '../../services/status-processo.service';
 import { TribunalService } from '../../services/tribunal.service';
 
 const TIPOS_PROCESSO: TipoProcesso[] = ['JUDICIAL', 'ADMINISTRATIVO', 'ARBITRAL'];
@@ -107,12 +103,8 @@ export type DadosGeraisValores = Omit<
 })
 export class ProcessoDadosGeraisComponent {
   private readonly processoService = inject(ProcessoService);
-  private readonly statusService = inject(StatusProcessoService);
   private readonly posicaoService = inject(PosicaoClienteService);
-  private readonly acaoService = inject(AcaoProcessoService);
-  private readonly naturezaService = inject(NaturezaProcessoService);
   private readonly procedimentoService = inject(ProcedimentoProcessoService);
-  private readonly faseService = inject(FaseProcessoService);
   private readonly cidadeService = inject(CidadeService);
   private readonly tribunalService = inject(TribunalService);
   private readonly orgaoJulgadorService = inject(OrgaoJulgadorService);
@@ -127,18 +119,17 @@ export class ProcessoDadosGeraisComponent {
   protected readonly buscarAdvogados = this.processoService.buscarAdvogados;
   /** Picker paginado de município (`cidades`) — valor = id, rótulo = "Nome — UF". */
   protected readonly buscarCidades = this.cidadeService.buscarPagina;
-  protected readonly nomesDeStatus = computed(() => this.statusService.status().map((s) => s.nome));
+  /** Pickers paginados dos catálogos por id (Status/Ação/Natureza/Fase), via `/domain`. */
+  protected readonly buscarStatus = this.processoService.buscarStatus;
+  protected readonly buscarAcoes = this.processoService.buscarAcoes;
+  protected readonly buscarNaturezas = this.processoService.buscarNaturezas;
+  protected readonly buscarFases = this.processoService.buscarFases;
   protected readonly nomesDePosicao = computed(() =>
     this.posicaoService.posicoes().map((p) => p.nome),
-  );
-  protected readonly nomesDeAcao = computed(() => this.acaoService.acoes().map((a) => a.nome));
-  protected readonly nomesDeNatureza = computed(() =>
-    this.naturezaService.naturezas().map((n) => n.nome),
   );
   protected readonly nomesDeProcedimento = computed(() =>
     this.procedimentoService.procedimentos().map((p) => p.nome),
   );
-  protected readonly nomesDeFase = computed(() => this.faseService.fases().map((f) => f.nome));
 
   // --- "Órgão processante" atual: cascata Tribunal → Órgão (filtrado pelo tribunal escolhido) ---
   protected readonly nomesDeTribunal = computed(() =>
@@ -193,11 +184,20 @@ export class ProcessoDadosGeraisComponent {
   protected readonly tipo = signal<TipoProcesso>('JUDICIAL');
   /** Só o judicial numera pelo padrão CNJ (máscara + 20 dígitos obrigatórios). */
   protected readonly ehJudicial = computed(() => this.tipo() === 'JUDICIAL');
-  protected readonly statusNome = signal('');
-  protected readonly acaoNome = signal('');
-  protected readonly naturezaNome = signal('');
+  /**
+   * Status/Ação/Natureza/Fase — amarrados por id ao catálogo (V26), não mais só o texto. O
+   * label vem direto da ficha carregada (`p.status`/`p.acao`/...) sem chamada HTTP extra: o
+   * backend já manda o snapshot do nome junto do id (mesmo desenho de `cidade`/`cidadeId`).
+   */
+  protected readonly statusId = signal<number | null>(null);
+  protected readonly statusLabel = signal('');
+  protected readonly acaoId = signal<number | null>(null);
+  protected readonly acaoLabel = signal('');
+  protected readonly naturezaId = signal<number | null>(null);
+  protected readonly naturezaLabel = signal('');
   protected readonly procedimentoNome = signal('');
-  protected readonly faseNome = signal('');
+  protected readonly faseId = signal<number | null>(null);
+  protected readonly faseLabel = signal('');
   /** Posição do cliente principal e da parte contrária — mesmo catálogo `PosicaoCliente`. */
   protected readonly clientePrincipalPosicaoNome = signal('');
   protected readonly contrarioPrincipalPosicaoNome = signal('');
@@ -219,6 +219,10 @@ export class ProcessoDadosGeraisComponent {
   protected readonly cidadeValor = computed(() =>
     this.cidadeId() === null ? '' : String(this.cidadeId()),
   );
+  protected readonly statusValor = computed(() => (this.statusId() === null ? '' : String(this.statusId())));
+  protected readonly acaoValor = computed(() => (this.acaoId() === null ? '' : String(this.acaoId())));
+  protected readonly naturezaValor = computed(() => (this.naturezaId() === null ? '' : String(this.naturezaId())));
+  protected readonly faseValor = computed(() => (this.faseId() === null ? '' : String(this.faseId())));
   protected readonly tags = signal<string[]>([]);
   protected readonly escritoriosAnteriores = signal<string[]>([]);
   // Preservados como vieram — sem UI de edição nesta fatia.
@@ -281,12 +285,8 @@ export class ProcessoDadosGeraisComponent {
   });
 
   constructor() {
-    this.statusService.carregar();
     this.posicaoService.carregar();
-    this.acaoService.carregar();
-    this.naturezaService.carregar();
     this.procedimentoService.carregar();
-    this.faseService.carregar();
     this.tribunalService.carregar();
     this.orgaoJulgadorService.carregar();
     this.destroyRef.onDestroy(() => clearTimeout(this.copiadoTimer));
@@ -316,11 +316,15 @@ export class ProcessoDadosGeraisComponent {
     this.form.updateValueAndValidity({ emitEvent: false });
     this.numeroValue.set(p.numero_cnj ?? '');
     this.tipo.set(p.tipo);
-    this.statusNome.set(p.status ?? '');
-    this.acaoNome.set(p.acao ?? '');
-    this.naturezaNome.set(p.natureza ?? '');
+    this.statusId.set(p.status_id);
+    this.statusLabel.set(p.status ?? '');
+    this.acaoId.set(p.acao_id);
+    this.acaoLabel.set(p.acao ?? '');
+    this.naturezaId.set(p.natureza_id);
+    this.naturezaLabel.set(p.natureza ?? '');
     this.procedimentoNome.set(p.procedimento ?? '');
-    this.faseNome.set(p.fase ?? '');
+    this.faseId.set(p.fase_id);
+    this.faseLabel.set(p.fase ?? '');
     this.clientePrincipalPosicaoNome.set(p.cliente_principal_posicao ?? '');
     this.contrarioPrincipalPosicaoNome.set(p.contrario_principal_posicao ?? '');
     this.uf.set(p.uf ?? '');
@@ -360,11 +364,15 @@ export class ProcessoDadosGeraisComponent {
     this.form.reset();
     this.numeroValue.set('');
     this.tipo.set('JUDICIAL');
-    this.statusNome.set('');
-    this.acaoNome.set('');
-    this.naturezaNome.set('');
+    this.statusId.set(null);
+    this.statusLabel.set('');
+    this.acaoId.set(null);
+    this.acaoLabel.set('');
+    this.naturezaId.set(null);
+    this.naturezaLabel.set('');
     this.procedimentoNome.set('');
-    this.faseNome.set('');
+    this.faseId.set(null);
+    this.faseLabel.set('');
     this.clientePrincipalPosicaoNome.set('');
     this.contrarioPrincipalPosicaoNome.set('');
     this.uf.set('');
@@ -409,7 +417,7 @@ export class ProcessoDadosGeraisComponent {
     return {
       tipo: this.tipo(),
       numeroCnj: raw.numeroCnj,
-      status: this.statusNome(),
+      statusId: this.statusId(),
       clientePrincipalId: this.clientePrincipalId(),
       clientePrincipalPosicao: this.clientePrincipalPosicaoNome(),
       contrarioPrincipalNome: raw.contrarioPrincipalNome,
@@ -417,10 +425,10 @@ export class ProcessoDadosGeraisComponent {
       contrarioPrincipalDocumento: raw.contrarioPrincipalDocumento,
       advogadoResponsavelId: this.advogadoResponsavelId(),
       dataDistribuicao: raw.dataDistribuicao,
-      acao: this.acaoNome(),
-      natureza: this.naturezaNome(),
+      acaoId: this.acaoId(),
+      naturezaId: this.naturezaId(),
       procedimento: this.procedimentoNome(),
-      fase: this.faseNome(),
+      faseId: this.faseId(),
       uf: this.uf(),
       cidadeId: this.cidadeId(),
       observacoesGerais: raw.observacoesGerais,
@@ -458,6 +466,26 @@ export class ProcessoDadosGeraisComponent {
     this.clientePrincipalLabel.set('');
   }
 
+  protected onStatusChange(valor: string): void {
+    this.statusId.set(valor ? Number(valor) : null);
+    this.statusLabel.set('');
+  }
+
+  protected onAcaoChange(valor: string): void {
+    this.acaoId.set(valor ? Number(valor) : null);
+    this.acaoLabel.set('');
+  }
+
+  protected onNaturezaChange(valor: string): void {
+    this.naturezaId.set(valor ? Number(valor) : null);
+    this.naturezaLabel.set('');
+  }
+
+  protected onFaseChange(valor: string): void {
+    this.faseId.set(valor ? Number(valor) : null);
+    this.faseLabel.set('');
+  }
+
   protected onAdvogadoResponsavelChange(valor: string): void {
     this.advogadoResponsavelId.set(valor ? Number(valor) : null);
     this.advogadoResponsavelLabel.set('');
@@ -491,39 +519,37 @@ export class ProcessoDadosGeraisComponent {
     });
   }
 
-  // --- catálogo "Status do processo" (ver `StatusProcessoService`) ---
+  // --- catálogo "Status do processo" — CRUD via `/domain/status-processo` (ver `ProcessoService`) ---
 
   protected criarStatus(nome: string): void {
-    this.statusService.criar(nome).subscribe({
-      next: (s) => this.statusNome.set(s.nome),
+    this.processoService.criarCatalogo('status-processo', nome).subscribe({
+      next: (s) => {
+        this.statusId.set(s.id);
+        this.statusLabel.set(s.nome);
+      },
       error: (err: unknown) => this.erro.emit(this.mensagemErroHttp(err)),
     });
   }
 
   protected renomearStatus({ de, para }: { de: string; para: string }): void {
-    const alvo = this.statusService.status().find((s) => s.nome === de);
-    if (!alvo) {
-      return;
-    }
-    this.statusService.alterar(alvo.id, para).subscribe({
+    const id = Number(de);
+    this.processoService.renomearCatalogo('status-processo', id, para).subscribe({
       next: (s) => {
-        if (this.statusNome() === de) {
-          this.statusNome.set(s.nome);
+        if (this.statusId() === id) {
+          this.statusLabel.set(s.nome);
         }
       },
       error: (err: unknown) => this.erro.emit(this.mensagemErroHttp(err)),
     });
   }
 
-  protected excluirStatus(nome: string): void {
-    const alvo = this.statusService.status().find((s) => s.nome === nome);
-    if (!alvo) {
-      return;
-    }
-    this.statusService.excluir(alvo.id).subscribe({
+  protected excluirStatus(valor: string): void {
+    const id = Number(valor);
+    this.processoService.excluirCatalogo('status-processo', id).subscribe({
       next: () => {
-        if (this.statusNome() === nome) {
-          this.statusNome.set('');
+        if (this.statusId() === id) {
+          this.statusId.set(null);
+          this.statusLabel.set('');
         }
       },
       error: (err: unknown) => this.erro.emit(this.mensagemErroHttp(err)),
@@ -578,78 +604,74 @@ export class ProcessoDadosGeraisComponent {
     });
   }
 
-  // --- catálogo "Ação" (ver `AcaoProcessoService`) ---
+  // --- catálogo "Ação" — CRUD via `/domain/acao-processo` (ver `ProcessoService`) ---
 
   protected criarAcao(nome: string): void {
-    this.acaoService.criar(nome).subscribe({
-      next: (a) => this.acaoNome.set(a.nome),
+    this.processoService.criarCatalogo('acao-processo', nome).subscribe({
+      next: (a) => {
+        this.acaoId.set(a.id);
+        this.acaoLabel.set(a.nome);
+      },
       error: (err: unknown) => this.erro.emit(this.mensagemErroHttp(err)),
     });
   }
 
   protected renomearAcao({ de, para }: { de: string; para: string }): void {
-    const alvo = this.acaoService.acoes().find((a) => a.nome === de);
-    if (!alvo) {
-      return;
-    }
-    this.acaoService.alterar(alvo.id, para).subscribe({
+    const id = Number(de);
+    this.processoService.renomearCatalogo('acao-processo', id, para).subscribe({
       next: (a) => {
-        if (this.acaoNome() === de) {
-          this.acaoNome.set(a.nome);
+        if (this.acaoId() === id) {
+          this.acaoLabel.set(a.nome);
         }
       },
       error: (err: unknown) => this.erro.emit(this.mensagemErroHttp(err)),
     });
   }
 
-  protected excluirAcao(nome: string): void {
-    const alvo = this.acaoService.acoes().find((a) => a.nome === nome);
-    if (!alvo) {
-      return;
-    }
-    this.acaoService.excluir(alvo.id).subscribe({
+  protected excluirAcao(valor: string): void {
+    const id = Number(valor);
+    this.processoService.excluirCatalogo('acao-processo', id).subscribe({
       next: () => {
-        if (this.acaoNome() === nome) {
-          this.acaoNome.set('');
+        if (this.acaoId() === id) {
+          this.acaoId.set(null);
+          this.acaoLabel.set('');
         }
       },
       error: (err: unknown) => this.erro.emit(this.mensagemErroHttp(err)),
     });
   }
 
-  // --- catálogo "Natureza" (ver `NaturezaProcessoService`) ---
+  // --- catálogo "Natureza" — CRUD via `/domain/natureza-processo` (ver `ProcessoService`) ---
 
   protected criarNatureza(nome: string): void {
-    this.naturezaService.criar(nome).subscribe({
-      next: (n) => this.naturezaNome.set(n.nome),
+    this.processoService.criarCatalogo('natureza-processo', nome).subscribe({
+      next: (n) => {
+        this.naturezaId.set(n.id);
+        this.naturezaLabel.set(n.nome);
+      },
       error: (err: unknown) => this.erro.emit(this.mensagemErroHttp(err)),
     });
   }
 
   protected renomearNatureza({ de, para }: { de: string; para: string }): void {
-    const alvo = this.naturezaService.naturezas().find((n) => n.nome === de);
-    if (!alvo) {
-      return;
-    }
-    this.naturezaService.alterar(alvo.id, para).subscribe({
+    const id = Number(de);
+    this.processoService.renomearCatalogo('natureza-processo', id, para).subscribe({
       next: (n) => {
-        if (this.naturezaNome() === de) {
-          this.naturezaNome.set(n.nome);
+        if (this.naturezaId() === id) {
+          this.naturezaLabel.set(n.nome);
         }
       },
       error: (err: unknown) => this.erro.emit(this.mensagemErroHttp(err)),
     });
   }
 
-  protected excluirNatureza(nome: string): void {
-    const alvo = this.naturezaService.naturezas().find((n) => n.nome === nome);
-    if (!alvo) {
-      return;
-    }
-    this.naturezaService.excluir(alvo.id).subscribe({
+  protected excluirNatureza(valor: string): void {
+    const id = Number(valor);
+    this.processoService.excluirCatalogo('natureza-processo', id).subscribe({
       next: () => {
-        if (this.naturezaNome() === nome) {
-          this.naturezaNome.set('');
+        if (this.naturezaId() === id) {
+          this.naturezaId.set(null);
+          this.naturezaLabel.set('');
         }
       },
       error: (err: unknown) => this.erro.emit(this.mensagemErroHttp(err)),
@@ -695,39 +717,37 @@ export class ProcessoDadosGeraisComponent {
     });
   }
 
-  // --- catálogo "Fase" (ver `FaseProcessoService`) ---
+  // --- catálogo "Fase" — CRUD via `/domain/fase-processo` (ver `ProcessoService`) ---
 
   protected criarFase(nome: string): void {
-    this.faseService.criar(nome).subscribe({
-      next: (f) => this.faseNome.set(f.nome),
+    this.processoService.criarCatalogo('fase-processo', nome).subscribe({
+      next: (f) => {
+        this.faseId.set(f.id);
+        this.faseLabel.set(f.nome);
+      },
       error: (err: unknown) => this.erro.emit(this.mensagemErroHttp(err)),
     });
   }
 
   protected renomearFase({ de, para }: { de: string; para: string }): void {
-    const alvo = this.faseService.fases().find((f) => f.nome === de);
-    if (!alvo) {
-      return;
-    }
-    this.faseService.alterar(alvo.id, para).subscribe({
+    const id = Number(de);
+    this.processoService.renomearCatalogo('fase-processo', id, para).subscribe({
       next: (f) => {
-        if (this.faseNome() === de) {
-          this.faseNome.set(f.nome);
+        if (this.faseId() === id) {
+          this.faseLabel.set(f.nome);
         }
       },
       error: (err: unknown) => this.erro.emit(this.mensagemErroHttp(err)),
     });
   }
 
-  protected excluirFase(nome: string): void {
-    const alvo = this.faseService.fases().find((f) => f.nome === nome);
-    if (!alvo) {
-      return;
-    }
-    this.faseService.excluir(alvo.id).subscribe({
+  protected excluirFase(valor: string): void {
+    const id = Number(valor);
+    this.processoService.excluirCatalogo('fase-processo', id).subscribe({
       next: () => {
-        if (this.faseNome() === nome) {
-          this.faseNome.set('');
+        if (this.faseId() === id) {
+          this.faseId.set(null);
+          this.faseLabel.set('');
         }
       },
       error: (err: unknown) => this.erro.emit(this.mensagemErroHttp(err)),

@@ -168,11 +168,14 @@ export interface ProcessoResumoApi {
   tipo: TipoProcesso;
   numero_cnj: string | null;
   status: string | null;
+  status_id: number | null;
   pasta: string | null;
   cliente_principal_id: number | null;
   advogado_responsavel_id: number | null;
   natureza: string | null;
+  natureza_id: number | null;
   fase: string | null;
+  fase_id: number | null;
   uf: string | null;
   cidade: string | null;
   cidade_id: number | null;
@@ -190,6 +193,7 @@ export interface ProcessoApi {
   tipo: TipoProcesso;
   numero_cnj: string | null;
   status: string | null;
+  status_id: number | null;
   pasta: string | null;
 
   cliente_principal_id: number | null;
@@ -202,9 +206,12 @@ export interface ProcessoApi {
   advogado_responsavel_id: number | null;
   data_distribuicao: string | null;
   acao: string | null;
+  acao_id: number | null;
   natureza: string | null;
+  natureza_id: number | null;
   procedimento: string | null;
   fase: string | null;
+  fase_id: number | null;
   uf: string | null;
   cidade: string | null;
   cidade_id: number | null;
@@ -244,7 +251,7 @@ export interface ProcessoApi {
 export interface ProcessoWriteApi {
   tipo: TipoProcesso;
   numero_cnj: string | null;
-  status: string | null;
+  status_id: number | null;
 
   cliente_principal_id: number | null;
   cliente_principal_posicao: string | null;
@@ -255,10 +262,10 @@ export interface ProcessoWriteApi {
 
   advogado_responsavel_id: number | null;
   data_distribuicao: string | null;
-  acao: string | null;
-  natureza: string | null;
+  acao_id: number | null;
+  natureza_id: number | null;
   procedimento: string | null;
-  fase: string | null;
+  fase_id: number | null;
   uf: string | null;
   cidade_id: number | null;
   observacoes_gerais: string | null;

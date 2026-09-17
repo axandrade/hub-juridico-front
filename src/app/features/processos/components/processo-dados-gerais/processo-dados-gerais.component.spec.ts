@@ -2,16 +2,12 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { of } from 'rxjs';
 
-import { AcaoProcessoService } from '../../services/acao-processo.service';
 import { CidadeService } from '../../services/cidade-service';
-import { FaseProcessoService } from '../../services/fase-processo.service';
-import { NaturezaProcessoService } from '../../services/natureza-processo.service';
 import { OrgaoJulgadorService } from '../../services/orgao-julgador.service';
 import { PosicaoClienteService } from '../../services/posicao-cliente.service';
 import { ProcedimentoProcessoService } from '../../services/procedimento-processo.service';
 import { ProcessoApi } from '../../services/processo-api.model';
 import { ProcessoService } from '../../services/processo-service';
-import { StatusProcessoService } from '../../services/status-processo.service';
 import { TribunalService } from '../../services/tribunal.service';
 import { ProcessoDadosGeraisComponent } from './processo-dados-gerais.component';
 
@@ -26,6 +22,7 @@ function makeProcesso(over: Partial<ProcessoApi> = {}): ProcessoApi {
     tipo: 'JUDICIAL',
     numero_cnj: '5001234-88.2026.4.05.8100',
     status: 'ativo',
+    status_id: null,
     pasta: 'PROC-000003',
     cliente_principal_id: null,
     cliente_principal_posicao: null,
@@ -35,9 +32,12 @@ function makeProcesso(over: Partial<ProcessoApi> = {}): ProcessoApi {
     advogado_responsavel_id: null,
     data_distribuicao: null,
     acao: null,
+    acao_id: null,
     natureza: null,
+    natureza_id: null,
     procedimento: null,
     fase: null,
+    fase_id: null,
     uf: null,
     cidade: null,
     cidade_id: null,
@@ -93,16 +93,16 @@ describe('ProcessoDadosGeraisComponent — tribunal/órgão atuais (carregar/col
           useValue: {
             buscarPessoas: () => of({ itens: [], ultima: true }),
             buscarAdvogados: () => of({ itens: [], ultima: true }),
+            buscarStatus: () => of({ itens: [], ultima: true }),
+            buscarAcoes: () => of({ itens: [], ultima: true }),
+            buscarNaturezas: () => of({ itens: [], ultima: true }),
+            buscarFases: () => of({ itens: [], ultima: true }),
             rotuloPessoa: () => of(''),
             rotuloAdvogado: () => of(''),
           },
         },
-        { provide: StatusProcessoService, useValue: { carregar: () => {}, status: () => [] } },
         { provide: PosicaoClienteService, useValue: { carregar: () => {}, posicoes: () => [] } },
-        { provide: AcaoProcessoService, useValue: { carregar: () => {}, acoes: () => [] } },
-        { provide: NaturezaProcessoService, useValue: { carregar: () => {}, naturezas: () => [] } },
         { provide: ProcedimentoProcessoService, useValue: { carregar: () => {}, procedimentos: () => [] } },
-        { provide: FaseProcessoService, useValue: { carregar: () => {}, fases: () => [] } },
         { provide: CidadeService, useValue: { buscarPagina: () => of({ itens: [], ultima: true }), resolver: () => of('') } },
         { provide: TribunalService, useValue: { carregar: () => {}, tribunais: () => tribunaisCatalogo } },
         { provide: OrgaoJulgadorService, useValue: { carregar: () => {}, recarregar: () => {}, orgaos: () => orgaosCatalogo } },

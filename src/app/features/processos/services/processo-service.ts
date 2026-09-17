@@ -41,7 +41,8 @@ export interface ProcessoEditavel {
   id: number;
   tipo: TipoProcesso;
   numeroCnj: string;
-  status: string;
+  /** Id do catálogo `status_processo` — `null` = sem status. */
+  statusId: number | null;
 
   clientePrincipalId: number | null;
   clientePrincipalPosicao: string;
@@ -53,10 +54,13 @@ export interface ProcessoEditavel {
 
   advogadoResponsavelId: number | null;
   dataDistribuicao: string;
-  acao: string;
-  natureza: string;
+  /** Id do catálogo `acao_processo` — `null` = sem ação. */
+  acaoId: number | null;
+  /** Id do catálogo `natureza_processo` — `null` = sem natureza. */
+  naturezaId: number | null;
   procedimento: string;
-  fase: string;
+  /** Id do catálogo `fase_processo` — `null` = sem fase. */
+  faseId: number | null;
   uf: string;
   cidadeId: number | null;
   observacoesGerais: string;
@@ -105,11 +109,14 @@ interface ProcessoResumoDomain {
   tipo: TipoProcesso;
   numeroCnj: string | null;
   status: string | null;
+  statusId: number | null;
   pasta: string | null;
   clientePrincipalId: number | null;
   advogadoResponsavelId: number | null;
   natureza: string | null;
+  naturezaId: number | null;
   fase: string | null;
+  faseId: number | null;
   uf: string | null;
   cidade: string | null;
   cidadeId: number | null;
@@ -120,9 +127,15 @@ interface ProcessoResumoDomain {
   atualizadoEm: string | null;
 }
 
+/** Item de um catálogo simples (`id`, `nome`) — Status/Ação/Natureza/Fase, via `/domain`. */
+interface CatalogoItem {
+  id: number;
+  nome: string;
+}
+
 const PROCESSO_RESUMO_FIELDS = [
-  'id', 'tipo', 'numeroCnj', 'status', 'pasta', 'clientePrincipalId', 'advogadoResponsavelId',
-  'natureza', 'fase', 'uf', 'cidade', 'cidadeId', 'dataDistribuicao', 'observacoesGerais',
+  'id', 'tipo', 'numeroCnj', 'status', 'statusId', 'pasta', 'clientePrincipalId', 'advogadoResponsavelId',
+  'natureza', 'naturezaId', 'fase', 'faseId', 'uf', 'cidade', 'cidadeId', 'dataDistribuicao', 'observacoesGerais',
   'destacarObservacao', 'ativo', 'atualizadoEm',
 ].join(',');
 
@@ -133,11 +146,14 @@ function processoResumoFromDomain(p: ProcessoResumoDomain, favorito: boolean): P
     tipo: p.tipo,
     numero_cnj: p.numeroCnj,
     status: p.status,
+    status_id: p.statusId,
     pasta: p.pasta,
     cliente_principal_id: p.clientePrincipalId,
     advogado_responsavel_id: p.advogadoResponsavelId,
     natureza: p.natureza,
+    natureza_id: p.naturezaId,
     fase: p.fase,
+    fase_id: p.faseId,
     uf: p.uf,
     cidade: p.cidade,
     cidade_id: p.cidadeId,
@@ -250,7 +266,7 @@ export class ProcessoService {
     const body: ProcessoWriteApi = {
       tipo: processo.tipo,
       numero_cnj: vazioParaNull(processo.numeroCnj),
-      status: vazioParaNull(processo.status),
+      status_id: processo.statusId,
       cliente_principal_id: processo.clientePrincipalId,
       cliente_principal_posicao: vazioParaNull(processo.clientePrincipalPosicao),
       contrario_principal_nome: vazioParaNull(processo.contrarioPrincipalNome),
@@ -258,10 +274,10 @@ export class ProcessoService {
       contrario_principal_documento: onlyDigits(processo.contrarioPrincipalDocumento) || null,
       advogado_responsavel_id: processo.advogadoResponsavelId,
       data_distribuicao: vazioParaNull(processo.dataDistribuicao),
-      acao: vazioParaNull(processo.acao),
-      natureza: vazioParaNull(processo.natureza),
+      acao_id: processo.acaoId,
+      natureza_id: processo.naturezaId,
       procedimento: vazioParaNull(processo.procedimento),
-      fase: vazioParaNull(processo.fase),
+      fase_id: processo.faseId,
       uf: vazioParaNull(processo.uf),
       cidade_id: processo.cidadeId,
       observacoes_gerais: vazioParaNull(processo.observacoesGerais),
@@ -347,6 +363,52 @@ export class ProcessoService {
     );
   }
 
+  // --- catálogos por id (Status/Ação/Natureza/Fase) — CRUD 100% via /domain, sem controller/
+  // service dedicado no backend (mesmo id/nome dos 4, ver StatusProcesso/AcaoProcesso/
+  // NaturezaProcesso/FaseProcesso). Excluir um valor em uso bloqueia (409, FK real) — ver V26.
+
+  buscarStatus = (termo: string, pagina: number): Observable<ComboPagina> =>
+    this.paginaCatalogo('status-processo', termo, pagina);
+
+  buscarAcoes = (termo: string, pagina: number): Observable<ComboPagina> =>
+    this.paginaCatalogo('acao-processo', termo, pagina);
+
+  buscarNaturezas = (termo: string, pagina: number): Observable<ComboPagina> =>
+    this.paginaCatalogo('natureza-processo', termo, pagina);
+
+  buscarFases = (termo: string, pagina: number): Observable<ComboPagina> =>
+    this.paginaCatalogo('fase-processo', termo, pagina);
+
+  criarCatalogo(entityName: string, nome: string): Observable<CatalogoItem> {
+    return this.domainService
+      .post<{ nome: string }>({ entityName, body: { nome } })
+      .pipe(switchMap((criado) => this.domainService.get<CatalogoItem>({ entityName, entityId: criado.id })));
+  }
+
+  renomearCatalogo(entityName: string, id: number, nome: string): Observable<CatalogoItem> {
+    return this.domainService
+      .patch({ entityName, entityId: id, body: { nome } })
+      .pipe(switchMap(() => this.domainService.get<CatalogoItem>({ entityName, entityId: id })));
+  }
+
+  excluirCatalogo(entityName: string, id: number): Observable<void> {
+    return this.domainService.delete({ entityName, entityId: id });
+  }
+
+  private paginaCatalogo(entityName: string, termo: string, pagina: number): Observable<ComboPagina> {
+    const filtro = termo.trim() ? `nome ilike '*${termo.trim().replace(/'/g, '')}*'` : undefined;
+    return this.domainService
+      .get<IDomainPage<CatalogoItem>>({
+        entityName, page: pagina, size: ProcessoService.PAGE_SIZE, fields: 'id,nome', sort: 'nome', filter: filtro,
+      })
+      .pipe(
+        map((p) => ({
+          itens: p.content.map((item) => ({ valor: String(item.id), rotulo: item.nome })),
+          ultima: p.last,
+        })),
+      );
+  }
+
   private paginaVinculo(
     url: string,
     termo: string,
@@ -397,11 +459,14 @@ function resumoDe(p: ProcessoApi): ProcessoResumoApi {
     tipo: p.tipo,
     numero_cnj: p.numero_cnj,
     status: p.status,
+    status_id: p.status_id,
     pasta: p.pasta,
     cliente_principal_id: p.cliente_principal_id,
     advogado_responsavel_id: p.advogado_responsavel_id,
     natureza: p.natureza,
+    natureza_id: p.natureza_id,
     fase: p.fase,
+    fase_id: p.fase_id,
     uf: p.uf,
     cidade: p.cidade,
     cidade_id: p.cidade_id,

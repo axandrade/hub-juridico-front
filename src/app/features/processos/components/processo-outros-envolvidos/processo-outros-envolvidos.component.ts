@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, WritableSignal, computed, inject, output, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, output, signal } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { switchMap } from 'rxjs';
 
@@ -6,6 +6,7 @@ import { cpfValidator, maskCpf, onlyDigits } from '../../../../core/auth/documen
 import { BRAZILIAN_STATES } from '../../../../core/models/pessoa.model';
 import { DomainService } from '../../../../core/services/domain.service';
 import { ComboboxComponent } from '../../../../shared/components/combobox/combobox.component';
+import { DomainModelDropdownComponent } from '../../../../shared/components/domain-dropdown/domain-model-dropdown.component';
 import { ModalComponent } from '../../../../shared/components/modal/modal.component';
 import { CpfMaskDirective } from '../../../../shared/directives/cpf-mask.directive';
 import { OrgaoJulgadorService } from '../../services/orgao-julgador.service';
@@ -65,7 +66,7 @@ export type OutrosEnvolvidosValores = Pick<
 @Component({
   selector: 'app-processo-outros-envolvidos',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ReactiveFormsModule, ComboboxComponent, CpfMaskDirective, ModalComponent],
+  imports: [ReactiveFormsModule, ComboboxComponent, DomainModelDropdownComponent, CpfMaskDirective, ModalComponent],
   templateUrl: './processo-outros-envolvidos.component.html',
   styleUrl: './processo-outros-envolvidos.component.scss',
 })
@@ -85,13 +86,11 @@ export class ProcessoOutrosEnvolvidosComponent {
   /** Siglas das 27 UFs — lista fixa (sem "+"), igual ao select de UF do cadastro de cliente. */
   protected readonly ufOpcoes = [...BRAZILIAN_STATES];
   /**
-   * Catálogo `posicao_cliente` (V27), só pra alimentar este `<app-combobox>` de opções locais —
-   * a "posição" aqui é texto livre num item da lista de advogados envolvidos, sem `*_id` no
-   * backend (ao contrário de "Posição do cliente"/"Posição da parte contrária" no processo
-   * principal, ver `ProcessoDadosGeraisComponent`), então não é um `<app-domain-model-dropdown>`.
+   * `displayFormatter` compartilhado por todos os `<app-domain-model-dropdown>` desta aba — todos
+   * os catálogos aqui só têm `nome` (Perito tem `cpf` a mais, mas não entra no rótulo).
    */
-  private readonly posicoesCatalogo = signal<CatalogoItem[]>([]);
-  protected readonly nomesDePosicao = computed(() => this.posicoesCatalogo().map((p) => p.nome));
+  protected readonly rotuloCatalogo = (item: Record<string, unknown>): string =>
+    String(item['nome'] ?? '');
 
   /** Campos de texto da linha de advogado em edição (posição e UF são `<app-combobox>` → signals). */
   protected readonly advForm: FormGroup<{
@@ -110,21 +109,23 @@ export class ProcessoOutrosEnvolvidosComponent {
 
   // ===================== Magistrados =====================
 
-  /** Catálogo `resultado_decisao`, via `/domain` — mesmo padrão de `posicoesCatalogo` (texto
-   *  livre num item da lista, sem `*_id` no backend). Compartilhado com "Perito Judicial". */
-  private readonly resultadosCatalogo = signal<CatalogoItem[]>([]);
-  protected readonly nomesDeResultado = computed(() => this.resultadosCatalogo().map((r) => r.nome));
-  /** Catálogo `magistrado` — este sim tem `magistrado_id` real no backend (ver `coletar()`). */
-  private readonly magistradosCatalogo = signal<CatalogoItem[]>([]);
-  protected readonly nomesDeMagistrado = computed(() => this.magistradosCatalogo().map((m) => m.nome));
-
   /** Campo de texto da linha de magistrado em edição (magistrado/resultado/tribunal/órgão são combobox → signals). */
   protected readonly magForm: FormGroup<{
     data: FormControl<string>;
   }> = new FormGroup({
     data: new FormControl('', { nonNullable: true }),
   });
-  protected readonly magistradoRascunho = signal('');
+  /**
+   * Magistrado selecionado no `<app-domain-model-dropdown>` — ao contrário dos demais catálogos
+   * desta aba (texto solto, sem vínculo), `magistrado_id` é chave estrangeira real (ver
+   * `coletar()`), então o dropdown trabalha por id (`valueField` padrão) e guarda o item cru
+   * inteiro (via `itemSelected`), não só o nome.
+   */
+  protected readonly magistradoAtual = signal<CatalogoItem | null>(null);
+  protected readonly magistradoValor = computed(() => {
+    const m = this.magistradoAtual();
+    return m ? String(m.id) : '';
+  });
   protected readonly resultadoRascunho = signal('');
 
   // --- cascata Tribunal → Órgão do magistrado em edição (mesmo padrão de "Órgão processante") ---
@@ -155,10 +156,6 @@ export class ProcessoOutrosEnvolvidosComponent {
 
   // ===================== Testemunhas =====================
 
-  /** Catálogo `parte_interessada`, via `/domain` — compartilhado com "Assistente Técnico". */
-  private readonly partesCatalogo = signal<CatalogoItem[]>([]);
-  protected readonly nomesDeParte = computed(() => this.partesCatalogo().map((p) => p.nome));
-
   /** Campos de texto da linha de testemunha em edição (parte interessada é combobox → signal). */
   protected readonly testForm: FormGroup<{
     testemunha: FormControl<string>;
@@ -175,12 +172,12 @@ export class ProcessoOutrosEnvolvidosComponent {
 
   // ===================== Perito Judicial =====================
 
-  /** Catálogo `perito`, via `/domain` — `perito_id` real no backend, com `cpf` a mais (ver `coletar()`). */
-  private readonly peritosCatalogo = signal<PeritoItem[]>([]);
-  protected readonly nomesDePerito = computed(() => this.peritosCatalogo().map((p) => p.nome));
-
-  /** Perito e resultado são combobox → signals; não há mais campo de texto nesta linha. */
-  protected readonly peritoRascunho = signal('');
+  /** Perito selecionado no dropdown — `perito_id` também é FK real, mesmo motivo de `magistradoAtual`. */
+  protected readonly peritoAtual = signal<PeritoItem | null>(null);
+  protected readonly peritoValor = computed(() => {
+    const p = this.peritoAtual();
+    return p ? String(p.id) : '';
+  });
   protected readonly resultadoRascunhoPerito = signal('');
 
   protected readonly peritos = signal<OutroEnvolvidoPeritoApi[]>([]);
@@ -247,22 +244,8 @@ export class ProcessoOutrosEnvolvidosComponent {
   }
 
   constructor() {
-    this.carregarCatalogo('posicao-cliente', this.posicoesCatalogo);
-    this.carregarCatalogo('magistrado', this.magistradosCatalogo);
-    this.carregarCatalogo('resultado-decisao', this.resultadosCatalogo);
-    this.carregarCatalogo('parte-interessada', this.partesCatalogo);
-    this.domainService
-      .get<PeritoItem[]>({ entityName: 'perito', all: true, fields: 'id,nome,cpf', sort: 'nome' })
-      .subscribe((peritos) => this.peritosCatalogo.set(peritos));
     this.orgaoService.carregar();
     this.tribunalService.carregar();
-  }
-
-  /** Busca um catálogo simples (`id`, `nome`) inteiro via `/domain/{entityName}`, ordenado por nome. */
-  private carregarCatalogo(entityName: string, destino: WritableSignal<CatalogoItem[]>): void {
-    this.domainService
-      .get<CatalogoItem[]>({ entityName, all: true, fields: 'id,nome', sort: 'nome' })
-      .subscribe((itens) => destino.set(itens));
   }
 
   // ===================== API pro shell =====================
@@ -364,15 +347,14 @@ export class ProcessoOutrosEnvolvidosComponent {
   }
 
   protected adicionarMagistrado(): void {
-    const nomeMagistrado = this.magistradoRascunho().trim();
-    const data = this.magForm.controls.data.value.trim();
-    if (!nomeMagistrado || !data) {
-      this.magForm.markAllAsTouched();
-      return;
-    }
-    const magistrado = this.magistradosCatalogo().find((m) => m.nome === nomeMagistrado);
+    const magistrado = this.magistradoAtual();
     if (!magistrado) {
       this.erro.emit('Selecione um magistrado do catálogo (use o "+" pra cadastrar um novo).');
+      return;
+    }
+    const data = this.magForm.controls.data.value.trim();
+    if (!data) {
+      this.magForm.markAllAsTouched();
       return;
     }
     const item = this.orgaosDoTribunalRascunhoMag().find((o) => o.descricao === this.orgaoRascunhoMag());
@@ -405,6 +387,11 @@ export class ProcessoOutrosEnvolvidosComponent {
   /** Abre o diálogo de arquivos daquele magistrado (botão na própria linha, não depende de seleção). */
   protected abrirPastaMagistrado(magistrado: { id: number; nome: string }): void {
     this.pastaMagistradoService.abrir(magistrado);
+  }
+
+  /** `(itemSelected)` do dropdown — item cru (`/domain`, camelCase) ou `null` (limpou a seleção). */
+  protected onMagistradoSelected(item: Record<string, unknown> | null): void {
+    this.magistradoAtual.set(item ? { id: Number(item['id']), nome: String(item['nome'] ?? '') } : null);
   }
 
   // ===================== lista de testemunhas =====================
@@ -448,11 +435,7 @@ export class ProcessoOutrosEnvolvidosComponent {
   }
 
   protected adicionarPerito(): void {
-    const nomePerito = this.peritoRascunho().trim();
-    if (!nomePerito) {
-      return;
-    }
-    const perito = this.peritosCatalogo().find((p) => p.nome === nomePerito);
+    const perito = this.peritoAtual();
     if (!perito) {
       this.erro.emit('Selecione um perito do catálogo (use o "+" pra cadastrar um novo).');
       return;
@@ -483,6 +466,15 @@ export class ProcessoOutrosEnvolvidosComponent {
   /** Abre o diálogo de arquivos daquele perito (botão na própria linha, não depende de seleção). */
   protected abrirPastaPerito(perito: { id: number; nome: string }): void {
     this.pastaPeritoService.abrir(perito);
+  }
+
+  /** `(itemSelected)` do dropdown de perito — item cru (`/domain`, camelCase) ou `null`. */
+  protected onPeritoSelected(item: Record<string, unknown> | null): void {
+    this.peritoAtual.set(
+      item
+        ? { id: Number(item['id']), nome: String(item['nome'] ?? ''), cpf: (item['cpf'] as string | null) ?? null }
+        : null,
+    );
   }
 
   // ===================== lista de assistentes técnicos =====================
@@ -523,35 +515,54 @@ export class ProcessoOutrosEnvolvidosComponent {
   // ===================== catálogos (só "adicionar" aqui) =====================
 
   protected criarPosicao(nome: string): void {
-    this.criarCatalogo('posicao-cliente', nome, this.posicoesCatalogo, (p) => this.posicaoRascunho.set(p.nome));
+    this.criarCatalogo('posicao-cliente', nome, (p) => this.posicaoRascunho.set(p.nome));
   }
 
   protected criarMagistrado(nome: string): void {
-    this.criarCatalogo('magistrado', nome, this.magistradosCatalogo, (m) => this.magistradoRascunho.set(m.nome));
+    this.criarCatalogo('magistrado', nome, (m) => this.magistradoAtual.set(m));
+  }
+
+  /**
+   * `Magistrado` é o único catálogo desta aba que também permite renomear/excluir pelo "⋮" (os
+   * demais são só "adicionar" — ver comentário da seção). Como o dropdown trabalha por id aqui
+   * (`magistrado_id` é FK real), `de`/`valor` já chegam como o id — sem precisar achar por nome.
+   */
+  protected renomearMagistrado({ de, para }: { de: string; para: string }): void {
+    const id = Number(de);
+    this.processoService.renomearCatalogo('magistrado', id, para).subscribe({
+      next: (m) => {
+        if (this.magistradoAtual()?.id === id) {
+          this.magistradoAtual.set(m);
+        }
+      },
+      error: (err: unknown) => this.erro.emit(this.mensagemErroHttp(err)),
+    });
+  }
+
+  protected excluirMagistrado(valor: string): void {
+    const id = Number(valor);
+    this.processoService.excluirCatalogo('magistrado', id).subscribe({
+      next: () => {
+        if (this.magistradoAtual()?.id === id) {
+          this.magistradoAtual.set(null);
+        }
+      },
+      error: (err: unknown) => this.erro.emit(this.mensagemErroHttp(err)),
+    });
   }
 
   protected criarResultado(nome: string): void {
-    this.criarCatalogo('resultado-decisao', nome, this.resultadosCatalogo, (r) => this.resultadoRascunho.set(r.nome));
+    this.criarCatalogo('resultado-decisao', nome, (r) => this.resultadoRascunho.set(r.nome));
   }
 
   protected criarResultadoPerito(nome: string): void {
-    this.criarCatalogo(
-      'resultado-decisao', nome, this.resultadosCatalogo, (r) => this.resultadoRascunhoPerito.set(r.nome),
-    );
+    this.criarCatalogo('resultado-decisao', nome, (r) => this.resultadoRascunhoPerito.set(r.nome));
   }
 
-  /** Cria um item num catálogo simples (`id`, `nome`) via `/domain/{entityName}` e o adiciona à lista local. */
-  private criarCatalogo(
-    entityName: string,
-    nome: string,
-    destino: WritableSignal<CatalogoItem[]>,
-    aoCriar: (item: CatalogoItem) => void,
-  ): void {
+  /** Cria um item num catálogo simples (`id`, `nome`) via `/domain/{entityName}`. */
+  private criarCatalogo(entityName: string, nome: string, aoCriar: (item: CatalogoItem) => void): void {
     this.processoService.criarCatalogo(entityName, nome).subscribe({
-      next: (item) => {
-        destino.update((atual) => [...atual, item].sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR')));
-        aoCriar(item);
-      },
+      next: (item) => aoCriar(item),
       error: (err: unknown) => this.erro.emit(this.mensagemErroHttp(err)),
     });
   }
@@ -584,8 +595,7 @@ export class ProcessoOutrosEnvolvidosComponent {
       )
       .subscribe({
         next: (p) => {
-          this.peritosCatalogo.update((atual) => [...atual, p].sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR')));
-          this.peritoRascunho.set(p.nome);
+          this.peritoAtual.set(p);
           this.novoPeritoAberto.set(false);
           this.novoPeritoForm.reset();
         },
@@ -688,13 +698,11 @@ export class ProcessoOutrosEnvolvidosComponent {
   }
 
   protected criarParte(nome: string): void {
-    this.criarCatalogo('parte-interessada', nome, this.partesCatalogo, (p) => this.parteRascunho.set(p.nome));
+    this.criarCatalogo('parte-interessada', nome, (p) => this.parteRascunho.set(p.nome));
   }
 
   protected criarParteAssistTec(nome: string): void {
-    this.criarCatalogo(
-      'parte-interessada', nome, this.partesCatalogo, (p) => this.parteRascunhoAssistTec.set(p.nome),
-    );
+    this.criarCatalogo('parte-interessada', nome, (p) => this.parteRascunhoAssistTec.set(p.nome));
   }
 
   // ===================== helpers =====================
@@ -715,7 +723,7 @@ export class ProcessoOutrosEnvolvidosComponent {
 
   private limparRascunhoMagistrado(): void {
     this.magForm.reset();
-    this.magistradoRascunho.set('');
+    this.magistradoAtual.set(null);
     this.resultadoRascunho.set('');
     this.tribunalRascunhoMag.set('');
     this.orgaoRascunhoMag.set('');
@@ -727,7 +735,7 @@ export class ProcessoOutrosEnvolvidosComponent {
   }
 
   private limparRascunhoPerito(): void {
-    this.peritoRascunho.set('');
+    this.peritoAtual.set(null);
     this.resultadoRascunhoPerito.set('');
   }
 

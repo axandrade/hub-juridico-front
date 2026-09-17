@@ -23,14 +23,20 @@
       </label>
       <div class="processo-field">
         <span>Posição</span>
-        <app-combobox
+        <app-domain-model-dropdown
           ariaLabel="Posição do advogado"
           placeholder="Buscar posição..."
           emptyLabel="— Sem posição —"
           noResultsText="Nenhuma posição encontrada"
           itemNoun="posição"
-          [options]="nomesDePosicao()"
+          entityName="posicao-cliente"
+          fields="id,nome"
+          [searchFields]="['nome']"
+          sort="nome"
+          [valueField]="'nome'"
+          [displayFormatter]="rotuloCatalogo"
           [value]="posicaoRascunho()"
+          [valueLabel]="posicaoRascunho()"
           [adicionar]="true"
           (valueChange)="posicaoRascunho.set($event)"
           (aoAdicionar)="criarPosicao($event)"
@@ -110,29 +116,44 @@
   <div class="processo-form__row">
     <div class="processo-field">
       <span>Magistrado</span>
-      <app-combobox
+      <app-domain-model-dropdown
         ariaLabel="Magistrado"
         placeholder="Buscar magistrado..."
         emptyLabel="— Sem magistrado —"
         noResultsText="Nenhum magistrado encontrado"
         itemNoun="magistrado"
-        [options]="nomesDeMagistrado()"
-        [value]="magistradoRascunho()"
+        entityName="magistrado"
+        fields="id,nome"
+        [searchFields]="['nome']"
+        sort="nome"
+        [displayFormatter]="rotuloCatalogo"
+        [value]="magistradoValor()"
+        [valueLabel]="magistradoAtual()?.nome ?? ''"
         [adicionar]="true"
-        (valueChange)="magistradoRascunho.set($event)"
+        [editar]="true"
+        [excluir]="true"
+        (itemSelected)="onMagistradoSelected($event)"
         (aoAdicionar)="criarMagistrado($event)"
+        (aoEditar)="renomearMagistrado($event)"
+        (aoExcluir)="excluirMagistrado($event)"
       />
     </div>
     <div class="processo-field">
       <span>Resultado</span>
-      <app-combobox
+      <app-domain-model-dropdown
         ariaLabel="Resultado da decisão"
         placeholder="Buscar resultado..."
         emptyLabel="— Sem resultado —"
         noResultsText="Nenhum resultado encontrado"
         itemNoun="resultado"
-        [options]="nomesDeResultado()"
+        entityName="resultado-decisao"
+        fields="id,nome"
+        [searchFields]="['nome']"
+        sort="nome"
+        [valueField]="'nome'"
+        [displayFormatter]="rotuloCatalogo"
         [value]="resultadoRascunho()"
+        [valueLabel]="resultadoRascunho()"
         [adicionar]="true"
         (valueChange)="resultadoRascunho.set($event)"
         (aoAdicionar)="criarResultado($event)"
@@ -272,14 +293,20 @@
   <div class="processo-form__row processo-form__row--full" [formGroup]="testForm">
     <div class="processo-field">
       <span>Parte interessada</span>
-      <app-combobox
+      <app-domain-model-dropdown
         ariaLabel="Parte interessada da testemunha"
         placeholder="Buscar parte..."
         emptyLabel="— Sem parte —"
         noResultsText="Nenhuma parte encontrada"
         itemNoun="parte"
-        [options]="nomesDeParte()"
+        entityName="parte-interessada"
+        fields="id,nome"
+        [searchFields]="['nome']"
+        sort="nome"
+        [valueField]="'nome'"
+        [displayFormatter]="rotuloCatalogo"
         [value]="parteRascunho()"
+        [valueLabel]="parteRascunho()"
         [adicionar]="true"
         (valueChange)="parteRascunho.set($event)"
         (aoAdicionar)="criarParte($event)"
@@ -340,29 +367,40 @@
   <div class="processo-form__row">
     <div class="processo-field">
       <span>Perito</span>
-      <app-combobox
+      <app-domain-model-dropdown
         ariaLabel="Perito"
         placeholder="Buscar perito..."
         emptyLabel="— Sem perito —"
         noResultsText="Nenhum perito encontrado"
         itemNoun="perito"
-        [options]="nomesDePerito()"
-        [value]="peritoRascunho()"
+        entityName="perito"
+        fields="id,nome,cpf"
+        [searchFields]="['nome']"
+        sort="nome"
+        [displayFormatter]="rotuloCatalogo"
+        [value]="peritoValor()"
+        [valueLabel]="peritoAtual()?.nome ?? ''"
         [adicionar]="true"
-        (valueChange)="peritoRascunho.set($event)"
+        (itemSelected)="onPeritoSelected($event)"
         (aoAdicionar)="abrirNovoPerito($event)"
       />
     </div>
     <div class="processo-field">
       <span>Resultado</span>
-      <app-combobox
+      <app-domain-model-dropdown
         ariaLabel="Resultado da decisão (perito)"
         placeholder="Buscar resultado..."
         emptyLabel="— Sem resultado —"
         noResultsText="Nenhum resultado encontrado"
         itemNoun="resultado"
-        [options]="nomesDeResultado()"
+        entityName="resultado-decisao"
+        fields="id,nome"
+        [searchFields]="['nome']"
+        sort="nome"
+        [valueField]="'nome'"
+        [displayFormatter]="rotuloCatalogo"
         [value]="resultadoRascunhoPerito()"
+        [valueLabel]="resultadoRascunhoPerito()"
         [adicionar]="true"
         (valueChange)="resultadoRascunhoPerito.set($event)"
         (aoAdicionar)="criarResultadoPerito($event)"
@@ -451,14 +489,20 @@
   <div class="processo-form__row processo-form__row--full" [formGroup]="assistTecForm">
     <div class="processo-field">
       <span>Parte interessada</span>
-      <app-combobox
+      <app-domain-model-dropdown
         ariaLabel="Parte interessada do assistente técnico"
         placeholder="Buscar parte..."
         emptyLabel="— Sem parte —"
         noResultsText="Nenhuma parte encontrada"
         itemNoun="parte"
-        [options]="nomesDeParte()"
+        entityName="parte-interessada"
+        fields="id,nome"
+        [searchFields]="['nome']"
+        sort="nome"
+        [valueField]="'nome'"
+        [displayFormatter]="rotuloCatalogo"
         [value]="parteRascunhoAssistTec()"
+        [valueLabel]="parteRascunhoAssistTec()"
         [adicionar]="true"
         (valueChange)="parteRascunhoAssistTec.set($event)"
         (aoAdicionar)="criarParteAssistTec($event)"

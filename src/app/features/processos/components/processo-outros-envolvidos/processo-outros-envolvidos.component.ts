@@ -9,10 +9,8 @@ import { ComboboxComponent } from '../../../../shared/components/combobox/combob
 import { DomainModelDropdownComponent } from '../../../../shared/components/domain-dropdown/domain-model-dropdown.component';
 import { ModalComponent } from '../../../../shared/components/modal/modal.component';
 import { CpfMaskDirective } from '../../../../shared/directives/cpf-mask.directive';
-import { OrgaoJulgadorService } from '../../services/orgao-julgador.service';
 import { PastaMagistradoService } from '../../services/pasta-magistrado.service';
 import { PastaPeritoService } from '../../services/pasta-perito.service';
-import { TribunalService } from '../../services/tribunal.service';
 import {
   OutroEnvolvidoAdvogadoApi,
   OutroEnvolvidoAssistenteTecnicoApi,
@@ -73,8 +71,6 @@ export type OutrosEnvolvidosValores = Pick<
 export class ProcessoOutrosEnvolvidosComponent {
   private readonly domainService = inject(DomainService);
   private readonly processoService = inject(ProcessoService);
-  private readonly orgaoService = inject(OrgaoJulgadorService);
-  private readonly tribunalService = inject(TribunalService);
   private readonly pastaMagistradoService = inject(PastaMagistradoService);
   private readonly pastaPeritoService = inject(PastaPeritoService);
 
@@ -129,26 +125,22 @@ export class ProcessoOutrosEnvolvidosComponent {
   protected readonly resultadoRascunho = signal('');
 
   // --- cascata Tribunal → Órgão do magistrado em edição (mesmo padrão de "Órgão processante") ---
-  protected readonly nomesDeTribunal = computed(() =>
-    this.tribunalService.tribunais().map((t) => t.nome),
-  );
-  protected readonly tribunalRascunhoMag = signal('');
-  protected readonly orgaoRascunhoMag = signal('');
-  /** Só os órgãos do tribunal escolhido no rascunho — vazio até escolher um tribunal. */
-  protected readonly orgaosDoTribunalRascunhoMag = computed(() => {
-    const tribunal = this.tribunalService.tribunais().find((t) => t.nome === this.tribunalRascunhoMag());
-    if (!tribunal) {
-      return [];
-    }
-    const prefixo = `${tribunal.nome} - `;
-    return this.orgaoService
-      .orgaos()
-      .filter((o) => o.tribunal_id === tribunal.id)
-      .map((o) => ({ id: o.id, descricao: o.nome.startsWith(prefixo) ? o.nome.slice(prefixo.length) : o.nome }));
+  /** Mesmo motivo de `magistradoAtual`: `tribunal_id`/`orgao_id` viram FK real, dropdown por id. */
+  protected readonly tribunalMagAtual = signal<CatalogoItem | null>(null);
+  protected readonly tribunalMagValor = computed(() => {
+    const t = this.tribunalMagAtual();
+    return t ? String(t.id) : '';
   });
-  protected readonly nomesDeOrgaoDoTribunalMag = computed(() =>
-    this.orgaosDoTribunalRascunhoMag().map((o) => o.descricao),
-  );
+  protected readonly orgaoMagAtual = signal<CatalogoItem | null>(null);
+  protected readonly orgaoMagValor = computed(() => {
+    const o = this.orgaoMagAtual();
+    return o ? String(o.id) : '';
+  });
+  /** RQL do dropdown de órgão — escopado ao tribunal escolhido (`id eq -1` = nunca casa, sem tribunal). */
+  protected readonly orgaoMagFiltro = computed(() => {
+    const t = this.tribunalMagAtual();
+    return `tribunalId eq ${t ? t.id : -1}`;
+  });
 
   protected readonly magistrados = signal<OutroEnvolvidoMagistradoApi[]>([]);
   /** Índice selecionado no listbox de magistrados (`-1` = nenhum). */
@@ -241,11 +233,6 @@ export class ProcessoOutrosEnvolvidosComponent {
 
   protected toggleAssistentesTecnicos(): void {
     this.mostrarAssistentesTecnicos.update((v) => !v);
-  }
-
-  constructor() {
-    this.orgaoService.carregar();
-    this.tribunalService.carregar();
   }
 
   // ===================== API pro shell =====================
@@ -357,14 +344,14 @@ export class ProcessoOutrosEnvolvidosComponent {
       this.magForm.markAllAsTouched();
       return;
     }
-    const item = this.orgaosDoTribunalRascunhoMag().find((o) => o.descricao === this.orgaoRascunhoMag());
-    const orgao = item ? this.orgaoService.orgaos().find((o) => o.id === item.id) : undefined;
+    const orgao = this.orgaoMagAtual();
+    const tribunal = this.tribunalMagAtual();
     this.magistrados.update((atual) => [
       ...atual,
       {
         magistrado: { id: magistrado.id, nome: magistrado.nome },
         resultado: this.resultadoRascunho().trim() || null,
-        orgao: orgao ? { id: orgao.id, nome: orgao.nome, tribunal_id: orgao.tribunal_id } : null,
+        orgao: orgao && tribunal ? { id: orgao.id, nome: orgao.nome, tribunal_id: tribunal.id } : null,
         data,
       },
     ]);
@@ -603,94 +590,88 @@ export class ProcessoOutrosEnvolvidosComponent {
       });
   }
 
-  protected onTribunalRascunhoMagChange(nome: string): void {
-    this.tribunalRascunhoMag.set(nome);
-    this.orgaoRascunhoMag.set(''); // troca de tribunal invalida o órgão escolhido antes
+  /** `(itemSelected)` do dropdown de tribunal — troca de tribunal invalida o órgão escolhido antes. */
+  protected onTribunalMagSelected(item: Record<string, unknown> | null): void {
+    this.tribunalMagAtual.set(item ? { id: Number(item['id']), nome: String(item['nome'] ?? '') } : null);
+    this.orgaoMagAtual.set(null);
+  }
+
+  protected onOrgaoMagSelected(item: Record<string, unknown> | null): void {
+    this.orgaoMagAtual.set(item ? { id: Number(item['id']), nome: String(item['nome'] ?? '') } : null);
   }
 
   protected criarTribunalMagistrado(nome: string): void {
-    this.tribunalService.criar(nome).subscribe({
-      next: (t) => this.onTribunalRascunhoMagChange(t.nome),
-      error: (err: unknown) => this.erro.emit(this.mensagemErroHttp(err)),
+    this.criarCatalogo('tribunal', nome, (t) => {
+      this.tribunalMagAtual.set(t);
+      this.orgaoMagAtual.set(null);
     });
   }
 
   protected renomearTribunalMagistrado({ de, para }: { de: string; para: string }): void {
-    const alvo = this.tribunalService.tribunais().find((t) => t.nome === de);
-    if (!alvo) {
-      return;
-    }
-    this.tribunalService.alterar(alvo.id, para).subscribe({
+    const id = Number(de);
+    this.processoService.renomearCatalogo('tribunal', id, para).subscribe({
       next: (t) => {
-        if (this.tribunalRascunhoMag() === de) {
-          this.tribunalRascunhoMag.set(t.nome);
+        if (this.tribunalMagAtual()?.id === id) {
+          this.tribunalMagAtual.set(t);
         }
-        // "TRIBUNAL - descrição" dos órgãos embutia o nome antigo — recarrega pra atualizar.
-        this.orgaoService.recarregar();
       },
       error: (err: unknown) => this.erro.emit(this.mensagemErroHttp(err)),
     });
   }
 
-  protected excluirTribunalMagistrado(nome: string): void {
-    const alvo = this.tribunalService.tribunais().find((t) => t.nome === nome);
-    if (!alvo) {
-      return;
-    }
-    this.tribunalService.excluir(alvo.id).subscribe({
+  protected excluirTribunalMagistrado(valor: string): void {
+    const id = Number(valor);
+    this.processoService.excluirCatalogo('tribunal', id).subscribe({
       next: () => {
-        if (this.tribunalRascunhoMag() === nome) {
-          this.onTribunalRascunhoMagChange('');
+        if (this.tribunalMagAtual()?.id === id) {
+          this.tribunalMagAtual.set(null);
+          this.orgaoMagAtual.set(null);
         }
       },
       error: (err: unknown) => this.erro.emit(this.mensagemErroHttp(err)),
     });
   }
 
-  protected criarOrgaoDoTribunalRascunhoMag(descricao: string): void {
-    const tribunal = this.tribunalRascunhoMag().trim();
-    if (!tribunal || !descricao.trim()) {
+  /** Órgão só pode ser criado com um tribunal já escolhido (o "+" fica desligado sem isso). */
+  protected criarOrgaoMag(nome: string): void {
+    const tribunalId = this.tribunalMagAtual()?.id;
+    if (!tribunalId) {
       return;
     }
-    this.orgaoService.criar(`${tribunal} - ${descricao.trim()}`).subscribe({
-      next: (criado) => {
-        const prefixo = `${tribunal} - `;
-        this.orgaoRascunhoMag.set(
-          criado.nome.startsWith(prefixo) ? criado.nome.slice(prefixo.length) : criado.nome,
-        );
-      },
-      error: (err: unknown) => this.erro.emit(this.mensagemErroHttp(err)),
-    });
+    this.domainService
+      .post<{ tribunal_id: number; nome: string }>({
+        entityName: 'orgao-julgador',
+        body: { tribunal_id: tribunalId, nome },
+      })
+      .pipe(
+        switchMap((criado) =>
+          this.domainService.get<CatalogoItem>({ entityName: 'orgao-julgador', entityId: criado.id, fields: 'id,nome' }),
+        ),
+      )
+      .subscribe({
+        next: (o) => this.orgaoMagAtual.set(o),
+        error: (err: unknown) => this.erro.emit(this.mensagemErroHttp(err)),
+      });
   }
 
-  protected renomearOrgaoDoTribunalRascunhoMag({ de, para }: { de: string; para: string }): void {
-    const item = this.orgaosDoTribunalRascunhoMag().find((o) => o.descricao === de);
-    const tribunal = this.tribunalRascunhoMag().trim();
-    if (!item || !tribunal) {
-      return;
-    }
-    this.orgaoService.alterar(item.id, `${tribunal} - ${para.trim()}`).subscribe({
-      next: (atualizado) => {
-        if (this.orgaoRascunhoMag() === de) {
-          const prefixo = `${tribunal} - `;
-          this.orgaoRascunhoMag.set(
-            atualizado.nome.startsWith(prefixo) ? atualizado.nome.slice(prefixo.length) : atualizado.nome,
-          );
+  protected renomearOrgaoMag({ de, para }: { de: string; para: string }): void {
+    const id = Number(de);
+    this.processoService.renomearCatalogo('orgao-julgador', id, para).subscribe({
+      next: (o) => {
+        if (this.orgaoMagAtual()?.id === id) {
+          this.orgaoMagAtual.set(o);
         }
       },
       error: (err: unknown) => this.erro.emit(this.mensagemErroHttp(err)),
     });
   }
 
-  protected excluirOrgaoDoTribunalRascunhoMag(descricao: string): void {
-    const item = this.orgaosDoTribunalRascunhoMag().find((o) => o.descricao === descricao);
-    if (!item) {
-      return;
-    }
-    this.orgaoService.excluir(item.id).subscribe({
+  protected excluirOrgaoMag(valor: string): void {
+    const id = Number(valor);
+    this.processoService.excluirCatalogo('orgao-julgador', id).subscribe({
       next: () => {
-        if (this.orgaoRascunhoMag() === descricao) {
-          this.orgaoRascunhoMag.set('');
+        if (this.orgaoMagAtual()?.id === id) {
+          this.orgaoMagAtual.set(null);
         }
       },
       error: (err: unknown) => this.erro.emit(this.mensagemErroHttp(err)),
@@ -725,8 +706,8 @@ export class ProcessoOutrosEnvolvidosComponent {
     this.magForm.reset();
     this.magistradoAtual.set(null);
     this.resultadoRascunho.set('');
-    this.tribunalRascunhoMag.set('');
-    this.orgaoRascunhoMag.set('');
+    this.tribunalMagAtual.set(null);
+    this.orgaoMagAtual.set(null);
   }
 
   private limparRascunhoTestemunha(): void {

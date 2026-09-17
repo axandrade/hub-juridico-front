@@ -164,18 +164,23 @@
   <div class="processo-form__row" [formGroup]="magForm">
     <div class="processo-field">
       <span>Tribunal</span>
-      <app-combobox
+      <app-domain-model-dropdown
         ariaLabel="Tribunal do magistrado"
         placeholder="Buscar tribunal..."
         emptyLabel="— Sem tribunal —"
         noResultsText="Nenhum tribunal encontrado"
         itemNoun="tribunal"
-        [options]="nomesDeTribunal()"
-        [value]="tribunalRascunhoMag()"
+        entityName="tribunal"
+        fields="id,nome"
+        [searchFields]="['nome']"
+        sort="nome"
+        [displayFormatter]="rotuloCatalogo"
+        [value]="tribunalMagValor()"
+        [valueLabel]="tribunalMagAtual()?.nome ?? ''"
         [adicionar]="true"
         [editar]="true"
         [excluir]="true"
-        (valueChange)="onTribunalRascunhoMagChange($event)"
+        (itemSelected)="onTribunalMagSelected($event)"
         (aoAdicionar)="criarTribunalMagistrado($event)"
         (aoEditar)="renomearTribunalMagistrado($event)"
         (aoExcluir)="excluirTribunalMagistrado($event)"
@@ -186,21 +191,28 @@
   <div class="processo-form__row processo-form__row--full">
     <div class="processo-field">
       <span>Órgão</span>
-      <app-combobox
+      <app-domain-model-dropdown
         ariaLabel="Órgão do tribunal escolhido (magistrado)"
         placeholder="Buscar órgão..."
         emptyLabel="— Sem órgão —"
         noResultsText="Nenhum órgão encontrado"
         itemNoun="órgão"
-        [options]="nomesDeOrgaoDoTribunalMag()"
-        [value]="orgaoRascunhoMag()"
-        [adicionar]="!!tribunalRascunhoMag()"
-        [editar]="!!tribunalRascunhoMag()"
-        [excluir]="!!tribunalRascunhoMag()"
-        (valueChange)="orgaoRascunhoMag.set($event)"
-        (aoAdicionar)="criarOrgaoDoTribunalRascunhoMag($event)"
-        (aoEditar)="renomearOrgaoDoTribunalRascunhoMag($event)"
-        (aoExcluir)="excluirOrgaoDoTribunalRascunhoMag($event)"
+        entityName="orgao-julgador"
+        fields="id,nome"
+        [searchFields]="['nome']"
+        [filter]="orgaoMagFiltro()"
+        sort="nome"
+        [displayFormatter]="rotuloCatalogo"
+        [value]="orgaoMagValor()"
+        [valueLabel]="orgaoMagAtual()?.nome ?? ''"
+        [disabled]="!tribunalMagAtual()"
+        [adicionar]="!!tribunalMagAtual()"
+        [editar]="!!tribunalMagAtual()"
+        [excluir]="!!tribunalMagAtual()"
+        (itemSelected)="onOrgaoMagSelected($event)"
+        (aoAdicionar)="criarOrgaoMag($event)"
+        (aoEditar)="renomearOrgaoMag($event)"
+        (aoExcluir)="excluirOrgaoMag($event)"
       />
     </div>
   </div>

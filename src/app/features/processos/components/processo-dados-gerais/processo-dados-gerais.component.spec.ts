@@ -4,8 +4,6 @@ import { of } from 'rxjs';
 
 import { CidadeService } from '../../services/cidade-service';
 import { OrgaoJulgadorService } from '../../services/orgao-julgador.service';
-import { PosicaoClienteService } from '../../services/posicao-cliente.service';
-import { ProcedimentoProcessoService } from '../../services/procedimento-processo.service';
 import { ProcessoApi } from '../../services/processo-api.model';
 import { ProcessoService } from '../../services/processo-service';
 import { TribunalService } from '../../services/tribunal.service';
@@ -26,8 +24,10 @@ function makeProcesso(over: Partial<ProcessoApi> = {}): ProcessoApi {
     pasta: 'PROC-000003',
     cliente_principal_id: null,
     cliente_principal_posicao: null,
+    cliente_principal_posicao_id: null,
     contrario_principal_nome: null,
     contrario_principal_posicao: null,
+    contrario_principal_posicao_id: null,
     contrario_principal_documento: null,
     advogado_responsavel_id: null,
     data_distribuicao: null,
@@ -36,6 +36,7 @@ function makeProcesso(over: Partial<ProcessoApi> = {}): ProcessoApi {
     natureza: null,
     natureza_id: null,
     procedimento: null,
+    procedimento_id: null,
     fase: null,
     fase_id: null,
     uf: null,
@@ -91,18 +92,10 @@ describe('ProcessoDadosGeraisComponent — tribunal/órgão atuais (carregar/col
         {
           provide: ProcessoService,
           useValue: {
-            buscarPessoas: () => of({ itens: [], ultima: true }),
-            buscarAdvogados: () => of({ itens: [], ultima: true }),
-            buscarStatus: () => of({ itens: [], ultima: true }),
-            buscarAcoes: () => of({ itens: [], ultima: true }),
-            buscarNaturezas: () => of({ itens: [], ultima: true }),
-            buscarFases: () => of({ itens: [], ultima: true }),
             rotuloPessoa: () => of(''),
             rotuloAdvogado: () => of(''),
           },
         },
-        { provide: PosicaoClienteService, useValue: { carregar: () => {}, posicoes: () => [] } },
-        { provide: ProcedimentoProcessoService, useValue: { carregar: () => {}, procedimentos: () => [] } },
         { provide: CidadeService, useValue: { buscarPagina: () => of({ itens: [], ultima: true }), resolver: () => of('') } },
         { provide: TribunalService, useValue: { carregar: () => {}, tribunais: () => tribunaisCatalogo } },
         { provide: OrgaoJulgadorService, useValue: { carregar: () => {}, recarregar: () => {}, orgaos: () => orgaosCatalogo } },

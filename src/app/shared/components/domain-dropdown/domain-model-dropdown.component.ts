@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, inject, input, output } from '@angu
 import { Observable, catchError, map, of, tap } from 'rxjs';
 
 import { DomainService, IDomainPage } from '../../../core/services/domain.service';
-import { ComboboxComponent, ComboPagina } from '../combobox/combobox.component';
+import { ComboboxComponent, ComboEdicao, ComboPagina } from '../combobox/combobox.component';
 
 /**
  * Combobox "domain-aware": mesmo conceito do `DomainModelDropdownComponent` do cev-front
@@ -19,6 +19,10 @@ import { ComboboxComponent, ComboPagina } from '../combobox/combobox.component';
  * polimórficas (ex.: Pessoa física vs jurídica, como `clientDisplayName` faz em
  * `clients.component.ts`). `fields` deve incluir tudo que `displayFormatter` usa; `valueField`
  * é sempre incluído automaticamente.
+ *
+ * Gestão do catálogo pelo menu "⋮" do `app-combobox` interno: liga `adicionar`/`editar`/`excluir`
+ * e escute `aoAdicionar`/`aoEditar`/`aoExcluir` — mesmo contrato do `ComboboxComponent`, só
+ * repassado. Quem persiste (POST/PATCH/DELETE) continua sendo o pai.
  */
 @Component({
   selector: 'app-domain-model-dropdown',
@@ -54,9 +58,22 @@ export class DomainModelDropdownComponent<T extends Record<string, unknown>> {
   readonly noResultsText = input<string>('Nenhum resultado');
   readonly itemNoun = input<string>('item');
 
+  /** Liga a opção "Adicionar" no menu "⋮" do `app-combobox` interno. */
+  readonly adicionar = input<boolean>(false);
+  /** Liga a opção "Editar" no menu "⋮". */
+  readonly editar = input<boolean>(false);
+  /** Liga a opção "Excluir" no menu "⋮". */
+  readonly excluir = input<boolean>(false);
+
   readonly valueChange = output<string>();
   /** Emitido junto com `valueChange` — o item cru selecionado, ou `null` (opção vazia/sem cache). */
   readonly itemSelected = output<T | null>();
+  /** Repassado do `app-combobox` interno — confirmou "Adicionar" (nome digitado). Quem persiste é o pai. */
+  readonly aoAdicionar = output<string>();
+  /** Repassado do `app-combobox` interno — confirmou "Editar" (`valor` do item, não o nome — ver `ComboboxComponent`). */
+  readonly aoEditar = output<ComboEdicao>();
+  /** Repassado do `app-combobox` interno — confirmou "Excluir" (`valor` do item). */
+  readonly aoExcluir = output<string>();
 
   /** Itens já vistos nesta sessão (páginas carregadas), por valor — evita um GET extra em `resolver`. */
   private readonly vistos = new Map<string, T>();

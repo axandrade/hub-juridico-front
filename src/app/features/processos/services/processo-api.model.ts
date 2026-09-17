@@ -198,9 +198,11 @@ export interface ProcessoApi {
 
   cliente_principal_id: number | null;
   cliente_principal_posicao: string | null;
+  cliente_principal_posicao_id: number | null;
 
   contrario_principal_nome: string | null;
   contrario_principal_posicao: string | null;
+  contrario_principal_posicao_id: number | null;
   contrario_principal_documento: string | null;
 
   advogado_responsavel_id: number | null;
@@ -210,6 +212,7 @@ export interface ProcessoApi {
   natureza: string | null;
   natureza_id: number | null;
   procedimento: string | null;
+  procedimento_id: number | null;
   fase: string | null;
   fase_id: number | null;
   uf: string | null;
@@ -254,17 +257,17 @@ export interface ProcessoWriteApi {
   status_id: number | null;
 
   cliente_principal_id: number | null;
-  cliente_principal_posicao: string | null;
+  cliente_principal_posicao_id: number | null;
 
   contrario_principal_nome: string | null;
-  contrario_principal_posicao: string | null;
+  contrario_principal_posicao_id: number | null;
   contrario_principal_documento: string | null;
 
   advogado_responsavel_id: number | null;
   data_distribuicao: string | null;
   acao_id: number | null;
   natureza_id: number | null;
-  procedimento: string | null;
+  procedimento_id: number | null;
   fase_id: number | null;
   uf: string | null;
   cidade_id: number | null;

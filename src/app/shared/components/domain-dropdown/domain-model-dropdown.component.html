@@ -8,5 +8,11 @@
   [buscarPagina]="buscarPagina"
   [value]="value()"
   [valueLabel]="valueLabel()"
+  [adicionar]="adicionar()"
+  [editar]="editar()"
+  [excluir]="excluir()"
   (valueChange)="onValueChange($event)"
+  (aoAdicionar)="aoAdicionar.emit($event)"
+  (aoEditar)="aoEditar.emit($event)"
+  (aoExcluir)="aoExcluir.emit($event)"
 />

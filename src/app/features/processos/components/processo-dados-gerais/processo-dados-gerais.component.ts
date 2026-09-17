@@ -18,6 +18,7 @@ import {
   numeroCnjCompleto,
 } from '../../../../core/auth/documentos-br';
 import { ComboboxComponent } from '../../../../shared/components/combobox/combobox.component';
+import { DomainModelDropdownComponent } from '../../../../shared/components/domain-dropdown/domain-model-dropdown.component';
 import { CnjMaskDirective } from '../../../../shared/directives/cnj-mask.directive';
 import { DocumentoMaskDirective } from '../../../../shared/directives/documento-mask.directive';
 import { mensagensCamposInvalidos } from '../../../../shared/utils/form-validacao';
@@ -32,8 +33,6 @@ import {
 } from '../../services/processo-api.model';
 import { CidadeService } from '../../services/cidade-service';
 import { OrgaoJulgadorService } from '../../services/orgao-julgador.service';
-import { PosicaoClienteService } from '../../services/posicao-cliente.service';
-import { ProcedimentoProcessoService } from '../../services/procedimento-processo.service';
 import { ProcessoEditavel, ProcessoService } from '../../services/processo-service';
 import { TribunalService } from '../../services/tribunal.service';
 
@@ -97,14 +96,18 @@ export type DadosGeraisValores = Omit<
 @Component({
   selector: 'app-processo-dados-gerais',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ReactiveFormsModule, ComboboxComponent, CnjMaskDirective, DocumentoMaskDirective],
+  imports: [
+    ReactiveFormsModule,
+    ComboboxComponent,
+    DomainModelDropdownComponent,
+    CnjMaskDirective,
+    DocumentoMaskDirective,
+  ],
   templateUrl: './processo-dados-gerais.component.html',
   styleUrl: './processo-dados-gerais.component.scss',
 })
 export class ProcessoDadosGeraisComponent {
   private readonly processoService = inject(ProcessoService);
-  private readonly posicaoService = inject(PosicaoClienteService);
-  private readonly procedimentoService = inject(ProcedimentoProcessoService);
   private readonly cidadeService = inject(CidadeService);
   private readonly tribunalService = inject(TribunalService);
   private readonly orgaoJulgadorService = inject(OrgaoJulgadorService);
@@ -115,21 +118,22 @@ export class ProcessoDadosGeraisComponent {
 
   /** Rótulos legíveis do tipo (o `<app-combobox>` estático mostra o texto que recebe). */
   protected readonly tipoOpcoes = TIPOS_PROCESSO.map((t) => TIPO_PROCESSO_LABEL[t]);
-  protected readonly buscarPessoas = this.processoService.buscarPessoas;
-  protected readonly buscarAdvogados = this.processoService.buscarAdvogados;
-  /** Picker paginado de município (`cidades`) — valor = id, rótulo = "Nome — UF". */
+  /** Picker paginado de município (`cidades`) — valor = id, rótulo = "Nome — UF". Ainda não é
+   *  `app-domain-model-dropdown`: a busca ignora acentos (ver `CidadeService`), não é um `ilike`
+   *  genérico direto. */
   protected readonly buscarCidades = this.cidadeService.buscarPagina;
-  /** Pickers paginados dos catálogos por id (Status/Ação/Natureza/Fase), via `/domain`. */
-  protected readonly buscarStatus = this.processoService.buscarStatus;
-  protected readonly buscarAcoes = this.processoService.buscarAcoes;
-  protected readonly buscarNaturezas = this.processoService.buscarNaturezas;
-  protected readonly buscarFases = this.processoService.buscarFases;
-  protected readonly nomesDePosicao = computed(() =>
-    this.posicaoService.posicoes().map((p) => p.nome),
-  );
-  protected readonly nomesDeProcedimento = computed(() =>
-    this.procedimentoService.procedimentos().map((p) => p.nome),
-  );
+  /**
+   * `displayFormatter` dos `<app-domain-model-dropdown>` — tipados como `Record<string, unknown>`
+   * (não o tipo real da entidade) por limitação de inferência do compilador de templates do
+   * Angular com componente genérico (`DomainModelDropdownComponent<T>`); o cast fica por conta de
+   * quem lê o campo, aqui é só `nome`/`razaoSocial`/`nomeFantasia`, sem necessidade de cast.
+   */
+  protected readonly rotuloCatalogo = (item: Record<string, unknown>): string =>
+    String(item['nome'] ?? '');
+  protected readonly rotuloPessoa = (item: Record<string, unknown>): string =>
+    String(item['nome'] ?? item['razaoSocial'] ?? item['nomeFantasia'] ?? '(sem nome)');
+  protected readonly rotuloAdvogado = (item: Record<string, unknown>): string =>
+    String(item['nome'] ?? '(sem nome)');
 
   // --- "Órgão processante" atual: cascata Tribunal → Órgão (filtrado pelo tribunal escolhido) ---
   protected readonly nomesDeTribunal = computed(() =>
@@ -195,12 +199,15 @@ export class ProcessoDadosGeraisComponent {
   protected readonly acaoLabel = signal('');
   protected readonly naturezaId = signal<number | null>(null);
   protected readonly naturezaLabel = signal('');
-  protected readonly procedimentoNome = signal('');
+  protected readonly procedimentoId = signal<number | null>(null);
+  protected readonly procedimentoLabel = signal('');
   protected readonly faseId = signal<number | null>(null);
   protected readonly faseLabel = signal('');
-  /** Posição do cliente principal e da parte contrária — mesmo catálogo `PosicaoCliente`. */
-  protected readonly clientePrincipalPosicaoNome = signal('');
-  protected readonly contrarioPrincipalPosicaoNome = signal('');
+  /** Posição do cliente principal e da parte contrária — mesmo catálogo `PosicaoCliente` (V27). */
+  protected readonly clientePrincipalPosicaoId = signal<number | null>(null);
+  protected readonly clientePrincipalPosicaoLabel = signal('');
+  protected readonly contrarioPrincipalPosicaoId = signal<number | null>(null);
+  protected readonly contrarioPrincipalPosicaoLabel = signal('');
   protected readonly uf = signal('');
   /** Município escolhido no picker `cidades` (`null` = nenhum). Vira o snapshot de cidade/uf no back. */
   protected readonly cidadeId = signal<number | null>(null);
@@ -223,6 +230,15 @@ export class ProcessoDadosGeraisComponent {
   protected readonly acaoValor = computed(() => (this.acaoId() === null ? '' : String(this.acaoId())));
   protected readonly naturezaValor = computed(() => (this.naturezaId() === null ? '' : String(this.naturezaId())));
   protected readonly faseValor = computed(() => (this.faseId() === null ? '' : String(this.faseId())));
+  protected readonly procedimentoValor = computed(() =>
+    this.procedimentoId() === null ? '' : String(this.procedimentoId()),
+  );
+  protected readonly clientePrincipalPosicaoValor = computed(() =>
+    this.clientePrincipalPosicaoId() === null ? '' : String(this.clientePrincipalPosicaoId()),
+  );
+  protected readonly contrarioPrincipalPosicaoValor = computed(() =>
+    this.contrarioPrincipalPosicaoId() === null ? '' : String(this.contrarioPrincipalPosicaoId()),
+  );
   protected readonly tags = signal<string[]>([]);
   protected readonly escritoriosAnteriores = signal<string[]>([]);
   // Preservados como vieram — sem UI de edição nesta fatia.
@@ -285,8 +301,6 @@ export class ProcessoDadosGeraisComponent {
   });
 
   constructor() {
-    this.posicaoService.carregar();
-    this.procedimentoService.carregar();
     this.tribunalService.carregar();
     this.orgaoJulgadorService.carregar();
     this.destroyRef.onDestroy(() => clearTimeout(this.copiadoTimer));
@@ -322,11 +336,14 @@ export class ProcessoDadosGeraisComponent {
     this.acaoLabel.set(p.acao ?? '');
     this.naturezaId.set(p.natureza_id);
     this.naturezaLabel.set(p.natureza ?? '');
-    this.procedimentoNome.set(p.procedimento ?? '');
+    this.procedimentoId.set(p.procedimento_id);
+    this.procedimentoLabel.set(p.procedimento ?? '');
     this.faseId.set(p.fase_id);
     this.faseLabel.set(p.fase ?? '');
-    this.clientePrincipalPosicaoNome.set(p.cliente_principal_posicao ?? '');
-    this.contrarioPrincipalPosicaoNome.set(p.contrario_principal_posicao ?? '');
+    this.clientePrincipalPosicaoId.set(p.cliente_principal_posicao_id);
+    this.clientePrincipalPosicaoLabel.set(p.cliente_principal_posicao ?? '');
+    this.contrarioPrincipalPosicaoId.set(p.contrario_principal_posicao_id);
+    this.contrarioPrincipalPosicaoLabel.set(p.contrario_principal_posicao ?? '');
     this.uf.set(p.uf ?? '');
     this.cidadeId.set(p.cidade_id);
     this.cidadeLabel.set(p.cidade_id !== null ? `${p.cidade ?? ''} — ${p.uf ?? ''}` : '');
@@ -370,11 +387,14 @@ export class ProcessoDadosGeraisComponent {
     this.acaoLabel.set('');
     this.naturezaId.set(null);
     this.naturezaLabel.set('');
-    this.procedimentoNome.set('');
+    this.procedimentoId.set(null);
+    this.procedimentoLabel.set('');
     this.faseId.set(null);
     this.faseLabel.set('');
-    this.clientePrincipalPosicaoNome.set('');
-    this.contrarioPrincipalPosicaoNome.set('');
+    this.clientePrincipalPosicaoId.set(null);
+    this.clientePrincipalPosicaoLabel.set('');
+    this.contrarioPrincipalPosicaoId.set(null);
+    this.contrarioPrincipalPosicaoLabel.set('');
     this.uf.set('');
     this.cidadeId.set(null);
     this.cidadeLabel.set('');
@@ -419,15 +439,15 @@ export class ProcessoDadosGeraisComponent {
       numeroCnj: raw.numeroCnj,
       statusId: this.statusId(),
       clientePrincipalId: this.clientePrincipalId(),
-      clientePrincipalPosicao: this.clientePrincipalPosicaoNome(),
+      clientePrincipalPosicaoId: this.clientePrincipalPosicaoId(),
       contrarioPrincipalNome: raw.contrarioPrincipalNome,
-      contrarioPrincipalPosicao: this.contrarioPrincipalPosicaoNome(),
+      contrarioPrincipalPosicaoId: this.contrarioPrincipalPosicaoId(),
       contrarioPrincipalDocumento: raw.contrarioPrincipalDocumento,
       advogadoResponsavelId: this.advogadoResponsavelId(),
       dataDistribuicao: raw.dataDistribuicao,
       acaoId: this.acaoId(),
       naturezaId: this.naturezaId(),
-      procedimento: this.procedimentoNome(),
+      procedimentoId: this.procedimentoId(),
       faseId: this.faseId(),
       uf: this.uf(),
       cidadeId: this.cidadeId(),
@@ -484,6 +504,21 @@ export class ProcessoDadosGeraisComponent {
   protected onFaseChange(valor: string): void {
     this.faseId.set(valor ? Number(valor) : null);
     this.faseLabel.set('');
+  }
+
+  protected onProcedimentoChange(valor: string): void {
+    this.procedimentoId.set(valor ? Number(valor) : null);
+    this.procedimentoLabel.set('');
+  }
+
+  protected onClientePrincipalPosicaoChange(valor: string): void {
+    this.clientePrincipalPosicaoId.set(valor ? Number(valor) : null);
+    this.clientePrincipalPosicaoLabel.set('');
+  }
+
+  protected onContrarioPrincipalPosicaoChange(valor: string): void {
+    this.contrarioPrincipalPosicaoId.set(valor ? Number(valor) : null);
+    this.contrarioPrincipalPosicaoLabel.set('');
   }
 
   protected onAdvogadoResponsavelChange(valor: string): void {
@@ -556,30 +591,38 @@ export class ProcessoDadosGeraisComponent {
     });
   }
 
-  // --- catálogo "Posição do cliente" — alimenta os dois combos de posição (cliente e contrária) ---
+  // --- catálogo "Posição do cliente" — CRUD via `/domain/posicao-cliente` (ver `ProcessoService`);
+  // alimenta os dois campos de posição (cliente principal e parte contrária), mesmo catálogo ---
 
-  /** Os dois campos que apontam pro catálogo; renomear/excluir propaga pra ambos. */
-  private posicoesEmUso(): WritableSignal<string>[] {
-    return [this.clientePrincipalPosicaoNome, this.contrarioPrincipalPosicaoNome];
+  /** Os dois pares id/label que apontam pro catálogo; renomear/excluir propaga pros dois. */
+  private posicoesEmUso(): { id: WritableSignal<number | null>; label: WritableSignal<string> }[] {
+    return [
+      { id: this.clientePrincipalPosicaoId, label: this.clientePrincipalPosicaoLabel },
+      { id: this.contrarioPrincipalPosicaoId, label: this.contrarioPrincipalPosicaoLabel },
+    ];
   }
 
-  protected criarPosicao(nome: string, alvo: WritableSignal<string>): void {
-    this.posicaoService.criar(nome).subscribe({
-      next: (p) => alvo.set(p.nome),
+  protected criarPosicaoCliente(
+    nome: string,
+    idAlvo: WritableSignal<number | null>,
+    labelAlvo: WritableSignal<string>,
+  ): void {
+    this.processoService.criarCatalogo('posicao-cliente', nome).subscribe({
+      next: (p) => {
+        idAlvo.set(p.id);
+        labelAlvo.set(p.nome);
+      },
       error: (err: unknown) => this.erro.emit(this.mensagemErroHttp(err)),
     });
   }
 
-  protected renomearPosicao({ de, para }: { de: string; para: string }): void {
-    const alvo = this.posicaoService.posicoes().find((p) => p.nome === de);
-    if (!alvo) {
-      return;
-    }
-    this.posicaoService.alterar(alvo.id, para).subscribe({
+  protected renomearPosicaoCliente({ de, para }: { de: string; para: string }): void {
+    const id = Number(de);
+    this.processoService.renomearCatalogo('posicao-cliente', id, para).subscribe({
       next: (p) => {
         for (const campo of this.posicoesEmUso()) {
-          if (campo() === de) {
-            campo.set(p.nome);
+          if (campo.id() === id) {
+            campo.label.set(p.nome);
           }
         }
       },
@@ -587,16 +630,14 @@ export class ProcessoDadosGeraisComponent {
     });
   }
 
-  protected excluirPosicao(nome: string): void {
-    const alvo = this.posicaoService.posicoes().find((p) => p.nome === nome);
-    if (!alvo) {
-      return;
-    }
-    this.posicaoService.excluir(alvo.id).subscribe({
+  protected excluirPosicaoCliente(valor: string): void {
+    const id = Number(valor);
+    this.processoService.excluirCatalogo('posicao-cliente', id).subscribe({
       next: () => {
         for (const campo of this.posicoesEmUso()) {
-          if (campo() === nome) {
-            campo.set('');
+          if (campo.id() === id) {
+            campo.id.set(null);
+            campo.label.set('');
           }
         }
       },
@@ -678,39 +719,37 @@ export class ProcessoDadosGeraisComponent {
     });
   }
 
-  // --- catálogo "Procedimento" (ver `ProcedimentoProcessoService`) ---
+  // --- catálogo "Procedimento" — CRUD via `/domain/procedimento-processo` (ver `ProcessoService`) ---
 
   protected criarProcedimento(nome: string): void {
-    this.procedimentoService.criar(nome).subscribe({
-      next: (p) => this.procedimentoNome.set(p.nome),
+    this.processoService.criarCatalogo('procedimento-processo', nome).subscribe({
+      next: (p) => {
+        this.procedimentoId.set(p.id);
+        this.procedimentoLabel.set(p.nome);
+      },
       error: (err: unknown) => this.erro.emit(this.mensagemErroHttp(err)),
     });
   }
 
   protected renomearProcedimento({ de, para }: { de: string; para: string }): void {
-    const alvo = this.procedimentoService.procedimentos().find((p) => p.nome === de);
-    if (!alvo) {
-      return;
-    }
-    this.procedimentoService.alterar(alvo.id, para).subscribe({
+    const id = Number(de);
+    this.processoService.renomearCatalogo('procedimento-processo', id, para).subscribe({
       next: (p) => {
-        if (this.procedimentoNome() === de) {
-          this.procedimentoNome.set(p.nome);
+        if (this.procedimentoId() === id) {
+          this.procedimentoLabel.set(p.nome);
         }
       },
       error: (err: unknown) => this.erro.emit(this.mensagemErroHttp(err)),
     });
   }
 
-  protected excluirProcedimento(nome: string): void {
-    const alvo = this.procedimentoService.procedimentos().find((p) => p.nome === nome);
-    if (!alvo) {
-      return;
-    }
-    this.procedimentoService.excluir(alvo.id).subscribe({
+  protected excluirProcedimento(valor: string): void {
+    const id = Number(valor);
+    this.processoService.excluirCatalogo('procedimento-processo', id).subscribe({
       next: () => {
-        if (this.procedimentoNome() === nome) {
-          this.procedimentoNome.set('');
+        if (this.procedimentoId() === id) {
+          this.procedimentoId.set(null);
+          this.procedimentoLabel.set('');
         }
       },
       error: (err: unknown) => this.erro.emit(this.mensagemErroHttp(err)),

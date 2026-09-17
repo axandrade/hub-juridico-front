@@ -1,9 +1,8 @@
-import { HttpClient, HttpParams } from '@angular/common/http';
+import { HttpClient } from '@angular/common/http';
 import { Injectable, inject, signal } from '@angular/core';
 import { Observable, catchError, map, of, switchMap, tap } from 'rxjs';
 
 import { environment } from '../../../../environments/environment';
-import { ComboPagina } from '../../../shared/components/combobox/combobox.component';
 import { DomainFavoritoService } from '../../../core/services/domain-favorito.service';
 import { DomainService, IDomainPage } from '../../../core/services/domain.service';
 import { FavoritoService } from '../../../shared/services/favorito.service';
@@ -15,7 +14,6 @@ import {
   OutroEnvolvidoMagistradoWriteApi,
   OutroEnvolvidoPeritoWriteApi,
   OutroEnvolvidoTestemunhaApi,
-  PaginaApi,
   ParteContrariaApi,
   ProcessoApi,
   ProcessoResumoApi,
@@ -45,10 +43,12 @@ export interface ProcessoEditavel {
   statusId: number | null;
 
   clientePrincipalId: number | null;
-  clientePrincipalPosicao: string;
+  /** Id do catálogo `posicao_cliente` — `null` = sem posição. */
+  clientePrincipalPosicaoId: number | null;
 
   contrarioPrincipalNome: string;
-  contrarioPrincipalPosicao: string;
+  /** Id do catálogo `posicao_cliente` (mesmo catálogo de `clientePrincipalPosicaoId`). */
+  contrarioPrincipalPosicaoId: number | null;
   /** CPF ou CNPJ (mascarado ou não) — o serviço manda só os dígitos. */
   contrarioPrincipalDocumento: string;
 
@@ -58,7 +58,8 @@ export interface ProcessoEditavel {
   acaoId: number | null;
   /** Id do catálogo `natureza_processo` — `null` = sem natureza. */
   naturezaId: number | null;
-  procedimento: string;
+  /** Id do catálogo `procedimento_processo` — `null` = sem procedimento. */
+  procedimentoId: number | null;
   /** Id do catálogo `fase_processo` — `null` = sem fase. */
   faseId: number | null;
   uf: string;
@@ -178,9 +179,11 @@ function processoResumoFromDomain(p: ProcessoResumoDomain, favorito: boolean): P
  * `/domain/favorito` espera — nenhum favorito existente fica "órfão".
  *
  * O CRUD de escrita (criar/editar/status) continua em `/api/v1/processos` (Spring), consumido
- * pelo painel `app-processo-form`. Também resolve os pickers de Cliente principal / Advogado
- * responsável — busca paginada no servidor (`buscarPessoas` / `buscarAdvogados`), pra alimentar o
- * `<app-combobox>` sem `findAll`.
+ * pelo painel `app-processo-form`. Os pickers de Cliente principal / Advogado responsável /
+ * Status / Ação / Natureza / Fase são `<app-domain-model-dropdown>` direto no template (busca
+ * própria via `/domain`); aqui só ficam `rotuloPessoa`/`rotuloAdvogado` (resolvem o `valueLabel`
+ * inicial ao carregar uma ficha) e `criarCatalogo`/`renomearCatalogo`/`excluirCatalogo` (escrita
+ * dos 4 catálogos, sem equivalente genérico no componente de dropdown).
  */
 @Injectable({ providedIn: 'root' })
 export class ProcessoService {
@@ -189,8 +192,6 @@ export class ProcessoService {
   private readonly domainService = inject(DomainService);
   private readonly domainFavoritoService = inject(DomainFavoritoService);
   private readonly base = `${environment.apiBaseUrl}/processos`;
-  private readonly pessoasUrl = `${environment.apiBaseUrl}/pessoas`;
-  private readonly advogadosUrl = `${environment.apiBaseUrl}/advogados`;
 
   static readonly PAGE_SIZE = 10;
 
@@ -268,15 +269,15 @@ export class ProcessoService {
       numero_cnj: vazioParaNull(processo.numeroCnj),
       status_id: processo.statusId,
       cliente_principal_id: processo.clientePrincipalId,
-      cliente_principal_posicao: vazioParaNull(processo.clientePrincipalPosicao),
+      cliente_principal_posicao_id: processo.clientePrincipalPosicaoId,
       contrario_principal_nome: vazioParaNull(processo.contrarioPrincipalNome),
-      contrario_principal_posicao: vazioParaNull(processo.contrarioPrincipalPosicao),
+      contrario_principal_posicao_id: processo.contrarioPrincipalPosicaoId,
       contrario_principal_documento: onlyDigits(processo.contrarioPrincipalDocumento) || null,
       advogado_responsavel_id: processo.advogadoResponsavelId,
       data_distribuicao: vazioParaNull(processo.dataDistribuicao),
       acao_id: processo.acaoId,
       natureza_id: processo.naturezaId,
-      procedimento: vazioParaNull(processo.procedimento),
+      procedimento_id: processo.procedimentoId,
       fase_id: processo.faseId,
       uf: vazioParaNull(processo.uf),
       cidade_id: processo.cidadeId,
@@ -338,46 +339,30 @@ export class ProcessoService {
     return desejado;
   }
 
-  // --- pickers de vínculo (Cliente principal / Advogado responsável) ---
+  // --- rótulo por id (Cliente principal / Advogado responsável) — via /domain: nem
+  // /api/v1/pessoas nem /api/v1/advogados (GET por id) existem mais — Pessoa e Advogado já
+  // migraram a leitura pra /domain/pessoa e /domain/advogado. A busca em si (o picker) é o
+  // `<app-domain-model-dropdown>` direto no template — isso aqui só resolve o `valueLabel` inicial
+  // ao carregar uma ficha já persistida (a página do valor pode não estar carregada no dropdown).
 
-  /** Página de pessoas para o `<app-combobox [buscarPagina]>` (valor = id, rótulo = nome). */
-  buscarPessoas = (termo: string, pagina: number): Observable<ComboPagina> =>
-    this.paginaVinculo(this.pessoasUrl, termo, pagina, (p) => nomeDePessoa(p));
-
-  /** Página de advogados para o picker. */
-  buscarAdvogados = (termo: string, pagina: number): Observable<ComboPagina> =>
-    this.paginaVinculo(this.advogadosUrl, termo, pagina, (a) => String(a['nome'] ?? '(sem nome)'));
-
-  /** Rótulo de uma pessoa por id (`valueLabel` do combobox quando a página dela não carregou). */
+  /** Rótulo de uma pessoa por id. */
   rotuloPessoa(id: number): Observable<string> {
-    return this.http.get<Record<string, unknown>>(`${this.pessoasUrl}/${id}`).pipe(
-      map(nomeDePessoa),
-      catchError(() => of('')),
-    );
+    return this.domainService
+      .get<Record<string, unknown>>({ entityName: 'pessoa', entityId: id, fields: 'id,nome,razaoSocial,nomeFantasia' })
+      .pipe(map(nomeDePessoa), catchError(() => of('')));
   }
 
   rotuloAdvogado(id: number): Observable<string> {
-    return this.http.get<Record<string, unknown>>(`${this.advogadosUrl}/${id}`).pipe(
-      map((a) => String(a['nome'] ?? '')),
-      catchError(() => of('')),
-    );
+    return this.domainService
+      .get<Record<string, unknown>>({ entityName: 'advogado', entityId: id, fields: 'id,nome' })
+      .pipe(map((a) => String(a['nome'] ?? '')), catchError(() => of('')));
   }
 
   // --- catálogos por id (Status/Ação/Natureza/Fase) — CRUD 100% via /domain, sem controller/
   // service dedicado no backend (mesmo id/nome dos 4, ver StatusProcesso/AcaoProcesso/
   // NaturezaProcesso/FaseProcesso). Excluir um valor em uso bloqueia (409, FK real) — ver V26.
-
-  buscarStatus = (termo: string, pagina: number): Observable<ComboPagina> =>
-    this.paginaCatalogo('status-processo', termo, pagina);
-
-  buscarAcoes = (termo: string, pagina: number): Observable<ComboPagina> =>
-    this.paginaCatalogo('acao-processo', termo, pagina);
-
-  buscarNaturezas = (termo: string, pagina: number): Observable<ComboPagina> =>
-    this.paginaCatalogo('natureza-processo', termo, pagina);
-
-  buscarFases = (termo: string, pagina: number): Observable<ComboPagina> =>
-    this.paginaCatalogo('fase-processo', termo, pagina);
+  // A busca (picker) também é o `<app-domain-model-dropdown>` direto no template — só o
+  // criar/renomear/excluir (sem equivalente genérico de escrita no componente) fica aqui.
 
   criarCatalogo(entityName: string, nome: string): Observable<CatalogoItem> {
     return this.domainService
@@ -393,41 +378,6 @@ export class ProcessoService {
 
   excluirCatalogo(entityName: string, id: number): Observable<void> {
     return this.domainService.delete({ entityName, entityId: id });
-  }
-
-  private paginaCatalogo(entityName: string, termo: string, pagina: number): Observable<ComboPagina> {
-    const filtro = termo.trim() ? `nome ilike '*${termo.trim().replace(/'/g, '')}*'` : undefined;
-    return this.domainService
-      .get<IDomainPage<CatalogoItem>>({
-        entityName, page: pagina, size: ProcessoService.PAGE_SIZE, fields: 'id,nome', sort: 'nome', filter: filtro,
-      })
-      .pipe(
-        map((p) => ({
-          itens: p.content.map((item) => ({ valor: String(item.id), rotulo: item.nome })),
-          ultima: p.last,
-        })),
-      );
-  }
-
-  private paginaVinculo(
-    url: string,
-    termo: string,
-    pagina: number,
-    rotulo: (item: Record<string, unknown>) => string,
-  ): Observable<ComboPagina> {
-    let params = new HttpParams().set('page', pagina).set('size', ProcessoService.PAGE_SIZE);
-    if (termo.trim()) {
-      params = params.set('busca', termo.trim());
-    }
-    return this.http.get<PaginaApi<Record<string, unknown>>>(url, { params }).pipe(
-      map((p) => ({
-        itens: (p.conteudo ?? []).map((item) => ({
-          valor: String(item['id']),
-          rotulo: rotulo(item),
-        })),
-        ultima: p.ultima ?? true,
-      })),
-    );
   }
 
   private mesclarNaLista(salvo: ProcessoApi): void {
@@ -446,9 +396,9 @@ export class ProcessoService {
   }
 }
 
-/** Nome de exibição de uma pessoa (física: `nome`; jurídica: `razao_social` / `nome_fantasia`). */
+/** Nome de exibição de uma pessoa vinda de `/domain/pessoa` (física: `nome`; jurídica: `razaoSocial` / `nomeFantasia`). */
 function nomeDePessoa(p: Record<string, unknown>): string {
-  return String(p['nome'] ?? p['razao_social'] ?? p['nome_fantasia'] ?? '(sem nome)');
+  return String(p['nome'] ?? p['razaoSocial'] ?? p['nomeFantasia'] ?? '(sem nome)');
 }
 
 /** Deriva a linha da listagem a partir da ficha completa (pós-save). */

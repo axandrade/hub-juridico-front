@@ -53,13 +53,17 @@
   <div class="processo-form__row">
     <div class="processo-field">
       <span>Status</span>
-      <app-combobox
+      <app-domain-model-dropdown
         ariaLabel="Status do processo"
         placeholder="Buscar status..."
         emptyLabel="— Sem status —"
         noResultsText="Nenhum status encontrado"
         itemNoun="status"
-        [buscarPagina]="buscarStatus"
+        entityName="status-processo"
+        fields="id,nome"
+        [searchFields]="['nome']"
+        sort="nome"
+        [displayFormatter]="rotuloCatalogo"
         [value]="statusValor()"
         [valueLabel]="statusLabel()"
         [adicionar]="true"
@@ -81,12 +85,15 @@
   <div class="processo-form__row">
     <div class="processo-field">
       <span>Cliente principal</span>
-      <app-combobox
+      <app-domain-model-dropdown
         ariaLabel="Cliente principal"
         placeholder="Buscar pessoa..."
         emptyLabel="— Sem cliente —"
         noResultsText="Nenhuma pessoa encontrada"
-        [buscarPagina]="buscarPessoas"
+        entityName="pessoa"
+        fields="id,nome,razaoSocial,nomeFantasia"
+        [searchFields]="['nome', 'razaoSocial', 'nomeFantasia']"
+        [displayFormatter]="rotuloPessoa"
         [value]="clientePrincipalValor()"
         [valueLabel]="clientePrincipalLabel()"
         (valueChange)="onClientePrincipalChange($event)"
@@ -94,21 +101,26 @@
     </div>
     <div class="processo-field">
       <span>Posição do cliente</span>
-      <app-combobox
+      <app-domain-model-dropdown
         ariaLabel="Posição do cliente"
         placeholder="Buscar posição..."
         emptyLabel="— Sem posição —"
         noResultsText="Nenhuma posição encontrada"
         itemNoun="posição"
-        [options]="nomesDePosicao()"
-        [value]="clientePrincipalPosicaoNome()"
+        entityName="posicao-cliente"
+        fields="id,nome"
+        [searchFields]="['nome']"
+        sort="nome"
+        [displayFormatter]="rotuloCatalogo"
+        [value]="clientePrincipalPosicaoValor()"
+        [valueLabel]="clientePrincipalPosicaoLabel()"
         [adicionar]="true"
         [editar]="true"
         [excluir]="true"
-        (valueChange)="clientePrincipalPosicaoNome.set($event)"
-        (aoAdicionar)="criarPosicao($event, clientePrincipalPosicaoNome)"
-        (aoEditar)="renomearPosicao($event)"
-        (aoExcluir)="excluirPosicao($event)"
+        (valueChange)="onClientePrincipalPosicaoChange($event)"
+        (aoAdicionar)="criarPosicaoCliente($event, clientePrincipalPosicaoId, clientePrincipalPosicaoLabel)"
+        (aoEditar)="renomearPosicaoCliente($event)"
+        (aoExcluir)="excluirPosicaoCliente($event)"
       />
     </div>
   </div>
@@ -121,21 +133,26 @@
     </label>
     <div class="processo-field">
       <span>Posição</span>
-      <app-combobox
+      <app-domain-model-dropdown
         ariaLabel="Posição da parte contrária"
         placeholder="Buscar posição..."
         emptyLabel="— Sem posição —"
         noResultsText="Nenhuma posição encontrada"
         itemNoun="posição"
-        [options]="nomesDePosicao()"
-        [value]="contrarioPrincipalPosicaoNome()"
+        entityName="posicao-cliente"
+        fields="id,nome"
+        [searchFields]="['nome']"
+        sort="nome"
+        [displayFormatter]="rotuloCatalogo"
+        [value]="contrarioPrincipalPosicaoValor()"
+        [valueLabel]="contrarioPrincipalPosicaoLabel()"
         [adicionar]="true"
         [editar]="true"
         [excluir]="true"
-        (valueChange)="contrarioPrincipalPosicaoNome.set($event)"
-        (aoAdicionar)="criarPosicao($event, contrarioPrincipalPosicaoNome)"
-        (aoEditar)="renomearPosicao($event)"
-        (aoExcluir)="excluirPosicao($event)"
+        (valueChange)="onContrarioPrincipalPosicaoChange($event)"
+        (aoAdicionar)="criarPosicaoCliente($event, contrarioPrincipalPosicaoId, contrarioPrincipalPosicaoLabel)"
+        (aoEditar)="renomearPosicaoCliente($event)"
+        (aoExcluir)="excluirPosicaoCliente($event)"
       />
     </div>
   </div>
@@ -156,12 +173,15 @@
   <div class="processo-form__row">
     <div class="processo-field">
       <span>Advogado responsável</span>
-      <app-combobox
+      <app-domain-model-dropdown
         ariaLabel="Advogado responsável"
         placeholder="Buscar advogado..."
         emptyLabel="— Sem responsável —"
         noResultsText="Nenhum advogado encontrado"
-        [buscarPagina]="buscarAdvogados"
+        entityName="advogado"
+        fields="id,nome"
+        [searchFields]="['nome']"
+        [displayFormatter]="rotuloAdvogado"
         [value]="advogadoResponsavelValor()"
         [valueLabel]="advogadoResponsavelLabel()"
         (valueChange)="onAdvogadoResponsavelChange($event)"
@@ -169,13 +189,17 @@
     </div>
     <div class="processo-field">
       <span>Ação</span>
-      <app-combobox
+      <app-domain-model-dropdown
         ariaLabel="Ação do processo"
         placeholder="Buscar ação..."
         emptyLabel="— Sem ação —"
         noResultsText="Nenhuma ação encontrada"
         itemNoun="ação"
-        [buscarPagina]="buscarAcoes"
+        entityName="acao-processo"
+        fields="id,nome"
+        [searchFields]="['nome']"
+        sort="nome"
+        [displayFormatter]="rotuloCatalogo"
         [value]="acaoValor()"
         [valueLabel]="acaoLabel()"
         [adicionar]="true"
@@ -191,13 +215,17 @@
   <div class="processo-form__row">
     <div class="processo-field">
       <span>Natureza</span>
-      <app-combobox
+      <app-domain-model-dropdown
         ariaLabel="Natureza do processo"
         placeholder="Buscar natureza..."
         emptyLabel="— Sem natureza —"
         noResultsText="Nenhuma natureza encontrada"
         itemNoun="natureza"
-        [buscarPagina]="buscarNaturezas"
+        entityName="natureza-processo"
+        fields="id,nome"
+        [searchFields]="['nome']"
+        sort="nome"
+        [displayFormatter]="rotuloCatalogo"
         [value]="naturezaValor()"
         [valueLabel]="naturezaLabel()"
         [adicionar]="true"
@@ -211,18 +239,23 @@
     </div>
     <div class="processo-field">
       <span>Procedimento</span>
-      <app-combobox
+      <app-domain-model-dropdown
         ariaLabel="Procedimento do processo"
         placeholder="Buscar procedimento..."
         emptyLabel="— Sem procedimento —"
         noResultsText="Nenhum procedimento encontrado"
         itemNoun="procedimento"
-        [options]="nomesDeProcedimento()"
-        [value]="procedimentoNome()"
+        entityName="procedimento-processo"
+        fields="id,nome"
+        [searchFields]="['nome']"
+        sort="nome"
+        [displayFormatter]="rotuloCatalogo"
+        [value]="procedimentoValor()"
+        [valueLabel]="procedimentoLabel()"
         [adicionar]="true"
         [editar]="true"
         [excluir]="true"
-        (valueChange)="procedimentoNome.set($event)"
+        (valueChange)="onProcedimentoChange($event)"
         (aoAdicionar)="criarProcedimento($event)"
         (aoEditar)="renomearProcedimento($event)"
         (aoExcluir)="excluirProcedimento($event)"
@@ -232,13 +265,17 @@
   <div class="processo-form__row processo-form__row--stack">
     <div class="processo-field">
       <span>Fase</span>
-      <app-combobox
+      <app-domain-model-dropdown
         ariaLabel="Fase do processo"
         placeholder="Buscar fase..."
         emptyLabel="— Sem fase —"
         noResultsText="Nenhuma fase encontrada"
         itemNoun="fase"
-        [buscarPagina]="buscarFases"
+        entityName="fase-processo"
+        fields="id,nome"
+        [searchFields]="['nome']"
+        sort="nome"
+        [displayFormatter]="rotuloCatalogo"
         [value]="faseValor()"
         [valueLabel]="faseLabel()"
         [adicionar]="true"

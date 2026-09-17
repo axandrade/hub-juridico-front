@@ -3,6 +3,7 @@ import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 
 import { cpfValidator, maskCpf, onlyDigits } from '../../../../core/auth/documentos-br';
 import { BRAZILIAN_STATES } from '../../../../core/models/pessoa.model';
+import { DomainService } from '../../../../core/services/domain.service';
 import { ComboboxComponent } from '../../../../shared/components/combobox/combobox.component';
 import { ModalComponent } from '../../../../shared/components/modal/modal.component';
 import { CpfMaskDirective } from '../../../../shared/directives/cpf-mask.directive';
@@ -12,7 +13,6 @@ import { ParteInteressadaService } from '../../services/parte-interessada.servic
 import { PastaMagistradoService } from '../../services/pasta-magistrado.service';
 import { PastaPeritoService } from '../../services/pasta-perito.service';
 import { PeritoService } from '../../services/perito.service';
-import { PosicaoClienteService } from '../../services/posicao-cliente.service';
 import { ResultadoDecisaoService } from '../../services/resultado-decisao.service';
 import { TribunalService } from '../../services/tribunal.service';
 import {
@@ -23,7 +23,7 @@ import {
   OutroEnvolvidoTestemunhaApi,
   ProcessoApi,
 } from '../../services/processo-api.model';
-import { ProcessoEditavel } from '../../services/processo-service';
+import { ProcessoEditavel, ProcessoService } from '../../services/processo-service';
 
 /** O que esta aba entrega pro `save()` do shell (junta no `ProcessoEditavel`). */
 export type OutrosEnvolvidosValores = Pick<
@@ -62,7 +62,8 @@ export type OutrosEnvolvidosValores = Pick<
   styleUrl: './processo-outros-envolvidos.component.scss',
 })
 export class ProcessoOutrosEnvolvidosComponent {
-  private readonly posicaoService = inject(PosicaoClienteService);
+  private readonly domainService = inject(DomainService);
+  private readonly processoService = inject(ProcessoService);
   private readonly magistradoService = inject(MagistradoService);
   private readonly resultadoService = inject(ResultadoDecisaoService);
   private readonly orgaoService = inject(OrgaoJulgadorService);
@@ -79,9 +80,14 @@ export class ProcessoOutrosEnvolvidosComponent {
 
   /** Siglas das 27 UFs — lista fixa (sem "+"), igual ao select de UF do cadastro de cliente. */
   protected readonly ufOpcoes = [...BRAZILIAN_STATES];
-  protected readonly nomesDePosicao = computed(() =>
-    this.posicaoService.posicoes().map((p) => p.nome),
-  );
+  /**
+   * Catálogo `posicao_cliente` (V27), só pra alimentar este `<app-combobox>` de opções locais —
+   * a "posição" aqui é texto livre num item da lista de advogados envolvidos, sem `*_id` no
+   * backend (ao contrário de "Posição do cliente"/"Posição da parte contrária" no processo
+   * principal, ver `ProcessoDadosGeraisComponent`), então não é um `<app-domain-model-dropdown>`.
+   */
+  private readonly posicoesCatalogo = signal<{ id: number; nome: string }[]>([]);
+  protected readonly nomesDePosicao = computed(() => this.posicoesCatalogo().map((p) => p.nome));
 
   /** Campos de texto da linha de advogado em edição (posição e UF são `<app-combobox>` → signals). */
   protected readonly advForm: FormGroup<{
@@ -232,7 +238,11 @@ export class ProcessoOutrosEnvolvidosComponent {
   }
 
   constructor() {
-    this.posicaoService.carregar();
+    this.domainService
+      .get<{ id: number; nome: string }[]>({
+        entityName: 'posicao-cliente', all: true, fields: 'id,nome', sort: 'nome',
+      })
+      .subscribe((posicoes) => this.posicoesCatalogo.set(posicoes));
     this.magistradoService.carregar();
     this.resultadoService.carregar();
     this.orgaoService.carregar();
@@ -499,8 +509,11 @@ export class ProcessoOutrosEnvolvidosComponent {
   // ===================== catálogos (só "adicionar" aqui) =====================
 
   protected criarPosicao(nome: string): void {
-    this.posicaoService.criar(nome).subscribe({
-      next: (p) => this.posicaoRascunho.set(p.nome),
+    this.processoService.criarCatalogo('posicao-cliente', nome).subscribe({
+      next: (p) => {
+        this.posicoesCatalogo.update((atual) => [...atual, p].sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR')));
+        this.posicaoRascunho.set(p.nome);
+      },
       error: (err: unknown) => this.erro.emit(this.mensagemErroHttp(err)),
     });
   }

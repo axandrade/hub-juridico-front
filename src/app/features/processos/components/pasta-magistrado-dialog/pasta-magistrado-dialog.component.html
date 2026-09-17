@@ -14,12 +14,18 @@
         <button type="button" class="pasta-dialog__voltar" (click)="voltarParaListaPastas()">
           <i class="fa-solid fa-arrow-left" aria-hidden="true"></i> Todos os processos
         </button>
-        <app-document-explorer
-          [pessoaId]="alvo.id"
-          [pessoaNome]="alvo.nome"
-          [pastaInicialId]="processo.pastaId"
-          (notify)="onPastaNotice($event)"
-        />
+        @if (processo.pastaId) {
+          <app-document-explorer
+            [pessoaId]="alvo.id"
+            [pessoaNome]="alvo.nome"
+            [pastaInicialId]="processo.pastaId"
+            (notify)="onPastaNotice($event)"
+          />
+        } @else {
+          <!-- `pastaId` nulo = subpasta do processo ainda não existe (não é "raiz do magistrado" —
+               omitir pastaInicialId aqui abriria a árvore geral dele, sem relação com este processo). -->
+          <p class="pasta-dialog__vazio">Este processo ainda não tem pasta de arquivos.</p>
+        }
       } @else {
         <app-processos-magistrado-com-arquivos
           [magistradoId]="alvo.id"

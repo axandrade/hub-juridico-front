@@ -6,6 +6,11 @@
   font-size: $font-size-xs;
 }
 
+.pasta-dialog__vazio {
+  margin: 0;
+  color: $color-text-secondary;
+}
+
 .pasta-dialog__voltar {
   display: inline-flex;
   align-items: center;

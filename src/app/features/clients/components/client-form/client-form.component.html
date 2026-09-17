@@ -34,16 +34,19 @@
     </div>
 
     <div class="clients-panel__tools" aria-label="Ferramentas do painel">
-      <button
-        type="button"
-        class="clients-icon-button"
-        [class.is-active]="favorite()"
-        title="Configurar favorito"
-        aria-label="Configurar favorito"
-        (click)="toggleFavorite()"
-      >
-        <i class="fa-solid fa-star" aria-hidden="true"></i>
-      </button>
+      @if (isPersisted()) {
+        <button
+          type="button"
+          class="clients-icon-button"
+          [class.is-active]="favorite()"
+          [disabled]="favoritoBusy()"
+          title="Configurar favorito"
+          aria-label="Configurar favorito"
+          (click)="toggleFavorite()"
+        >
+          <i class="fa-solid fa-star" aria-hidden="true"></i>
+        </button>
+      }
       <button
         type="button"
         class="clients-icon-button"

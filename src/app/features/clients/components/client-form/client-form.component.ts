@@ -11,7 +11,7 @@ import {
 } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
-import { Observable, catchError, forkJoin, map, of, startWith, switchMap } from 'rxjs';
+import { Observable, catchError, map, of, startWith, switchMap } from 'rxjs';
 
 import {
   IPessoa,
@@ -71,9 +71,10 @@ interface EditorNotice {
 /**
  * Tela autônoma de cadastro/edição de pessoa (física ou jurídica). Dona do
  * `FormGroup` raiz; carrega a ficha por id (ou vazia para novo cadastro), valida, e persiste —
- * criar e atualizar via `DomainService` (`/domain/pessoa-fisica`/`/domain/pessoa-juridica`,
- * mesmo padrão do `AdvogadoFormComponent`); status/favorito continuam via `ClientService`
- * (`/api/v1/pessoas`). O `clients` só decide qual `pessoaId` mostrar e reage aos outputs.
+ * criar, atualizar e favoritar via `DomainService`/`DomainFavoritoService`
+ * (`/domain/pessoa-fisica`/`/domain/pessoa-juridica`/`/domain/favorito`, mesmo padrão do
+ * `AdvogadoFormComponent`); status continua via `ClientService` (`/api/v1/pessoas`). O `clients`
+ * só decide qual `pessoaId` mostrar e reage aos outputs.
  */
 @Component({
   selector: 'app-client-form',
@@ -131,7 +132,10 @@ export class ClientFormComponent {
 
   protected readonly entityId = signal(0);
   protected readonly registeredAt = signal(new Date());
-  protected readonly favorite = signal(false);
+  /** Id da linha `Favorito` (não do cliente) — `null` = não favoritado. Ver `DomainFavoritoService`. */
+  private readonly favoritoId = signal<number | null>(null);
+  protected readonly favorite = computed(() => this.favoritoId() !== null);
+  protected readonly favoritoBusy = signal(false);
   /** `registro_andamento` como veio do backend — base para detectar mudança e logar no histórico. */
   private readonly loadedProgress = signal('');
   protected readonly activePanelTab = signal<PanelTab>('person');
@@ -211,16 +215,30 @@ export class ClientFormComponent {
 
   protected toggleFavorite(): void {
     const id = this.entityId();
-    if (id > 0) {
-      this.favorite.set(this.clientService.alternarFavorito(id, this.favorite()));
-    } else {
-      this.favorite.update((value) => !value);
+    if (id <= 0 || this.favoritoBusy()) {
+      return;
     }
-    this.toast.sucesso(
-      this.favorite()
-        ? `${this.panelTitle()} marcado como favorito.`
-        : `${this.panelTitle()} removido dos favoritos.`,
-    );
+    this.favoritoBusy.set(true);
+    const currentFavoritoId = this.favoritoId();
+    const request$ = currentFavoritoId != null
+      ? this.domainFavoritoService.desfavoritar(currentFavoritoId).pipe(map(() => null as number | null))
+      : this.domainFavoritoService.favoritar('pessoa', id).pipe(map((novoId) => novoId as number | null));
+
+    request$.subscribe({
+      next: (novoFavoritoId) => {
+        this.favoritoId.set(currentFavoritoId != null ? null : novoFavoritoId);
+        this.favoritoBusy.set(false);
+        this.toast.sucesso(
+          this.favorite()
+            ? `${this.panelTitle()} marcado como favorito.`
+            : `${this.panelTitle()} removido dos favoritos.`,
+        );
+      },
+      error: (err: unknown) => {
+        this.favoritoBusy.set(false);
+        this.toast.erro(`Não foi possível favoritar: ${this.httpErrorMessage(err)}`);
+      },
+    });
   }
 
   protected save(): void {
@@ -279,8 +297,9 @@ export class ClientFormComponent {
   /**
    * `PATCH /domain/pessoa-fisica` ou `/domain/pessoa-juridica` (ddd-noap, merge genérico — sem
    * `@Update`, igual `Advogado`: CPF/CNPJ ficam de fora do corpo por convenção, ver
-   * `clientToAtualizarPessoaDomainRequest`) — devolve `204`, então encadeia um `get()` pra
-   * ficha completa. Favorito não muda aqui, então reaproveita o valor já carregado no painel.
+   * `clientToAtualizarPessoaDomainRequest`) — devolve `204`, então encadeia um `get()` pra ficha
+   * completa. `favorite` aqui é só placeholder (`false`) — `loadIntoForm` reconsulta o favorito
+   * de verdade via `DomainFavoritoService` logo em seguida.
    */
   private atualizarPessoaDomain(client: IPessoa): Observable<IPessoa> {
     const entityName = client.pessoa.tipo === 'FISICA' ? 'pessoa-fisica' : 'pessoa-juridica';
@@ -293,7 +312,7 @@ export class ClientFormComponent {
           fields: PESSOA_DOMAIN_FIELDS,
         }),
       ),
-      map((pessoa) => pessoaDomainToClient(pessoa, this.favorite(), this.auth.user())),
+      map((pessoa) => pessoaDomainToClient(pessoa, false, this.auth.user())),
     );
   }
 
@@ -365,32 +384,33 @@ export class ClientFormComponent {
 
   /**
    * Ficha completa por id direto do `/domain/pessoa/{id}` (ddd-noap) — mesmo padrão já validado
-   * em `AdvogadoFormComponent`. `favorito` não é campo da entidade, então vem à parte via
-   * `DomainFavoritoService` (mesma tabela `Favorito` que `ClientService.alternarFavorito`
-   * grava, só a leitura muda). "Cadastrado por" perde a resolução do nome vinda do backend
+   * em `AdvogadoFormComponent`. `favorite` aqui é só placeholder (`false`) — `loadIntoForm`
+   * resolve o favorito de verdade via `DomainFavoritoService` (favorito não é campo da entidade
+   * `Pessoa`). "Cadastrado por" perde a resolução do nome vinda do backend
    * (`cadastrado_por_nome` era join no `PessoaService` antigo) — cai no fallback já existente
    * de `resolveCadastradoPor` (usuário atual ou "Usuário #id").
    */
   private buscarCompleto(id: number) {
-    return forkJoin({
-      pessoa: this.domainService.get<PessoaDomain>({
-        entityName: 'pessoa',
-        entityId: id,
-        fields: PESSOA_DOMAIN_FIELDS,
-      }),
-      favoritos: this.domainFavoritoService.listarFavoritos('pessoa', [id]),
-    }).pipe(
-      map(({ pessoa, favoritos }) => pessoaDomainToClient(pessoa, favoritos.has(id), this.auth.user())),
-      catchError(() => of(null)),
-    );
+    return this.domainService
+      .get<PessoaDomain>({ entityName: 'pessoa', entityId: id, fields: PESSOA_DOMAIN_FIELDS })
+      .pipe(
+        map((pessoa) => pessoaDomainToClient(pessoa, false, this.auth.user())),
+        catchError(() => of(null)),
+      );
   }
 
   private loadIntoForm(client: IPessoa): void {
     this.entityId.set(client.id);
     this.registeredAt.set(new Date(client.registeredAt));
-    this.favorite.set(client.favorite);
     this.loadedProgress.set(client.dossier.progressEntry);
     patchClientForm(this.form, client);
+    if (client.id > 0) {
+      this.domainFavoritoService
+        .listarFavoritos('pessoa', [client.id])
+        .subscribe((map) => this.favoritoId.set(map.get(client.id) ?? null));
+    } else {
+      this.favoritoId.set(null);
+    }
   }
 
   private assembleClient(): IPessoa {

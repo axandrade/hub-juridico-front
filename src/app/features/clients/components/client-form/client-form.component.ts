@@ -22,7 +22,7 @@ import {
 } from '../../../../core/models';
 import { AuthService } from '../../../../core/services/auth.service';
 import { DomainFavoritoService } from '../../../../core/services/domain-favorito.service';
-import { DomainService } from '../../../../core/services/domain.service';
+import { DomainService, IDomainPage } from '../../../../core/services/domain.service';
 import { PanelFooterActionsComponent } from '../../../../shared/components/panel-footer-actions/panel-footer-actions.component';
 import { ToastService } from '../../../../shared/services/toast.service';
 import { mensagensCamposInvalidos } from '../../../../shared/utils/form-validacao';
@@ -38,7 +38,6 @@ import {
   PESSOA_JURIDICA_FIELDS,
 } from '../../models/client-form.model';
 import { StatusVinculoApi } from '../../services/client-api.model';
-import { ClientService } from '../../services/client-service';
 import {
   PESSOA_DOMAIN_FIELDS,
   PessoaDomain,
@@ -71,10 +70,11 @@ interface EditorNotice {
 /**
  * Tela autônoma de cadastro/edição de pessoa (física ou jurídica). Dona do
  * `FormGroup` raiz; carrega a ficha por id (ou vazia para novo cadastro), valida, e persiste —
- * criar, atualizar e favoritar via `DomainService`/`DomainFavoritoService`
- * (`/domain/pessoa-fisica`/`/domain/pessoa-juridica`/`/domain/favorito`, mesmo padrão do
- * `AdvogadoFormComponent`); status continua via `ClientService` (`/api/v1/pessoas`). O `clients`
- * só decide qual `pessoaId` mostrar e reage aos outputs.
+ * criar, atualizar, ativar/inativar e favoritar, tudo via `DomainService`/`DomainFavoritoService`
+ * (`/domain/pessoa-fisica`/`/domain/pessoa-juridica`/`/domain/favorito`) — mesmo padrão do
+ * `AdvogadoFormComponent`, sem nenhum `ClientService`/`PessoaController` dedicado (removidos
+ * junto — só sobrava aqui `PessoaController` mesmo, e o mais recente `alterarStatus`). O
+ * `clients` só decide qual `pessoaId` mostrar e reage aos outputs.
  */
 @Component({
   selector: 'app-client-form',
@@ -94,7 +94,6 @@ interface EditorNotice {
   styleUrl: './client-form.component.scss',
 })
 export class ClientFormComponent {
-  private readonly clientService = inject(ClientService);
   private readonly domainService = inject(DomainService);
   private readonly domainFavoritoService = inject(DomainFavoritoService);
   private readonly auth = inject(AuthService);
@@ -250,27 +249,54 @@ export class ClientFormComponent {
       return;
     }
 
-    const prepared = this.prepareClientForSave(this.assembleClient());
+    const assembled = this.assembleClient();
     this.salvando.set(true);
-    const request$ = this.isPersisted()
-      ? this.atualizarPessoaDomain(prepared)
-      : this.criarPessoaDomain(prepared);
 
-    request$.subscribe({
-      next: (savedClient) => {
-        this.salvando.set(false);
-        this.tipoNovoEscolhido.set(null);
-        this.loadIntoForm(savedClient);
-        this.lastLoadedKey = `id:${savedClient.id}`;
-        this.activePanelTab.set('person');
-        this.toast.sucesso(`Cliente salvo: ${this.clientDisplayName(savedClient)}.`);
-        this.saved.emit(savedClient);
-      },
-      error: (err: unknown) => {
-        this.salvando.set(false);
-        this.toast.erro(`Não foi possível salvar: ${this.httpErrorMessage(err)}`);
-      },
+    // `clientFolderName` só precisa de um "próximo id" quando é registro novo E o usuário não
+    // digitou nome de pasta manualmente — nos outros casos pula a chamada extra.
+    const precisaDeProximoId = assembled.id === 0 && !assembled.dossier.folder.trim();
+    this.resolverProximoIdGuess(precisaDeProximoId).subscribe((proximoIdGuess) => {
+      const prepared = this.prepareClientForSave(assembled, proximoIdGuess);
+      const request$ = this.isPersisted()
+        ? this.atualizarPessoaDomain(prepared)
+        : this.criarPessoaDomain(prepared);
+
+      request$.subscribe({
+        next: (savedClient) => {
+          this.salvando.set(false);
+          this.tipoNovoEscolhido.set(null);
+          this.loadIntoForm(savedClient);
+          this.lastLoadedKey = `id:${savedClient.id}`;
+          this.activePanelTab.set('person');
+          this.toast.sucesso(`Cliente salvo: ${this.clientDisplayName(savedClient)}.`);
+          this.saved.emit(savedClient);
+        },
+        error: (err: unknown) => {
+          this.salvando.set(false);
+          this.toast.erro(`Não foi possível salvar: ${this.httpErrorMessage(err)}`);
+        },
+      });
     });
+  }
+
+  /**
+   * Chute de "próximo id" pra nomear a pasta de um cliente novo antes de existir de verdade
+   * (o id real só sai depois do create) — maior id existente em `/domain/pessoa` + 1. Mais
+   * preciso que o cache local que existia antes (`ClientService`, removido): esse via só o que
+   * tinha passado pelo navegador nesta sessão; isso aqui é o estado real do banco. Ainda é só
+   * um chute (outro create concorrente pode furar), mas é sempre foi só isso — nunca uma
+   * garantia de unicidade.
+   */
+  private resolverProximoIdGuess(precisa: boolean): Observable<number> {
+    if (!precisa) {
+      return of(1);
+    }
+    return this.domainService
+      .get<IDomainPage<{ id: number }>>({ entityName: 'pessoa', sort: '-id', size: 1, fields: 'id' })
+      .pipe(
+        map((page) => (page.content[0]?.id ?? 0) + 1),
+        catchError(() => of(1)),
+      );
   }
 
   /**
@@ -319,7 +345,8 @@ export class ClientFormComponent {
   /**
    * Ação do botão ativar/inativar (só aparece com o cliente já salvo). Inativar
    * pede confirmação; reativar é direto — não há exclusão, só muda o status via
-   * `PATCH /pessoas/{id}/status`.
+   * `PATCH /domain/pessoa-fisica`/`/domain/pessoa-juridica` (igual `atualizarPessoaDomain`,
+   * mesmo padrão do `AdvogadoFormComponent.alterarStatus`).
    */
   protected requestStatusChange(): void {
     if (this.isInactive()) {
@@ -335,16 +362,29 @@ export class ClientFormComponent {
 
   private applyStatusChange(status: StatusVinculoApi): void {
     const id = this.entityId();
-    this.clientService.alterarStatus(id, status).subscribe({
-      next: (updated) => {
-        this.loadIntoForm(updated);
-        this.toast.sucesso(`Cliente ${status === 'ATIVO' ? 'ativado' : 'inativado'}.`);
-        this.statusChanged.emit(updated);
-      },
-      error: (err: unknown) => {
-        this.toast.erro(`Não foi possível alterar o status: ${this.httpErrorMessage(err)}`);
-      },
-    });
+    const entityName = this.tipoPessoaAtual() === 'FISICA' ? 'pessoa-fisica' : 'pessoa-juridica';
+    this.domainService
+      .patch({ entityName, entityId: id, body: { status } })
+      .pipe(
+        switchMap(() =>
+          this.domainService.get<PessoaDomain>({
+            entityName: 'pessoa',
+            entityId: id,
+            fields: PESSOA_DOMAIN_FIELDS,
+          }),
+        ),
+        map((pessoa) => pessoaDomainToClient(pessoa, false, this.auth.user())),
+      )
+      .subscribe({
+        next: (updated) => {
+          this.loadIntoForm(updated);
+          this.toast.sucesso(`Cliente ${status === 'ATIVO' ? 'ativado' : 'inativado'}.`);
+          this.statusChanged.emit(updated);
+        },
+        error: (err: unknown) => {
+          this.toast.erro(`Não foi possível alterar o status: ${this.httpErrorMessage(err)}`);
+        },
+      });
   }
 
   protected clearPanel(): void {
@@ -422,7 +462,7 @@ export class ClientFormComponent {
     };
   }
 
-  private prepareClientForSave(client: IPessoa): IPessoa {
+  private prepareClientForSave(client: IPessoa, proximoIdGuess: number): IPessoa {
     const base = structuredClone(client);
 
     base.pessoa.nome = this.toUppercaseName(base.pessoa.nome);
@@ -447,7 +487,7 @@ export class ClientFormComponent {
     dossier.internalOwner = dossier.internalOwner.trim() || this.usuarioLogado();
 
     if (!dossier.folder.trim()) {
-      dossier.folder = this.clientFolderName(base);
+      dossier.folder = this.clientFolderName(base, proximoIdGuess);
     }
 
     // `progressEntry` é o andamento atual (persiste em `registro_andamento`).
@@ -484,9 +524,9 @@ export class ClientFormComponent {
       : (client.pessoa.razaoSocial || client.pessoa.nomeFantasia).trim();
   }
 
-  private clientFolderName(client: IPessoa): string {
+  private clientFolderName(client: IPessoa, proximoIdGuess: number): string {
     const name = this.sanitizeFolderName(this.clientDisplayName(client) || 'CLIENTE');
-    return `Pasta - ${this.formatClientId(client.id || this.clientService.proximoId())} - ${name}`;
+    return `Pasta - ${this.formatClientId(client.id || proximoIdGuess)} - ${name}`;
   }
 
   private sanitizeFolderName(value: string): string {

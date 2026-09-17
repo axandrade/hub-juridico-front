@@ -13,7 +13,7 @@ import {
 /**
  * Fonte da lista de todos os clientes, com ou sem arquivo (`GET /api/v1/pastas/clientes`,
  * paginado de 10 em 10 no backend). Só apresentação — o componente pede uma página, o serviço
- * guarda o estado de paginação. Mesma forma do `ClientService`.
+ * guarda o estado de paginação.
  */
 @Injectable({ providedIn: 'root' })
 export class ClientesComArquivosService {

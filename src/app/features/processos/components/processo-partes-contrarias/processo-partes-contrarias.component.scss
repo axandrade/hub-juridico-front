@@ -121,6 +121,20 @@
   }
 }
 
+// Ícone estático (public/icon-parte-contraria-principal.svg, cores fixas) — sem "currentColor"
+// pra responder ao estado do botão, então quem marca "não é a principal" é o filtro, não a cor.
+.processo-partes__estrela {
+  width: 18px;
+  height: 16px;
+  filter: grayscale(1) opacity(0.55);
+  transition: filter $transition-fast;
+}
+
+.clients-primary-toggle:hover .processo-partes__estrela,
+.clients-primary-toggle.is-active .processo-partes__estrela {
+  filter: none;
+}
+
 // Linha selecionável (clica pra marcar/desmarcar — "Remover" ao lado de "Adicionar" age sobre a
 // seleção), mesmo conceito de `ProcessoClientesComponent`/`.processo-outros__lista button`.
 .processo-partes__opcao {

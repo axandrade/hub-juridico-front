@@ -96,9 +96,18 @@
   }
 }
 
+// Ícone estático (public/icon-cliente-principal.svg, cores fixas) — sem "currentColor" pra
+// responder ao estado do botão, então quem marca "não é o principal" é o filtro, não a cor.
 .processo-clientes__estrela {
   width: 18px;
   height: 16px;
+  filter: grayscale(1) opacity(0.55);
+  transition: filter $transition-fast;
+}
+
+.clients-primary-toggle:hover .processo-clientes__estrela,
+.clients-primary-toggle.is-active .processo-clientes__estrela {
+  filter: none;
 }
 
 // Linha selecionável (clica pra marcar/desmarcar — "Remover" ao lado de "Adicionar" age sobre a

@@ -60,7 +60,9 @@
         [attr.aria-label]="linha.principal ? 'Parte contrária principal' : 'Definir como principal'"
         (click)="marcarPrincipal(i)"
       >
-        <i class="fa-solid fa-star" aria-hidden="true"></i>
+        <!-- Ícone estático em public/ (estrela + grupo) — cor fixa; "não é a principal" fica
+             acinzentada via filtro CSS (ver .processo-partes__estrela), sem duplicar o SVG aqui. -->
+        <img class="processo-partes__estrela" src="icon-parte-contraria-principal.svg" alt="" />
       </button>
       <button
         type="button"

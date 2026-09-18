@@ -50,17 +50,20 @@
       trackKey="id"
       emptyMessage="Nenhuma operação cadastrada para este processo."
       [favoritable]="false"
+      [editAction]="abrirEdicao"
+      editAriaLabel="Editar operação"
       (dataLoaded)="onDataLoaded($event)"
     />
   </div>
 </aside>
 
-<app-modal [open]="novoAberto()" [wide]="true" title="Nova operação" (closed)="fecharNovo()">
-  @if (novoAberto()) {
+<app-modal [open]="formAberto() !== null" [wide]="true" [title]="tituloForm()" (closed)="fecharForm()">
+  @if (formAberto() !== null) {
     <app-operacao-form
       [processoId]="processoId()"
+      [operacaoId]="operacaoIdParaForm()"
       (salvo)="onOperacaoSalva()"
-      (cancelado)="fecharNovo()"
+      (cancelado)="fecharForm()"
     />
   }
 </app-modal>

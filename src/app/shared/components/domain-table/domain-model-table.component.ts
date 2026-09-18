@@ -84,6 +84,10 @@ export class DomainModelTableComponent<T extends object> {
   readonly favoritable = input<boolean>(true);
   /** Sem isso, todo registro é favoritável. Quando informado, um registro "inativo" nunca fixa como favorito e o botão de favoritar fica desabilitado nele. */
   readonly isRowActive = input<((row: T) => boolean) | null>(null);
+  /** Liga uma coluna de ícone "editar" à direita da linha (própria, fora do `rowClick`) — sem isso, a coluna nem existe. */
+  readonly editAction = input<((row: T) => void) | null>(null);
+  readonly editIcon = input<string>('fa-solid fa-pen');
+  readonly editAriaLabel = input<string>('Editar');
 
   readonly rowClick = output<T>();
   /** Emitido a cada busca bem-sucedida — espelha `getCurrentDataList` do cev-front. */
@@ -114,7 +118,9 @@ export class DomainModelTableComponent<T extends object> {
     return this.columns().filter((column) => keys.has(column.key));
   });
 
-  protected readonly colspan = computed(() => this.visibleColumns().length + (this.favoritable() ? 1 : 0));
+  protected readonly colspan = computed(
+    () => this.visibleColumns().length + (this.favoritable() ? 1 : 0) + (this.editAction() ? 1 : 0),
+  );
 
   /** Favoritos fixos sempre primeiro, independente da paginação/ordenação do resto. */
   protected readonly displayRows = computed(() => [...this.pinnedRows(), ...this.rows()]);
@@ -257,6 +263,11 @@ export class DomainModelTableComponent<T extends object> {
   protected isRowFavoritable(row: T): boolean {
     const predicate = this.isRowActive();
     return !predicate || predicate(row);
+  }
+
+  protected onEditClick(row: T, event: MouseEvent): void {
+    event.stopPropagation();
+    this.editAction()?.(row);
   }
 
   protected toggleFavorito(row: T, event: MouseEvent): void {

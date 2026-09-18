@@ -42,6 +42,9 @@
             }
           </th>
         }
+        @if (editAction()) {
+          <th class="data-table__edit"></th>
+        }
       </tr>
     </thead>
 
@@ -97,6 +100,18 @@
                     {{ displayValue(row, column) }}
                   }
                 }
+              </td>
+            }
+            @if (editAction()) {
+              <td class="data-table__edit">
+                <button
+                  type="button"
+                  class="data-table__edit-button"
+                  [attr.aria-label]="editAriaLabel()"
+                  (click)="onEditClick(row, $event)"
+                >
+                  <i [class]="editIcon()" aria-hidden="true"></i>
+                </button>
               </td>
             }
           </tr>

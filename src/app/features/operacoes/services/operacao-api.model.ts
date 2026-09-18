@@ -19,6 +19,27 @@ export interface OperacaoRow {
   criadoEm: string | null;
 }
 
+/** Ficha completa de `/domain/operacao/{id}` — usada pelo formulário pra carregar uma edição. */
+export interface OperacaoDetalheRow {
+  id: number;
+  tipo: TipoOperacao;
+  processoId: number;
+  titulo: string | null;
+  prazoFatal: string | null;
+  horaInicio: string | null;
+  horaFim: string | null;
+  importancia: string | null;
+  dataEvento: string | null;
+  horaEvento: string | null;
+  horaPrazo: string | null;
+  origem: string | null;
+  link: string | null;
+  teor: string | null;
+  providencia: string | null;
+  responsavelId: number | null;
+  status: string | null;
+}
+
 /**
  * Corpo de `POST /domain/operacao` — snake_case (ver `DomainService`, escrita vai direto no bean
  * JPA via `ObjectMapper.readerForUpdating`, respeita o `PropertyNamingStrategy`). Campos que não

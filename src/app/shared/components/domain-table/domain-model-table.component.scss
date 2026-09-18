@@ -156,6 +156,34 @@
     }
   }
 
+  &__edit {
+    width: 44px;
+    max-width: 44px;
+    text-align: center;
+  }
+
+  &__edit-button {
+    @include flex-center;
+    width: 34px;
+    height: 34px;
+    padding: 0;
+    border: 1px solid $color-border;
+    border-radius: $border-radius-sm;
+    background-color: $color-neutral-light;
+    color: $color-text-secondary;
+    cursor: pointer;
+    transition:
+      background-color $transition-fast,
+      border-color $transition-fast,
+      color $transition-fast;
+
+    &:hover {
+      border-color: $color-primary-light;
+      background-color: rgba($burgundy-deep, 0.05);
+      color: $color-primary;
+    }
+  }
+
   &__sort {
     display: inline-flex;
     width: 100%;

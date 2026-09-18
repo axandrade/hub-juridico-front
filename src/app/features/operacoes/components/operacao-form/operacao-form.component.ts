@@ -1,5 +1,16 @@
-import { ChangeDetectionStrategy, Component, computed, inject, input, output, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  effect,
+  inject,
+  input,
+  output,
+  signal,
+  untracked,
+} from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, ValidatorFn, Validators } from '@angular/forms';
+import { map } from 'rxjs';
 
 import { DomainService } from '../../../../core/services/domain.service';
 import { ButtonComponent } from '../../../../shared/components/button/button.component';
@@ -7,7 +18,12 @@ import { ComboboxComponent } from '../../../../shared/components/combobox/combob
 import { DomainModelDropdownComponent } from '../../../../shared/components/domain-dropdown/domain-model-dropdown.component';
 import { ToastService } from '../../../../shared/services/toast.service';
 import { mensagensCamposInvalidos } from '../../../../shared/utils/form-validacao';
-import { OperacaoWriteApi, TIPO_OPERACAO_LABEL, TipoOperacao } from '../../services/operacao-api.model';
+import {
+  OperacaoDetalheRow,
+  OperacaoWriteApi,
+  TIPO_OPERACAO_LABEL,
+  TipoOperacao,
+} from '../../services/operacao-api.model';
 
 const ENTITY = 'operacao';
 
@@ -39,14 +55,16 @@ function text(validators: ValidatorFn[] = []): FormControl<string> {
 }
 
 /**
- * Formulário de cadastro de operação — vive dentro do `app-modal` do
+ * Formulário de cadastro/edição de operação — vive dentro do `app-modal` do
  * `app-operacoes-processo-panel` (mesmo padrão de `app-usuario-form`). Sem service dedicado: como
- * `Advogado`, `Operacao` é `POST`ada direto em `/domain/operacao` via `DomainService` (ver
- * `Operacao.criarOperacao` no backend).
+ * `Advogado`, `Operacao` é `POST`ada (criar) ou `PATCH`ada (editar) direto em `/domain/operacao`
+ * via `DomainService` (ver `Operacao.criarOperacao` no backend — o `PATCH` não precisa de método
+ * dedicado, é o merge genérico do ddd-noap).
  *
  * Um dropdown de "Tipo" (Intimação/Tarefa/Compromisso) troca quais campos aparecem — mesma
  * tabela pros 3 tipos no backend, campos que não se aplicam vão `null`. `processoId` não é um
- * campo do formulário: vem fixo do painel que já está filtrado por aquele processo.
+ * campo do formulário: vem fixo do painel que já está filtrado por aquele processo (mesmo em
+ * edição — não dá pra mover a operação pra outro processo por aqui).
  */
 @Component({
   selector: 'app-operacao-form',
@@ -60,6 +78,8 @@ export class OperacaoFormComponent {
   private readonly toast = inject(ToastService);
 
   readonly processoId = input.required<number>();
+  /** `null` = cadastro novo; com id, carrega a ficha e `salvar()` vira `PATCH`. */
+  readonly operacaoId = input<number | null>(null);
 
   readonly salvo = output<void>();
   readonly cancelado = output<void>();
@@ -101,7 +121,53 @@ export class OperacaoFormComponent {
   });
 
   constructor() {
+    effect(() => {
+      const id = this.operacaoId();
+      untracked(() => {
+        if (id === null) {
+          this.resetToEmpty();
+          return;
+        }
+        this.domainService
+          .get<OperacaoDetalheRow>({ entityName: ENTITY, entityId: id })
+          .subscribe((op) => this.loadIntoForm(op));
+      });
+    });
+  }
+
+  private resetToEmpty(): void {
+    this.form.reset();
     this.form.patchValue({ status: 'Pendente', origem: 'Cadastro manual' });
+    this.tipo.set('INTIMACAO');
+    this.responsavelId.set(null);
+    this.responsavelLabel.set('');
+  }
+
+  private loadIntoForm(op: OperacaoDetalheRow): void {
+    this.tipo.set(op.tipo);
+    this.responsavelId.set(op.responsavelId);
+    this.responsavelLabel.set('');
+    if (op.responsavelId !== null) {
+      this.domainService
+        .get<{ name: string }>({ entityName: 'user', entityId: op.responsavelId, fields: 'name' })
+        .subscribe((u) => this.responsavelLabel.set(u?.name ?? ''));
+    }
+    this.form.reset();
+    this.form.patchValue({
+      titulo: op.titulo ?? '',
+      prazoFatal: op.prazoFatal ?? '',
+      status: op.status ?? 'Pendente',
+      horaInicio: op.horaInicio ?? '',
+      horaFim: op.horaFim ?? '',
+      importancia: op.importancia ?? '',
+      dataEvento: op.dataEvento ?? '',
+      horaEvento: op.horaEvento ?? '',
+      horaPrazo: op.horaPrazo ?? '',
+      origem: op.origem ?? '',
+      link: op.link ?? '',
+      teor: op.teor ?? '',
+      providencia: op.providencia ?? '',
+    });
   }
 
   protected tipoRotulo(): string {
@@ -152,11 +218,19 @@ export class OperacaoFormComponent {
       providencia: intimacao ? raw.providencia.trim() || null : null,
     };
 
+    const id = this.operacaoId();
+    const request$ =
+      id === null
+        ? this.domainService
+            .post<OperacaoWriteApi>({ entityName: ENTITY, body: payload })
+            .pipe(map(() => undefined))
+        : this.domainService.patch<OperacaoWriteApi>({ entityName: ENTITY, entityId: id, body: payload });
+
     this.salvando.set(true);
-    this.domainService.post<OperacaoWriteApi>({ entityName: ENTITY, body: payload }).subscribe({
+    request$.subscribe({
       next: () => {
         this.salvando.set(false);
-        this.toast.sucesso('Operação cadastrada.');
+        this.toast.sucesso(id === null ? 'Operação cadastrada.' : 'Operação atualizada.');
         this.salvo.emit();
       },
       error: (err: unknown) => {

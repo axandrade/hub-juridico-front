@@ -14,9 +14,9 @@ import { OperacaoFormComponent } from '../operacao-form/operacao-form.component'
  * Painel lateral fixo (sempre à direita — sem os outros modos de `PanelShellController` tipo
  * esquerda/abaixo/diálogo, só o redimensionamento por arraste, que o controller já resolve)
  * com as operações de um processo — uma segunda `app-domain-model-table`, apontada pra
- * `/domain/operacao`, filtrada por `processoId eq {processoId}`. "Novo" abre `app-operacao-form`
- * dentro de um `app-modal` (mesmo padrão de Usuários — dialog, não painel, porque este painel já
- * ocupa a lateral).
+ * `/domain/operacao`, filtrada por `processoId eq {processoId}`. "Novo" e o ícone de editar de
+ * cada linha (`editAction`) abrem `app-operacao-form` dentro de um `app-modal` (mesmo padrão de
+ * Usuários — dialog, não painel, porque este painel já ocupa a lateral).
  *
  * A coluna "Ordem" é derivada no cliente (não existe na entidade): posição cronológica de
  * cadastro (1º = mais antiga), calculada a partir de `criadoEm`/`id` de TODA a lista carregada —
@@ -42,7 +42,13 @@ export class OperacoesProcessoPanelComponent {
 
   private readonly grade = viewChild(DomainModelTableComponent<OperacaoRow>);
 
-  protected readonly novoAberto = signal(false);
+  /** `null` = fechado, `'novo'` = cadastro, `número` = editando a operação daquele id. */
+  protected readonly formAberto = signal<'novo' | number | null>(null);
+  protected readonly operacaoIdParaForm = computed(() => {
+    const v = this.formAberto();
+    return typeof v === 'number' ? v : null;
+  });
+  protected readonly tituloForm = computed(() => (this.formAberto() === 'novo' ? 'Nova operação' : 'Editar operação'));
 
   /**
    * Só a largura/arraste do `PanelShellController` interessam aqui (painel sempre ancorado à
@@ -131,15 +137,20 @@ export class OperacoesProcessoPanelComponent {
   }
 
   protected abrirNovo(): void {
-    this.novoAberto.set(true);
+    this.formAberto.set('novo');
   }
 
-  protected fecharNovo(): void {
-    this.novoAberto.set(false);
+  /** Ícone "editar" da grade (`editAction`) — arrow function de propósito, ver `DomainModelTableComponent.editAction`. */
+  protected readonly abrirEdicao = (row: OperacaoRow): void => {
+    this.formAberto.set(row.id);
+  };
+
+  protected fecharForm(): void {
+    this.formAberto.set(null);
   }
 
   protected onOperacaoSalva(): void {
-    this.novoAberto.set(false);
+    this.formAberto.set(null);
     this.grade()?.reload();
   }
 }

@@ -257,6 +257,44 @@ const cenarioApiDe = (c: CenarioRiscoDomain): CenarioRiscoApi => ({
   provisionar: c.provisionar,
 });
 
+/**
+ * `/domain/processo/{id}` sem `fields` explícito omite TODA coleção `@ElementCollection` não
+ * carregada (mesmo com dado — é assim que o dump por reflexão do ddd-noap funciona, verificado
+ * direto na API: sem isso `clientes`/`outrosEnvolvidosMagistrados`/`tribunaisHistorico` etc.
+ * simplesmente não vêm no JSON). Pedir os campos explicitamente resolve pros não-vazios; um
+ * vazio continua ausente de qualquer jeito — por isso `normalizarRaw` ainda é necessário.
+ */
+const PROCESSO_FICHA_FIELDS = [
+  'id', 'tipo', 'numeroCnj', 'status', 'statusId', 'pasta', 'advogadoResponsavelId', 'dataDistribuicao',
+  'acao', 'acaoId', 'natureza', 'naturezaId', 'procedimento', 'procedimentoId', 'fase', 'faseId',
+  'uf', 'cidade', 'cidadeId', 'observacoesGerais', 'destacarObservacao',
+  'objetoPrincipal', 'observacoesObjeto', 'valorPedido', 'valorDeferido',
+  'cenarioProvavel', 'cenarioPossivel', 'cenarioRemoto', 'objetosSecundarios',
+  'clientes', 'partesContrarias', 'outrosEnvolvidosAdvogados', 'outrosEnvolvidosMagistrados',
+  'outrosEnvolvidosTestemunhas', 'outrosEnvolvidosPeritos', 'outrosEnvolvidosAssistentesTecnicos',
+  'tribunalAtualId', 'orgaoProcessanteId', 'escritoriosAnteriores', 'tags',
+  'observacoesPrevias', 'tribunaisHistorico', 'ativo', 'atualizadoEm',
+].join(',');
+
+/** Preenche com `[]` toda coleção que o backend omitiu por estar vazia (ver `PROCESSO_FICHA_FIELDS`). */
+function normalizarRaw(raw: ProcessoDomainRaw): ProcessoDomainRaw {
+  return {
+    ...raw,
+    objetosSecundarios: raw.objetosSecundarios ?? [],
+    clientes: raw.clientes ?? [],
+    partesContrarias: raw.partesContrarias ?? [],
+    outrosEnvolvidosAdvogados: raw.outrosEnvolvidosAdvogados ?? [],
+    outrosEnvolvidosMagistrados: raw.outrosEnvolvidosMagistrados ?? [],
+    outrosEnvolvidosTestemunhas: raw.outrosEnvolvidosTestemunhas ?? [],
+    outrosEnvolvidosPeritos: raw.outrosEnvolvidosPeritos ?? [],
+    outrosEnvolvidosAssistentesTecnicos: raw.outrosEnvolvidosAssistentesTecnicos ?? [],
+    escritoriosAnteriores: raw.escritoriosAnteriores ?? [],
+    tags: raw.tags ?? [],
+    observacoesPrevias: raw.observacoesPrevias ?? [],
+    tribunaisHistorico: raw.tribunaisHistorico ?? [],
+  };
+}
+
 /** Deduplica e remove `null`/`undefined` — usado pra montar os filtros `id eq X or id eq Y...`. */
 function idsUnicos(ids: (number | null | undefined)[]): number[] {
   return [...new Set(ids.filter((id): id is number => id != null))];
@@ -526,9 +564,9 @@ export class ProcessoService {
    */
   buscarCompleto(id: number): Observable<ProcessoApi | null> {
     return this.domainService
-      .get<ProcessoDomainRaw>({ entityName: 'processo', entityId: id })
+      .get<ProcessoDomainRaw>({ entityName: 'processo', entityId: id, fields: PROCESSO_FICHA_FIELDS })
       .pipe(
-        switchMap((raw) => this.montarFichaCompleta(id, raw)),
+        switchMap((raw) => this.montarFichaCompleta(id, normalizarRaw(raw))),
         catchError(() => of(null)),
       );
   }

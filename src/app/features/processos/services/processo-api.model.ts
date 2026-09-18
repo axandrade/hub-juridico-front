@@ -1,6 +1,8 @@
 /**
- * Formas de resposta de `/api/v1/processos` (Spring). JSON snake_case (ver `JacksonConfig`),
- * mesmo padrão de `advogado-api.model.ts` — sem model camelCase à parte.
+ * Forma final de um processo (snake_case, mesmo padrão de `advogado-api.model.ts`) — desde
+ * 2026-09-18, sem `ProcessoController`/`ProcessoService` nenhum: `ProcessoApi` é montada no
+ * front a partir de `/domain/processo` (cru) + catálogos resolvidos à parte, ver
+ * `ProcessoService.montarProcessoApi` (`processo-service.ts`).
  */
 
 export type TipoProcesso = 'JUDICIAL' | 'ADMINISTRATIVO' | 'ARBITRAL';
@@ -141,9 +143,9 @@ export interface ObservacaoProcessoApi {
 }
 
 /**
- * Um item de "Órgãos processantes" (`ProcessoResponse.orgaosProcessantes`) — mesma forma de
- * `OrgaoJulgador` do catálogo (`nome` pronto como "TRIBUNAL - descrição"), devolvido dentro da
- * ficha do processo pra não precisar de uma segunda chamada.
+ * O órgão processante atual do processo — mesma forma de `OrgaoJulgador` do catálogo (`nome`
+ * pronto como "TRIBUNAL - descrição"), resolvido dentro da ficha do processo pra não precisar de
+ * uma segunda chamada (ver `ProcessoService.montarProcessoApi`).
  */
 export interface OrgaoProcessanteApi {
   id: number;
@@ -152,9 +154,9 @@ export interface OrgaoProcessanteApi {
 }
 
 /**
- * Tribunal "atual" do processo (`ProcessoResponse.tribunalAtual`) — independente do órgão: pode
- * vir preenchido mesmo sem nenhum órgão específico escolhido ainda (tribunal novo, sem órgão
- * cadastrado no catálogo). Mesma forma do catálogo `Tribunal` (`/domain/tribunal`).
+ * Tribunal "atual" do processo — independente do órgão: pode vir preenchido mesmo sem nenhum
+ * órgão específico escolhido ainda (tribunal novo, sem órgão cadastrado no catálogo). Mesma
+ * forma do catálogo `Tribunal` (`/domain/tribunal`).
  */
 export interface TribunalAtualApi {
   id: number;
@@ -197,7 +199,7 @@ export interface ProcessoResumoApi {
   atualizado_em: string | null;
 }
 
-/** `ProcessoResponse` — completo (aba "Informações básicas" + coleções + auditoria). */
+/** Ficha completa do processo (aba "Informações básicas" + coleções + auditoria). */
 export interface ProcessoApi {
   id: number;
   favorito: boolean;
@@ -253,7 +255,7 @@ export interface ProcessoApi {
   atualizado_em: string | null;
 }
 
-/** Corpo do `POST` / `PUT` de processo (`ProcessoRequest` no backend) — snake_case. */
+/** Corpo do `POST`/`PATCH` de processo em `/domain/processo` — snake_case. */
 export interface ProcessoWriteApi {
   tipo: TipoProcesso;
   numero_cnj: string | null;

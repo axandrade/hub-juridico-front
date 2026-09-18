@@ -1,24 +1,29 @@
-import { HttpClient } from '@angular/common/http';
 import { Injectable, inject, signal } from '@angular/core';
-import { Observable, catchError, map, of, switchMap, tap } from 'rxjs';
+import { Observable, catchError, forkJoin, map, of, switchMap, tap } from 'rxjs';
 
-import { environment } from '../../../../environments/environment';
 import { DomainFavoritoService } from '../../../core/services/domain-favorito.service';
 import { DomainService, IDomainPage } from '../../../core/services/domain.service';
-import { FavoritoService } from '../../../shared/services/favorito.service';
 import {
   CenarioRiscoApi,
   ClienteProcessoApi,
+  MagistradoAtualApi,
+  ObservacaoProcessoApi,
+  OrgaoProcessanteApi,
   OutroEnvolvidoAdvogadoApi,
   OutroEnvolvidoAssistenteTecnicoApi,
+  OutroEnvolvidoMagistradoApi,
   OutroEnvolvidoMagistradoWriteApi,
+  OutroEnvolvidoPeritoApi,
   OutroEnvolvidoPeritoWriteApi,
   OutroEnvolvidoTestemunhaApi,
   ParteContrariaApi,
+  PeritoAtualApi,
   ProcessoApi,
   ProcessoResumoApi,
+  ProcessoTribunalHistoricoApi,
   ProcessoWriteApi,
   TipoProcesso,
+  TribunalAtualApi,
 } from './processo-api.model';
 
 /**
@@ -124,6 +129,266 @@ interface CatalogoItem {
   nome: string;
 }
 
+// ==========================================================================================
+// Ficha completa (buscarCompleto) — desde que `ProcessoController.buscarPorId` foi eliminado
+// (2026-09-18), a ficha vem de `/domain/processo/{id}` (cru, camelCase, ids soltos) + resolução
+// à parte de tudo que o `ProcessoResponse` do backend costumava "joinar": nome de
+// magistrado/perito, tribunal/órgão atual (com fallback pro último do histórico, mesma regra de
+// `ProcessoService.tribunalAtualEfetivoId`/`orgaoProcessanteEfetivoId`), nomes do histórico de
+// tribunais e o favorito do usuário logado. Monta exatamente o mesmo formato de `ProcessoApi` no
+// final — nenhum componente consumidor mudou.
+// ==========================================================================================
+
+interface CenarioRiscoDomain {
+  valor: number | null;
+  percentual: number | null;
+  provisionar: boolean;
+}
+
+interface ClienteProcessoDomain {
+  pessoaId: number;
+  posicaoId: number | null;
+  principal: boolean;
+}
+
+interface ParteContrariaDomain {
+  nome: string;
+  posicaoId: number | null;
+  documento: string | null;
+  principal: boolean;
+}
+
+interface OutroEnvolvidoAdvogadoDomain {
+  advogado: string;
+  posicao: string | null;
+  oab: string | null;
+  uf: string | null;
+}
+
+interface OutroEnvolvidoMagistradoDomain {
+  magistradoId: number;
+  resultado: string | null;
+  orgaoId: number | null;
+  data: string;
+}
+
+interface OutroEnvolvidoTestemunhaDomain {
+  testemunha: string;
+  cpf: string | null;
+  parteInteressada: string;
+}
+
+interface OutroEnvolvidoPeritoDomain {
+  peritoId: number;
+  resultado: string | null;
+}
+
+interface OutroEnvolvidoAssistenteTecnicoDomain {
+  assistenteTecnico: string;
+  cpf: string | null;
+  parteInteressada: string;
+}
+
+interface ObservacaoProcessoDomain {
+  data: string;
+  autorId: number | null;
+  autorNome: string | null;
+  texto: string;
+}
+
+interface ProcessoTribunalHistoricoDomain {
+  tribunalId: number;
+  orgaoId: number | null;
+  data: string;
+  autorId: number | null;
+}
+
+/** Linha crua de `/domain/processo/{id}` (ficha completa) — camelCase, sem nenhum nome resolvido. */
+interface ProcessoDomainRaw {
+  id: number;
+  tipo: TipoProcesso;
+  numeroCnj: string | null;
+  status: string | null;
+  statusId: number | null;
+  pasta: string | null;
+  advogadoResponsavelId: number | null;
+  dataDistribuicao: string | null;
+  acao: string | null;
+  acaoId: number | null;
+  natureza: string | null;
+  naturezaId: number | null;
+  procedimento: string | null;
+  procedimentoId: number | null;
+  fase: string | null;
+  faseId: number | null;
+  uf: string | null;
+  cidade: string | null;
+  cidadeId: number | null;
+  observacoesGerais: string | null;
+  destacarObservacao: boolean;
+  objetoPrincipal: string | null;
+  observacoesObjeto: string | null;
+  valorPedido: number | null;
+  valorDeferido: number | null;
+  cenarioProvavel: CenarioRiscoDomain;
+  cenarioPossivel: CenarioRiscoDomain;
+  cenarioRemoto: CenarioRiscoDomain;
+  objetosSecundarios: string[];
+  clientes: ClienteProcessoDomain[];
+  partesContrarias: ParteContrariaDomain[];
+  outrosEnvolvidosAdvogados: OutroEnvolvidoAdvogadoDomain[];
+  outrosEnvolvidosMagistrados: OutroEnvolvidoMagistradoDomain[];
+  outrosEnvolvidosTestemunhas: OutroEnvolvidoTestemunhaDomain[];
+  outrosEnvolvidosPeritos: OutroEnvolvidoPeritoDomain[];
+  outrosEnvolvidosAssistentesTecnicos: OutroEnvolvidoAssistenteTecnicoDomain[];
+  tribunalAtualId: number | null;
+  orgaoProcessanteId: number | null;
+  escritoriosAnteriores: string[];
+  tags: string[];
+  observacoesPrevias: ObservacaoProcessoDomain[];
+  tribunaisHistorico: ProcessoTribunalHistoricoDomain[];
+  ativo: boolean;
+  atualizadoEm: string | null;
+}
+
+const cenarioApiDe = (c: CenarioRiscoDomain): CenarioRiscoApi => ({
+  valor: c.valor,
+  percentual: c.percentual,
+  provisionar: c.provisionar,
+});
+
+/** Deduplica e remove `null`/`undefined` — usado pra montar os filtros `id eq X or id eq Y...`. */
+function idsUnicos(ids: (number | null | undefined)[]): number[] {
+  return [...new Set(ids.filter((id): id is number => id != null))];
+}
+
+/**
+ * Monta o `ProcessoApi` final a partir da ficha crua + catálogos resolvidos em lote — replica
+ * `ProcessoService.toResponse`/`resolverTribunalAtual`/`resolverOrgaoProcessante`/
+ * `resolverMagistrados`/`resolverPeritos`/`resolverTribunaisHistorico` do backend (formato
+ * "TRIBUNAL - descrição" só no órgão processante/magistrados — `tribunais_historico.orgao_nome`
+ * usa o nome cru do catálogo, sem prefixo, mesma regra de `ProcessoTribunalHistoricoResponse`).
+ */
+function montarProcessoApi(
+  id: number,
+  raw: ProcessoDomainRaw,
+  favorito: boolean,
+  magistrados: Map<number, MagistradoAtualApi>,
+  peritos: Map<number, PeritoAtualApi>,
+  orgaos: Map<number, { id: number; nome: string; tribunalId: number }>,
+  tribunais: Map<number, TribunalAtualApi>,
+  tribunalEfetivoId: number | null,
+  orgaoEfetivoId: number | null,
+): ProcessoApi {
+  const orgaoProcessanteApiDe = (orgaoId: number | null): OrgaoProcessanteApi | null => {
+    const orgao = orgaoId != null ? orgaos.get(orgaoId) : undefined;
+    if (!orgao) {
+      return null;
+    }
+    const tribunalNome = tribunais.get(orgao.tribunalId)?.nome ?? null;
+    return {
+      id: orgao.id,
+      nome: tribunalNome ? `${tribunalNome} - ${orgao.nome}` : orgao.nome,
+      tribunal_id: orgao.tribunalId,
+    };
+  };
+
+  const outrosEnvolvidosMagistrados: OutroEnvolvidoMagistradoApi[] = raw.outrosEnvolvidosMagistrados.map((m) => ({
+    magistrado: magistrados.get(m.magistradoId) ?? null,
+    resultado: m.resultado,
+    orgao: orgaoProcessanteApiDe(m.orgaoId),
+    data: m.data,
+  }));
+
+  const outrosEnvolvidosPeritos: OutroEnvolvidoPeritoApi[] = raw.outrosEnvolvidosPeritos.map((p) => ({
+    perito: peritos.get(p.peritoId) ?? null,
+    resultado: p.resultado,
+  }));
+
+  const observacoesPrevias: ObservacaoProcessoApi[] = raw.observacoesPrevias.map((o) => ({
+    data: o.data,
+    autor_id: o.autorId,
+    autor_nome: o.autorNome,
+    texto: o.texto,
+  }));
+
+  const tribunaisHistorico: ProcessoTribunalHistoricoApi[] = raw.tribunaisHistorico.map((h) => ({
+    data: h.data,
+    tribunal_nome: tribunais.get(h.tribunalId)?.nome ?? null,
+    orgao_nome: (h.orgaoId != null ? orgaos.get(h.orgaoId)?.nome : null) ?? null,
+  }));
+
+  return {
+    id: raw.id,
+    favorito,
+    tipo: raw.tipo,
+    numero_cnj: raw.numeroCnj,
+    status: raw.status,
+    status_id: raw.statusId,
+    pasta: raw.pasta,
+
+    advogado_responsavel_id: raw.advogadoResponsavelId,
+    data_distribuicao: raw.dataDistribuicao,
+    acao: raw.acao,
+    acao_id: raw.acaoId,
+    natureza: raw.natureza,
+    natureza_id: raw.naturezaId,
+    procedimento: raw.procedimento,
+    procedimento_id: raw.procedimentoId,
+    fase: raw.fase,
+    fase_id: raw.faseId,
+    uf: raw.uf,
+    cidade: raw.cidade,
+    cidade_id: raw.cidadeId,
+    observacoes_gerais: raw.observacoesGerais,
+    destacar_observacao: raw.destacarObservacao,
+
+    objeto_principal: raw.objetoPrincipal,
+    observacoes_objeto: raw.observacoesObjeto,
+    valor_pedido: raw.valorPedido,
+    valor_deferido: raw.valorDeferido,
+    cenario_provavel: cenarioApiDe(raw.cenarioProvavel),
+    cenario_possivel: cenarioApiDe(raw.cenarioPossivel),
+    cenario_remoto: cenarioApiDe(raw.cenarioRemoto),
+    objetos_secundarios: raw.objetosSecundarios,
+
+    clientes: raw.clientes.map((c) => ({ pessoa_id: c.pessoaId, posicao_id: c.posicaoId, principal: c.principal })),
+    partes_contrarias: raw.partesContrarias.map((p) => ({
+      nome: p.nome,
+      posicao_id: p.posicaoId,
+      documento: p.documento,
+      principal: p.principal,
+    })),
+    outros_envolvidos_advogados: raw.outrosEnvolvidosAdvogados.map((o) => ({
+      advogado: o.advogado,
+      posicao: o.posicao,
+      oab: o.oab,
+      uf: o.uf,
+    })),
+    outros_envolvidos_magistrados: outrosEnvolvidosMagistrados,
+    outros_envolvidos_testemunhas: raw.outrosEnvolvidosTestemunhas.map((t) => ({
+      testemunha: t.testemunha,
+      cpf: t.cpf,
+      parte_interessada: t.parteInteressada,
+    })),
+    outros_envolvidos_peritos: outrosEnvolvidosPeritos,
+    outros_envolvidos_assistentes_tecnicos: raw.outrosEnvolvidosAssistentesTecnicos.map((a) => ({
+      assistente_tecnico: a.assistenteTecnico,
+      cpf: a.cpf,
+      parte_interessada: a.parteInteressada,
+    })),
+    tribunal_atual: tribunalEfetivoId != null ? tribunais.get(tribunalEfetivoId) ?? null : null,
+    orgao_processante: orgaoProcessanteApiDe(orgaoEfetivoId),
+    escritorios_anteriores: raw.escritoriosAnteriores,
+    tags: raw.tags,
+    observacoes_previas: observacoesPrevias,
+    tribunais_historico: tribunaisHistorico,
+
+    ativo: raw.ativo,
+    atualizado_em: raw.atualizadoEm,
+  };
+}
+
 const PROCESSO_RESUMO_FIELDS = [
   'id', 'tipo', 'numeroCnj', 'status', 'statusId', 'pasta', 'clientePrincipalId', 'advogadoResponsavelId',
   'natureza', 'naturezaId', 'fase', 'faseId', 'uf', 'cidade', 'cidadeId', 'dataDistribuicao', 'observacoesGerais',
@@ -168,8 +433,10 @@ function processoResumoFromDomain(p: ProcessoResumoDomain, favorito: boolean): P
  * desde sempre (ver `ProcessoService.TIPO_FAVORITO` no backend), então bate 1:1 com o que
  * `/domain/favorito` espera — nenhum favorito existente fica "órfão".
  *
- * O CRUD de escrita (criar/editar/status) continua em `/api/v1/processos` (Spring), consumido
- * pelo painel `app-processo-form`. Os pickers de Clientes (lista, ver `ProcessoClientesComponent`)
+ * Criar/editar/ativar-inativar vão direto por `/domain/processo` (`DomainService.post`/`patch`,
+ * sem `ProcessoController.criar`/`atualizar`/`alterarStatus` — ver
+ * `Processo.criarProcesso`/`atualizarProcesso` no backend, mesmo padrão de Advogado/Pessoa). Os
+ * pickers de Clientes (lista, ver `ProcessoClientesComponent`)
  * / Advogado responsável / Status / Ação / Natureza / Fase são `<app-domain-model-dropdown>` direto
  * no template (busca própria via `/domain`); aqui só ficam `rotuloPessoa`/`rotuloAdvogado`/
  * `rotuloPosicaoCliente` (resolvem o `valueLabel` inicial ao carregar uma ficha) e
@@ -178,16 +445,16 @@ function processoResumoFromDomain(p: ProcessoResumoDomain, favorito: boolean): P
  */
 @Injectable({ providedIn: 'root' })
 export class ProcessoService {
-  private readonly http = inject(HttpClient);
-  private readonly favoritoService = inject(FavoritoService);
   private readonly domainService = inject(DomainService);
   private readonly domainFavoritoService = inject(DomainFavoritoService);
-  private readonly base = `${environment.apiBaseUrl}/processos`;
 
   static readonly PAGE_SIZE = 10;
 
   private readonly _processos = signal<ProcessoResumoApi[]>([]);
   readonly processos = this._processos.asReadonly();
+
+  /** Id da linha `Favorito` (não do processo) por id de processo — necessário pra desfavoritar via `DomainFavoritoService`. */
+  private readonly _favoritoIds = signal<Map<number, number>>(new Map());
 
   private readonly _page = signal(0);
   private readonly _totalPages = signal(1);
@@ -219,9 +486,12 @@ export class ProcessoService {
         }),
         switchMap((pagina) => {
           const ids = pagina.content.map((p) => p.id);
-          return this.domainFavoritoService
-            .listarFavoritos('processo', ids)
-            .pipe(map((favoritos) => pagina.content.map((p) => processoResumoFromDomain(p, favoritos.has(p.id)))));
+          return this.domainFavoritoService.listarFavoritos('processo', ids).pipe(
+            map((favoritos) => {
+              this.mesclarFavoritoIds(favoritos);
+              return pagina.content.map((p) => processoResumoFromDomain(p, favoritos.has(p.id)));
+            }),
+          );
         }),
         tap((processos) => this._processos.set(processos)),
       );
@@ -248,9 +518,72 @@ export class ProcessoService {
     return clausulas.join(' and ');
   }
 
-  /** Ficha completa por id (`GET /processos/{id}`) — pro painel não depender da página carregada. */
+  /**
+   * Ficha completa por id — pro painel não depender da página carregada. Vai em
+   * `/domain/processo/{id}` (cru) + resolve à parte tudo que o antigo `GET /processos/{id}`
+   * devolvia pronto (nomes de magistrado/perito/tribunal/órgão, histórico, favorito) — ver o
+   * bloco de comentário acima de `ProcessoDomainRaw`.
+   */
   buscarCompleto(id: number): Observable<ProcessoApi | null> {
-    return this.http.get<ProcessoApi>(`${this.base}/${id}`).pipe(catchError(() => of(null)));
+    return this.domainService
+      .get<ProcessoDomainRaw>({ entityName: 'processo', entityId: id })
+      .pipe(
+        switchMap((raw) => this.montarFichaCompleta(id, raw)),
+        catchError(() => of(null)),
+      );
+  }
+
+  private montarFichaCompleta(id: number, raw: ProcessoDomainRaw): Observable<ProcessoApi> {
+    const ultimoHistorico = [...raw.tribunaisHistorico].sort((a, b) => a.data.localeCompare(b.data)).at(-1) ?? null;
+    const tribunalEfetivoId = raw.tribunalAtualId ?? ultimoHistorico?.tribunalId ?? null;
+    const orgaoEfetivoId =
+      raw.orgaoProcessanteId ?? (raw.tribunalAtualId != null ? null : ultimoHistorico?.orgaoId ?? null);
+
+    const magistradoIds = idsUnicos(raw.outrosEnvolvidosMagistrados.map((m) => m.magistradoId));
+    const peritoIds = idsUnicos(raw.outrosEnvolvidosPeritos.map((p) => p.peritoId));
+    const orgaoIds = idsUnicos([
+      orgaoEfetivoId,
+      ...raw.outrosEnvolvidosMagistrados.map((m) => m.orgaoId),
+      ...raw.tribunaisHistorico.map((h) => h.orgaoId),
+    ]);
+
+    return forkJoin({
+      magistrados: this.buscarCatalogoPorIds<{ id: number; nome: string }>('magistrado', 'id,nome', magistradoIds),
+      peritos: this.buscarCatalogoPorIds<{ id: number; nome: string; cpf: string | null }>(
+        'perito', 'id,nome,cpf', peritoIds),
+      orgaos: this.buscarCatalogoPorIds<{ id: number; nome: string; tribunalId: number }>(
+        'orgao-julgador', 'id,nome,tribunalId', orgaoIds),
+      favoritos: this.domainFavoritoService.listarFavoritos('processo', [id]),
+    }).pipe(
+      switchMap(({ magistrados, peritos, orgaos, favoritos }) => {
+        this.mesclarFavoritoIds(favoritos);
+        const tribunalIds = idsUnicos([
+          tribunalEfetivoId,
+          ...raw.tribunaisHistorico.map((h) => h.tribunalId),
+          ...[...orgaos.values()].map((o) => o.tribunalId),
+        ]);
+        return this.buscarCatalogoPorIds<{ id: number; nome: string }>('tribunal', 'id,nome', tribunalIds).pipe(
+          map((tribunais) =>
+            montarProcessoApi(
+              id, raw, favoritos.has(id), magistrados, peritos, orgaos, tribunais, tribunalEfetivoId, orgaoEfetivoId,
+            ),
+          ),
+        );
+      }),
+    );
+  }
+
+  /** Busca em lote por id (`id eq X or id eq Y...`) — mesmo padrão de `DomainFavoritoService.listarFavoritos`. */
+  private buscarCatalogoPorIds<T extends { id: number }>(
+    entityName: string, fields: string, ids: number[],
+  ): Observable<Map<number, T>> {
+    if (ids.length === 0) {
+      return of(new Map());
+    }
+    const filter = ids.map((id) => `id eq ${id}`).join(' or ');
+    return this.domainService
+      .get<IDomainPage<T>>({ entityName, fields, filter, size: ids.length })
+      .pipe(map((pagina) => new Map(pagina.content.map((item) => [item.id, item]))));
   }
 
   /** `POST` (id 0) ou `PUT` (id existente); devolve a ficha e atualiza a linha na lista. */
@@ -290,25 +623,55 @@ export class ProcessoService {
       tags: processo.tags,
     };
 
+    // Criar (POST) e editar (PATCH) vão direto em /domain/processo — sem
+    // ProcessoController.criar/atualizar/buscarPorId, ver Processo.criarProcesso/atualizarProcesso
+    // no backend (mesmo padrão de Advogado/Pessoa). Os dois só devolvem `{id}`/204, então sempre
+    // encadeia `buscarCompleto` (mesma resolução cliente-side usada pelo painel) pra pegar o que
+    // a lista/painel precisa exibir.
     const request$ =
       processo.id > 0
-        ? this.http.put<ProcessoApi>(`${this.base}/${processo.id}`, body)
-        : this.http.post<ProcessoApi>(this.base, body);
+        ? this.domainService
+            .patch<ProcessoWriteApi>({ entityName: 'processo', entityId: processo.id, body })
+            .pipe(switchMap(() => this.buscarCompleto(processo.id)))
+        : this.domainService
+            .post<ProcessoWriteApi>({ entityName: 'processo', body })
+            .pipe(switchMap((criado) => this.buscarCompleto(criado.id)));
 
-    return request$.pipe(tap((salvo) => this.mesclarNaLista(salvo)));
-  }
-
-  /** Ativa/inativa via `PATCH /processos/{id}/status` (corpo `{ ativo }`) e substitui na lista. */
-  alterarStatus(id: number, ativo: boolean): Observable<ProcessoApi> {
-    return this.http
-      .patch<ProcessoApi>(`${this.base}/${id}/status`, { ativo })
-      .pipe(tap((atualizado) => this.mesclarNaLista(atualizado)));
+    return request$.pipe(
+      switchMap((salvo) => {
+        if (!salvo) {
+          throw new Error('Falha ao recarregar o processo salvo.');
+        }
+        return of(salvo);
+      }),
+      tap((salvo) => this.mesclarNaLista(salvo)),
+    );
   }
 
   /**
-   * Alterna o favorito do processo (otimista): atualiza a lista na hora, dispara
-   * `PATCH /processos/{id}/favorito` e desfaz se a API falhar. Devolve o estado desejado, ou
-   * `null` se o processo não está carregado.
+   * Ativa/inativa via `PATCH /domain/processo/{id}` (campo `ativo` direto — sem
+   * `ProcessoController.alterarStatus`/`ProcessoService.alterarStatus` desde 2026-09-18, mesmo
+   * padrão de `AdvogadoFormComponent.alterarStatus`/`ClientFormComponent.applyStatusChange`) e
+   * substitui na lista.
+   */
+  alterarStatus(id: number, ativo: boolean): Observable<ProcessoApi> {
+    return this.domainService.patch({ entityName: 'processo', entityId: id, body: { ativo } }).pipe(
+      switchMap(() => this.buscarCompleto(id)),
+      switchMap((atualizado) => {
+        if (!atualizado) {
+          throw new Error('Falha ao recarregar o processo atualizado.');
+        }
+        return of(atualizado);
+      }),
+      tap((atualizado) => this.mesclarNaLista(atualizado)),
+    );
+  }
+
+  /**
+   * Alterna o favorito do processo (otimista): atualiza a lista na hora, favorita/desfavorita
+   * via `/domain/favorito` (mesmo mecanismo genérico de Pessoa/Advogado — ver
+   * `DomainFavoritoService`, sem `ProcessoController.definirFavorito` desde 2026-09-18) e desfaz
+   * se a API falhar. Devolve o estado desejado, ou `null` se o processo não está carregado.
    */
   alternarFavorito(id: number): boolean | null {
     const atual = this._processos().find((p) => p.id === id);
@@ -316,13 +679,38 @@ export class ProcessoService {
       return null;
     }
     const desejado = !atual.favorito;
+    const existingFavoritoId = this._favoritoIds().get(id);
     this.setFavoritoLocal(id, desejado);
 
-    this.favoritoService
-      .alternar('processos', id, desejado)
-      .subscribe({ error: () => this.setFavoritoLocal(id, !desejado) });
+    const request$: Observable<number | null> = existingFavoritoId != null
+      ? this.domainFavoritoService.desfavoritar(existingFavoritoId).pipe(map(() => null))
+      : this.domainFavoritoService.favoritar('processo', id);
+
+    request$.subscribe({
+      next: (novoId) => this.mesclarFavoritoId(id, novoId),
+      error: () => this.setFavoritoLocal(id, !desejado),
+    });
 
     return desejado;
+  }
+
+  private mesclarFavoritoIds(favoritos: Map<number, number>): void {
+    if (favoritos.size === 0) {
+      return;
+    }
+    this._favoritoIds.update((atual) => new Map([...atual, ...favoritos]));
+  }
+
+  private mesclarFavoritoId(processoId: number, favoritoId: number | null): void {
+    this._favoritoIds.update((atual) => {
+      const proximo = new Map(atual);
+      if (favoritoId == null) {
+        proximo.delete(processoId);
+      } else {
+        proximo.set(processoId, favoritoId);
+      }
+      return proximo;
+    });
   }
 
   // --- rótulo por id (Cliente principal / Advogado responsável) — via /domain: nem

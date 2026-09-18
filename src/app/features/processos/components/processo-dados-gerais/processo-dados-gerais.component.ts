@@ -10,7 +10,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { FormControl, FormGroup, ReactiveFormsModule, ValidatorFn } from '@angular/forms';
+import { FormControl, FormGroup, ReactiveFormsModule, ValidatorFn, Validators } from '@angular/forms';
 import { switchMap } from 'rxjs';
 
 import { maskNumeroCnj, numeroCnjCompleto } from '../../../../core/auth/documentos-br';
@@ -144,7 +144,7 @@ export class ProcessoDadosGeraisComponent {
   protected readonly orgaoAtualFiltro = computed(() => `tribunalId eq ${this.tribunalAtualId() ?? -1}`);
 
   protected readonly form: ProcessoForm = new FormGroup({
-    numeroCnj: text(),
+    numeroCnj: text([Validators.required]),
     dataDistribuicao: text(),
     observacoesGerais: text(),
     destacarObservacao: new FormControl(false, { nonNullable: true }),
@@ -356,7 +356,8 @@ export class ProcessoDadosGeraisComponent {
   validar(): DadosGeraisValidacao {
     if (this.form.invalid) {
       this.form.markAllAsTouched();
-      const mensagens = mensagensCamposInvalidos(this.form, {});
+      const rotulos = { numeroCnj: this.ehJudicial() ? 'Número CNJ' : 'Número do processo' };
+      const mensagens = mensagensCamposInvalidos(this.form, rotulos);
       return { ok: false, mensagem: `Preencha corretamente: ${mensagens.join('; ')}` };
     }
     if (this.ehJudicial() && !numeroCnjCompleto(this.form.controls.numeroCnj.value)) {

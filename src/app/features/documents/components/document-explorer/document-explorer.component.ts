@@ -592,13 +592,10 @@ export class DocumentExplorerComponent {
     this.arquivosPendentes.update((atual) => atual.filter((_, i) => i !== indice));
   }
 
-  /** Prévia do nome de exibição que o servidor vai montar (a hora é aproximada — o carimbo real é o do envio). */
+  /** Prévia do nome de exibição que o servidor vai montar. */
   protected previewNome(arquivo: File): string {
-    const d = new Date();
-    const p = (n: number): string => String(n).padStart(2, '0');
-    const carimbo = `${p(d.getDate())}/${p(d.getMonth() + 1)}/${d.getFullYear()} (${p(d.getHours())}:${p(d.getMinutes())})`;
     const tipo = this.tipoAnexoNome().trim();
-    return tipo ? `${carimbo} | Anexo: ${tipo} | ${arquivo.name}` : `${carimbo} | ${arquivo.name}`;
+    return tipo ? `${arquivo.name} - ${tipo}` : arquivo.name;
   }
 
   /** "Enviar" do painel: sobe cada pendente com o tipo do anexo escolhido. */
@@ -680,7 +677,7 @@ export class DocumentExplorerComponent {
       return;
     }
     // Reembala só pra garantir o content-type resolvido (o navegador às vezes reporta vazio); o
-    // nome de exibição — com carimbo e "Anexo: {tipo}" — é montado pelo servidor no `confirmar`.
+    // nome de exibição — "{arquivo} - {tipo}" — é montado pelo servidor no `confirmar`.
     const arquivoTipado =
       arquivo.type === tipo ? arquivo : new File([arquivo], arquivo.name, { type: tipo });
     // O envio vira uma tarefa com percentual na bandeja de transferências (canto inferior direito),

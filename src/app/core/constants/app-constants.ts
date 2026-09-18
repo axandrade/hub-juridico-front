@@ -33,8 +33,8 @@ export const SIDEBAR_NAV: readonly NavItem[] = [
   { label: 'Agenda', icon: 'fa-solid fa-calendar-days', emphasis: 'accent' },
   { label: 'Tarefas', icon: 'fa-solid fa-square-check', emphasis: 'neutral' },
   { label: 'Compromissos', icon: 'fa-solid fa-clock', emphasis: 'neutral' },
-  { label: 'Andamentos', icon: 'fa-solid fa-bell', emphasis: 'accent' },
-  { label: 'Andamentos automáticos', icon: 'fa-solid fa-tower-broadcast', emphasis: 'accent' },
+  { label: 'Operações', icon: 'fa-solid fa-bell', emphasis: 'accent' },
+  { label: 'Rastreamentos', icon: 'fa-solid fa-tower-broadcast', emphasis: 'accent' },
   {
     label: 'Clientes',
     icon: 'fa-solid fa-address-book',

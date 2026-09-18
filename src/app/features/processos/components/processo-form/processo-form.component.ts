@@ -63,7 +63,7 @@ export class ProcessoFormComponent {
   private readonly outrosEnvolvidos = viewChild(ProcessoOutrosEnvolvidosComponent);
   private readonly objeto = viewChild(ProcessoObjetoComponent);
 
-  /** Aba visível do painel. Volta pra "gerais" ao trocar de processo / limpar. */
+  /** Aba visível do painel. Só volta pra "gerais" ao limpar — trocar de processo mantém a aba. */
   protected readonly abaAtiva = signal<ProcessoAba>('gerais');
   protected readonly abas: readonly ProcessoAba[] = ['gerais', 'outrosEnvolvidos', 'objeto'];
 
@@ -93,7 +93,6 @@ export class ProcessoFormComponent {
       this.lastLoadedKey = key;
 
       untracked(() => {
-        this.abaAtiva.set('gerais');
         if (id !== null) {
           this.processoService.buscarCompleto(id).subscribe((found) => {
             if (found) {

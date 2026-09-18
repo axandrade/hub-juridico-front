@@ -5,6 +5,7 @@ import {
   DestroyRef,
   HostListener,
   computed,
+  effect,
   inject,
   signal,
   viewChild,
@@ -17,6 +18,7 @@ import { DataTableComponent } from '../../../shared/components/table/data-table.
 import { TableColumn } from '../../../shared/components/table/table-column.model';
 import { TablePagination, TablePinAction } from '../../../shared/components/table/table.model';
 import { PanelShellController } from '../../../shared/panel-shell/panel-shell.controller';
+import { PastaClienteService } from '../../clients/services/pasta-cliente.service';
 import {
   ProcessoApi,
   ProcessoResumoApi,
@@ -42,6 +44,7 @@ export class ProcessosComponent {
   private readonly document = inject(DOCUMENT);
   private readonly destroyRef = inject(DestroyRef);
   private readonly processoService = inject(ProcessoService);
+  private readonly pastaCliente = inject(PastaClienteService);
 
   private readonly form = viewChild(ProcessoFormComponent);
   /** A grade — o botão "Colunas" da barra de ações comanda esta instância. */
@@ -180,6 +183,30 @@ export class ProcessosComponent {
         this.loading.set(false);
         this.loadError.set(false);
       });
+
+    // Publica o cliente principal do processo selecionado para o diálogo "Abrir pasta do
+    // cliente" (global, no layout) — mesma ponte que a tela de Clientes usa.
+    effect(() => {
+      const id = this.selectedId();
+      const row = id !== null ? this.processos().find((p) => p.id === id) : null;
+      const clienteId = row?.cliente_principal_id ?? null;
+      if (clienteId === null) {
+        this.pastaCliente.definirCliente(null);
+        return;
+      }
+      this.pastaCliente.definirCliente({ id: clienteId, nome: '' });
+      this.processoService
+        .rotuloPessoa(clienteId)
+        .pipe(takeUntilDestroyed(this.destroyRef))
+        .subscribe((nome) => {
+          if (this.selectedId() === id) {
+            this.pastaCliente.definirCliente({ id: clienteId, nome });
+          }
+        });
+    });
+
+    // Ao sair de /processos, esquece a seleção: em qualquer outra tela o diálogo abre na visão geral.
+    this.destroyRef.onDestroy(() => this.pastaCliente.definirCliente(null));
   }
 
   protected onPageChange(page: number): void {

@@ -142,6 +142,26 @@
   white-space: nowrap;
 }
 
+// Botão "pasta de arquivos" — mesmo tratamento de `.processo-outros__pasta` (Magistrados/Peritos
+// em "Outros envolvidos"), só que abre o `app-pasta-cliente-dialog` global em vez de um próprio.
+.processo-clientes__pasta {
+  @include flex-center;
+  flex: 0 0 auto;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 0;
+  border-radius: $border-radius-sm;
+  background: transparent;
+  color: $color-text-secondary;
+  cursor: pointer;
+  transition: color $transition-fast;
+
+  &:hover {
+    color: $color-primary;
+  }
+}
+
 .processo-clientes__vazio {
   padding: $spacing-sm;
   color: $color-text-muted;

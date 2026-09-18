@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject, output, signal } from '@angular/core';
 
 import { DomainModelDropdownComponent } from '../../../../shared/components/domain-dropdown/domain-model-dropdown.component';
+import { PastaClienteService } from '../../../clients/services/pasta-cliente.service';
 import { ClienteProcessoApi } from '../../services/processo-api.model';
 import { ProcessoService } from '../../services/processo-service';
 
@@ -35,6 +36,10 @@ interface ClienteProcessoLinha {
  *
  * Mesma pessoa não pode entrar duas vezes na lista — `adicionar()` rejeita com `erro` (o pai
  * repassa pro rodapé do shell, mesmo canal dos erros de catálogo).
+ *
+ * Botão de pasta por linha (`abrirPasta`) — mesma ideia do botão de pasta de Magistrados em
+ * "Outros envolvidos", mas sem dialog próprio: reaproveita o `PastaClienteService`/
+ * `app-pasta-cliente-dialog` global (o mesmo do botão "Abrir pasta do cliente" no header).
  */
 @Component({
   selector: 'app-processo-clientes',
@@ -45,6 +50,7 @@ interface ClienteProcessoLinha {
 })
 export class ProcessoClientesComponent {
   private readonly processoService = inject(ProcessoService);
+  private readonly pastaCliente = inject(PastaClienteService);
 
   /** Erro de validação (ex.: cliente duplicado) — o pai repassa pro rodapé do shell. */
   readonly erro = output<string>();
@@ -106,6 +112,12 @@ export class ProcessoClientesComponent {
 
   protected selecionar(indice: number): void {
     this.selecionado.update((atual) => (atual === indice ? -1 : indice));
+  }
+
+  /** Abre o diálogo de arquivos daquele cliente (botão na própria linha, não depende de seleção). */
+  protected abrirPasta(linha: ClienteProcessoLinha): void {
+    this.pastaCliente.definirCliente({ id: linha.pessoaId, nome: linha.pessoaNome });
+    this.pastaCliente.abrir();
   }
 
   protected remover(): void {

@@ -75,6 +75,15 @@
         <span class="processo-clientes__nome" [title]="linha.pessoaNome">{{ linha.pessoaNome || '—' }}</span>
         <span class="processo-clientes__posicao">{{ linha.posicaoNome || '—' }}</span>
       </button>
+      <button
+        type="button"
+        class="processo-clientes__pasta"
+        title="Pasta de arquivos do cliente"
+        [attr.aria-label]="'Pasta de arquivos de ' + linha.pessoaNome"
+        (click)="abrirPasta(linha)"
+      >
+        <i class="fa-solid fa-folder-open" aria-hidden="true"></i>
+      </button>
     </li>
   } @empty {
     <li class="processo-clientes__vazio">Nenhum cliente adicionado.</li>

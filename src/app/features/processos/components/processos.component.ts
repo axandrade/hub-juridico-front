@@ -244,11 +244,11 @@ export class ProcessosComponent {
     this.refreshList();
   }
 
-  /** No modo diálogo, Esc esconde o painel (mantém o processo selecionado). */
+  /** No modo diálogo, Esc fecha o diálogo (volta à posição original, mantém o processo selecionado). */
   @HostListener('document:keydown.escape')
   protected onEscape(): void {
     if (this.panelShell.layoutPainel() === 'dialog' && this.panelShell.panelVisible()) {
-      this.panelShell.setPanelVisible(false);
+      this.panelShell.fecharDialog();
     }
   }
 

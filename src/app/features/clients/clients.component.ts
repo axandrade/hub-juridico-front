@@ -218,7 +218,7 @@ export class ClientsComponent {
     this.clientsTable()?.reload();
   }
 
-  /** No modo diálogo, Esc esconde o painel (mantém o cliente selecionado). */
+  /** No modo diálogo, Esc fecha o diálogo (volta à posição original, mantém o cliente selecionado). */
   @HostListener('document:keydown.escape')
   protected onEscape(): void {
     if (
@@ -226,7 +226,7 @@ export class ClientsComponent {
       this.panelShell.panelVisible() &&
       !this.temModalAberto()
     ) {
-      this.panelShell.setPanelVisible(false);
+      this.panelShell.fecharDialog();
     }
   }
 

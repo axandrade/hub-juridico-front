@@ -10,7 +10,7 @@
       type="button"
       class="clients-panel-backdrop"
       aria-label="Fechar painel"
-      (click)="$event.stopPropagation(); panelShell.setPanelVisible(false)"
+      (click)="$event.stopPropagation(); panelShell.fecharDialog()"
     ></button>
   }
 
@@ -20,7 +20,7 @@
         type="button"
         class="clients-panel-slot__close"
         aria-label="Fechar painel"
-        (click)="$event.stopPropagation(); panelShell.setPanelVisible(false)"
+        (click)="$event.stopPropagation(); panelShell.fecharDialog()"
       >
         <i class="fa-solid fa-xmark" aria-hidden="true"></i>
       </button>

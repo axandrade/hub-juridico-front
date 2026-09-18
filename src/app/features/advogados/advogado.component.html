@@ -10,7 +10,7 @@
       type="button"
       class="advogados-panel-backdrop"
       aria-label="Fechar painel"
-      (click)="panelShell.setPanelVisible(false)"
+      (click)="panelShell.fecharDialog()"
     ></button>
   }
 
@@ -20,7 +20,7 @@
         type="button"
         class="advogados-panel-slot__close"
         aria-label="Fechar painel"
-        (click)="panelShell.setPanelVisible(false)"
+        (click)="panelShell.fecharDialog()"
       >
         <i class="fa-solid fa-xmark" aria-hidden="true"></i>
       </button>

@@ -163,11 +163,11 @@ export class AdvogadoComponent {
     this.grade()?.reload();
   }
 
-  /** No modo diálogo, Esc esconde o painel (mantém o advogado selecionado). */
+  /** No modo diálogo, Esc fecha o diálogo (volta à posição original, mantém o advogado selecionado). */
   @HostListener('document:keydown.escape')
   protected onEscape(): void {
     if (this.panelShell.layoutPainel() === 'dialog' && this.panelShell.panelVisible()) {
-      this.panelShell.setPanelVisible(false);
+      this.panelShell.fecharDialog();
     }
   }
 

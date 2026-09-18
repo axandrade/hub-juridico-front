@@ -36,6 +36,8 @@ const PADROES: Required<Omit<PanelShellOptions, 'storagePrefix'>> = {
 export class PanelShellController {
   private readonly opts: Required<PanelShellOptions>;
   private redimensionandoFlag = false;
+  /** Última posição não-diálogo (left/right/bottom) — sobrevive à troca pra 'dialog'. */
+  private posicaoBase: PainelLayout = PAINEL_LAYOUT_PADRAO;
 
   readonly layoutPainel = signal<PainelLayout>(PAINEL_LAYOUT_PADRAO);
   readonly panelVisible = signal(true);
@@ -49,6 +51,7 @@ export class PanelShellController {
     this.opts = { ...PADROES, ...options };
     this.layoutPainel.set(this.carregarLayout());
     this.panelVisible.set(this.layoutPainel() !== 'dialog');
+    this.posicaoBase = this.carregarPosicaoBase();
     this.painelLargura.set(
       this.carregarTamanho(this.chave('painelLargura'), this.opts.larguraPadrao, this.opts.larguraMin, this.opts.larguraMax),
     );
@@ -75,6 +78,18 @@ export class PanelShellController {
     this.layoutPainel.set(layout);
     this.panelVisible.set(true);
     this.persistir(this.chave('layout'), layout);
+    if (layout !== 'dialog') {
+      this.posicaoBase = layout;
+      this.persistir(this.chave('layoutPosicao'), layout);
+    }
+  }
+
+  /**
+   * Fecha o painel-diálogo voltando à posição original (esquerda/direita/abaixo) — o painel nunca
+   * fica oculto depois de fechado, só deixa de ser exibido em diálogo.
+   */
+  fecharDialog(): void {
+    this.setLayoutPainel(this.posicaoBase);
   }
 
   /** Começa a arrastar a divisória painel/tabela. */
@@ -127,6 +142,20 @@ export class PanelShellController {
       /* ignore */
     }
     return PAINEL_LAYOUT_PADRAO;
+  }
+
+  private carregarPosicaoBase(): PainelLayout {
+    try {
+      const salvo = this.document.defaultView?.localStorage.getItem(this.chave('layoutPosicao'));
+      if (ehPainelLayout(salvo) && salvo !== 'dialog') {
+        return salvo;
+      }
+    } catch {
+      /* ignore */
+    }
+    // Compat: bancos sem a chave nova aproveitam a posição atual, se não for 'dialog'.
+    const layoutAtual = this.layoutPainel();
+    return layoutAtual !== 'dialog' ? layoutAtual : PAINEL_LAYOUT_PADRAO;
   }
 
   private carregarTamanho(chave: string, padrao: number, min: number, max: number): number {

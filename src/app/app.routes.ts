@@ -49,6 +49,12 @@ export const routes: Routes = [
         title: 'Hub Jurídico · Processos',
       },
       {
+        path: 'operacoes',
+        loadChildren: () =>
+          import('./features/operacoes/operacoes.routes').then((m) => m.OPERACOES_ROUTES),
+        title: 'Hub Jurídico · Operações',
+      },
+      {
         path: 'usuarios',
         canActivate: [adminGuard],
         loadChildren: () =>

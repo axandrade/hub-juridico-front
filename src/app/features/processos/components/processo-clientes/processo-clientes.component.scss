@@ -96,6 +96,11 @@
   }
 }
 
+.processo-clientes__estrela {
+  width: 18px;
+  height: 16px;
+}
+
 // Linha selecionável (clica pra marcar/desmarcar — "Remover" ao lado de "Adicionar" age sobre a
 // seleção), mesmo conceito de `.processo-outros__lista button` em "Outros envolvidos".
 .processo-clientes__opcao {

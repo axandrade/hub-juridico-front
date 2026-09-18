@@ -1,0 +1,181 @@
+@use 'variables' as *;
+@use 'mixins' as *;
+
+.processo-form__row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: $spacing-sm;
+}
+
+.processo-field {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: $spacing-xs;
+  color: $color-text-secondary;
+  font-size: $font-size-xs;
+  font-weight: $font-weight-medium;
+}
+
+.processo-form__row input {
+  width: 100%;
+  min-height: 36px;
+  border: 1px solid $color-border;
+  border-radius: $border-radius-sm;
+  background-color: $color-neutral-light;
+  color: $color-text-primary;
+  font: inherit;
+  outline: none;
+  padding: $spacing-xs $spacing-sm;
+  transition:
+    border-color $transition-fast,
+    box-shadow $transition-fast;
+
+  &:focus {
+    border-color: $color-primary-light;
+    box-shadow: 0 0 0 3px rgba($rouge-light, 0.16);
+  }
+}
+
+.processo-partes__acoes {
+  display: flex;
+  gap: $spacing-sm;
+  margin-top: $spacing-xs;
+}
+
+.processo-partes__botao {
+  display: inline-flex;
+  align-items: center;
+  gap: $spacing-xs;
+  padding: $spacing-xs $spacing-md;
+  border: 1px solid $color-border;
+  border-radius: $border-radius-sm;
+  background-color: $color-neutral-light;
+  color: $color-text-primary;
+  font: inherit;
+  font-size: $font-size-xs;
+  cursor: pointer;
+  transition:
+    border-color $transition-fast,
+    background-color $transition-fast;
+
+  &:hover:not(:disabled) {
+    border-color: $color-primary-light;
+    color: $color-primary;
+  }
+
+  &:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+}
+
+.processo-partes__lista {
+  @include thin-scrollbar;
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-xs;
+  margin: $spacing-xs 0 0;
+  padding: $spacing-xs;
+  list-style: none;
+  border: 1px solid $color-border;
+  border-radius: $border-radius-sm;
+  background-color: $color-neutral-light;
+  min-height: 60px;
+  max-height: 220px;
+  overflow: auto;
+}
+
+.processo-partes__linha {
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+}
+
+// Estrela de "principal" — mesma interação/visual de `ProcessoClientesComponent`/`ClientEmailListComponent`.
+.clients-primary-toggle {
+  @include flex-center;
+  flex: 0 0 auto;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 1px solid $color-border;
+  border-radius: $border-radius-sm;
+  background-color: $color-surface;
+  color: $color-text-secondary;
+  cursor: pointer;
+  transition:
+    background-color $transition-fast,
+    border-color $transition-fast,
+    color $transition-fast;
+
+  &:hover {
+    border-color: $color-primary-light;
+    background-color: rgba($color-primary-pale, 0.55);
+    color: $color-primary;
+  }
+
+  &.is-active {
+    border-color: $color-warning;
+    color: $color-warning;
+  }
+}
+
+// Linha selecionável (clica pra marcar/desmarcar — "Remover" ao lado de "Adicionar" age sobre a
+// seleção), mesmo conceito de `ProcessoClientesComponent`/`.processo-outros__lista button`.
+.processo-partes__opcao {
+  display: flex;
+  overflow: hidden;
+  flex: 1 1 auto;
+  align-items: center;
+  min-width: 0;
+  gap: $spacing-xs;
+  border: 0;
+  border-radius: $border-radius-sm;
+  background: transparent;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  padding: $spacing-xs $spacing-sm;
+
+  &:hover {
+    background-color: rgba($color-primary-pale, 0.3);
+  }
+
+  &.is-selected {
+    background-color: rgba($color-primary-pale, 0.7);
+  }
+}
+
+.processo-partes__nome {
+  overflow: hidden;
+  flex: 1 1 auto;
+  min-width: 0;
+  color: $color-text-primary;
+  font-size: $font-size-xs;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.processo-partes__posicao {
+  flex: 0 0 auto;
+  max-width: 40%;
+  overflow: hidden;
+  color: $color-text-secondary;
+  font-size: $font-size-xs;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.processo-partes__vazio {
+  padding: $spacing-sm;
+  color: $color-text-muted;
+  font-size: $font-size-xs;
+  text-align: center;
+}
+
+@include respond-below($breakpoint-sm) {
+  .processo-form__row {
+    grid-template-columns: 1fr;
+  }
+}

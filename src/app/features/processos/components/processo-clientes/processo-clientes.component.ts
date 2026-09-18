@@ -186,6 +186,9 @@ export class ProcessoClientesComponent {
   /** Chamado pelo pai quando "posição do cliente" é renomeada por outro campo da mesma aba. */
   sincronizarPosicaoRenomeada(id: number, novoNome: string): void {
     this.linhas.update((atual) => atual.map((l) => (l.posicaoId === id ? { ...l, posicaoNome: novoNome } : l)));
+    if (this.posicaoAtual()?.id === id) {
+      this.posicaoAtual.set({ id, nome: novoNome });
+    }
   }
 
   /** Chamado pelo pai quando "posição do cliente" é excluída por outro campo da mesma aba. */
@@ -193,6 +196,9 @@ export class ProcessoClientesComponent {
     this.linhas.update((atual) =>
       atual.map((l) => (l.posicaoId === id ? { ...l, posicaoId: null, posicaoNome: '' } : l)),
     );
+    if (this.posicaoAtual()?.id === id) {
+      this.posicaoAtual.set(null);
+    }
   }
 
   private atualizarNome(indice: number, campo: 'pessoaNome' | 'posicaoNome', nome: string): void {

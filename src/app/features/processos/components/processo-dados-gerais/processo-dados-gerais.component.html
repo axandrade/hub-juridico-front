@@ -84,49 +84,12 @@
   <div class="processo-form__group-title">Clientes</div>
   <app-processo-clientes (erro)="erro.emit($event)" />
 
-  <div class="processo-form__group-title">Parte contrária principal</div>
-  <div class="processo-form__row">
-    <label class="processo-field">
-      <span>Nome</span>
-      <input type="text" formControlName="contrarioPrincipalNome" />
-    </label>
-    <div class="processo-field">
-      <span>Posição</span>
-      <app-domain-model-dropdown
-        ariaLabel="Posição da parte contrária"
-        placeholder="Buscar posição..."
-        emptyLabel="— Sem posição —"
-        noResultsText="Nenhuma posição encontrada"
-        itemNoun="posição"
-        entityName="posicao-cliente"
-        fields="id,nome"
-        [searchFields]="['nome']"
-        sort="nome"
-        [displayFormatter]="rotuloCatalogo"
-        [value]="contrarioPrincipalPosicaoValor()"
-        [valueLabel]="contrarioPrincipalPosicaoLabel()"
-        [adicionar]="true"
-        [editar]="true"
-        [excluir]="true"
-        (valueChange)="onContrarioPrincipalPosicaoChange($event)"
-        (aoAdicionar)="criarPosicaoCliente($event, contrarioPrincipalPosicaoId, contrarioPrincipalPosicaoLabel)"
-        (aoEditar)="renomearPosicaoCliente($event)"
-        (aoExcluir)="excluirPosicaoCliente($event)"
-      />
-    </div>
-  </div>
-  <div class="processo-form__row">
-    <label class="processo-field">
-      <span>CPF/CNPJ</span>
-      <input
-        type="text"
-        formControlName="contrarioPrincipalDocumento"
-        appDocumentoMask
-        placeholder="000.000.000-00"
-        [attr.aria-label]="'CPF ou CNPJ da parte contrária'"
-      />
-    </label>
-  </div>
+  <div class="processo-form__group-title">Partes contrárias</div>
+  <app-processo-partes-contrarias
+    (erro)="erro.emit($event)"
+    (aoEditarPosicao)="renomearPosicaoCliente($event)"
+    (aoExcluirPosicao)="excluirPosicaoCliente($event)"
+  />
 
   <div class="processo-form__group-title">Tramitação</div>
   <div class="processo-form__row">

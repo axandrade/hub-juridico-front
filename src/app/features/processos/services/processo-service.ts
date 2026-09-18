@@ -20,7 +20,6 @@ import {
   ProcessoWriteApi,
   TipoProcesso,
 } from './processo-api.model';
-import { onlyDigits } from '../../../core/auth/documentos-br';
 
 /**
  * Filtros de `carregar()` (via `/domain/processo`) — `busca` casa parcialmente em número CNJ /
@@ -41,12 +40,6 @@ export interface ProcessoEditavel {
   numeroCnj: string;
   /** Id do catálogo `status_processo` — `null` = sem status. */
   statusId: number | null;
-
-  contrarioPrincipalNome: string;
-  /** Id do catálogo `posicao_cliente` (mesmo catálogo de `clientePrincipalPosicaoId`). */
-  contrarioPrincipalPosicaoId: number | null;
-  /** CPF ou CNPJ (mascarado ou não) — o serviço manda só os dígitos. */
-  contrarioPrincipalDocumento: string;
 
   advogadoResponsavelId: number | null;
   dataDistribuicao: string;
@@ -92,7 +85,7 @@ export interface ProcessoEditavel {
   outrosEnvolvidosAssistentesTecnicos: OutroEnvolvidoAssistenteTecnicoApi[];
   /** Lista de clientes do processo — um deles (`principal: true`) é o cliente principal. */
   clientes: ClienteProcessoApi[];
-  /** Preservado como veio — ainda sem UI de edição nesta fatia. */
+  /** Lista de partes contrárias do processo — uma delas (`principal: true`) é a principal. */
   partesContrarias: ParteContrariaApi[];
 }
 
@@ -266,9 +259,6 @@ export class ProcessoService {
       tipo: processo.tipo,
       numero_cnj: vazioParaNull(processo.numeroCnj),
       status_id: processo.statusId,
-      contrario_principal_nome: vazioParaNull(processo.contrarioPrincipalNome),
-      contrario_principal_posicao_id: processo.contrarioPrincipalPosicaoId,
-      contrario_principal_documento: onlyDigits(processo.contrarioPrincipalDocumento) || null,
       advogado_responsavel_id: processo.advogadoResponsavelId,
       data_distribuicao: vazioParaNull(processo.dataDistribuicao),
       acao_id: processo.acaoId,

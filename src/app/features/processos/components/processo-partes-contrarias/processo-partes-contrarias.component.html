@@ -1,0 +1,80 @@
+<div class="processo-form__row" [formGroup]="form">
+  <label class="processo-field">
+    <span>Nome</span>
+    <input type="text" formControlName="nome" maxlength="255" />
+  </label>
+  <label class="processo-field">
+    <span>CPF/CNPJ</span>
+    <input type="text" formControlName="documento" appDocumentoMask placeholder="000.000.000-00" />
+  </label>
+</div>
+
+<div class="processo-form__row">
+  <div class="processo-field">
+    <span>Posição</span>
+    <app-domain-model-dropdown
+      ariaLabel="Posição da parte contrária"
+      placeholder="Buscar posição..."
+      emptyLabel="— Sem posição —"
+      noResultsText="Nenhuma posição encontrada"
+      itemNoun="posição"
+      entityName="posicao-cliente"
+      fields="id,nome"
+      [searchFields]="['nome']"
+      sort="nome"
+      [displayFormatter]="rotuloCatalogo"
+      [value]="posicaoValor()"
+      [valueLabel]="posicaoAtual()?.nome ?? ''"
+      [adicionar]="true"
+      [editar]="true"
+      [excluir]="true"
+      (itemSelected)="onPosicaoSelected($event)"
+      (aoAdicionar)="criarPosicao($event)"
+      (aoEditar)="aoEditarPosicao.emit($event)"
+      (aoExcluir)="aoExcluirPosicao.emit($event)"
+    />
+  </div>
+</div>
+
+<div class="processo-partes__acoes">
+  <button type="button" class="processo-partes__botao" (click)="adicionar()">
+    <i class="fa-solid fa-plus" aria-hidden="true"></i> Adicionar
+  </button>
+  <button
+    type="button"
+    class="processo-partes__botao"
+    [disabled]="selecionado() < 0"
+    (click)="remover()"
+  >
+    <i class="fa-solid fa-trash-can" aria-hidden="true"></i> Remover
+  </button>
+</div>
+
+<ul class="processo-partes__lista" role="listbox" aria-label="Partes contrárias do processo">
+  @for (linha of linhas(); track $index; let i = $index) {
+    <li class="processo-partes__linha">
+      <button
+        type="button"
+        class="clients-primary-toggle"
+        [class.is-active]="linha.principal"
+        [attr.aria-label]="linha.principal ? 'Parte contrária principal' : 'Definir como principal'"
+        (click)="marcarPrincipal(i)"
+      >
+        <i class="fa-solid fa-star" aria-hidden="true"></i>
+      </button>
+      <button
+        type="button"
+        class="processo-partes__opcao"
+        role="option"
+        [attr.aria-selected]="selecionado() === i"
+        [class.is-selected]="selecionado() === i"
+        (click)="selecionar(i)"
+      >
+        <span class="processo-partes__nome" [title]="linha.nome">{{ linha.nome }}</span>
+        <span class="processo-partes__posicao">{{ linha.posicaoNome || '—' }}</span>
+      </button>
+    </li>
+  } @empty {
+    <li class="processo-partes__vazio">Nenhuma parte contrária adicionada.</li>
+  }
+</ul>

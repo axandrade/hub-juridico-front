@@ -22,11 +22,17 @@ export interface ClienteProcessoApi {
   principal: boolean;
 }
 
-/** Uma parte contrária secundária (texto livre). `documento` é CPF ou CNPJ, só dígitos. */
+/**
+ * Uma parte contrária do processo: nome + documento livres (não é `Pessoa` do cadastro —
+ * normalmente a parte contrária não é cliente do escritório), `documento` é CPF ou CNPJ (só
+ * dígitos), posição é o catálogo `posicao_cliente` (mesmo de `ClienteProcessoApi`). No máximo um
+ * item da lista tem `principal: true` (reforçado por índice único parcial no banco).
+ */
 export interface ParteContrariaApi {
   nome: string;
-  posicao: string | null;
+  posicao_id: number | null;
   documento: string | null;
+  principal: boolean;
 }
 
 /**
@@ -201,11 +207,6 @@ export interface ProcessoApi {
   status_id: number | null;
   pasta: string | null;
 
-  contrario_principal_nome: string | null;
-  contrario_principal_posicao: string | null;
-  contrario_principal_posicao_id: number | null;
-  contrario_principal_documento: string | null;
-
   advogado_responsavel_id: number | null;
   data_distribuicao: string | null;
   acao: string | null;
@@ -257,10 +258,6 @@ export interface ProcessoWriteApi {
   tipo: TipoProcesso;
   numero_cnj: string | null;
   status_id: number | null;
-
-  contrario_principal_nome: string | null;
-  contrario_principal_posicao_id: number | null;
-  contrario_principal_documento: string | null;
 
   advogado_responsavel_id: number | null;
   data_distribuicao: string | null;

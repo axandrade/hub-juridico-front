@@ -13,16 +13,10 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule, ValidatorFn } from '@angular/forms';
 import { switchMap } from 'rxjs';
 
-import {
-  documentoValidator,
-  maskDocumento,
-  maskNumeroCnj,
-  numeroCnjCompleto,
-} from '../../../../core/auth/documentos-br';
+import { maskNumeroCnj, numeroCnjCompleto } from '../../../../core/auth/documentos-br';
 import { ComboboxComponent } from '../../../../shared/components/combobox/combobox.component';
 import { DomainModelDropdownComponent } from '../../../../shared/components/domain-dropdown/domain-model-dropdown.component';
 import { CnjMaskDirective } from '../../../../shared/directives/cnj-mask.directive';
-import { DocumentoMaskDirective } from '../../../../shared/directives/documento-mask.directive';
 import { mensagensCamposInvalidos } from '../../../../shared/utils/form-validacao';
 import { DomainService, IDomainPage } from '../../../../core/services/domain.service';
 import {
@@ -36,6 +30,7 @@ import {
 } from '../../services/processo-api.model';
 import { ProcessoEditavel, ProcessoService } from '../../services/processo-service';
 import { ProcessoClientesComponent } from '../processo-clientes/processo-clientes.component';
+import { ProcessoPartesContrariasComponent } from '../processo-partes-contrarias/processo-partes-contrarias.component';
 
 /** Item de um catálogo simples (`id`, `nome`) — Tribunal/OrgaoJulgador, via `/domain`. */
 interface CatalogoItem {
@@ -44,10 +39,6 @@ interface CatalogoItem {
 }
 
 const TIPOS_PROCESSO: TipoProcesso[] = ['JUDICIAL', 'ADMINISTRATIVO', 'ARBITRAL'];
-
-const ROTULOS_CAMPOS: Record<string, string> = {
-  contrarioPrincipalDocumento: 'CPF/CNPJ da parte contrária',
-};
 
 /**
  * `FormGroup` dos campos de texto/data/textarea desta aba — sem arquivo de "factory" separado
@@ -58,8 +49,6 @@ const ROTULOS_CAMPOS: Record<string, string> = {
  */
 type ProcessoForm = FormGroup<{
   numeroCnj: FormControl<string>;
-  contrarioPrincipalNome: FormControl<string>;
-  contrarioPrincipalDocumento: FormControl<string>;
   dataDistribuicao: FormControl<string>;
   observacoesGerais: FormControl<string>;
   destacarObservacao: FormControl<boolean>;
@@ -108,8 +97,8 @@ export type DadosGeraisValores = Omit<
     ComboboxComponent,
     DomainModelDropdownComponent,
     CnjMaskDirective,
-    DocumentoMaskDirective,
     ProcessoClientesComponent,
+    ProcessoPartesContrariasComponent,
   ],
   templateUrl: './processo-dados-gerais.component.html',
   styleUrl: './processo-dados-gerais.component.scss',
@@ -156,8 +145,6 @@ export class ProcessoDadosGeraisComponent {
 
   protected readonly form: ProcessoForm = new FormGroup({
     numeroCnj: text(),
-    contrarioPrincipalNome: text(),
-    contrarioPrincipalDocumento: text([documentoValidator]),
     dataDistribuicao: text(),
     observacoesGerais: text(),
     destacarObservacao: new FormControl(false, { nonNullable: true }),
@@ -191,9 +178,6 @@ export class ProcessoDadosGeraisComponent {
   protected readonly procedimentoLabel = signal('');
   protected readonly faseId = signal<number | null>(null);
   protected readonly faseLabel = signal('');
-  /** Posição da parte contrária — mesmo catálogo `PosicaoCliente` (V27) da posição de cada cliente. */
-  protected readonly contrarioPrincipalPosicaoId = signal<number | null>(null);
-  protected readonly contrarioPrincipalPosicaoLabel = signal('');
   protected readonly uf = signal('');
   /** Município escolhido no picker `cidades` (`null` = nenhum). Vira o snapshot de cidade/uf no back. */
   protected readonly cidadeId = signal<number | null>(null);
@@ -214,15 +198,11 @@ export class ProcessoDadosGeraisComponent {
   protected readonly procedimentoValor = computed(() =>
     this.procedimentoId() === null ? '' : String(this.procedimentoId()),
   );
-  protected readonly contrarioPrincipalPosicaoValor = computed(() =>
-    this.contrarioPrincipalPosicaoId() === null ? '' : String(this.contrarioPrincipalPosicaoId()),
-  );
   protected readonly tags = signal<string[]>([]);
   protected readonly escritoriosAnteriores = signal<string[]>([]);
-  // Preservado como veio — sem UI de edição nesta fatia.
-  private partesContrarias: ProcessoApi['partes_contrarias'] = [];
 
   private readonly clientesComp = viewChild(ProcessoClientesComponent);
+  private readonly partesContrariasComp = viewChild(ProcessoPartesContrariasComponent);
 
   /**
    * Histórico de "Observações gerais" — o backend arquiva a entrada automaticamente quando o
@@ -294,8 +274,6 @@ export class ProcessoDadosGeraisComponent {
     this.form.patchValue(
       {
         numeroCnj: p.numero_cnj ?? '',
-        contrarioPrincipalNome: p.contrario_principal_nome ?? '',
-        contrarioPrincipalDocumento: maskDocumento(p.contrario_principal_documento),
         dataDistribuicao: p.data_distribuicao ?? '',
         observacoesGerais: p.observacoes_gerais ?? '',
         destacarObservacao: p.destacar_observacao,
@@ -317,8 +295,6 @@ export class ProcessoDadosGeraisComponent {
     this.procedimentoLabel.set(p.procedimento ?? '');
     this.faseId.set(p.fase_id);
     this.faseLabel.set(p.fase ?? '');
-    this.contrarioPrincipalPosicaoId.set(p.contrario_principal_posicao_id);
-    this.contrarioPrincipalPosicaoLabel.set(p.contrario_principal_posicao ?? '');
     this.uf.set(p.uf ?? '');
     this.cidadeId.set(p.cidade_id);
     this.cidadeLabel.set(p.cidade_id !== null ? `${p.cidade ?? ''} — ${p.uf ?? ''}` : '');
@@ -326,7 +302,7 @@ export class ProcessoDadosGeraisComponent {
     this.aplicarTribunalProcessante(p.tribunal_atual, p.orgao_processante);
     this.escritoriosAnteriores.set([...p.escritorios_anteriores]);
     this.clientesComp()?.carregar(p.clientes);
-    this.partesContrarias = p.partes_contrarias;
+    this.partesContrariasComp()?.carregar(p.partes_contrarias);
     this.observacoesPrevias.set(p.observacoes_previas);
     this.paginaObservacoes.set(0);
     this.tribunaisHistorico.set(p.tribunais_historico);
@@ -359,8 +335,6 @@ export class ProcessoDadosGeraisComponent {
     this.procedimentoLabel.set('');
     this.faseId.set(null);
     this.faseLabel.set('');
-    this.contrarioPrincipalPosicaoId.set(null);
-    this.contrarioPrincipalPosicaoLabel.set('');
     this.uf.set('');
     this.cidadeId.set(null);
     this.cidadeLabel.set('');
@@ -370,7 +344,7 @@ export class ProcessoDadosGeraisComponent {
     this.aplicarTribunalProcessante(null, null);
     this.escritoriosAnteriores.set([]);
     this.clientesComp()?.limpar();
-    this.partesContrarias = [];
+    this.partesContrariasComp()?.limpar();
     this.observacoesPrevias.set([]);
     this.paginaObservacoes.set(0);
     this.tribunaisHistorico.set([]);
@@ -382,7 +356,7 @@ export class ProcessoDadosGeraisComponent {
   validar(): DadosGeraisValidacao {
     if (this.form.invalid) {
       this.form.markAllAsTouched();
-      const mensagens = mensagensCamposInvalidos(this.form, ROTULOS_CAMPOS);
+      const mensagens = mensagensCamposInvalidos(this.form, {});
       return { ok: false, mensagem: `Preencha corretamente: ${mensagens.join('; ')}` };
     }
     if (this.ehJudicial() && !numeroCnjCompleto(this.form.controls.numeroCnj.value)) {
@@ -402,9 +376,6 @@ export class ProcessoDadosGeraisComponent {
       tipo: this.tipo(),
       numeroCnj: raw.numeroCnj,
       statusId: this.statusId(),
-      contrarioPrincipalNome: raw.contrarioPrincipalNome,
-      contrarioPrincipalPosicaoId: this.contrarioPrincipalPosicaoId(),
-      contrarioPrincipalDocumento: raw.contrarioPrincipalDocumento,
       advogadoResponsavelId: this.advogadoResponsavelId(),
       dataDistribuicao: raw.dataDistribuicao,
       acaoId: this.acaoId(),
@@ -420,7 +391,7 @@ export class ProcessoDadosGeraisComponent {
       orgaoProcessanteId: this.orgaoProcessanteId(),
       escritoriosAnteriores: this.escritoriosAnteriores(),
       clientes: this.clientesComp()?.coletar() ?? [],
-      partesContrarias: this.partesContrarias,
+      partesContrarias: this.partesContrariasComp()?.coletar() ?? [],
     };
   }
 
@@ -466,11 +437,6 @@ export class ProcessoDadosGeraisComponent {
   protected onProcedimentoChange(valor: string): void {
     this.procedimentoId.set(valor ? Number(valor) : null);
     this.procedimentoLabel.set('');
-  }
-
-  protected onContrarioPrincipalPosicaoChange(valor: string): void {
-    this.contrarioPrincipalPosicaoId.set(valor ? Number(valor) : null);
-    this.contrarioPrincipalPosicaoLabel.set('');
   }
 
   protected onAdvogadoResponsavelChange(valor: string): void {
@@ -542,38 +508,18 @@ export class ProcessoDadosGeraisComponent {
   }
 
   // --- catálogo "Posição do cliente" — CRUD via `/domain/posicao-cliente` (ver `ProcessoService`);
-  // usado pela "Posição" de cada cliente (ver `app-processo-clientes`) e pela parte contrária,
-  // mesmo catálogo ---
-
-  /** Os pares id/label desta aba que apontam pro catálogo (fora do `app-processo-clientes`); renomear/excluir propaga pra eles. */
-  private posicoesEmUso(): { id: WritableSignal<number | null>; label: WritableSignal<string> }[] {
-    return [{ id: this.contrarioPrincipalPosicaoId, label: this.contrarioPrincipalPosicaoLabel }];
-  }
-
-  protected criarPosicaoCliente(
-    nome: string,
-    idAlvo: WritableSignal<number | null>,
-    labelAlvo: WritableSignal<string>,
-  ): void {
-    this.processoService.criarCatalogo('posicao-cliente', nome).subscribe({
-      next: (p) => {
-        idAlvo.set(p.id);
-        labelAlvo.set(p.nome);
-      },
-      error: (err: unknown) => this.erro.emit(this.mensagemErroHttp(err)),
-    });
-  }
+  // usado pela "Posição" de cada cliente e de cada parte contrária (ver `app-processo-clientes`/
+  // `app-processo-partes-contrarias`), mesmo catálogo. "Adicionar" cada sub-lista resolve local;
+  // "Editar"/"Excluir" só ficam habilitados no dropdown de `app-processo-partes-contrarias` (ver
+  // doc da classe lá), que repassa pra cá via `aoEditarPosicao`/`aoExcluirPosicao` — daqui,
+  // propaga pras duas listas (o evento pode ter vindo de qualquer uma delas).
 
   protected renomearPosicaoCliente({ de, para }: { de: string; para: string }): void {
     const id = Number(de);
     this.processoService.renomearCatalogo('posicao-cliente', id, para).subscribe({
       next: (p) => {
-        for (const campo of this.posicoesEmUso()) {
-          if (campo.id() === id) {
-            campo.label.set(p.nome);
-          }
-        }
         this.clientesComp()?.sincronizarPosicaoRenomeada(id, p.nome);
+        this.partesContrariasComp()?.sincronizarPosicaoRenomeada(id, p.nome);
       },
       error: (err: unknown) => this.erro.emit(this.mensagemErroHttp(err)),
     });
@@ -583,13 +529,8 @@ export class ProcessoDadosGeraisComponent {
     const id = Number(valor);
     this.processoService.excluirCatalogo('posicao-cliente', id).subscribe({
       next: () => {
-        for (const campo of this.posicoesEmUso()) {
-          if (campo.id() === id) {
-            campo.id.set(null);
-            campo.label.set('');
-          }
-        }
         this.clientesComp()?.sincronizarPosicaoExcluida(id);
+        this.partesContrariasComp()?.sincronizarPosicaoExcluida(id);
       },
       error: (err: unknown) => this.erro.emit(this.mensagemErroHttp(err)),
     });

@@ -1,0 +1,55 @@
+@use 'variables' as *;
+
+:host {
+  display: block;
+}
+
+.processos-com-arquivos {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-sm;
+  min-height: 0;
+
+  &__hint {
+    margin: 0;
+    color: $color-text-muted;
+    font-size: $font-size-xs;
+  }
+
+  &__erro {
+    margin: 0;
+    color: $color-text-secondary;
+    font-size: $font-size-xs;
+
+    button {
+      border: 0;
+      background: none;
+      padding: 0;
+      color: $color-primary;
+      cursor: pointer;
+      font: inherit;
+      text-decoration: underline;
+    }
+  }
+
+  // Afford: a última coluna (vazia) sinaliza que a linha abre a pasta; no hover vira "Abrir".
+  ::ng-deep tbody td:last-child {
+    text-align: right;
+    white-space: nowrap;
+    color: $color-text-muted;
+    font-size: $font-size-xs;
+
+    &::after {
+      content: '\2192'; // →
+    }
+  }
+
+  ::ng-deep tbody tr:hover td:last-child {
+    color: $color-primary;
+    font-weight: $font-weight-medium;
+
+    &::after {
+      content: 'Abrir \00a0\2192';
+    }
+  }
+}

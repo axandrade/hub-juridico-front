@@ -5,3 +5,27 @@
   color: $color-text-secondary;
   font-size: $font-size-xs;
 }
+
+.pasta-dialog__vazio {
+  margin: 0;
+  color: $color-text-secondary;
+}
+
+.pasta-dialog__voltar {
+  display: inline-flex;
+  align-items: center;
+  gap: $spacing-xs;
+  margin-bottom: $spacing-sm;
+  border: 0;
+  background: none;
+  padding: 0;
+  color: $color-primary;
+  cursor: pointer;
+  font: inherit;
+  font-size: $font-size-xs;
+  font-weight: $font-weight-medium;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}

@@ -1,7 +1,38 @@
 @if (pastaPerito.aberto()) {
   @if (pastaPerito.perito(); as alvo) {
-    <app-modal [open]="true" [large]="true" [title]="'Pasta — ' + (alvo.nome || 'perito')" (closed)="fechar()">
-      <app-document-explorer [pessoaId]="alvo.id" [pessoaNome]="alvo.nome" (notify)="onPastaNotice($event)" />
+    <app-modal
+      [open]="true"
+      [large]="true"
+      [title]="
+        pastaExplorerProcesso()
+          ? 'Pasta — ' + (alvo.nome || 'perito') + ' · ' + pastaExplorerProcesso()!.numeroProcesso
+          : 'Pasta — ' + (alvo.nome || 'perito')
+      "
+      (closed)="fechar()"
+    >
+      @if (pastaExplorerProcesso(); as processo) {
+        <button type="button" class="pasta-dialog__voltar" (click)="voltarParaListaPastas()">
+          <i class="fa-solid fa-arrow-left" aria-hidden="true"></i> Todos os processos
+        </button>
+        @if (processo.pastaId) {
+          <app-document-explorer
+            [pessoaId]="alvo.id"
+            [pessoaNome]="alvo.nome"
+            [pastaInicialId]="processo.pastaId"
+            (notify)="onPastaNotice($event)"
+          />
+        } @else {
+          <!-- `pastaId` nulo = subpasta do processo ainda não existe (não é "raiz do perito" —
+               omitir pastaInicialId aqui abriria a árvore geral dele, sem relação com este processo). -->
+          <p class="pasta-dialog__vazio">Este processo ainda não tem pasta de arquivos.</p>
+        }
+      } @else {
+        <app-processos-perito-com-arquivos
+          [peritoId]="alvo.id"
+          [recarregarTick]="pastaResumoTick()"
+          (rowOpen)="abrirPastaDoResumo($event)"
+        />
+      }
       @if (pastaNotice()) {
         <p class="pasta-dialog__notice">{{ pastaNotice() }}</p>
       }

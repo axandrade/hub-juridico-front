@@ -1,0 +1,21 @@
+<div class="processos-com-arquivos">
+  <p class="processos-com-arquivos__hint">Clique num processo para abrir a pasta dele.</p>
+
+  <app-data-table
+    [columns]="columns"
+    [data]="itens()"
+    [loading]="loading()"
+    trackKey="processoId"
+    emptyMessage="Nenhum processo vinculado a este perito."
+    [sortable]="true"
+    [initialSort]="{ key: 'ultimoEnvioEm', direction: 'desc' }"
+    (rowClick)="onRowClick($event)"
+  />
+
+  @if (loadError()) {
+    <p class="processos-com-arquivos__erro">
+      Não foi possível carregar a lista.
+      <button type="button" (click)="recarregar()">Tentar de novo</button>
+    </p>
+  }
+</div>

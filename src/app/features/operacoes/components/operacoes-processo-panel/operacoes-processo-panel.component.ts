@@ -2,21 +2,27 @@ import { DOCUMENT, formatDate } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, inject, input, output, signal, viewChild } from '@angular/core';
 
 import { DATE_FORMAT } from '../../../../core/constants/app-constants';
+import { DomainService } from '../../../../core/services/domain.service';
 import { ButtonComponent } from '../../../../shared/components/button/button.component';
 import { DomainModelTableComponent } from '../../../../shared/components/domain-table/domain-model-table.component';
 import { TableColumn } from '../../../../shared/components/table/table-column.model';
 import { ModalComponent } from '../../../../shared/components/modal/modal.component';
-import { PanelShellController } from '../../../../shared/panel-shell/panel-shell.controller';
+import { PanelLayoutSwitcherComponent } from '../../../../shared/components/panel-layout-switcher/panel-layout-switcher.component';
+import { PAINEL_LAYOUT_PADRAO, PainelLayout } from '../../../../shared/models/panel-layout';
+import { ToastService } from '../../../../shared/services/toast.service';
 import { OperacaoRow, TIPO_OPERACAO_LABEL } from '../../services/operacao-api.model';
 import { OperacaoFormComponent } from '../operacao-form/operacao-form.component';
 
 /**
- * Painel lateral fixo (sempre à direita — sem os outros modos de `PanelShellController` tipo
- * esquerda/abaixo/diálogo, só o redimensionamento por arraste, que o controller já resolve)
- * com as operações de um processo — uma segunda `app-domain-model-table`, apontada pra
- * `/domain/operacao`, filtrada por `processoId eq {processoId}`. "Novo" e o ícone de editar de
+ * Conteúdo do painel — vive dentro do "slot" que `OperacoesComponent` monta com
+ * `PanelShellController` (mesmo padrão de posicionamento/redimensionamento de Processos/
+ * Advogados: divide espaço com a tabela, não fica por cima dela; o dono do controller é o pai,
+ * este componente só recebe `layoutPainel`/emite `layoutPainelChange`, igual
+ * `AdvogadoFormComponent`). Uma segunda `app-domain-model-table`, apontada pra `/domain/operacao`,
+ * filtrada por `processoId eq {processoId} and ativo eq true`. "Novo" e o ícone de editar de
  * cada linha (`editAction`) abrem `app-operacao-form` dentro de um `app-modal` (mesmo padrão de
- * Usuários — dialog, não painel, porque este painel já ocupa a lateral).
+ * Usuários — dialog, não painel, porque este painel já mostra a tabela). O ícone de excluir
+ * (`deleteAction`) inativa direto (soft-delete), sem abrir o form.
  *
  * A coluna "Ordem" é derivada no cliente (não existe na entidade): posição cronológica de
  * cadastro (1º = mais antiga), calculada a partir de `criadoEm`/`id` de TODA a lista carregada —
@@ -29,15 +35,20 @@ import { OperacaoFormComponent } from '../operacao-form/operacao-form.component'
 @Component({
   selector: 'app-operacoes-processo-panel',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [DomainModelTableComponent, ButtonComponent, ModalComponent, OperacaoFormComponent],
+  imports: [DomainModelTableComponent, ButtonComponent, ModalComponent, PanelLayoutSwitcherComponent, OperacaoFormComponent],
   templateUrl: './operacoes-processo-panel.component.html',
   styleUrl: './operacoes-processo-panel.component.scss',
 })
 export class OperacoesProcessoPanelComponent {
   private readonly document = inject(DOCUMENT);
+  private readonly domainService = inject(DomainService);
+  private readonly toast = inject(ToastService);
 
   readonly processoId = input.required<number>();
   readonly numeroCnj = input<string | null>(null);
+  /** Posição atual do painel na tela (a página é quem aplica/persiste, ver `OperacoesComponent`). */
+  readonly layoutPainel = input<PainelLayout>(PAINEL_LAYOUT_PADRAO);
+  readonly layoutPainelChange = output<PainelLayout>();
   readonly fechar = output<void>();
 
   private readonly grade = viewChild(DomainModelTableComponent<OperacaoRow>);
@@ -50,26 +61,12 @@ export class OperacoesProcessoPanelComponent {
   });
   protected readonly tituloForm = computed(() => (this.formAberto() === 'novo' ? 'Nova operação' : 'Editar operação'));
 
-  /**
-   * Só a largura/arraste do `PanelShellController` interessam aqui (painel sempre ancorado à
-   * direita) — `iniciarResize` já assume o sinal certo pra essa posição (arrastar a borda pra
-   * esquerda alarga), então é só travar `layoutPainel` em `'right'` uma vez e nunca expor troca
-   * de posição na UI.
-   */
-  protected readonly panelShell = new PanelShellController(this.document, {
-    storagePrefix: 'hub-juridico.operacoes-painel',
-    larguraPadrao: 720,
-    larguraMin: 480,
-    larguraMax: 1100,
-  });
-
-  constructor() {
-    if (this.panelShell.layoutPainel() !== 'right') {
-      this.panelShell.setLayoutPainel('right');
-    }
+  protected escolherLayout(layout: PainelLayout): void {
+    this.layoutPainelChange.emit(layout);
   }
 
-  protected readonly filtro = computed(() => `processoId eq ${this.processoId()}`);
+  /** `ativo eq true`: excluir é soft-delete (inativar) — some da lista sem um "mostrar inativos" ainda. */
+  protected readonly filtro = computed(() => `processoId eq ${this.processoId()} and ativo eq true`);
 
   /** id -> posição cronológica (1-based) entre as operações carregadas. */
   private readonly ordemPorId = signal<Map<number, number>>(new Map());
@@ -148,6 +145,27 @@ export class OperacoesProcessoPanelComponent {
   protected fecharForm(): void {
     this.formAberto.set(null);
   }
+
+  /**
+   * Ícone "excluir" da grade (`deleteAction`) — soft-delete: `PATCH ativo=false`, mesma
+   * convenção do resto do projeto (Pessoa/Advogado/Processo — sem hard delete pra agregados).
+   * Arrow function de propósito, ver `DomainModelTableComponent.deleteAction`.
+   */
+  protected readonly excluirOperacao = (row: OperacaoRow): void => {
+    const confirmado = this.document.defaultView?.confirm(
+      `Excluir a operação "${row.titulo ?? 'sem título'}"? Essa ação não pode ser desfeita por aqui.`,
+    );
+    if (!confirmado) {
+      return;
+    }
+    this.domainService.patch({ entityName: 'operacao', entityId: row.id, body: { ativo: false } }).subscribe({
+      next: () => {
+        this.toast.sucesso('Operação excluída.');
+        this.grade()?.reload();
+      },
+      error: () => this.toast.erro('Não foi possível excluir a operação.'),
+    });
+  };
 
   protected onOperacaoSalva(): void {
     this.formAberto.set(null);

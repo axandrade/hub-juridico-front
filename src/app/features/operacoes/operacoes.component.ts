@@ -1,9 +1,12 @@
-import { ChangeDetectionStrategy, Component, computed, signal, viewChild } from '@angular/core';
+import { DOCUMENT } from '@angular/common';
+import { ChangeDetectionStrategy, Component, HostListener, computed, inject, signal, viewChild } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { debounceTime, distinctUntilChanged } from 'rxjs';
 
 import { DomainModelTableComponent } from '../../shared/components/domain-table/domain-model-table.component';
 import { TableColumn } from '../../shared/components/table/table-column.model';
+import { PainelLayout } from '../../shared/models/panel-layout';
+import { PanelShellController } from '../../shared/panel-shell/panel-shell.controller';
 import { OperacoesProcessoPanelComponent } from './components/operacoes-processo-panel/operacoes-processo-panel.component';
 
 /** Linha crua de `/domain/processo-operacoes` (camelCase) — view só-leitura, ver backend `ProcessoOperacoes`/migration V30. */
@@ -37,8 +40,11 @@ const CAMPOS_BUSCA = ['numeroCnj', 'clientePrincipalNome', 'contrarioPrincipalNo
  * cliente principal e contrário principal, resolvido no servidor via `filter` do
  * `DomainModelTableComponent`. Sem "mostrar inativos" aqui — a view já só traz processos ativos.
  *
- * Clicar numa linha abre `app-operacoes-processo-panel` (componente próprio, ver ele pros
- * detalhes) com as operações daquele processo.
+ * Clicar numa linha abre `app-operacoes-processo-panel` — mesmo padrão de painel posicionável de
+ * Processos/Advogados (`PanelShellController`, dono aqui, não dentro do painel): divide espaço
+ * com a tabela (grid), não fica por cima dela; só o layout `'dialog'` flutua/overlay. Diferente
+ * das outras telas, o painel só existe quando um processo está selecionado — sem seleção, a
+ * grade ocupa a largura toda mesmo que a preferência salva seja "painel visível".
  */
 @Component({
   selector: 'app-operacoes',
@@ -48,10 +54,23 @@ const CAMPOS_BUSCA = ['numeroCnj', 'clientePrincipalNome', 'contrarioPrincipalNo
   styleUrl: './operacoes.component.scss',
 })
 export class OperacoesComponent {
+  private readonly document = inject(DOCUMENT);
+
   /** A grade principal — usada pra reload manual e pro resumo de resultados no rodapé. */
   protected readonly grade = viewChild(DomainModelTableComponent<ProcessoOperacoesRow>);
 
+  protected readonly panelShell = new PanelShellController(this.document, {
+    storagePrefix: 'hub-juridico.operacoes',
+    larguraPadrao: 720,
+    larguraMin: 480,
+    larguraMax: 1100,
+  });
+
   protected readonly processoSelecionado = signal<ProcessoSelecionado | null>(null);
+  /** Sem processo selecionado não há o que mostrar, então o painel nunca ocupa espaço nesse caso — independe da preferência salva de visibilidade. */
+  protected readonly painelAtivo = computed(
+    () => this.processoSelecionado() !== null && this.panelShell.panelVisible(),
+  );
 
   /** Busca livre (número CNJ / cliente principal / contrário principal) — RQL, resolvida no servidor, com debounce. */
   protected readonly busca = signal('');
@@ -110,13 +129,30 @@ export class OperacoesComponent {
 
   protected abrirOperacoesDoProcesso(row: ProcessoOperacoesRow): void {
     this.processoSelecionado.set({ id: row.id, numeroCnj: row.numeroCnj });
+    this.panelShell.setPanelVisible(true);
   }
 
   protected fecharPainelOperacoes(): void {
     this.processoSelecionado.set(null);
   }
 
+  protected togglePanel(): void {
+    this.panelShell.togglePanel();
+  }
+
+  protected onLayoutPainelChange(layout: PainelLayout): void {
+    this.panelShell.setLayoutPainel(layout);
+  }
+
   protected reloadList(): void {
     this.grade()?.reload();
+  }
+
+  /** No modo diálogo, Esc fecha o diálogo (volta à posição original, mantém o processo selecionado). */
+  @HostListener('document:keydown.escape')
+  protected onEscape(): void {
+    if (this.panelShell.layoutPainel() === 'dialog' && this.panelShell.panelVisible()) {
+      this.panelShell.fecharDialog();
+    }
   }
 }

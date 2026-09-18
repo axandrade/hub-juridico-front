@@ -156,14 +156,25 @@
     }
   }
 
-  &__edit {
-    width: 44px;
-    max-width: 44px;
+  &__actions {
+    width: 88px;
+    max-width: 88px;
     text-align: center;
+    white-space: nowrap;
   }
 
-  &__edit-button {
+  // `inline-flex` (não `flex` no `<td>` direto — quebraria o layout de tabela da célula):
+  // cada botão já é `flex-center` (display: flex, vira caixa de bloco) — sem envolver os dois
+  // num container flex próprio eles empilham em vez de ficar lado a lado.
+  &__actions-group {
+    display: inline-flex;
+    align-items: center;
+    gap: $spacing-xs;
+  }
+
+  &__action-button {
     @include flex-center;
+    flex: 0 0 auto;
     width: 34px;
     height: 34px;
     padding: 0;
@@ -181,6 +192,12 @@
       border-color: $color-primary-light;
       background-color: rgba($burgundy-deep, 0.05);
       color: $color-primary;
+    }
+
+    &--danger:hover {
+      border-color: rgba($color-error, 0.5);
+      background-color: rgba($color-error, 0.08);
+      color: $color-error;
     }
   }
 

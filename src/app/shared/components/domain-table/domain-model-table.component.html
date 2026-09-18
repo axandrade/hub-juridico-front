@@ -42,8 +42,8 @@
             }
           </th>
         }
-        @if (editAction()) {
-          <th class="data-table__edit"></th>
+        @if (hasRowActions()) {
+          <th class="data-table__actions"></th>
         }
       </tr>
     </thead>
@@ -102,16 +102,30 @@
                 }
               </td>
             }
-            @if (editAction()) {
-              <td class="data-table__edit">
-                <button
-                  type="button"
-                  class="data-table__edit-button"
-                  [attr.aria-label]="editAriaLabel()"
-                  (click)="onEditClick(row, $event)"
-                >
-                  <i [class]="editIcon()" aria-hidden="true"></i>
-                </button>
+            @if (hasRowActions()) {
+              <td class="data-table__actions">
+                <span class="data-table__actions-group">
+                  @if (editAction()) {
+                    <button
+                      type="button"
+                      class="data-table__action-button"
+                      [attr.aria-label]="editAriaLabel()"
+                      (click)="onEditClick(row, $event)"
+                    >
+                      <i [class]="editIcon()" aria-hidden="true"></i>
+                    </button>
+                  }
+                  @if (deleteAction()) {
+                    <button
+                      type="button"
+                      class="data-table__action-button data-table__action-button--danger"
+                      [attr.aria-label]="deleteAriaLabel()"
+                      (click)="onDeleteClick(row, $event)"
+                    >
+                      <i [class]="deleteIcon()" aria-hidden="true"></i>
+                    </button>
+                  }
+                </span>
               </td>
             }
           </tr>

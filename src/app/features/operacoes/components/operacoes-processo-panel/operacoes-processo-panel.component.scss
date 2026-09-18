@@ -1,67 +1,30 @@
 @use 'variables' as *;
 @use 'mixins' as *;
 
-.operacoes-painel-backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: $z-overlay - 1;
-  border: 0;
-  padding: 0;
-  background-color: rgba($burgundy-deep, 0.45);
-  cursor: pointer;
+:host {
+  display: block;
+  min-width: 0;
+  height: 100%;
 }
 
-.operacoes-painel {
-  position: fixed;
-  z-index: $z-overlay;
-  top: 0;
-  right: 0;
-  bottom: 0;
+.operacoes-processo-panel {
   display: flex;
-  width: min(var(--painel-largura), 92vw);
   flex-direction: column;
-  border-left: 1px solid $color-border;
+  height: 100%;
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid $color-border;
+  border-radius: $border-radius-md;
   background-color: $color-surface;
-  box-shadow: $shadow-lg;
+  box-shadow: $shadow-sm;
 }
 
-// Arraste da borda esquerda — mesma matemática de `PanelShellController.iniciarResize` pra
-// layout `'right'` (arrastar pra esquerda alarga, pra direita estreita).
-.operacoes-painel__resizer {
-  position: absolute;
-  z-index: 1;
-  top: 0;
-  bottom: 0;
-  left: 0;
-  width: $spacing-lg;
-  transform: translateX(-50%);
-  cursor: col-resize;
-  touch-action: none;
-
-  &::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    bottom: 0;
-    left: 50%;
-    width: 3px;
-    transform: translateX(-50%);
-    border-radius: 999px;
-    background-color: rgba($color-border, 0.9);
-    transition: background-color $transition-fast;
-  }
-
-  &:hover::after,
-  &:active::after {
-    background-color: $color-primary-light;
-  }
-}
-
-.operacoes-painel__header {
+.operacoes-processo-panel__header {
   @include flex-between;
+  align-items: flex-start;
   gap: $spacing-sm;
   padding: $spacing-md;
-  border-bottom: 1px solid rgba($color-border, 0.7);
+  border-bottom: 1px solid rgba($color-border, 0.75);
 
   h2 {
     display: flex;
@@ -74,16 +37,24 @@
   }
 }
 
-.operacoes-painel__cnj {
+.operacoes-processo-panel__cnj {
   color: $color-text-secondary;
   font-size: $font-size-base;
   font-weight: $font-weight-regular;
 }
 
-.operacoes-painel__close {
+.operacoes-processo-panel__tools {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.operacoes-processo-panel__close {
   @include flex-center;
-  width: 32px;
-  height: 32px;
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
   border: 1px solid $color-border;
   border-radius: $border-radius-sm;
   background-color: $color-neutral-light;
@@ -99,12 +70,12 @@
   }
 }
 
-.operacoes-painel__acoes {
+.operacoes-processo-panel__acoes {
   display: flex;
   padding: $spacing-md $spacing-md 0;
 }
 
-.operacoes-painel__table-wrap {
+.operacoes-processo-panel__table-wrap {
   @include thin-scrollbar;
   flex: 1;
   min-height: 0;

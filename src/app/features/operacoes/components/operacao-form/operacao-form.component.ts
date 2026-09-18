@@ -87,6 +87,8 @@ export class OperacaoFormComponent {
   protected readonly tipos = TIPOS;
   protected readonly tipoOpcoes = TIPOS.map((t) => TIPO_OPERACAO_LABEL[t]);
   protected readonly importanciaOpcoes = IMPORTANCIA_OPCOES;
+  /** Tipo é imutável após criado (os campos que ele controla mudam demais pra editar sem confusão). */
+  protected readonly tipoTravado = computed(() => this.operacaoId() !== null);
 
   protected readonly tipo = signal<TipoOperacao>('INTIMACAO');
   protected readonly ehTarefa = computed(() => this.tipo() === 'TAREFA');
@@ -175,6 +177,9 @@ export class OperacaoFormComponent {
   }
 
   protected onTipoChange(rotulo: string): void {
+    if (this.tipoTravado()) {
+      return;
+    }
     const achado = this.tipos.find((t) => TIPO_OPERACAO_LABEL[t] === rotulo);
     if (achado) {
       this.tipo.set(achado);

@@ -1,34 +1,23 @@
-<button
-  type="button"
-  class="operacoes-painel-backdrop"
-  aria-label="Fechar painel"
-  (click)="onFechar()"
-></button>
-
-<aside
-  class="operacoes-painel"
-  aria-label="Operações do processo"
-  [style.--painel-largura.px]="panelShell.painelLargura()"
->
-  <div
-    class="operacoes-painel__resizer"
-    role="separator"
-    aria-orientation="vertical"
-    aria-label="Redimensionar painel"
-    (pointerdown)="panelShell.iniciarResize($event)"
-  ></div>
-
-  <header class="operacoes-painel__header">
+<section class="operacoes-processo-panel" aria-label="Operações do processo">
+  <header class="operacoes-processo-panel__header">
     <h2>
       Operações
-      <span class="operacoes-painel__cnj">{{ numeroCnj() || 'sem número CNJ' }}</span>
+      <span class="operacoes-processo-panel__cnj">{{ numeroCnj() || 'sem número CNJ' }}</span>
     </h2>
-    <button type="button" class="operacoes-painel__close" aria-label="Fechar painel" (click)="onFechar()">
-      <i class="fa-solid fa-xmark" aria-hidden="true"></i>
-    </button>
+    <div class="operacoes-processo-panel__tools" aria-label="Ferramentas do painel">
+      <button
+        type="button"
+        class="operacoes-processo-panel__close"
+        aria-label="Fechar painel"
+        (click)="onFechar()"
+      >
+        <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+      </button>
+      <app-panel-layout-switcher [layoutPainel]="layoutPainel()" (layoutPainelChange)="escolherLayout($event)" />
+    </div>
   </header>
 
-  <div class="operacoes-painel__acoes">
+  <div class="operacoes-processo-panel__acoes">
     <app-button
       variant="primary"
       size="sm"
@@ -38,7 +27,7 @@
     />
   </div>
 
-  <div class="operacoes-painel__table-wrap">
+  <div class="operacoes-processo-panel__table-wrap">
     <app-domain-model-table
       entityName="operacao"
       fields="id,tipo,titulo,providencia,prazoFatal,status,criadoEm,processoId"
@@ -52,10 +41,12 @@
       [favoritable]="false"
       [editAction]="abrirEdicao"
       editAriaLabel="Editar operação"
+      [deleteAction]="excluirOperacao"
+      deleteAriaLabel="Excluir operação"
       (dataLoaded)="onDataLoaded($event)"
     />
   </div>
-</aside>
+</section>
 
 <app-modal [open]="formAberto() !== null" [wide]="true" [title]="tituloForm()" (closed)="fecharForm()">
   @if (formAberto() !== null) {

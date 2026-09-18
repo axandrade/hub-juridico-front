@@ -1,11 +1,125 @@
 @use 'variables' as *;
 @use 'mixins' as *;
 
+:host {
+  display: block;
+}
+
+// Grid posicionável — mesmo mecanismo de Processos/Advogados (`PanelShellController`), só que
+// aqui o painel só existe quando um processo está selecionado (ver `painelAtivo()` no
+// componente); sem seleção, `.operacoes--panel-hidden` colapsa pra uma coluna só.
 .operacoes {
+  --painel-largura: 720px;
+  --painel-altura: 340px;
+
+  position: relative; // âncora do redimensionador
+  display: grid;
+  gap: $spacing-lg;
+  min-height: calc(100vh - 160px);
+  grid-template-columns: var(--painel-largura) minmax(0, 1fr); // padrão = painel à esquerda
+
+  &[data-layout='right'] {
+    grid-template-columns: minmax(0, 1fr) var(--painel-largura);
+
+    .operacoes-panel-slot {
+      order: 2;
+    }
+    .operacoes-main {
+      order: 1;
+    }
+  }
+
+  &[data-layout='bottom'] {
+    height: calc(100vh - 160px);
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr) var(--painel-altura);
+
+    .operacoes-panel-slot {
+      order: 2;
+      min-height: 0;
+      overflow: auto;
+    }
+    .operacoes-main {
+      order: 1;
+      min-height: 0;
+      max-height: none;
+    }
+  }
+
+  &[data-layout='dialog'] {
+    grid-template-columns: minmax(0, 1fr);
+
+    .operacoes-panel-slot {
+      position: fixed;
+      z-index: $z-overlay;
+      top: 50%;
+      left: 50%;
+      width: min(720px, 94vw);
+      height: min(80vh, 720px);
+      transform: translate(-50%, -50%);
+    }
+  }
+
+  // Painel oculto (ou sem processo selecionado) — vale para todos os layouts, então precisa
+  // vencer os seletores acima.
+  &.operacoes--panel-hidden {
+    grid-template-columns: minmax(0, 1fr);
+
+    .operacoes-panel-slot {
+      display: none;
+    }
+  }
+}
+
+.operacoes-main {
   display: flex;
-  height: 100%;
   flex-direction: column;
+  min-width: 0;
+  max-height: calc(100vh - 132px);
+  overflow: hidden;
   padding: $spacing-lg;
+  border: 1px solid $color-border;
+  border-radius: $border-radius-md;
+  background-color: $color-surface;
+  box-shadow: $shadow-sm;
+}
+
+.operacoes-actions {
+  @include flex-between;
+  gap: $spacing-md;
+  margin-bottom: $spacing-md;
+
+  h1 {
+    margin: 0;
+  }
+}
+
+.operacoes-panel-toggle {
+  display: inline-flex;
+  min-height: 34px;
+  align-items: center;
+  gap: $spacing-xs;
+  padding: 0 $spacing-sm;
+  border: 1px solid $color-border;
+  border-radius: $border-radius-sm;
+  background-color: $color-neutral-light;
+  color: $color-text-secondary;
+  cursor: pointer;
+  font: inherit;
+  font-size: $font-size-xs;
+  font-weight: $font-weight-medium;
+  white-space: nowrap;
+  transition:
+    background-color $transition-fast,
+    border-color $transition-fast,
+    color $transition-fast;
+
+  &:hover,
+  &.is-active {
+    border-color: $color-primary-light;
+    background-color: rgba($color-primary-pale, 0.55);
+    color: $color-primary;
+  }
 }
 
 // Seção "Pesquisar" — mesmo desenho de Advogados/Clientes (rótulo em cima, contador à direita).
@@ -87,11 +201,11 @@
 .operacoes-table-wrap {
   @include thin-scrollbar;
   flex: 1;
-  min-height: 360px;
+  min-height: 0;
   overflow: auto;
 }
 
-.operacoes-footer {
+.operacoes-main__footer {
   display: flex;
   align-items: center;
   gap: $spacing-xs;
@@ -108,4 +222,140 @@
   cursor: pointer;
   font: inherit;
   text-decoration: underline;
+}
+
+.operacoes-panel-slot {
+  position: relative;
+  min-width: 0;
+}
+
+.operacoes-panel-slot__close {
+  @include flex-center;
+  position: absolute;
+  top: -14px;
+  right: -14px;
+  z-index: 1;
+  width: 30px;
+  height: 30px;
+  border: 1px solid $color-border;
+  border-radius: 999px;
+  background-color: $color-surface;
+  color: $color-text-secondary;
+  cursor: pointer;
+  box-shadow: $shadow-md;
+  transition:
+    color $transition-fast,
+    border-color $transition-fast;
+
+  &:hover {
+    border-color: $color-primary-light;
+    color: $color-primary;
+  }
+}
+
+.operacoes-panel-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: $z-overlay - 1;
+  border: 0;
+  padding: 0;
+  background-color: rgba($burgundy-deep, 0.45);
+  cursor: pointer;
+}
+
+.operacoes-resizer {
+  position: absolute;
+  z-index: 4;
+  touch-action: none;
+
+  &::after {
+    content: '';
+    position: absolute;
+    border-radius: 999px;
+    background-color: rgba($color-border, 0.9);
+    transition: background-color $transition-fast;
+  }
+
+  &:hover::after,
+  &:active::after {
+    background-color: $color-primary-light;
+  }
+}
+
+.operacoes-resizer--left {
+  top: 0;
+  bottom: 0;
+  left: var(--painel-largura);
+  width: $spacing-lg;
+  transform: translateX(-50%);
+  cursor: col-resize;
+
+  &::after {
+    top: 0;
+    bottom: 0;
+    left: 50%;
+    width: 3px;
+    transform: translateX(-50%);
+  }
+}
+
+.operacoes-resizer--right {
+  top: 0;
+  bottom: 0;
+  right: var(--painel-largura);
+  width: $spacing-lg;
+  transform: translateX(50%);
+  cursor: col-resize;
+
+  &::after {
+    top: 0;
+    bottom: 0;
+    left: 50%;
+    width: 3px;
+    transform: translateX(-50%);
+  }
+}
+
+.operacoes-resizer--bottom {
+  left: 0;
+  right: 0;
+  bottom: var(--painel-altura);
+  height: $spacing-lg;
+  transform: translateY(50%);
+  cursor: row-resize;
+
+  &::after {
+    left: 0;
+    right: 0;
+    top: 50%;
+    height: 3px;
+    transform: translateY(-50%);
+  }
+}
+
+@include respond-below($breakpoint-lg) {
+  // Telas estreitas: qualquer layout dockeado vira coluna única e sem redimensionador
+  // (o modo diálogo continua flutuando).
+  .operacoes[data-layout='left'],
+  .operacoes[data-layout='right'],
+  .operacoes[data-layout='bottom'] {
+    height: auto;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: none;
+  }
+
+  .operacoes-resizer {
+    display: none;
+  }
+
+  .operacoes-main {
+    max-height: none;
+  }
+}
+
+@include respond-below($breakpoint-sm) {
+  .operacoes-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
 }

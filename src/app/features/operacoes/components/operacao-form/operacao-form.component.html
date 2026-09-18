@@ -5,6 +5,7 @@
       <app-combobox
         ariaLabel="Tipo da operação"
         [pesquisavel]="false"
+        [disabled]="tipoTravado()"
         [options]="tipoOpcoes"
         [value]="tipoRotulo()"
         (valueChange)="onTipoChange($event)"

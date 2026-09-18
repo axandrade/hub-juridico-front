@@ -1,16 +1,64 @@
 <div class="operacoes">
   <h1>Tela de Operações</h1>
 
+  <div class="operacoes-search-section">
+    <span class="operacoes-search-section__label">Pesquisar</span>
+    <label class="operacoes-search">
+      <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+      <input
+        type="text"
+        placeholder="número CNJ, cliente principal ou contrário principal"
+        [value]="busca()"
+        (input)="onBuscaInput($event)"
+        aria-label="Buscar por número CNJ, cliente principal ou contrário principal"
+      />
+      @if (busca()) {
+        <button type="button" aria-label="Limpar busca" (click)="limparBusca()">
+          <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+        </button>
+      }
+    </label>
+    <span class="operacoes-search-section__count">{{ busca().trim() ? 1 : 0 }} filtro(s)</span>
+  </div>
+
   <div class="operacoes-table-wrap">
     <app-domain-model-table
       entityName="processo-operacoes"
       fields="id,numeroCnj,acao,status,clientePrincipalNome,contrarioPrincipalNome"
       [columns]="operacoesColumns"
       [columnsToolbar]="false"
+      [filter]="filtro()"
       sort="-id"
       trackKey="id"
       emptyMessage="Nenhum processo encontrado."
       [favoritable]="false"
+      (rowClick)="abrirOperacoesDoProcesso($event)"
     />
   </div>
+
+  <footer class="operacoes-footer">
+    <span>
+      @if (busca().trim()) {
+        {{ grade()?.pagination()?.totalElements ?? 0 }} resultado(s) para "{{ busca().trim() }}"
+      } @else {
+        {{ grade()?.pagination()?.totalElements ?? 0 }} operação(ões) encontrada(s)
+      }
+    </span>
+    @if (grade()?.loadError()) {
+      <span>
+        · Não foi possível carregar a lista.
+        <button type="button" class="operacoes-link-button" (click)="reloadList()">
+          Tentar de novo
+        </button>
+      </span>
+    }
+  </footer>
+
+  @if (processoSelecionado(); as processo) {
+    <app-operacoes-processo-panel
+      [processoId]="processo.id"
+      [numeroCnj]="processo.numeroCnj"
+      (fechar)="fecharPainelOperacoes()"
+    />
+  }
 </div>

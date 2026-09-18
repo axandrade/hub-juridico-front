@@ -8,9 +8,104 @@
   padding: $spacing-lg;
 }
 
+// Seção "Pesquisar" — mesmo desenho de Advogados/Clientes (rótulo em cima, contador à direita).
+.operacoes-search-section {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-areas:
+    'label label'
+    'input count';
+  align-items: center;
+  gap: $spacing-xs $spacing-sm;
+  margin-bottom: $spacing-sm;
+
+  &__label {
+    grid-area: label;
+    font-size: $font-size-xs;
+    font-weight: $font-weight-medium;
+    color: $color-text-secondary;
+  }
+
+  &__count {
+    grid-area: count;
+    font-size: $font-size-xs;
+    color: $color-text-muted;
+    white-space: nowrap;
+  }
+}
+
+.operacoes-search {
+  grid-area: input;
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+  min-width: 0;
+  min-height: 36px;
+  padding: 0 $spacing-sm;
+  border: 1px solid $color-border;
+  border-radius: $border-radius-sm;
+  background-color: $color-surface;
+  color: $color-text-muted;
+
+  &:focus-within {
+    border-color: $color-primary-light;
+    box-shadow: 0 0 0 3px rgba($rouge-light, 0.16);
+  }
+
+  > i {
+    font-size: $font-size-xs;
+  }
+
+  input {
+    flex: 1;
+    min-width: 0;
+    border: 0;
+    background: transparent;
+    color: $color-text-primary;
+    font: inherit;
+    outline: none;
+
+    &::placeholder {
+      color: $color-text-muted;
+    }
+  }
+
+  button {
+    display: inline-flex;
+    border: 0;
+    padding: 2px;
+    background: none;
+    color: $color-text-muted;
+    cursor: pointer;
+
+    &:hover {
+      color: $color-primary;
+    }
+  }
+}
+
 .operacoes-table-wrap {
   @include thin-scrollbar;
   flex: 1;
   min-height: 360px;
   overflow: auto;
+}
+
+.operacoes-footer {
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+  padding-top: $spacing-sm;
+  color: $color-text-muted;
+  font-size: $font-size-xs;
+}
+
+.operacoes-link-button {
+  border: 0;
+  padding: 0;
+  background: none;
+  color: $color-primary;
+  cursor: pointer;
+  font: inherit;
+  text-decoration: underline;
 }

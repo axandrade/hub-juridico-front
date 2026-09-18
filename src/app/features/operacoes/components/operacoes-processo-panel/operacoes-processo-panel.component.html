@@ -1,0 +1,66 @@
+<button
+  type="button"
+  class="operacoes-painel-backdrop"
+  aria-label="Fechar painel"
+  (click)="onFechar()"
+></button>
+
+<aside
+  class="operacoes-painel"
+  aria-label="Operações do processo"
+  [style.--painel-largura.px]="panelShell.painelLargura()"
+>
+  <div
+    class="operacoes-painel__resizer"
+    role="separator"
+    aria-orientation="vertical"
+    aria-label="Redimensionar painel"
+    (pointerdown)="panelShell.iniciarResize($event)"
+  ></div>
+
+  <header class="operacoes-painel__header">
+    <h2>
+      Operações
+      <span class="operacoes-painel__cnj">{{ numeroCnj() || 'sem número CNJ' }}</span>
+    </h2>
+    <button type="button" class="operacoes-painel__close" aria-label="Fechar painel" (click)="onFechar()">
+      <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+    </button>
+  </header>
+
+  <div class="operacoes-painel__acoes">
+    <app-button
+      variant="primary"
+      size="sm"
+      icon="fa-solid fa-circle-plus"
+      label="Novo"
+      (clicked)="abrirNovo()"
+    />
+  </div>
+
+  <div class="operacoes-painel__table-wrap">
+    <app-domain-model-table
+      entityName="operacao"
+      fields="id,tipo,titulo,providencia,prazoFatal,status,criadoEm,processoId"
+      [columns]="colunas"
+      [columnsToolbar]="false"
+      [filter]="filtro()"
+      [size]="200"
+      sort="-criadoEm"
+      trackKey="id"
+      emptyMessage="Nenhuma operação cadastrada para este processo."
+      [favoritable]="false"
+      (dataLoaded)="onDataLoaded($event)"
+    />
+  </div>
+</aside>
+
+<app-modal [open]="novoAberto()" [wide]="true" title="Nova operação" (closed)="fecharNovo()">
+  @if (novoAberto()) {
+    <app-operacao-form
+      [processoId]="processoId()"
+      (salvo)="onOperacaoSalva()"
+      (cancelado)="fecharNovo()"
+    />
+  }
+</app-modal>

@@ -1,0 +1,116 @@
+<form class="operacao-form" [formGroup]="form" (ngSubmit)="salvar()">
+  <div class="operacao-form__grid">
+    <label class="operacao-field">
+      <span>Tipo</span>
+      <app-combobox
+        ariaLabel="Tipo da operação"
+        [pesquisavel]="false"
+        [options]="tipoOpcoes"
+        [value]="tipoRotulo()"
+        (valueChange)="onTipoChange($event)"
+      />
+    </label>
+
+    <label class="operacao-field">
+      <span>Status</span>
+      <input type="text" formControlName="status" maxlength="30" autocomplete="off" />
+    </label>
+
+    <label class="operacao-field operacao-field--full">
+      <span>Título</span>
+      <input type="text" formControlName="titulo" maxlength="70" autocomplete="off" />
+    </label>
+
+    <label class="operacao-field">
+      <span>Prazo</span>
+      <input type="date" formControlName="prazoFatal" />
+    </label>
+
+    <div class="operacao-field">
+      <span>Responsável</span>
+      <app-domain-model-dropdown
+        ariaLabel="Responsável pela operação"
+        placeholder="Buscar usuário..."
+        emptyLabel="— Sem responsável —"
+        noResultsText="Nenhum usuário encontrado"
+        entityName="user"
+        fields="id,name"
+        [searchFields]="['name']"
+        filter="status eq 'ACTIVE'"
+        sort="name"
+        [displayFormatter]="rotuloUsuario"
+        [value]="responsavelValor()"
+        [valueLabel]="responsavelLabel()"
+        (valueChange)="onResponsavelChange($event)"
+      />
+    </div>
+
+    @if (ehTarefaOuCompromisso()) {
+      <label class="operacao-field">
+        <span>Hora início</span>
+        <input type="time" formControlName="horaInicio" />
+      </label>
+      <label class="operacao-field">
+        <span>Hora fim</span>
+        <input type="time" formControlName="horaFim" />
+      </label>
+    }
+
+    @if (ehTarefa()) {
+      <label class="operacao-field">
+        <span>Importância</span>
+        <app-combobox
+          ariaLabel="Importância da tarefa"
+          [pesquisavel]="false"
+          [emptyLabel]="'— Sem importância —'"
+          [options]="importanciaOpcoes"
+          [value]="form.controls.importancia.value"
+          (valueChange)="form.controls.importancia.setValue($event)"
+        />
+      </label>
+    }
+
+    @if (ehIntimacao()) {
+      <label class="operacao-field">
+        <span>Data do evento</span>
+        <input type="date" formControlName="dataEvento" />
+      </label>
+      <label class="operacao-field">
+        <span>Hora do evento</span>
+        <input type="time" formControlName="horaEvento" />
+      </label>
+      <label class="operacao-field">
+        <span>Hora do prazo</span>
+        <input type="time" formControlName="horaPrazo" />
+      </label>
+      <label class="operacao-field">
+        <span>Origem</span>
+        <input type="text" formControlName="origem" maxlength="60" autocomplete="off" />
+      </label>
+      <label class="operacao-field operacao-field--full">
+        <span>Link</span>
+        <input type="text" formControlName="link" maxlength="500" autocomplete="off" />
+      </label>
+      <label class="operacao-field operacao-field--full">
+        <span>Teor</span>
+        <textarea formControlName="teor" rows="3"></textarea>
+      </label>
+      <label class="operacao-field operacao-field--full">
+        <span>Providência</span>
+        <textarea formControlName="providencia" rows="3"></textarea>
+      </label>
+    }
+  </div>
+
+  <div class="operacao-form__acoes">
+    <app-button variant="tertiary" size="sm" label="Cancelar" (clicked)="cancelar()" />
+    <app-button
+      variant="primary"
+      size="sm"
+      icon="fa-solid fa-floppy-disk"
+      [label]="salvando() ? 'Salvando...' : 'Salvar'"
+      [disabled]="salvando()"
+      (clicked)="salvar()"
+    />
+  </div>
+</form>

@@ -1,3 +1,16 @@
 <div class="operacoes">
   <h1>Tela de Operações</h1>
+
+  <div class="operacoes-table-wrap">
+    <app-domain-model-table
+      entityName="processo-operacoes"
+      fields="id,numeroCnj,acao,status,clientePrincipalNome,contrarioPrincipalNome"
+      [columns]="operacoesColumns"
+      [columnsToolbar]="false"
+      sort="-id"
+      trackKey="id"
+      emptyMessage="Nenhum processo encontrado."
+      [favoritable]="false"
+    />
+  </div>
 </div>

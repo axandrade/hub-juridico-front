@@ -1,5 +1,16 @@
 @use 'variables' as *;
+@use 'mixins' as *;
 
 .operacoes {
+  display: flex;
+  height: 100%;
+  flex-direction: column;
   padding: $spacing-lg;
+}
+
+.operacoes-table-wrap {
+  @include thin-scrollbar;
+  flex: 1;
+  min-height: 360px;
+  overflow: auto;
 }

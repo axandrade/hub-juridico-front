@@ -81,49 +81,8 @@
     </label>
   </div>
 
-  <div class="processo-form__group-title">Cliente</div>
-  <div class="processo-form__row">
-    <div class="processo-field">
-      <span>Cliente principal</span>
-      <app-domain-model-dropdown
-        ariaLabel="Cliente principal"
-        placeholder="Buscar pessoa..."
-        emptyLabel="— Sem cliente —"
-        noResultsText="Nenhuma pessoa encontrada"
-        entityName="pessoa"
-        fields="id,nome,razaoSocial,nomeFantasia"
-        [searchFields]="['nome', 'razaoSocial', 'nomeFantasia']"
-        [displayFormatter]="rotuloPessoa"
-        [value]="clientePrincipalValor()"
-        [valueLabel]="clientePrincipalLabel()"
-        (valueChange)="onClientePrincipalChange($event)"
-      />
-    </div>
-    <div class="processo-field">
-      <span>Posição do cliente</span>
-      <app-domain-model-dropdown
-        ariaLabel="Posição do cliente"
-        placeholder="Buscar posição..."
-        emptyLabel="— Sem posição —"
-        noResultsText="Nenhuma posição encontrada"
-        itemNoun="posição"
-        entityName="posicao-cliente"
-        fields="id,nome"
-        [searchFields]="['nome']"
-        sort="nome"
-        [displayFormatter]="rotuloCatalogo"
-        [value]="clientePrincipalPosicaoValor()"
-        [valueLabel]="clientePrincipalPosicaoLabel()"
-        [adicionar]="true"
-        [editar]="true"
-        [excluir]="true"
-        (valueChange)="onClientePrincipalPosicaoChange($event)"
-        (aoAdicionar)="criarPosicaoCliente($event, clientePrincipalPosicaoId, clientePrincipalPosicaoLabel)"
-        (aoEditar)="renomearPosicaoCliente($event)"
-        (aoExcluir)="excluirPosicaoCliente($event)"
-      />
-    </div>
-  </div>
+  <div class="processo-form__group-title">Clientes</div>
+  <app-processo-clientes (erro)="erro.emit($event)" />
 
   <div class="processo-form__group-title">Parte contrária principal</div>
   <div class="processo-form__row">

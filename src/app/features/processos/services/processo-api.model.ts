@@ -11,10 +11,15 @@ export const TIPO_PROCESSO_LABEL: Record<TipoProcesso, string> = {
   ARBITRAL: 'Arbitral',
 };
 
-/** Um cliente secundário: `Pessoa` vinculada + posição processual dela. */
-export interface ClienteSecundarioApi {
+/**
+ * Um cliente do processo: `Pessoa` vinculada + posição processual dela (catálogo
+ * `posicao_cliente`, `null` = sem posição) + se é o cliente principal. No máximo um item da lista
+ * tem `principal: true` (reforçado por índice único parcial no banco).
+ */
+export interface ClienteProcessoApi {
   pessoa_id: number;
-  posicao: string | null;
+  posicao_id: number | null;
+  principal: boolean;
 }
 
 /** Uma parte contrária secundária (texto livre). `documento` é CPF ou CNPJ, só dígitos. */
@@ -196,10 +201,6 @@ export interface ProcessoApi {
   status_id: number | null;
   pasta: string | null;
 
-  cliente_principal_id: number | null;
-  cliente_principal_posicao: string | null;
-  cliente_principal_posicao_id: number | null;
-
   contrario_principal_nome: string | null;
   contrario_principal_posicao: string | null;
   contrario_principal_posicao_id: number | null;
@@ -230,7 +231,8 @@ export interface ProcessoApi {
   cenario_remoto: CenarioRiscoApi;
   objetos_secundarios: string[];
 
-  clientes_secundarios: ClienteSecundarioApi[];
+  /** Lista de clientes do processo — um deles (`principal: true`) é o cliente principal. */
+  clientes: ClienteProcessoApi[];
   partes_contrarias: ParteContrariaApi[];
   outros_envolvidos_advogados: OutroEnvolvidoAdvogadoApi[];
   outros_envolvidos_magistrados: OutroEnvolvidoMagistradoApi[];
@@ -256,9 +258,6 @@ export interface ProcessoWriteApi {
   numero_cnj: string | null;
   status_id: number | null;
 
-  cliente_principal_id: number | null;
-  cliente_principal_posicao_id: number | null;
-
   contrario_principal_nome: string | null;
   contrario_principal_posicao_id: number | null;
   contrario_principal_documento: string | null;
@@ -283,7 +282,7 @@ export interface ProcessoWriteApi {
   cenario_remoto: CenarioRiscoApi;
   objetos_secundarios: string[];
 
-  clientes_secundarios: ClienteSecundarioApi[];
+  clientes: ClienteProcessoApi[];
   partes_contrarias: ParteContrariaApi[];
   outros_envolvidos_advogados: OutroEnvolvidoAdvogadoApi[];
   outros_envolvidos_magistrados: OutroEnvolvidoMagistradoWriteApi[];

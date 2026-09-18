@@ -7,6 +7,7 @@ import {
   inject,
   output,
   signal,
+  viewChild,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule, ValidatorFn } from '@angular/forms';
@@ -34,6 +35,7 @@ import {
   TribunalAtualApi,
 } from '../../services/processo-api.model';
 import { ProcessoEditavel, ProcessoService } from '../../services/processo-service';
+import { ProcessoClientesComponent } from '../processo-clientes/processo-clientes.component';
 
 /** Item de um catálogo simples (`id`, `nome`) — Tribunal/OrgaoJulgador, via `/domain`. */
 interface CatalogoItem {
@@ -107,6 +109,7 @@ export type DadosGeraisValores = Omit<
     DomainModelDropdownComponent,
     CnjMaskDirective,
     DocumentoMaskDirective,
+    ProcessoClientesComponent,
   ],
   templateUrl: './processo-dados-gerais.component.html',
   styleUrl: './processo-dados-gerais.component.scss',
@@ -132,8 +135,6 @@ export class ProcessoDadosGeraisComponent {
    */
   protected readonly rotuloCatalogo = (item: Record<string, unknown>): string =>
     String(item['nome'] ?? '');
-  protected readonly rotuloPessoa = (item: Record<string, unknown>): string =>
-    String(item['nome'] ?? item['razaoSocial'] ?? item['nomeFantasia'] ?? '(sem nome)');
   protected readonly rotuloAdvogado = (item: Record<string, unknown>): string =>
     String(item['nome'] ?? '(sem nome)');
 
@@ -190,23 +191,16 @@ export class ProcessoDadosGeraisComponent {
   protected readonly procedimentoLabel = signal('');
   protected readonly faseId = signal<number | null>(null);
   protected readonly faseLabel = signal('');
-  /** Posição do cliente principal e da parte contrária — mesmo catálogo `PosicaoCliente` (V27). */
-  protected readonly clientePrincipalPosicaoId = signal<number | null>(null);
-  protected readonly clientePrincipalPosicaoLabel = signal('');
+  /** Posição da parte contrária — mesmo catálogo `PosicaoCliente` (V27) da posição de cada cliente. */
   protected readonly contrarioPrincipalPosicaoId = signal<number | null>(null);
   protected readonly contrarioPrincipalPosicaoLabel = signal('');
   protected readonly uf = signal('');
   /** Município escolhido no picker `cidades` (`null` = nenhum). Vira o snapshot de cidade/uf no back. */
   protected readonly cidadeId = signal<number | null>(null);
   protected readonly cidadeLabel = signal('');
-  protected readonly clientePrincipalId = signal<number | null>(null);
-  protected readonly clientePrincipalLabel = signal('');
   protected readonly advogadoResponsavelId = signal<number | null>(null);
   protected readonly advogadoResponsavelLabel = signal('');
   /** Id como string pro `[value]` do combobox (`''` = nenhum). */
-  protected readonly clientePrincipalValor = computed(() =>
-    this.clientePrincipalId() === null ? '' : String(this.clientePrincipalId()),
-  );
   protected readonly advogadoResponsavelValor = computed(() =>
     this.advogadoResponsavelId() === null ? '' : String(this.advogadoResponsavelId()),
   );
@@ -220,17 +214,15 @@ export class ProcessoDadosGeraisComponent {
   protected readonly procedimentoValor = computed(() =>
     this.procedimentoId() === null ? '' : String(this.procedimentoId()),
   );
-  protected readonly clientePrincipalPosicaoValor = computed(() =>
-    this.clientePrincipalPosicaoId() === null ? '' : String(this.clientePrincipalPosicaoId()),
-  );
   protected readonly contrarioPrincipalPosicaoValor = computed(() =>
     this.contrarioPrincipalPosicaoId() === null ? '' : String(this.contrarioPrincipalPosicaoId()),
   );
   protected readonly tags = signal<string[]>([]);
   protected readonly escritoriosAnteriores = signal<string[]>([]);
-  // Preservados como vieram — sem UI de edição nesta fatia.
-  private clientesSecundarios: ProcessoApi['clientes_secundarios'] = [];
+  // Preservado como veio — sem UI de edição nesta fatia.
   private partesContrarias: ProcessoApi['partes_contrarias'] = [];
+
+  private readonly clientesComp = viewChild(ProcessoClientesComponent);
 
   /**
    * Histórico de "Observações gerais" — o backend arquiva a entrada automaticamente quando o
@@ -325,8 +317,6 @@ export class ProcessoDadosGeraisComponent {
     this.procedimentoLabel.set(p.procedimento ?? '');
     this.faseId.set(p.fase_id);
     this.faseLabel.set(p.fase ?? '');
-    this.clientePrincipalPosicaoId.set(p.cliente_principal_posicao_id);
-    this.clientePrincipalPosicaoLabel.set(p.cliente_principal_posicao ?? '');
     this.contrarioPrincipalPosicaoId.set(p.contrario_principal_posicao_id);
     this.contrarioPrincipalPosicaoLabel.set(p.contrario_principal_posicao ?? '');
     this.uf.set(p.uf ?? '');
@@ -335,7 +325,7 @@ export class ProcessoDadosGeraisComponent {
     this.tags.set([...p.tags]);
     this.aplicarTribunalProcessante(p.tribunal_atual, p.orgao_processante);
     this.escritoriosAnteriores.set([...p.escritorios_anteriores]);
-    this.clientesSecundarios = p.clientes_secundarios;
+    this.clientesComp()?.carregar(p.clientes);
     this.partesContrarias = p.partes_contrarias;
     this.observacoesPrevias.set(p.observacoes_previas);
     this.paginaObservacoes.set(0);
@@ -345,13 +335,6 @@ export class ProcessoDadosGeraisComponent {
     // propósito: são preferência do usuário, não dado do processo — ficam abertos entre saves e
     // ao trocar de processo, só fecham se ele fechar.
 
-    this.clientePrincipalId.set(p.cliente_principal_id);
-    this.clientePrincipalLabel.set('');
-    if (p.cliente_principal_id !== null) {
-      this.processoService
-        .rotuloPessoa(p.cliente_principal_id)
-        .subscribe((nome) => this.clientePrincipalLabel.set(nome));
-    }
     this.advogadoResponsavelId.set(p.advogado_responsavel_id);
     this.advogadoResponsavelLabel.set('');
     if (p.advogado_responsavel_id !== null) {
@@ -376,21 +359,17 @@ export class ProcessoDadosGeraisComponent {
     this.procedimentoLabel.set('');
     this.faseId.set(null);
     this.faseLabel.set('');
-    this.clientePrincipalPosicaoId.set(null);
-    this.clientePrincipalPosicaoLabel.set('');
     this.contrarioPrincipalPosicaoId.set(null);
     this.contrarioPrincipalPosicaoLabel.set('');
     this.uf.set('');
     this.cidadeId.set(null);
     this.cidadeLabel.set('');
-    this.clientePrincipalId.set(null);
-    this.clientePrincipalLabel.set('');
     this.advogadoResponsavelId.set(null);
     this.advogadoResponsavelLabel.set('');
     this.tags.set([]);
     this.aplicarTribunalProcessante(null, null);
     this.escritoriosAnteriores.set([]);
-    this.clientesSecundarios = [];
+    this.clientesComp()?.limpar();
     this.partesContrarias = [];
     this.observacoesPrevias.set([]);
     this.paginaObservacoes.set(0);
@@ -423,8 +402,6 @@ export class ProcessoDadosGeraisComponent {
       tipo: this.tipo(),
       numeroCnj: raw.numeroCnj,
       statusId: this.statusId(),
-      clientePrincipalId: this.clientePrincipalId(),
-      clientePrincipalPosicaoId: this.clientePrincipalPosicaoId(),
       contrarioPrincipalNome: raw.contrarioPrincipalNome,
       contrarioPrincipalPosicaoId: this.contrarioPrincipalPosicaoId(),
       contrarioPrincipalDocumento: raw.contrarioPrincipalDocumento,
@@ -442,7 +419,7 @@ export class ProcessoDadosGeraisComponent {
       tribunalAtualId: this.tribunalAtualId(),
       orgaoProcessanteId: this.orgaoProcessanteId(),
       escritoriosAnteriores: this.escritoriosAnteriores(),
-      clientesSecundarios: this.clientesSecundarios,
+      clientes: this.clientesComp()?.coletar() ?? [],
       partesContrarias: this.partesContrarias,
     };
   }
@@ -464,11 +441,6 @@ export class ProcessoDadosGeraisComponent {
       const numero = this.form.controls.numeroCnj;
       numero.setValue(maskNumeroCnj(numero.value));
     }
-  }
-
-  protected onClientePrincipalChange(valor: string): void {
-    this.clientePrincipalId.set(valor ? Number(valor) : null);
-    this.clientePrincipalLabel.set('');
   }
 
   protected onStatusChange(valor: string): void {
@@ -494,11 +466,6 @@ export class ProcessoDadosGeraisComponent {
   protected onProcedimentoChange(valor: string): void {
     this.procedimentoId.set(valor ? Number(valor) : null);
     this.procedimentoLabel.set('');
-  }
-
-  protected onClientePrincipalPosicaoChange(valor: string): void {
-    this.clientePrincipalPosicaoId.set(valor ? Number(valor) : null);
-    this.clientePrincipalPosicaoLabel.set('');
   }
 
   protected onContrarioPrincipalPosicaoChange(valor: string): void {
@@ -575,14 +542,12 @@ export class ProcessoDadosGeraisComponent {
   }
 
   // --- catálogo "Posição do cliente" — CRUD via `/domain/posicao-cliente` (ver `ProcessoService`);
-  // alimenta os dois campos de posição (cliente principal e parte contrária), mesmo catálogo ---
+  // usado pela "Posição" de cada cliente (ver `app-processo-clientes`) e pela parte contrária,
+  // mesmo catálogo ---
 
-  /** Os dois pares id/label que apontam pro catálogo; renomear/excluir propaga pros dois. */
+  /** Os pares id/label desta aba que apontam pro catálogo (fora do `app-processo-clientes`); renomear/excluir propaga pra eles. */
   private posicoesEmUso(): { id: WritableSignal<number | null>; label: WritableSignal<string> }[] {
-    return [
-      { id: this.clientePrincipalPosicaoId, label: this.clientePrincipalPosicaoLabel },
-      { id: this.contrarioPrincipalPosicaoId, label: this.contrarioPrincipalPosicaoLabel },
-    ];
+    return [{ id: this.contrarioPrincipalPosicaoId, label: this.contrarioPrincipalPosicaoLabel }];
   }
 
   protected criarPosicaoCliente(
@@ -608,6 +573,7 @@ export class ProcessoDadosGeraisComponent {
             campo.label.set(p.nome);
           }
         }
+        this.clientesComp()?.sincronizarPosicaoRenomeada(id, p.nome);
       },
       error: (err: unknown) => this.erro.emit(this.mensagemErroHttp(err)),
     });
@@ -623,6 +589,7 @@ export class ProcessoDadosGeraisComponent {
             campo.label.set('');
           }
         }
+        this.clientesComp()?.sincronizarPosicaoExcluida(id);
       },
       error: (err: unknown) => this.erro.emit(this.mensagemErroHttp(err)),
     });

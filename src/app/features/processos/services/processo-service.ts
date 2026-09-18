@@ -8,7 +8,7 @@ import { DomainService, IDomainPage } from '../../../core/services/domain.servic
 import { FavoritoService } from '../../../shared/services/favorito.service';
 import {
   CenarioRiscoApi,
-  ClienteSecundarioApi,
+  ClienteProcessoApi,
   OutroEnvolvidoAdvogadoApi,
   OutroEnvolvidoAssistenteTecnicoApi,
   OutroEnvolvidoMagistradoWriteApi,
@@ -41,10 +41,6 @@ export interface ProcessoEditavel {
   numeroCnj: string;
   /** Id do catálogo `status_processo` — `null` = sem status. */
   statusId: number | null;
-
-  clientePrincipalId: number | null;
-  /** Id do catálogo `posicao_cliente` — `null` = sem posição. */
-  clientePrincipalPosicaoId: number | null;
 
   contrarioPrincipalNome: string;
   /** Id do catálogo `posicao_cliente` (mesmo catálogo de `clientePrincipalPosicaoId`). */
@@ -94,8 +90,9 @@ export interface ProcessoEditavel {
   outrosEnvolvidosPeritos: OutroEnvolvidoPeritoWriteApi[];
   /** Assistentes técnicos "outros envolvidos" (aba "Outros envolvidos"). */
   outrosEnvolvidosAssistentesTecnicos: OutroEnvolvidoAssistenteTecnicoApi[];
-  /** Preservados como vieram — ainda sem UI de edição nesta fatia. */
-  clientesSecundarios: ClienteSecundarioApi[];
+  /** Lista de clientes do processo — um deles (`principal: true`) é o cliente principal. */
+  clientes: ClienteProcessoApi[];
+  /** Preservado como veio — ainda sem UI de edição nesta fatia. */
   partesContrarias: ParteContrariaApi[];
 }
 
@@ -179,11 +176,12 @@ function processoResumoFromDomain(p: ProcessoResumoDomain, favorito: boolean): P
  * `/domain/favorito` espera — nenhum favorito existente fica "órfão".
  *
  * O CRUD de escrita (criar/editar/status) continua em `/api/v1/processos` (Spring), consumido
- * pelo painel `app-processo-form`. Os pickers de Cliente principal / Advogado responsável /
- * Status / Ação / Natureza / Fase são `<app-domain-model-dropdown>` direto no template (busca
- * própria via `/domain`); aqui só ficam `rotuloPessoa`/`rotuloAdvogado` (resolvem o `valueLabel`
- * inicial ao carregar uma ficha) e `criarCatalogo`/`renomearCatalogo`/`excluirCatalogo` (escrita
- * dos 4 catálogos, sem equivalente genérico no componente de dropdown).
+ * pelo painel `app-processo-form`. Os pickers de Clientes (lista, ver `ProcessoClientesComponent`)
+ * / Advogado responsável / Status / Ação / Natureza / Fase são `<app-domain-model-dropdown>` direto
+ * no template (busca própria via `/domain`); aqui só ficam `rotuloPessoa`/`rotuloAdvogado`/
+ * `rotuloPosicaoCliente` (resolvem o `valueLabel` inicial ao carregar uma ficha) e
+ * `criarCatalogo`/`renomearCatalogo`/`excluirCatalogo` (escrita dos catálogos, sem equivalente
+ * genérico no componente de dropdown).
  */
 @Injectable({ providedIn: 'root' })
 export class ProcessoService {
@@ -268,8 +266,6 @@ export class ProcessoService {
       tipo: processo.tipo,
       numero_cnj: vazioParaNull(processo.numeroCnj),
       status_id: processo.statusId,
-      cliente_principal_id: processo.clientePrincipalId,
-      cliente_principal_posicao_id: processo.clientePrincipalPosicaoId,
       contrario_principal_nome: vazioParaNull(processo.contrarioPrincipalNome),
       contrario_principal_posicao_id: processo.contrarioPrincipalPosicaoId,
       contrario_principal_documento: onlyDigits(processo.contrarioPrincipalDocumento) || null,
@@ -291,7 +287,7 @@ export class ProcessoService {
       cenario_possivel: processo.cenarioPossivel,
       cenario_remoto: processo.cenarioRemoto,
       objetos_secundarios: processo.objetosSecundarios,
-      clientes_secundarios: processo.clientesSecundarios,
+      clientes: processo.clientes,
       partes_contrarias: processo.partesContrarias,
       outros_envolvidos_advogados: processo.outrosEnvolvidosAdvogados,
       outros_envolvidos_magistrados: processo.outrosEnvolvidosMagistrados,
@@ -358,6 +354,13 @@ export class ProcessoService {
       .pipe(map((a) => String(a['nome'] ?? '')), catchError(() => of('')));
   }
 
+  /** Rótulo de uma posição do catálogo `posicao_cliente` por id — mesmo padrão de `rotuloPessoa`/`rotuloAdvogado`. */
+  rotuloPosicaoCliente(id: number): Observable<string> {
+    return this.domainService
+      .get<Record<string, unknown>>({ entityName: 'posicao-cliente', entityId: id, fields: 'id,nome' })
+      .pipe(map((p) => String(p['nome'] ?? '')), catchError(() => of('')));
+  }
+
   // --- catálogos por id (Status/Ação/Natureza/Fase) — CRUD 100% via /domain, sem controller/
   // service dedicado no backend (mesmo id/nome dos 4, ver StatusProcesso/AcaoProcesso/
   // NaturezaProcesso/FaseProcesso). Excluir um valor em uso bloqueia (409, FK real) — ver V26.
@@ -411,7 +414,7 @@ function resumoDe(p: ProcessoApi): ProcessoResumoApi {
     status: p.status,
     status_id: p.status_id,
     pasta: p.pasta,
-    cliente_principal_id: p.cliente_principal_id,
+    cliente_principal_id: p.clientes.find((c) => c.principal)?.pessoa_id ?? null,
     advogado_responsavel_id: p.advogado_responsavel_id,
     natureza: p.natureza,
     natureza_id: p.natureza_id,

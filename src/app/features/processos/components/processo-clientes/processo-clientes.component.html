@@ -1,0 +1,82 @@
+<div class="processo-form__row">
+  <div class="processo-field">
+    <span>Cliente</span>
+    <app-domain-model-dropdown
+      ariaLabel="Cliente do processo"
+      placeholder="Buscar pessoa..."
+      emptyLabel="— Sem cliente —"
+      noResultsText="Nenhuma pessoa encontrada"
+      itemNoun="pessoa"
+      entityName="pessoa"
+      fields="id,nome,razaoSocial,nomeFantasia"
+      [searchFields]="['nome', 'razaoSocial', 'nomeFantasia']"
+      [displayFormatter]="rotuloPessoaFormatter"
+      [value]="clienteValor()"
+      [valueLabel]="clienteAtual()?.nome ?? ''"
+      (itemSelected)="onClienteSelected($event)"
+    />
+  </div>
+  <div class="processo-field">
+    <span>Posição</span>
+    <app-domain-model-dropdown
+      ariaLabel="Posição do cliente"
+      placeholder="Buscar posição..."
+      emptyLabel="— Sem posição —"
+      noResultsText="Nenhuma posição encontrada"
+      itemNoun="posição"
+      entityName="posicao-cliente"
+      fields="id,nome"
+      [searchFields]="['nome']"
+      sort="nome"
+      [displayFormatter]="rotuloCatalogo"
+      [value]="posicaoValor()"
+      [valueLabel]="posicaoAtual()?.nome ?? ''"
+      [adicionar]="true"
+      (itemSelected)="onPosicaoSelected($event)"
+      (aoAdicionar)="criarPosicao($event)"
+    />
+  </div>
+</div>
+
+<div class="processo-clientes__acoes">
+  <button type="button" class="processo-clientes__botao" (click)="adicionar()">
+    <i class="fa-solid fa-plus" aria-hidden="true"></i> Adicionar
+  </button>
+  <button
+    type="button"
+    class="processo-clientes__botao"
+    [disabled]="selecionado() < 0"
+    (click)="remover()"
+  >
+    <i class="fa-solid fa-trash-can" aria-hidden="true"></i> Remover
+  </button>
+</div>
+
+<ul class="processo-clientes__lista" role="listbox" aria-label="Clientes do processo">
+  @for (linha of linhas(); track linha.pessoaId; let i = $index) {
+    <li class="processo-clientes__linha">
+      <button
+        type="button"
+        class="clients-primary-toggle"
+        [class.is-active]="linha.principal"
+        [attr.aria-label]="linha.principal ? 'Cliente principal' : 'Definir como principal'"
+        (click)="marcarPrincipal(i)"
+      >
+        <i class="fa-solid fa-star" aria-hidden="true"></i>
+      </button>
+      <button
+        type="button"
+        class="processo-clientes__opcao"
+        role="option"
+        [attr.aria-selected]="selecionado() === i"
+        [class.is-selected]="selecionado() === i"
+        (click)="selecionar(i)"
+      >
+        <span class="processo-clientes__nome" [title]="linha.pessoaNome">{{ linha.pessoaNome || '—' }}</span>
+        <span class="processo-clientes__posicao">{{ linha.posicaoNome || '—' }}</span>
+      </button>
+    </li>
+  } @empty {
+    <li class="processo-clientes__vazio">Nenhum cliente adicionado.</li>
+  }
+</ul>

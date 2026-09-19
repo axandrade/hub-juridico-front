@@ -179,3 +179,45 @@ describe('ColumnVisibilityController — reordenar arrastando o cabeçalho', () 
     expect(controller.isVisible('id')).toBe(false);
   });
 });
+
+describe('ColumnVisibilityController — marcar/desmarcar todas', () => {
+  const CHAVE = 'teste.column-visibility-controller.marcar-todas';
+
+  afterEach(() => {
+    localStorage.removeItem(CHAVE);
+  });
+
+  it('toggleAll(true) marca todas as colunas', () => {
+    const controller = new ColumnVisibilityController(document, { columns: () => COLUNAS_3 });
+    controller.toggle('id'); // começa com uma oculta
+
+    controller.toggleAll(true);
+
+    expect(controller.isVisible('id')).toBe(true);
+    expect(controller.isVisible('nome')).toBe(true);
+    expect(controller.isVisible('email')).toBe(true);
+  });
+
+  it('toggleAll(false) nunca zera de verdade — mantém a primeira coluna visível', () => {
+    const controller = new ColumnVisibilityController(document, { columns: () => COLUNAS_3 });
+
+    controller.toggleAll(false);
+
+    expect(controller.isVisible('id')).toBe(true);
+    expect(controller.isVisible('nome')).toBe(false);
+    expect(controller.isVisible('email')).toBe(false);
+  });
+
+  it('persiste em localStorage nos dois sentidos', () => {
+    const controller = new ColumnVisibilityController(document, {
+      columns: () => COLUNAS_3,
+      storageKey: () => CHAVE,
+    });
+
+    controller.toggleAll(false);
+    expect(JSON.parse(localStorage.getItem(CHAVE)!)).toEqual(['id']);
+
+    controller.toggleAll(true);
+    expect(JSON.parse(localStorage.getItem(CHAVE)!)).toEqual(['id', 'nome', 'email']);
+  });
+});

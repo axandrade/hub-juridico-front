@@ -65,6 +65,7 @@
             [menuOpen]="tabela.columnVisibilityState.menuOpen()"
             (menuOpenChange)="tabela.columnVisibilityState.menuOpen.set($event)"
             (toggleColumn)="tabela.columnVisibilityState.toggle($event)"
+            (toggleAll)="tabela.columnVisibilityState.toggleAll($event)"
           />
         }
       </div>

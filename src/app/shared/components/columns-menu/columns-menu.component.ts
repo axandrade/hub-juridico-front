@@ -1,4 +1,13 @@
-import { ChangeDetectionStrategy, Component, ElementRef, HostListener, inject, input, output } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  ElementRef,
+  HostListener,
+  computed,
+  inject,
+  input,
+  output,
+} from '@angular/core';
 
 import { TableColumn } from '../table/table-column.model';
 
@@ -25,9 +34,18 @@ export class ColumnsMenuComponent<T extends object> {
   readonly menuOpen = input<boolean>(false);
   readonly menuOpenChange = output<boolean>();
   readonly toggleColumn = output<string>();
+  /** Checkbox mestre: `true` pede pra marcar todas, `false` pede pra desmarcar (o dono decide como — ver `ColumnVisibilityController.toggleAll`). */
+  readonly toggleAll = output<boolean>();
+
+  protected readonly allVisible = computed(() => this.columns().every((column) => this.isVisible()(column.key)));
+  protected readonly someVisible = computed(() => this.columns().some((column) => this.isVisible()(column.key)));
 
   protected toggleMenu(): void {
     this.menuOpenChange.emit(!this.menuOpen());
+  }
+
+  protected onToggleAllClick(): void {
+    this.toggleAll.emit(!this.allVisible());
   }
 
   @HostListener('document:click', ['$event'])

@@ -6,6 +6,7 @@
       [menuOpen]="columnVisibilityState.menuOpen()"
       (menuOpenChange)="columnVisibilityState.menuOpen.set($event)"
       (toggleColumn)="columnVisibilityState.toggle($event)"
+      (toggleAll)="columnVisibilityState.toggleAll($event)"
     />
   </div>
 }

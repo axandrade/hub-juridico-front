@@ -5,6 +5,15 @@
   </button>
   @if (menuOpen()) {
     <div class="columns-menu__dropdown" role="menu">
+      <label class="columns-menu__select-all">
+        <input
+          type="checkbox"
+          [checked]="allVisible()"
+          [indeterminate]="someVisible() && !allVisible()"
+          (change)="onToggleAllClick()"
+        />
+        <span>Todas</span>
+      </label>
       @for (column of columns(); track column.key) {
         <label>
           <input type="checkbox" [checked]="isVisible()(column.key)" (change)="toggleColumn.emit(column.key)" />

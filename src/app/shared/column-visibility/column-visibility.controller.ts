@@ -60,6 +60,20 @@ export class ColumnVisibilityController<T extends object> {
     this.menuOpen.update((open) => !open);
   }
 
+  /**
+   * Marca/desmarca todas de uma vez (checkbox mestre do `ColumnsMenuComponent`). `desmarcar`
+   * nunca zera de verdade — sempre sobra a primeira coluna (mesma regra do `toggle`, que nunca
+   * deixa a última visível ser ocultada): uma tabela sem nenhuma coluna não faz sentido.
+   */
+  readonly toggleAll = (marcarTodas: boolean): void => {
+    const colunas = this.opts.columns();
+    const next = marcarTodas
+      ? new Set(colunas.map((column) => column.key))
+      : new Set(colunas.length > 0 ? [colunas[0].key] : []);
+    this.visibleKeysOverride.set(next);
+    this.persistirLista(this.opts.storageKey?.() ?? null, [...next]);
+  };
+
   /** `columns()` na ordem escolhida pelo usuário — colunas novas (fora da ordem salva) entram no fim, na ordem original. */
   readonly orderedColumns = (): readonly TableColumn<T>[] => {
     const colunas = this.opts.columns();

@@ -112,8 +112,9 @@ export class OperacoesProcessoPanelComponent {
     {
       key: 'prazoFatal',
       header: 'Prazo',
-      width: '110px',
-      formatter: (value) => (value ? formatDate(String(value), DATE_FORMAT.SHORT, DATE_FORMAT.LOCALE) : '—'),
+      width: '140px',
+      // Agora datetime único (data + hora, ver Operacao.prazoFatal) — LONG mostra os dois.
+      formatter: (value) => (value ? formatDate(String(value), DATE_FORMAT.LONG, DATE_FORMAT.LOCALE) : '—'),
     },
     {
       key: 'status',

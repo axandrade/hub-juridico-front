@@ -35,7 +35,10 @@ export const ORIGEM_OPERACAO_LABEL: Record<OrigemOperacao, string> = {
   SISTEMA_EXTERNO: 'Sistema externo',
 };
 
-/** Linha crua de `/domain/operacao` (camelCase) — ver backend `Operacao`/migration V31. */
+/**
+ * Linha crua de `/domain/operacao` (camelCase) — ver backend `Operacao`/migration V31.
+ * `prazoFatal` é datetime (data + hora), ISO com timezone — `Instant` no backend.
+ */
 export interface OperacaoRow {
   id: number;
   tipo: TipoOperacao;
@@ -57,7 +60,6 @@ export interface OperacaoDetalheRow {
   horaInicio: string | null;
   horaFim: string | null;
   importancia: string | null;
-  horaPrazo: string | null;
   origem: OrigemOperacao | null;
   link: string | null;
   teor: string | null;
@@ -79,7 +81,6 @@ export interface OperacaoWriteApi {
   hora_inicio: string | null;
   hora_fim: string | null;
   importancia: string | null;
-  hora_prazo: string | null;
   origem: OrigemOperacao | null;
   link: string | null;
   teor: string | null;

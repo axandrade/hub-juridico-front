@@ -36,7 +36,7 @@
 
     <label class="operacao-field">
       <span>Prazo Fatal</span>
-      <input type="date" formControlName="prazoFatal" />
+      <input type="datetime-local" formControlName="prazoFatal" />
     </label>
 
     <div class="operacao-field">
@@ -86,10 +86,6 @@
     }
 
     @if (ehIntimacao()) {
-      <label class="operacao-field">
-        <span>Hora do prazo</span>
-        <input type="time" formControlName="horaPrazo" />
-      </label>
       <div class="operacao-field">
         <span>Origem</span>
         <app-combobox

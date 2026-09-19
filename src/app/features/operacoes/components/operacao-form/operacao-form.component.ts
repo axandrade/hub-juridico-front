@@ -53,7 +53,6 @@ type OperacaoForm = FormGroup<{
   horaInicio: FormControl<string>;
   horaFim: FormControl<string>;
   importancia: FormControl<string>;
-  horaPrazo: FormControl<string>;
   link: FormControl<string>;
   teor: FormControl<string>;
   providencia: FormControl<string>;
@@ -61,6 +60,28 @@ type OperacaoForm = FormGroup<{
 
 function text(validators: ValidatorFn[] = []): FormControl<string> {
   return new FormControl('', { nonNullable: true, validators });
+}
+
+/** ISO com timezone (`Operacao.prazoFatal`, `Instant`) → valor de `<input type="datetime-local">` (hora local, sem timezone). */
+function instantParaDatetimeLocal(iso: string | null): string {
+  if (!iso) {
+    return '';
+  }
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) {
+    return '';
+  }
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+/** Valor de `<input type="datetime-local">` (hora local, sem timezone) → ISO com timezone pro payload. */
+function datetimeLocalParaInstant(valor: string): string | null {
+  if (!valor) {
+    return null;
+  }
+  const d = new Date(valor);
+  return Number.isNaN(d.getTime()) ? null : d.toISOString();
 }
 
 /**
@@ -83,7 +104,10 @@ function text(validators: ValidatorFn[] = []): FormControl<string> {
  * um campo do formulário: vem fixo do painel que já está filtrado por aquele processo (mesmo em
  * edição — não dá pra mover a operação pra outro processo por aqui). Sem campo de "data de
  * cadastro" aqui — `Operacao.dataCadastro` (datetime, automático via `@PrePersist`) já registra
- * isso sozinho, sem precisar espelhar no formulário nem no `OperacaoWriteApi`.
+ * isso sozinho, sem precisar espelhar no formulário nem no `OperacaoWriteApi`. "Prazo Fatal"
+ * também virou datetime único (`<input type="datetime-local">`, calendário + hora nativos do
+ * navegador — sem lib nenhuma) — substituiu o par antigo data+hora separados
+ * (`instantParaDatetimeLocal`/`datetimeLocalParaInstant` convertem pra/da hora local do form).
  */
 @Component({
   selector: 'app-operacao-form',
@@ -137,7 +161,6 @@ export class OperacaoFormComponent {
     horaInicio: text(),
     horaFim: text(),
     importancia: text(),
-    horaPrazo: text(),
     link: text(),
     teor: text(),
     providencia: text(),
@@ -181,11 +204,10 @@ export class OperacaoFormComponent {
     this.form.reset();
     this.form.patchValue({
       titulo: op.titulo ?? '',
-      prazoFatal: op.prazoFatal ?? '',
+      prazoFatal: instantParaDatetimeLocal(op.prazoFatal),
       horaInicio: op.horaInicio ?? '',
       horaFim: op.horaFim ?? '',
       importancia: op.importancia ?? '',
-      horaPrazo: op.horaPrazo ?? '',
       link: op.link ?? '',
       teor: op.teor ?? '',
       providencia: op.providencia ?? '',
@@ -250,13 +272,12 @@ export class OperacaoFormComponent {
       tipo,
       processo_id: this.processoId(),
       titulo: raw.titulo.trim(),
-      prazo_fatal: raw.prazoFatal || null,
+      prazo_fatal: datetimeLocalParaInstant(raw.prazoFatal),
       status: this.status(),
       responsavel_id: this.responsavelId(),
       hora_inicio: tarefaOuCompromisso ? raw.horaInicio || null : null,
       hora_fim: tarefaOuCompromisso ? raw.horaFim || null : null,
       importancia: this.ehTarefa() ? raw.importancia || null : null,
-      hora_prazo: intimacao ? raw.horaPrazo || null : null,
       origem: intimacao ? this.origem() : null,
       link: intimacao ? raw.link.trim() || null : null,
       teor: intimacao ? raw.teor.trim() || null : null,

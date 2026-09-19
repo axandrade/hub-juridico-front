@@ -40,11 +40,10 @@
       emptyMessage="Nenhuma operação cadastrada para este processo."
       [sortable]="true"
       [favoritable]="false"
-      [editAction]="abrirEdicao"
-      editAriaLabel="Editar operação"
       [deleteAction]="excluirOperacao"
       deleteAriaLabel="Excluir operação"
       (dataLoaded)="onDataLoaded($event)"
+      (rowClick)="abrirEdicao($event)"
     />
   </div>
 </section>

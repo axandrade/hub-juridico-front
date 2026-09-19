@@ -19,10 +19,11 @@ import { OperacaoFormComponent } from '../operacao-form/operacao-form.component'
  * Advogados: divide espaço com a tabela, não fica por cima dela; o dono do controller é o pai,
  * este componente só recebe `layoutPainel`/emite `layoutPainelChange`, igual
  * `AdvogadoFormComponent`). Uma segunda `app-domain-model-table`, apontada pra `/domain/operacao`,
- * filtrada por `processoId eq {processoId} and ativo eq true`. "Novo" e o ícone de editar de
- * cada linha (`editAction`) abrem `app-operacao-form` dentro de um `app-modal` (mesmo padrão de
- * Usuários — dialog, não painel, porque este painel já mostra a tabela). O ícone de excluir
- * (`deleteAction`) inativa direto (soft-delete), sem abrir o form.
+ * filtrada por `processoId eq {processoId} and ativo eq true`. "Novo" e clicar numa linha
+ * (`rowClick`, sem ícone de editar dedicado) abrem `app-operacao-form` dentro de um `app-modal`
+ * (mesmo padrão de Usuários — dialog, não painel, porque este painel já mostra a tabela). O ícone
+ * de excluir (`deleteAction`) continua na linha (com `stopPropagation`, não dispara o `rowClick`) e
+ * inativa direto (soft-delete), sem abrir o form.
  *
  * A coluna "Ordem" é derivada no cliente (não existe na entidade): posição cronológica de
  * cadastro (1º = mais antiga), calculada a partir de `criadoEm`/`id` de TODA a lista carregada —
@@ -139,7 +140,7 @@ export class OperacoesProcessoPanelComponent {
     this.formAberto.set('novo');
   }
 
-  /** Ícone "editar" da grade (`editAction`) — arrow function de propósito, ver `DomainModelTableComponent.editAction`. */
+  /** Clique na linha da grade (`rowClick`) — sem ícone de editar dedicado. */
   protected readonly abrirEdicao = (row: OperacaoRow): void => {
     this.formAberto.set(row.id);
   };

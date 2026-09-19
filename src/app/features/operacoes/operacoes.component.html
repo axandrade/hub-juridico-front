@@ -56,15 +56,28 @@
     <div class="operacoes-actions">
       <h1>Tela de Operações</h1>
 
-      <button
-        type="button"
-        class="operacoes-panel-toggle"
-        [class.is-active]="panelShell.panelVisible()"
-        (click)="togglePanel()"
-      >
-        <i class="fa-solid fa-table-columns" aria-hidden="true"></i>
-        {{ panelShell.panelVisible() ? 'Ocultar painel' : 'Mostrar painel' }}
-      </button>
+      <div class="operacoes-actions__buttons">
+        @if (grade(); as tabela) {
+          <app-columns-menu
+            [columns]="operacoesColumns"
+            [isVisible]="tabela.columnVisibilityState.isVisible"
+            [menuOpen]="tabela.columnVisibilityState.menuOpen()"
+            (menuOpenChange)="tabela.columnVisibilityState.menuOpen.set($event)"
+            (toggleColumn)="tabela.columnVisibilityState.toggle($event)"
+            (toggleAll)="tabela.columnVisibilityState.toggleAll($event)"
+          />
+        }
+
+        <button
+          type="button"
+          class="operacoes-panel-toggle"
+          [class.is-active]="panelShell.panelVisible()"
+          (click)="togglePanel()"
+        >
+          <i class="fa-solid fa-table-columns" aria-hidden="true"></i>
+          {{ panelShell.panelVisible() ? 'Ocultar painel' : 'Mostrar painel' }}
+        </button>
+      </div>
     </div>
 
     <div class="operacoes-search-section">
@@ -93,6 +106,9 @@
         fields="id,numeroCnj,acao,status,clientePrincipalNome,contrarioPrincipalNome,clientePrincipalId"
         [columns]="operacoesColumns"
         [columnsToolbar]="false"
+        [columnVisibility]="true"
+        [columnReorder]="true"
+        columnsStorageKey="hub-juridico.operacoes.processos.colunas"
         [filter]="filtro()"
         sort="-id"
         trackKey="id"

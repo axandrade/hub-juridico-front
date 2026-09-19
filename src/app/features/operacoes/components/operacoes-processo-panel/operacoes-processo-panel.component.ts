@@ -4,6 +4,7 @@ import { ChangeDetectionStrategy, Component, computed, inject, input, output, si
 import { DATE_FORMAT } from '../../../../core/constants/app-constants';
 import { DomainService } from '../../../../core/services/domain.service';
 import { ButtonComponent } from '../../../../shared/components/button/button.component';
+import { ColumnsMenuComponent } from '../../../../shared/components/columns-menu/columns-menu.component';
 import { DomainModelTableComponent } from '../../../../shared/components/domain-table/domain-model-table.component';
 import { TableColumn } from '../../../../shared/components/table/table-column.model';
 import { ModalComponent } from '../../../../shared/components/modal/modal.component';
@@ -38,7 +39,14 @@ import { OperacaoFormComponent } from '../operacao-form/operacao-form.component'
 @Component({
   selector: 'app-operacoes-processo-panel',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [DomainModelTableComponent, ButtonComponent, ModalComponent, PanelLayoutSwitcherComponent, OperacaoFormComponent],
+  imports: [
+    DomainModelTableComponent,
+    ButtonComponent,
+    ModalComponent,
+    PanelLayoutSwitcherComponent,
+    OperacaoFormComponent,
+    ColumnsMenuComponent,
+  ],
   templateUrl: './operacoes-processo-panel.component.html',
   styleUrl: './operacoes-processo-panel.component.scss',
 })
@@ -54,7 +62,7 @@ export class OperacoesProcessoPanelComponent {
   readonly layoutPainelChange = output<PainelLayout>();
   readonly fechar = output<void>();
 
-  private readonly grade = viewChild(DomainModelTableComponent<OperacaoRow>);
+  protected readonly grade = viewChild(DomainModelTableComponent<OperacaoRow>);
 
   /** `null` = fechado, `'novo'` = cadastro, `número` = editando a operação daquele id. */
   protected readonly formAberto = signal<'novo' | number | null>(null);

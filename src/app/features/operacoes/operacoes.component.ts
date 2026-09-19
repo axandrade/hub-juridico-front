@@ -4,6 +4,7 @@ import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { debounceTime, distinctUntilChanged } from 'rxjs';
 
 import { PastaClienteService } from '../clients/services/pasta-cliente.service';
+import { ColumnsMenuComponent } from '../../shared/components/columns-menu/columns-menu.component';
 import { DomainModelTableComponent } from '../../shared/components/domain-table/domain-model-table.component';
 import { TableColumn } from '../../shared/components/table/table-column.model';
 import { PainelLayout } from '../../shared/models/panel-layout';
@@ -51,7 +52,7 @@ const CAMPOS_BUSCA = ['numeroCnj', 'clientePrincipalNome', 'contrarioPrincipalNo
 @Component({
   selector: 'app-operacoes',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [DomainModelTableComponent, OperacoesProcessoPanelComponent],
+  imports: [DomainModelTableComponent, OperacoesProcessoPanelComponent, ColumnsMenuComponent],
   templateUrl: './operacoes.component.html',
   styleUrl: './operacoes.component.scss',
 })

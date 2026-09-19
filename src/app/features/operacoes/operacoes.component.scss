@@ -92,6 +92,12 @@
   h1 {
     margin: 0;
   }
+
+  &__buttons {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+  }
 }
 
 .operacoes-panel-toggle {

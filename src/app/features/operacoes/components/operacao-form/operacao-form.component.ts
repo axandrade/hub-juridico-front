@@ -53,8 +53,6 @@ type OperacaoForm = FormGroup<{
   horaInicio: FormControl<string>;
   horaFim: FormControl<string>;
   importancia: FormControl<string>;
-  dataEvento: FormControl<string>;
-  horaEvento: FormControl<string>;
   horaPrazo: FormControl<string>;
   link: FormControl<string>;
   teor: FormControl<string>;
@@ -83,7 +81,9 @@ function text(validators: ValidatorFn[] = []): FormControl<string> {
  * envolvendo `<app-combobox>` reencaminha um clique sintético pro `<input>` interno e reabre a
  * lista ao selecionar uma opção (achado real, ver `combobox.component.html`). `processoId` não é
  * um campo do formulário: vem fixo do painel que já está filtrado por aquele processo (mesmo em
- * edição — não dá pra mover a operação pra outro processo por aqui).
+ * edição — não dá pra mover a operação pra outro processo por aqui). Sem campo de "data de
+ * cadastro" aqui — `Operacao.dataCadastro` (datetime, automático via `@PrePersist`) já registra
+ * isso sozinho, sem precisar espelhar no formulário nem no `OperacaoWriteApi`.
  */
 @Component({
   selector: 'app-operacao-form',
@@ -135,8 +135,6 @@ export class OperacaoFormComponent {
     horaInicio: text(),
     horaFim: text(),
     importancia: text(),
-    dataEvento: text(),
-    horaEvento: text(),
     horaPrazo: text(),
     link: text(),
     teor: text(),
@@ -185,8 +183,6 @@ export class OperacaoFormComponent {
       horaInicio: op.horaInicio ?? '',
       horaFim: op.horaFim ?? '',
       importancia: op.importancia ?? '',
-      dataEvento: op.dataEvento ?? '',
-      horaEvento: op.horaEvento ?? '',
       horaPrazo: op.horaPrazo ?? '',
       link: op.link ?? '',
       teor: op.teor ?? '',
@@ -258,8 +254,6 @@ export class OperacaoFormComponent {
       hora_inicio: tarefaOuCompromisso ? raw.horaInicio || null : null,
       hora_fim: tarefaOuCompromisso ? raw.horaFim || null : null,
       importancia: this.ehTarefa() ? raw.importancia || null : null,
-      data_evento: raw.dataEvento || null,
-      hora_evento: raw.horaEvento || null,
       hora_prazo: intimacao ? raw.horaPrazo || null : null,
       origem: intimacao ? this.origem() : null,
       link: intimacao ? raw.link.trim() || null : null,

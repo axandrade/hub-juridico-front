@@ -57,8 +57,6 @@ export interface OperacaoDetalheRow {
   horaInicio: string | null;
   horaFim: string | null;
   importancia: string | null;
-  dataEvento: string | null;
-  horaEvento: string | null;
   horaPrazo: string | null;
   origem: OrigemOperacao | null;
   link: string | null;
@@ -81,8 +79,6 @@ export interface OperacaoWriteApi {
   hora_inicio: string | null;
   hora_fim: string | null;
   importancia: string | null;
-  data_evento: string | null;
-  hora_evento: string | null;
   hora_prazo: string | null;
   origem: OrigemOperacao | null;
   link: string | null;

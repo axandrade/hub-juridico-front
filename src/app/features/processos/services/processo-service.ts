@@ -433,7 +433,11 @@ const PROCESSO_RESUMO_FIELDS = [
   'destacarObservacao', 'ativo', 'atualizadoEm',
 ].join(',');
 
-function processoResumoFromDomain(p: ProcessoResumoDomain, favorito: boolean): ProcessoResumoApi {
+function processoResumoFromDomain(
+  p: ProcessoResumoDomain,
+  favorito: boolean,
+  clientePrincipalNome: string | null,
+): ProcessoResumoApi {
   return {
     id: p.id,
     favorito,
@@ -443,6 +447,7 @@ function processoResumoFromDomain(p: ProcessoResumoDomain, favorito: boolean): P
     status_id: p.statusId,
     pasta: p.pasta,
     cliente_principal_id: p.clientePrincipalId,
+    cliente_principal_nome: clientePrincipalNome,
     advogado_responsavel_id: p.advogadoResponsavelId,
     natureza: p.natureza,
     natureza_id: p.naturezaId,
@@ -524,10 +529,21 @@ export class ProcessoService {
         }),
         switchMap((pagina) => {
           const ids = pagina.content.map((p) => p.id);
+          const clienteIds = idsUnicos(pagina.content.map((p) => p.clientePrincipalId));
           return this.domainFavoritoService.listarFavoritos('processo', ids).pipe(
-            map((favoritos) => {
+            switchMap((favoritos) => {
               this.mesclarFavoritoIds(favoritos);
-              return pagina.content.map((p) => processoResumoFromDomain(p, favoritos.has(p.id)));
+              return this.buscarNomesPessoas(clienteIds).pipe(
+                map((nomes) =>
+                  pagina.content.map((p) =>
+                    processoResumoFromDomain(
+                      p,
+                      favoritos.has(p.id),
+                      p.clientePrincipalId != null ? nomes.get(p.clientePrincipalId) ?? null : null,
+                    ),
+                  ),
+                ),
+              );
             }),
           );
         }),
@@ -682,7 +698,7 @@ export class ProcessoService {
         }
         return of(salvo);
       }),
-      tap((salvo) => this.mesclarNaLista(salvo)),
+      switchMap((salvo) => this.mesclarNaLista(salvo).pipe(map(() => salvo))),
     );
   }
 
@@ -701,7 +717,7 @@ export class ProcessoService {
         }
         return of(atualizado);
       }),
-      tap((atualizado) => this.mesclarNaLista(atualizado)),
+      switchMap((atualizado) => this.mesclarNaLista(atualizado).pipe(map(() => atualizado))),
     );
   }
 
@@ -764,6 +780,13 @@ export class ProcessoService {
       .pipe(map(nomeDePessoa), catchError(() => of('')));
   }
 
+  /** Nomes de várias pessoas por id, em lote — mesmo padrão de `buscarCatalogoPorIds`, usado pela coluna "Cliente principal". */
+  private buscarNomesPessoas(ids: number[]): Observable<Map<number, string>> {
+    return this.buscarCatalogoPorIds<Record<string, unknown> & { id: number }>(
+      'pessoa', 'id,nome,razaoSocial,nomeFantasia', ids,
+    ).pipe(map((mapa) => new Map([...mapa].map(([id, pessoa]) => [id, nomeDePessoa(pessoa)]))));
+  }
+
   rotuloAdvogado(id: number): Observable<string> {
     return this.domainService
       .get<Record<string, unknown>>({ entityName: 'advogado', entityId: id, fields: 'id,nome' })
@@ -799,12 +822,20 @@ export class ProcessoService {
     return this.domainService.delete({ entityName, entityId: id });
   }
 
-  private mesclarNaLista(salvo: ProcessoApi): void {
-    const linha = resumoDe(salvo);
-    this._processos.update((processos) =>
-      processos.some((p) => p.id === linha.id)
-        ? processos.map((p) => (p.id === linha.id ? linha : p))
-        : [linha, ...processos],
+  /** Resolve o nome do cliente principal (se houver) e substitui/insere a linha na lista. */
+  private mesclarNaLista(salvo: ProcessoApi): Observable<void> {
+    const clienteId = salvo.clientes.find((c) => c.principal)?.pessoa_id ?? null;
+    const nome$: Observable<string | null> = clienteId != null ? this.rotuloPessoa(clienteId) : of(null);
+    return nome$.pipe(
+      tap((nome) => {
+        const linha = resumoDe(salvo, nome);
+        this._processos.update((processos) =>
+          processos.some((p) => p.id === linha.id)
+            ? processos.map((p) => (p.id === linha.id ? linha : p))
+            : [linha, ...processos],
+        );
+      }),
+      map(() => undefined),
     );
   }
 
@@ -820,8 +851,8 @@ function nomeDePessoa(p: Record<string, unknown>): string {
   return String(p['nome'] ?? p['razaoSocial'] ?? p['nomeFantasia'] ?? '(sem nome)');
 }
 
-/** Deriva a linha da listagem a partir da ficha completa (pós-save). */
-function resumoDe(p: ProcessoApi): ProcessoResumoApi {
+/** Deriva a linha da listagem a partir da ficha completa (pós-save). `clienteNome` vem resolvido à parte por `mesclarNaLista`. */
+function resumoDe(p: ProcessoApi, clienteNome: string | null): ProcessoResumoApi {
   return {
     id: p.id,
     favorito: p.favorito,
@@ -831,6 +862,7 @@ function resumoDe(p: ProcessoApi): ProcessoResumoApi {
     status_id: p.status_id,
     pasta: p.pasta,
     cliente_principal_id: p.clientes.find((c) => c.principal)?.pessoa_id ?? null,
+    cliente_principal_nome: clienteNome,
     advogado_responsavel_id: p.advogado_responsavel_id,
     natureza: p.natureza,
     natureza_id: p.natureza_id,

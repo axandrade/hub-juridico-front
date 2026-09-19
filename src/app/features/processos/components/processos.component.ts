@@ -83,6 +83,12 @@ export class ProcessosComponent {
       formatter: (value) => (value ? String(value) : '—'),
     },
     {
+      key: 'cliente_principal_nome',
+      header: 'Cliente principal',
+      width: '200px',
+      formatter: (value) => (value ? String(value) : '—'),
+    },
+    {
       key: 'tipo',
       header: 'Tipo',
       width: '130px',

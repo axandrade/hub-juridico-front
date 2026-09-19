@@ -184,6 +184,8 @@ export interface ProcessoResumoApi {
   status_id: number | null;
   pasta: string | null;
   cliente_principal_id: number | null;
+  /** Nome de exibição do cliente principal, resolvido à parte (`ProcessoService.carregar`) — `null` sem cliente principal. */
+  cliente_principal_nome: string | null;
   advogado_responsavel_id: number | null;
   natureza: string | null;
   natureza_id: number | null;

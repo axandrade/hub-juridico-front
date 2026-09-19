@@ -13,12 +13,18 @@
 <div class="table-wrap">
   <table class="data-table">
     <thead>
-      <tr>
-        @if (favoritable()) {
+      <tr cdkDropList cdkDropListOrientation="horizontal" [cdkDropListDisabled]="!columnReorder()" (cdkDropListDropped)="onColumnDropped($event)">
+        @if (hasPinColumn()) {
           <th class="data-table__pin"></th>
         }
         @for (column of visibleColumns(); track column.key) {
-          <th [style.width]="column.width" [class]="'align-' + (column.align ?? 'left')">
+          <th
+            cdkDrag
+            [cdkDragDisabled]="!columnReorder()"
+            [class.data-table__th--draggable]="columnReorder()"
+            [style.width]="column.width"
+            [class]="'align-' + (column.align ?? 'left')"
+          >
             @if (sortable() && column.sortable !== false) {
               <button type="button" class="data-table__sort" (click)="sortBy(column.key)">
                 {{ column.header }}
@@ -52,8 +58,25 @@
         </tr>
       } @else {
         @for (row of displayRows(); track trackRow($index, row)) {
-          <tr [class]="rowClasses(row)" (click)="rowClick.emit(row)">
-            @if (favoritable()) {
+          <tr
+            [class]="rowClasses(row)"
+            (click)="rowClick.emit(row)"
+            (mouseenter)="onRowMouseEnter($event, row)"
+            (mouseleave)="onRowMouseLeave()"
+          >
+            @if (pinAction(); as pin) {
+              <td class="data-table__pin">
+                <button
+                  type="button"
+                  class="data-table__pin-button"
+                  [class.is-active]="pin.isActive(row)"
+                  [attr.aria-label]="pin.ariaLabel ?? null"
+                  (click)="pin.onToggle(row, $event)"
+                >
+                  <i class="fa-solid fa-star" aria-hidden="true"></i>
+                </button>
+              </td>
+            } @else if (favoritable() && !isExternalMode()) {
               <td class="data-table__pin">
                 <button
                   type="button"
@@ -143,5 +166,12 @@
       Próxima
       <i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
     </button>
+  </div>
+}
+
+@if (hoveredTooltip(); as tooltip) {
+  <div class="data-table__tooltip" [style.top.px]="tooltip.top + 6" [style.left.px]="tooltip.left">
+    <span class="data-table__tooltip-label">Observação</span>
+    <p class="data-table__tooltip-text">{{ tooltip.text }}</p>
   </div>
 }

@@ -32,6 +32,25 @@
     white-space: nowrap;
   }
 
+  // Arrastar o cabeçalho pra reordenar (`columnReorder`) — só nas colunas com `cdkDrag` ligado.
+  .data-table__th--draggable {
+    cursor: grab;
+
+    &:active {
+      cursor: grabbing;
+    }
+
+    &.cdk-drag-preview {
+      z-index: 10;
+      box-shadow: $shadow-lg;
+      background-color: $color-surface;
+    }
+
+    &.cdk-drag-placeholder {
+      opacity: 0.3;
+    }
+  }
+
   tbody td {
     padding: $spacing-sm $spacing-md;
     border-bottom: 1px solid rgba($burgundy-deep, 0.08); // divisória neutra e discreta

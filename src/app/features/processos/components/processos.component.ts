@@ -15,7 +15,7 @@ import { EMPTY, catchError, debounceTime, distinctUntilChanged, skip, switchMap 
 
 import { ButtonComponent } from '../../../shared/components/button/button.component';
 import { ColumnsMenuComponent } from '../../../shared/components/columns-menu/columns-menu.component';
-import { DataTableComponent } from '../../../shared/components/table/data-table.component';
+import { DomainModelTableComponent } from '../../../shared/components/domain-table/domain-model-table.component';
 import { TableColumn } from '../../../shared/components/table/table-column.model';
 import { TablePagination, TablePinAction } from '../../../shared/components/table/table.model';
 import { PanelShellController } from '../../../shared/panel-shell/panel-shell.controller';
@@ -37,7 +37,7 @@ import { ProcessoFormComponent } from './processo-form/processo-form.component';
 @Component({
   selector: 'app-processos',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [DataTableComponent, ButtonComponent, ProcessoFormComponent, ColumnsMenuComponent],
+  imports: [DomainModelTableComponent, ButtonComponent, ProcessoFormComponent, ColumnsMenuComponent],
   templateUrl: './processos.component.html',
   styleUrl: './processos.component.scss',
 })

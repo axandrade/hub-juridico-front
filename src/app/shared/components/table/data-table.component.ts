@@ -1,4 +1,5 @@
 import { DOCUMENT } from '@angular/common';
+import { CdkDrag, CdkDragDrop, CdkDropList } from '@angular/cdk/drag-drop';
 import { ChangeDetectionStrategy, Component, computed, effect, inject, input, output, signal } from '@angular/core';
 
 import { ColumnVisibilityController } from '../../column-visibility/column-visibility.controller';
@@ -24,7 +25,7 @@ import { TablePagination, TablePinAction, TableSort } from './table.model';
 @Component({
   selector: 'app-data-table',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [DateFormatPipe, CurrencyFormatPipe, BadgeComponent, ColumnsMenuComponent],
+  imports: [DateFormatPipe, CurrencyFormatPipe, BadgeComponent, ColumnsMenuComponent, CdkDropList, CdkDrag],
   templateUrl: './data-table.component.html',
   styleUrl: './data-table.component.scss',
 })
@@ -56,6 +57,8 @@ export class DataTableComponent<T extends object> {
   readonly defaultVisibleColumns = input<readonly string[] | null>(null);
   /** Chave de `localStorage` pra lembrar a escolha de colunas visíveis entre sessões; `null` = não persiste. */
   readonly columnsStorageKey = input<string | null>(null);
+  /** Habilita arrastar o cabeçalho da coluna pra reordenar (persiste junto de `columnsStorageKey`). */
+  readonly columnReorder = input<boolean>(false);
 
   /** Busca livre client-side (aplicada sobre `data`, não refaz requisição). */
   readonly searchQuery = input<string>('');
@@ -96,10 +99,11 @@ export class DataTableComponent<T extends object> {
   protected readonly effectiveSort = computed(() => this.sortOverride() ?? this.initialSort());
 
   protected readonly visibleColumns = computed(() => {
+    const ordered = this.columnVisibilityState.orderedColumns();
     if (!this.columnVisibility()) {
-      return this.columns();
+      return ordered;
     }
-    return this.columns().filter((column) => this.columnVisibilityState.isVisible(column.key));
+    return ordered.filter((column) => this.columnVisibilityState.isVisible(column.key));
   });
 
   protected readonly rows = computed(() => {
@@ -149,6 +153,7 @@ export class DataTableComponent<T extends object> {
   constructor() {
     // Nunca dentro do `computed` de `visibleColumns` (ver `ColumnVisibilityController.carregarStorage`).
     effect(() => this.columnVisibilityState.carregarStorage());
+    effect(() => this.columnVisibilityState.carregarOrdemStorage());
   }
 
   protected columnFilterValue(key: string): string {
@@ -157,6 +162,10 @@ export class DataTableComponent<T extends object> {
 
   protected submitColumnFilter(key: string, value: string): void {
     this.columnFilterChange.emit({ key, value });
+  }
+
+  protected onColumnDropped(event: CdkDragDrop<TableColumn<T>[]>): void {
+    this.columnVisibilityState.reorder(event.previousIndex, event.currentIndex);
   }
 
   protected sortBy(key: string): void {

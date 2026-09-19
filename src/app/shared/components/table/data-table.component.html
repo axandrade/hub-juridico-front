@@ -13,12 +13,15 @@
 <div class="table-wrap">
   <table class="data-table">
     <thead>
-      <tr>
+      <tr cdkDropList cdkDropListOrientation="horizontal" [cdkDropListDisabled]="!columnReorder()" (cdkDropListDropped)="onColumnDropped($event)">
         @if (pinAction()) {
           <th class="data-table__pin"></th>
         }
         @for (column of visibleColumns(); track column.key) {
           <th
+            cdkDrag
+            [cdkDragDisabled]="!columnReorder()"
+            [class.data-table__th--draggable]="columnReorder()"
             [style.width]="column.width"
             [class]="'align-' + (column.align ?? 'left')"
           >

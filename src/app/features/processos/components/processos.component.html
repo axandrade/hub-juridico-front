@@ -143,7 +143,7 @@
     </div>
 
     <div class="processos-table-wrap">
-      <app-data-table
+      <app-domain-model-table
         #gradeProcessos
         [columnsToolbar]="false"
         [columns]="processoColumns"
@@ -154,6 +154,7 @@
         [sortable]="true"
         [initialSort]="{ key: 'data_distribuicao', direction: 'desc' }"
         [columnVisibility]="true"
+        [columnReorder]="true"
         columnsStorageKey="hub-juridico.processos.colunas"
         [rowClass]="processoRowClass"
         [rowTitle]="processoRowTitle"

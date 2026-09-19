@@ -479,13 +479,16 @@ function processoResumoFromDomain(
  * Fonte da lista de processos. A listagem (`carregar`) busca em `/domain/processo` (ddd-noap),
  * página a página, exatamente como `ProcessoRepository.listarComFiltros` filtrava (mesmos campos
  * de busca livre, `ativo eq true` por padrão, ordenação por `id` — igual ao
- * `@PageableDefault(sort = "id")` que o `AbstractController` usava) — `ProcessosComponent` e o
- * `<app-data-table>` continuam iguais, sem nenhuma mudança visível (tooltip de observação
- * destacada, favoritos fixados no topo da página e a ordenação por clique de coluna são recursos
- * só do `DataTableComponent`, que o `DomainModelTableComponent` genérico não tem — por isso aqui
- * só a fonte dos dados mudou, não o componente). Favoritar já usa `tipo_entidade = "processo"`
- * desde sempre (ver `ProcessoService.TIPO_FAVORITO` no backend), então bate 1:1 com o que
- * `/domain/favorito` espera — nenhum favorito existente fica "órfão".
+ * `@PageableDefault(sort = "id")` que o `AbstractController` usava) — mas resolve à parte os
+ * nomes de ids relacionados que `/domain/processo` cru não tem (`clientePrincipalId` →
+ * `nomesClientes`, `orgaoProcessanteId` → `nomesOrgaos`, ambos via busca em lote pelos ids únicos
+ * da página) antes de montar `ProcessoResumoApi`. É por isso que `ProcessosComponent` alimenta o
+ * `<app-domain-model-table>` no "modo `data`" (`[data]="processos()"`, sem `entityName`) em vez de
+ * deixá-lo buscar sozinho: a tabela não saberia fazer essa resolução de nomes. Favoritar já usa
+ * `tipo_entidade = "processo"` desde sempre (ver `ProcessoService.TIPO_FAVORITO` no backend),
+ * então bate 1:1 com o que `/domain/favorito` espera — nenhum favorito existente fica "órfão"; o
+ * `pinFirst`/`pinAction` da tabela é que fixa quem é favorito no topo e desenha o botão (o
+ * favoritar nativo do componente não funciona no modo `data`, exige `entityName`).
  *
  * Criar/editar/ativar-inativar vão direto por `/domain/processo` (`DomainService.post`/`patch`,
  * sem `ProcessoController.criar`/`atualizar`/`alterarStatus` — ver

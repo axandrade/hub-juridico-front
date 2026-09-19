@@ -1,4 +1,5 @@
 import { DOCUMENT } from '@angular/common';
+import { CdkDrag, CdkDragDrop, CdkDropList } from '@angular/cdk/drag-drop';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -20,7 +21,7 @@ import { CurrencyFormatPipe } from '../../pipes/currency-format.pipe';
 import { BadgeComponent } from '../badge/badge.component';
 import { ColumnsMenuComponent } from '../columns-menu/columns-menu.component';
 import { TableColumn } from '../table/table-column.model';
-import { TablePagination, TableSort } from '../table/table.model';
+import { TablePagination, TablePinAction, TableSort } from '../table/table.model';
 
 /**
  * Tabela "domain-aware": mesmo conceito do `DomainModelTableComponent` do cev-front
@@ -28,15 +29,23 @@ import { TablePagination, TableSort } from '../table/table.model';
  * `/domain/{entityName}` (ddd-noap), com paginação, ordenação e filtro RQL, sem o pai
  * orquestrar `HttpClient` nenhum.
  *
- * Visualmente idêntica ao `DataTableComponent` (mesmas classes/estilos), mas é um
- * componente separado de propósito — não convém acoplar a tabela "burra" (usada em
- * Clientes/Processos/Usuários) a uma dependência de rede.
+ * A tabela padrão do sistema — dois modos, mutuamente exclusivos por instância:
  *
- * Favoritar é nativo daqui (todas as telas do sistema têm essa coluna — ver Clientes/Processos):
- * usa a entidade genérica `Favorito` via `/domain/favorito` (`DomainFavoritoService`), com
- * `tipoEntidade = entityName()` — nenhuma tela precisa fiar nada, só existe (a menos que
- * `favoritable` seja explicitamente desligado). Sem coluna de `id` visível nenhuma: o id da
- * linha vem de `trackKey` (ou `'id'` por padrão).
+ * 1. **`entityName`** (Advogados/Clientes): busca sozinha em `/domain/{entityName}`, com
+ *    paginação/ordenação/filtro resolvidos no servidor via RQL, e favoritar nativo (ver abaixo).
+ * 2. **`data`** (Processos): o pai já buscou os dados (ex.: `ProcessoService`, que resolve nomes
+ *    de ids relacionados — `clientePrincipalId` → nome — que `/domain/processo` cru não tem) e
+ *    só alimenta a tabela; paginação vira input (`[pagination]`)/output (`(pageChange)`), e
+ *    `sortable`/`initialSort`/`pinFirst`/`rowTitle`/`pinAction` resolvem tudo no cliente, igual o
+ *    `DataTableComponent` — que fica reservado a telas mais simples sem rede (dashboard/usuários).
+ *    `favoritable` não funciona nesse modo (não tem `entityName` pra chamar `/domain/favorito`) —
+ *    use `pinFirst`/`pinAction` pra favoritar do jeito próprio da tela, como a Processos faz.
+ *
+ * Favoritar é nativo no modo `entityName` (todas as telas desse modo têm essa coluna — ver
+ * Clientes/Advogados): usa a entidade genérica `Favorito` via `/domain/favorito`
+ * (`DomainFavoritoService`), com `tipoEntidade = entityName()` — nenhuma tela precisa fiar nada,
+ * só existe (a menos que `favoritable` seja explicitamente desligado). Sem coluna de `id` visível
+ * nenhuma: o id da linha vem de `trackKey` (ou `'id'` por padrão).
  *
  * Favorito sempre fica fixo no topo da listagem, mesmo vindo de outra página (achado real
  * 2026-09-17: existia isso numa tela antiga de Clientes, comparador local, perdido na migração
@@ -49,15 +58,11 @@ import { TablePagination, TableSort } from '../table/table.model';
  * (`filter`) — só o predicado `isRowActive`, se informado: um registro inativo nunca fixa, e o
  * botão de favoritar fica desabilitado nele (não dá pra favoritar/manter favoritado algo
  * inativo).
- *
- * Recursos do `DataTableComponent` que este componente NÃO tem (cortados por não serem
- * necessários no piloto de Advogados): busca client-side, filtro por coluna, tooltip de linha.
- * `filter`/`sort` aqui são resolvidos no servidor via RQL, não localmente.
  */
 @Component({
   selector: 'app-domain-model-table',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [DateFormatPipe, CurrencyFormatPipe, BadgeComponent, ColumnsMenuComponent],
+  imports: [DateFormatPipe, CurrencyFormatPipe, BadgeComponent, ColumnsMenuComponent, CdkDropList, CdkDrag],
   templateUrl: './domain-model-table.component.html',
   styleUrl: './domain-model-table.component.scss',
 })
@@ -66,26 +71,43 @@ export class DomainModelTableComponent<T extends object> {
   private readonly domainFavoritoService = inject(DomainFavoritoService);
   private readonly document = inject(DOCUMENT);
 
-  /** Nome da entidade em kebab-case, igual ao backend resolve (`EntityFinder`) — ex.: `'advogado'`. */
-  readonly entityName = input.required<string>();
+  /**
+   * Nome da entidade em kebab-case, igual ao backend resolve (`EntityFinder`) — ex.: `'advogado'`.
+   * Obrigatório só no modo `entityName` (busca sozinha); ausente/`null` quando `data` é usado.
+   */
+  readonly entityName = input<string | null>(null);
+  /** Modo `data`: linhas já buscadas pelo pai — desliga a busca própria via `/domain/{entityName}`. */
+  readonly data = input<readonly T[] | null>(null);
   readonly columns = input.required<TableColumn<T>[]>();
-  /** `fields=` — campos a pedir ao backend; vazio = conjunto padrão do backend. */
+  /** `fields=` — campos a pedir ao backend; vazio = conjunto padrão do backend. Só no modo `entityName`. */
   readonly fields = input<string>('');
-  /** RQL — filtro base/atual, resolvido pelo pai (ex.: busca + `ativo eq true`). */
+  /** RQL — filtro base/atual, resolvido pelo pai (ex.: busca + `ativo eq true`). Só no modo `entityName`. */
   readonly filter = input<string>('');
-  /** Ordenação padrão (`campo` ou `-campo`); sobrescrita ao clicar no cabeçalho, se `sortable`. */
+  /** Ordenação padrão (`campo` ou `-campo`) enviada ao servidor. Só no modo `entityName`. */
   readonly sort = input<string>('');
+  /** Só no modo `entityName` — tamanho de página pedido ao servidor. */
   readonly size = input<number>(10);
+  /** Habilita clicar no cabeçalho pra ordenar — nos dois modos (no modo `data`, ordena no cliente). */
   readonly sortable = input<boolean>(false);
+  /** Só no modo `data`: ordenação inicial, lida uma vez (ordenação no cliente, como o `DataTableComponent`). */
+  readonly initialSort = input<TableSort | null>(null);
   readonly trackKey = input<string | null>(null);
   readonly emptyMessage = input<string>('Nenhum registro encontrado.');
   readonly rowClass = input<((row: T) => Record<string, boolean>) | null>(null);
+  /** Só no modo `data`: tooltip customizado no hover da linha; `null`/vazio = sem tooltip nessa linha. */
+  readonly rowTitle = input<((row: T) => string | null) | null>(null);
+  /** Só no modo `data`: linhas para as quais isso retorna `true` sobem para o topo (ex.: favoritos resolvidos pelo pai). */
+  readonly pinFirst = input<((row: T) => boolean) | null>(null);
+  /** Só no modo `data`: coluna de ação fixa (ex.: favoritar) desenhada pela própria tabela, alternativa ao `favoritable` nativo (que exige `entityName`). */
+  readonly pinAction = input<TablePinAction<T> | null>(null);
 
   readonly columnVisibility = input<boolean>(false);
   readonly columnsToolbar = input<boolean>(true);
   readonly defaultVisibleColumns = input<readonly string[] | null>(null);
   /** Chave de `localStorage` pra lembrar a escolha de colunas visíveis entre sessões; `null` = não persiste. */
   readonly columnsStorageKey = input<string | null>(null);
+  /** Habilita arrastar o cabeçalho da coluna pra reordenar (persiste junto de `columnsStorageKey`). */
+  readonly columnReorder = input<boolean>(false);
   /** Toda tabela tem favoritar por padrão — desligue só se a entidade genuinamente não fizer sentido favoritar. */
   readonly favoritable = input<boolean>(true);
   /** Sem isso, todo registro é favoritável. Quando informado, um registro "inativo" nunca fixa como favorito e o botão de favoritar fica desabilitado nele. */
@@ -103,8 +125,16 @@ export class DomainModelTableComponent<T extends object> {
   readonly deleteAriaLabel = input<string>('Excluir');
 
   readonly rowClick = output<T>();
-  /** Emitido a cada busca bem-sucedida — espelha `getCurrentDataList` do cev-front. */
+  /** Emitido a cada busca bem-sucedida — espelha `getCurrentDataList` do cev-front. Só no modo `entityName`. */
   readonly dataLoaded = output<T[]>();
+  /**
+   * Só no modo `data`: paginação já pronta, resolvida pelo pai (o binding no template é
+   * `[pagination]`, igual `DataTableComponent` — o campo interno só se chama diferente porque
+   * `pagination`, sem alias, já é o getter público de leitura usado nos dois modos).
+   */
+  readonly paginationInput = input<TablePagination | null>(null, { alias: 'pagination' });
+  /** Só no modo `data`: página (0-based) pedida via Anterior/Próxima — quem busca é o pai. */
+  readonly pageChange = output<number>();
 
   private readonly page = signal(0);
   private readonly sortOverride = signal<TableSort | null>(null);
@@ -116,32 +146,74 @@ export class DomainModelTableComponent<T extends object> {
   });
 
   private readonly rows = signal<T[]>([]);
-  readonly loading = signal(false);
+  /** Só no modo `data`: spinner controlado pelo pai (igual `DataTableComponent`). */
+  readonly loadingInput = input<boolean>(false, { alias: 'loading' });
+  private readonly loadingState = signal(false);
+  /** `loading` atual — no modo `entityName`, calculado sozinho durante o fetch; no modo `data`, reflete `[loading]`. */
+  readonly loading = computed(() => (this.isExternalMode() ? this.loadingInput() : this.loadingState()));
   readonly loadError = signal(false);
   private readonly pageInfo = signal<TablePagination | null>(null);
-  readonly pagination = this.pageInfo.asReadonly();
+  /** Paginação atual — no modo `entityName`, calculada sozinha; no modo `data`, reflete `[pagination]`. */
+  readonly pagination = computed(() => (this.isExternalMode() ? this.paginationInput() : this.pageInfo()));
+  /** Tooltip customizado atualmente exibido (linha sob o mouse), com posição em coordenadas de viewport. Só no modo `data`. */
+  protected readonly hoveredTooltip = signal<{ text: string; top: number; left: number } | null>(null);
 
-  /** entidadeId -> id da linha `Favorito` (precisa do id pra desfavoritar via DELETE). */
+  /** entidadeId -> id da linha `Favorito` (precisa do id pra desfavoritar via DELETE). Só no modo `entityName`. */
   private readonly favoritoMap = signal<Map<number, number>>(new Map());
   private readonly favoritoBusy = signal<Set<number>>(new Set());
-  /** Fichas completas de todos os favoritos do tipo de entidade — sempre fixos no topo. */
+  /** Fichas completas de todos os favoritos do tipo de entidade — sempre fixos no topo. Só no modo `entityName`. */
   private readonly pinnedRows = signal<T[]>([]);
 
+  protected readonly isExternalMode = computed(() => this.data() !== null);
+
   protected readonly visibleColumns = computed(() => {
+    const ordered = this.columnVisibilityState.orderedColumns();
     if (!this.columnVisibility()) {
-      return this.columns();
+      return ordered;
     }
-    return this.columns().filter((column) => this.columnVisibilityState.isVisible(column.key));
+    return ordered.filter((column) => this.columnVisibilityState.isVisible(column.key));
   });
 
   protected readonly hasRowActions = computed(() => this.editAction() !== null || this.deleteAction() !== null);
 
+  protected readonly hasPinColumn = computed(() => (this.isExternalMode() ? this.pinAction() !== null : this.favoritable()));
+
   protected readonly colspan = computed(
-    () => this.visibleColumns().length + (this.favoritable() ? 1 : 0) + (this.hasRowActions() ? 1 : 0),
+    () => this.visibleColumns().length + (this.hasPinColumn() ? 1 : 0) + (this.hasRowActions() ? 1 : 0),
   );
 
-  /** Favoritos fixos sempre primeiro, independente da paginação/ordenação do resto. */
-  protected readonly displayRows = computed(() => [...this.pinnedRows(), ...this.rows()]);
+  protected readonly effectiveSort = computed(() => this.sortOverride() ?? this.initialSort());
+
+  /**
+   * Modo `data`: ordena localmente (igual `DataTableComponent.rows`) e sobe quem `pinFirst` marcar.
+   * Modo `entityName`: favoritos fixos sempre primeiro, independente da paginação/ordenação do resto.
+   */
+  protected readonly displayRows = computed(() => {
+    if (!this.isExternalMode()) {
+      return [...this.pinnedRows(), ...this.rows()];
+    }
+    let rows = [...(this.data() ?? [])];
+    const sort = this.effectiveSort();
+    const pin = this.pinFirst();
+    if (sort || pin) {
+      const column = this.columns().find((item) => item.key === sort?.key);
+      const direction = sort?.direction === 'desc' ? -1 : 1;
+      rows = rows.sort((a, b) => {
+        if (pin) {
+          const pinnedA = pin(a);
+          const pinnedB = pin(b);
+          if (pinnedA !== pinnedB) {
+            return pinnedA ? -1 : 1;
+          }
+        }
+        if (!column) {
+          return 0;
+        }
+        return this.compareValues(this.displayValue(a, column), this.displayValue(b, column)) * direction;
+      });
+    }
+    return rows;
+  });
 
   private lastQueryKey: string | null = null;
   private requestSeq = 0;
@@ -149,9 +221,16 @@ export class DomainModelTableComponent<T extends object> {
   constructor() {
     // Nunca dentro do `computed` de `visibleColumns` (ver `ColumnVisibilityController.carregarStorage`).
     effect(() => this.columnVisibilityState.carregarStorage());
+    effect(() => this.columnVisibilityState.carregarOrdemStorage());
 
     effect(() => {
+      if (this.isExternalMode()) {
+        return; // modo `data` — quem busca é o pai.
+      }
       const entityName = this.entityName();
+      if (!entityName) {
+        return;
+      }
       const filter = this.filter();
       const sortInput = this.sort();
       const size = this.size();
@@ -168,9 +247,13 @@ export class DomainModelTableComponent<T extends object> {
     });
   }
 
-  /** Refaz a busca da página atual — o pai chama isso (via `viewChild`) depois de salvar/excluir. */
+  /** Refaz a busca da página atual — o pai chama isso (via `viewChild`) depois de salvar/excluir. Sem efeito no modo `data`. */
   reload(): void {
-    this.fetch(this.entityName(), this.page(), this.currentSort(), this.filter(), this.fields(), this.size());
+    const entityName = this.entityName();
+    if (this.isExternalMode() || !entityName) {
+      return;
+    }
+    this.fetch(entityName, this.page(), this.currentSort(), this.filter(), this.fields(), this.size());
   }
 
   protected sortBy(key: string): void {
@@ -182,6 +265,10 @@ export class DomainModelTableComponent<T extends object> {
     );
   }
 
+  protected onColumnDropped(event: CdkDragDrop<TableColumn<T>[]>): void {
+    this.columnVisibilityState.reorder(event.previousIndex, event.currentIndex);
+  }
+
   protected sortIcon(key: string): string {
     const sort = this.sortOverride();
     if (sort?.key !== key) {
@@ -191,7 +278,7 @@ export class DomainModelTableComponent<T extends object> {
   }
 
   protected requestPage(delta: -1 | 1): void {
-    const info = this.pageInfo();
+    const info = this.pagination();
     if (!info) {
       return;
     }
@@ -199,11 +286,29 @@ export class DomainModelTableComponent<T extends object> {
     if (next < 0 || (delta > 0 && info.last)) {
       return;
     }
-    this.page.set(next);
+    if (this.isExternalMode()) {
+      this.pageChange.emit(next);
+    } else {
+      this.page.set(next);
+    }
   }
 
   protected pageCountLabel(info: TablePagination): number {
     return Math.max(info.totalPages, 1);
+  }
+
+  protected onRowMouseEnter(event: MouseEvent, row: T): void {
+    const text = this.rowTitle()?.(row);
+    if (!text) {
+      this.hoveredTooltip.set(null);
+      return;
+    }
+    const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
+    this.hoveredTooltip.set({ text, top: rect.bottom, left: rect.left });
+  }
+
+  protected onRowMouseLeave(): void {
+    this.hoveredTooltip.set(null);
   }
 
   protected cellValue(row: T, column: TableColumn<T>): unknown {
@@ -272,6 +377,10 @@ export class DomainModelTableComponent<T extends object> {
 
   protected toggleFavorito(row: T, event: MouseEvent): void {
     event.stopPropagation();
+    const entityName = this.entityName();
+    if (!entityName) {
+      return; // favoritar nativo não existe no modo `data` — use `pinAction`.
+    }
     const id = this.rowId(row);
     if (this.favoritoBusy().has(id) || !this.isRowFavoritable(row)) {
       return;
@@ -280,7 +389,7 @@ export class DomainModelTableComponent<T extends object> {
     const existingFavoritoId = this.favoritoMap().get(id);
     const request$ = existingFavoritoId != null
       ? this.domainFavoritoService.desfavoritar(existingFavoritoId).pipe(map(() => undefined))
-      : this.domainFavoritoService.favoritar(this.entityName(), id).pipe(map(() => undefined));
+      : this.domainFavoritoService.favoritar(entityName, id).pipe(map(() => undefined));
 
     // Refaz a busca inteira (pinned + página) em vez de só corrigir o Map local: é o jeito mais
     // simples de manter `pinnedRows`/exclusão da paginação normal consistentes com o servidor.
@@ -348,9 +457,14 @@ export class DomainModelTableComponent<T extends object> {
     return sort.direction === 'desc' ? `-${sort.key}` : sort.key;
   }
 
+  /** Só usado pela ordenação local do modo `data` (ver `displayRows`) — igual `DataTableComponent`. */
+  private compareValues(left: string, right: string): number {
+    return left.localeCompare(right, 'pt-BR', { numeric: true, sensitivity: 'base' });
+  }
+
   private fetch(entityName: string, page: number, sort: string, filter: string, fields: string, size: number): void {
     const seq = ++this.requestSeq;
-    this.loading.set(true);
+    this.loadingState.set(true);
     this.resolvePinned(entityName, fields)
       .pipe(
         switchMap((pinnedIds) => {
@@ -371,7 +485,7 @@ export class DomainModelTableComponent<T extends object> {
         }),
         catchError(() => {
           if (seq === this.requestSeq) {
-            this.loading.set(false);
+            this.loadingState.set(false);
             this.loadError.set(true);
             this.rows.set([]);
             this.pageInfo.set(null);
@@ -383,7 +497,7 @@ export class DomainModelTableComponent<T extends object> {
         if (seq !== this.requestSeq) {
           return;
         }
-        this.loading.set(false);
+        this.loadingState.set(false);
         this.loadError.set(false);
         this.rows.set(result.content);
         this.pageInfo.set({

@@ -103,3 +103,79 @@ describe('ColumnVisibilityController — isVisible() nunca escreve num signal', 
     expect(localStorage.getItem(CHAVE)).toBeNull();
   });
 });
+
+const COLUNAS_3: TableColumn<Row & { email: string }>[] = [
+  { key: 'id', header: 'Id' },
+  { key: 'nome', header: 'Nome' },
+  { key: 'email', header: 'E-mail' },
+];
+
+describe('ColumnVisibilityController — reordenar arrastando o cabeçalho', () => {
+  const CHAVE = 'teste.column-visibility-controller.ordem';
+
+  afterEach(() => {
+    localStorage.removeItem(CHAVE);
+    localStorage.removeItem(`${CHAVE}.ordem`);
+  });
+
+  it('sem ordem salva, orderedColumns() devolve a ordem original de columns()', () => {
+    const controller = new ColumnVisibilityController(document, { columns: () => COLUNAS_3 });
+
+    expect(controller.orderedColumns().map((c) => c.key)).toEqual(['id', 'nome', 'email']);
+  });
+
+  it('reorder() move a coluna e orderedColumns() passa a refletir a nova ordem', () => {
+    const controller = new ColumnVisibilityController(document, { columns: () => COLUNAS_3 });
+
+    controller.reorder(0, 2); // arrasta "Id" (índice 0) pro lugar do último (índice 2)
+
+    expect(controller.orderedColumns().map((c) => c.key)).toEqual(['nome', 'email', 'id']);
+  });
+
+  it('reorder() persiste a ordem numa chave derivada (`<storageKey>.ordem`)', () => {
+    const controller = new ColumnVisibilityController(document, {
+      columns: () => COLUNAS_3,
+      storageKey: () => CHAVE,
+    });
+
+    controller.reorder(0, 2);
+
+    expect(JSON.parse(localStorage.getItem(`${CHAVE}.ordem`)!)).toEqual(['nome', 'email', 'id']);
+  });
+
+  it('carregarOrdemStorage() aplica a ordem salva', () => {
+    localStorage.setItem(`${CHAVE}.ordem`, JSON.stringify(['email', 'id', 'nome']));
+    const controller = new ColumnVisibilityController(document, {
+      columns: () => COLUNAS_3,
+      storageKey: () => CHAVE,
+    });
+
+    controller.carregarOrdemStorage();
+
+    expect(controller.orderedColumns().map((c) => c.key)).toEqual(['email', 'id', 'nome']);
+  });
+
+  it('colunas novas (fora da ordem salva) entram no fim, na ordem original', () => {
+    localStorage.setItem(`${CHAVE}.ordem`, JSON.stringify(['email', 'id'])); // "nome" não estava na lista quando foi salva
+    const controller = new ColumnVisibilityController(document, {
+      columns: () => COLUNAS_3,
+      storageKey: () => CHAVE,
+    });
+
+    controller.carregarOrdemStorage();
+
+    expect(controller.orderedColumns().map((c) => c.key)).toEqual(['email', 'id', 'nome']);
+  });
+
+  it('reordena só entre as colunas visíveis, mantendo as ocultas na posição relativa absoluta', () => {
+    const controller = new ColumnVisibilityController(document, { columns: () => COLUNAS_3 });
+    controller.toggle('id'); // oculta "id" — mantém "nome" e "email" visíveis (índices 0 e 1 na lista visível)
+
+    // Arrasta "email" (índice 1 dentre as visíveis) pra antes de "nome" (índice 0).
+    controller.reorder(1, 0);
+
+    // "id" continua oculta e no mesmo slot absoluto (posição 0); só "nome"/"email" trocaram de lugar entre si.
+    expect(controller.orderedColumns().map((c) => c.key)).toEqual(['id', 'email', 'nome']);
+    expect(controller.isVisible('id')).toBe(false);
+  });
+});

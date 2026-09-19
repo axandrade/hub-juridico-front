@@ -138,6 +138,34 @@ describe('DataTableComponent — visibilidade de colunas', () => {
       expect(JSON.parse(localStorage.getItem(CHAVE)!)).toEqual(['name']);
     });
   });
+
+  describe('reordenar colunas arrastando o cabeçalho', () => {
+    const CHAVE = 'teste.data-table.colunas.reorder';
+
+    afterEach(() => {
+      localStorage.removeItem(CHAVE);
+      localStorage.removeItem(`${CHAVE}.ordem`);
+    });
+
+    it('onColumnDropped() reordena visibleColumns e persiste a nova ordem', () => {
+      const fixture = createFixture();
+      fixture.componentRef.setInput('columns', COLUMNS);
+      fixture.componentRef.setInput('data', ROWS);
+      fixture.componentRef.setInput('columnReorder', true);
+      fixture.componentRef.setInput('columnsStorageKey', CHAVE);
+      fixture.detectChanges();
+
+      (fixture.componentInstance as unknown as { onColumnDropped: (e: { previousIndex: number; currentIndex: number }) => void })
+        .onColumnDropped({ previousIndex: 0, currentIndex: 1 });
+      fixture.detectChanges();
+
+      const headerTexts = Array.from(
+        (fixture.nativeElement as HTMLElement).querySelectorAll('thead th'),
+      ).map((th) => th.textContent?.trim());
+      expect(headerTexts).toEqual(['Idade', 'Nome']);
+      expect(JSON.parse(localStorage.getItem(`${CHAVE}.ordem`)!)).toEqual(['age', 'name']);
+    });
+  });
 });
 
 describe('DataTableComponent — busca e filtro', () => {

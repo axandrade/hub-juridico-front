@@ -122,6 +122,12 @@ export class ProcessosComponent {
         row.cidade ? `${row.cidade}${row.uf ? '/' + row.uf : ''}` : (row.uf ?? '—'),
     },
     {
+      key: 'orgao_processante_nome',
+      header: 'Último órgão',
+      width: '220px',
+      formatter: (value) => (value ? String(value) : '—'),
+    },
+    {
       key: 'data_distribuicao',
       header: 'Distribuição',
       width: '130px',

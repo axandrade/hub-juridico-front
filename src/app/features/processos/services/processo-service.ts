@@ -108,6 +108,7 @@ interface ProcessoResumoDomain {
   statusId: number | null;
   pasta: string | null;
   clientePrincipalId: number | null;
+  orgaoProcessanteId: number | null;
   advogadoResponsavelId: number | null;
   natureza: string | null;
   naturezaId: number | null;
@@ -428,15 +429,16 @@ function montarProcessoApi(
 }
 
 const PROCESSO_RESUMO_FIELDS = [
-  'id', 'tipo', 'numeroCnj', 'status', 'statusId', 'pasta', 'clientePrincipalId', 'advogadoResponsavelId',
-  'natureza', 'naturezaId', 'fase', 'faseId', 'uf', 'cidade', 'cidadeId', 'dataDistribuicao', 'observacoesGerais',
-  'destacarObservacao', 'ativo', 'atualizadoEm',
+  'id', 'tipo', 'numeroCnj', 'status', 'statusId', 'pasta', 'clientePrincipalId', 'orgaoProcessanteId',
+  'advogadoResponsavelId', 'natureza', 'naturezaId', 'fase', 'faseId', 'uf', 'cidade', 'cidadeId',
+  'dataDistribuicao', 'observacoesGerais', 'destacarObservacao', 'ativo', 'atualizadoEm',
 ].join(',');
 
 function processoResumoFromDomain(
   p: ProcessoResumoDomain,
   favorito: boolean,
   clientePrincipalNome: string | null,
+  orgaoProcessanteNome: string | null,
 ): ProcessoResumoApi {
   return {
     id: p.id,
@@ -448,6 +450,7 @@ function processoResumoFromDomain(
     pasta: p.pasta,
     cliente_principal_id: p.clientePrincipalId,
     cliente_principal_nome: clientePrincipalNome,
+    orgao_processante_nome: orgaoProcessanteNome,
     advogado_responsavel_id: p.advogadoResponsavelId,
     natureza: p.natureza,
     natureza_id: p.naturezaId,
@@ -530,16 +533,21 @@ export class ProcessoService {
         switchMap((pagina) => {
           const ids = pagina.content.map((p) => p.id);
           const clienteIds = idsUnicos(pagina.content.map((p) => p.clientePrincipalId));
+          const orgaoIds = idsUnicos(pagina.content.map((p) => p.orgaoProcessanteId));
           return this.domainFavoritoService.listarFavoritos('processo', ids).pipe(
             switchMap((favoritos) => {
               this.mesclarFavoritoIds(favoritos);
-              return this.buscarNomesPessoas(clienteIds).pipe(
-                map((nomes) =>
+              return forkJoin({
+                nomesClientes: this.buscarNomesPessoas(clienteIds),
+                nomesOrgaos: this.buscarNomesOrgaos(orgaoIds),
+              }).pipe(
+                map(({ nomesClientes, nomesOrgaos }) =>
                   pagina.content.map((p) =>
                     processoResumoFromDomain(
                       p,
                       favoritos.has(p.id),
-                      p.clientePrincipalId != null ? nomes.get(p.clientePrincipalId) ?? null : null,
+                      p.clientePrincipalId != null ? nomesClientes.get(p.clientePrincipalId) ?? null : null,
+                      p.orgaoProcessanteId != null ? nomesOrgaos.get(p.orgaoProcessanteId) ?? null : null,
                     ),
                   ),
                 ),
@@ -787,6 +795,29 @@ export class ProcessoService {
     ).pipe(map((mapa) => new Map([...mapa].map(([id, pessoa]) => [id, nomeDePessoa(pessoa)]))));
   }
 
+  /**
+   * Nomes de vários órgãos processantes por id, em lote, já no formato "TRIBUNAL - descrição" —
+   * mesma composição de `orgaoProcessanteApiDe` (usada na ficha completa), usada pela coluna
+   * "Último órgão".
+   */
+  private buscarNomesOrgaos(ids: number[]): Observable<Map<number, string>> {
+    return this.buscarCatalogoPorIds<{ id: number; nome: string; tribunalId: number }>(
+      'orgao-julgador', 'id,nome,tribunalId', ids,
+    ).pipe(
+      switchMap((orgaos) => {
+        const tribunalIds = idsUnicos([...orgaos.values()].map((o) => o.tribunalId));
+        return this.buscarCatalogoPorIds<{ id: number; nome: string }>('tribunal', 'id,nome', tribunalIds).pipe(
+          map((tribunais) => new Map(
+            [...orgaos].map(([id, orgao]) => {
+              const tribunalNome = tribunais.get(orgao.tribunalId)?.nome ?? null;
+              return [id, tribunalNome ? `${tribunalNome} - ${orgao.nome}` : orgao.nome] as const;
+            }),
+          )),
+        );
+      }),
+    );
+  }
+
   rotuloAdvogado(id: number): Observable<string> {
     return this.domainService
       .get<Record<string, unknown>>({ entityName: 'advogado', entityId: id, fields: 'id,nome' })
@@ -863,6 +894,8 @@ function resumoDe(p: ProcessoApi, clienteNome: string | null): ProcessoResumoApi
     pasta: p.pasta,
     cliente_principal_id: p.clientes.find((c) => c.principal)?.pessoa_id ?? null,
     cliente_principal_nome: clienteNome,
+    // `orgao_processante` já vem resolvido (com o "TRIBUNAL - descrição") na ficha completa — sem busca extra.
+    orgao_processante_nome: p.orgao_processante?.nome ?? null,
     advogado_responsavel_id: p.advogado_responsavel_id,
     natureza: p.natureza,
     natureza_id: p.natureza_id,

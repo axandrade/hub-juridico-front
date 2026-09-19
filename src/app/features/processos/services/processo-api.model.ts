@@ -186,6 +186,8 @@ export interface ProcessoResumoApi {
   cliente_principal_id: number | null;
   /** Nome de exibição do cliente principal, resolvido à parte (`ProcessoService.carregar`) — `null` sem cliente principal. */
   cliente_principal_nome: string | null;
+  /** Nome do órgão processante atual ("TRIBUNAL - descrição"), resolvido à parte — `null` sem órgão definido. */
+  orgao_processante_nome: string | null;
   advogado_responsavel_id: number | null;
   natureza: string | null;
   natureza_id: number | null;

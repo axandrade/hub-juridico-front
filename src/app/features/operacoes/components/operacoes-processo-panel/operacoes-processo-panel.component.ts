@@ -21,9 +21,11 @@ import { OperacaoFormComponent } from '../operacao-form/operacao-form.component'
  * `AdvogadoFormComponent`). Uma segunda `app-domain-model-table`, apontada pra `/domain/operacao`,
  * filtrada por `processoId eq {processoId} and ativo eq true`. "Novo" e clicar numa linha
  * (`rowClick`, sem ícone de editar dedicado) abrem `app-operacao-form` dentro de um `app-modal`
- * (mesmo padrão de Usuários — dialog, não painel, porque este painel já mostra a tabela). O ícone
- * de excluir (`deleteAction`) continua na linha (com `stopPropagation`, não dispara o `rowClick`) e
- * inativa direto (soft-delete), sem abrir o form.
+ * (mesmo padrão de Usuários — dialog, não painel, porque este painel já mostra a tabela). Os dois
+ * ícones de ação ficam na linha (com `stopPropagation`, não disparam o `rowClick`): o que era
+ * "editar" virou "marcar como cumprido" (`editAction` reaproveitado — `PATCH status='CUMPRIDO'`
+ * direto, com confirmação, sem abrir o form) e "excluir" (`deleteAction`) inativa direto
+ * (soft-delete), também sem abrir o form.
  *
  * A coluna "Ordem" é derivada no cliente (não existe na entidade): posição cronológica de
  * cadastro (1º = mais antiga), calculada a partir de `criadoEm`/`id` de TODA a lista carregada —
@@ -149,6 +151,28 @@ export class OperacoesProcessoPanelComponent {
   protected fecharForm(): void {
     this.formAberto.set(null);
   }
+
+  /**
+   * Ícone "marcar como cumprido" da grade (`editAction` — reaproveita o slot que antes abria o
+   * form de edição, ver comentário da classe) — `PATCH status='CUMPRIDO'` direto, sem abrir o
+   * form. Confirma antes, mesmo padrão de `excluirOperacao`. Arrow function de propósito, ver
+   * `DomainModelTableComponent.editAction`.
+   */
+  protected readonly marcarComoCumprido = (row: OperacaoRow): void => {
+    const confirmado = this.document.defaultView?.confirm(
+      `Marcar a operação "${row.titulo ?? 'sem título'}" como cumprida?`,
+    );
+    if (!confirmado) {
+      return;
+    }
+    this.domainService.patch({ entityName: 'operacao', entityId: row.id, body: { status: 'CUMPRIDO' } }).subscribe({
+      next: () => {
+        this.toast.sucesso('Operação marcada como cumprida.');
+        this.grade()?.reload();
+      },
+      error: () => this.toast.erro('Não foi possível atualizar o status.'),
+    });
+  };
 
   /**
    * Ícone "excluir" da grade (`deleteAction`) — soft-delete: `PATCH ativo=false`, mesma

@@ -45,8 +45,8 @@ const CAMPOS_BUSCA = ['numeroCnj', 'clientePrincipalNome', 'contrarioPrincipalNo
  * Clicar numa linha abre `app-operacoes-processo-panel` — mesmo padrão de painel posicionável de
  * Processos/Advogados (`PanelShellController`, dono aqui, não dentro do painel): divide espaço
  * com a tabela (grid), não fica por cima dela; só o layout `'dialog'` flutua/overlay. Diferente
- * das outras telas, o painel só existe quando um processo está selecionado — sem seleção, a
- * grade ocupa a largura toda mesmo que a preferência salva seja "painel visível".
+ * das outras telas, o painel aberto por padrão sem seleção nenhuma mostra um aviso pra escolher um
+ * processo em vez do conteúdo — não faz sentido mostrar operações de processo nenhum.
  */
 @Component({
   selector: 'app-operacoes',
@@ -71,10 +71,8 @@ export class OperacoesComponent {
   });
 
   protected readonly processoSelecionado = signal<ProcessoSelecionado | null>(null);
-  /** Sem processo selecionado não há o que mostrar, então o painel nunca ocupa espaço nesse caso — independe da preferência salva de visibilidade. */
-  protected readonly painelAtivo = computed(
-    () => this.processoSelecionado() !== null && this.panelShell.panelVisible(),
-  );
+  /** Painel aberto por padrão (mesma regra de Processos/Advogados) — sem seleção, mostra um aviso pra escolher um processo em vez do conteúdo. */
+  protected readonly painelAtivo = this.panelShell.panelVisible;
 
   /** Busca livre (número CNJ / cliente principal / contrário principal) — RQL, resolvida no servidor, com debounce. */
   protected readonly busca = signal('');

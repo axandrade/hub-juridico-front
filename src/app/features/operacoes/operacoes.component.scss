@@ -5,9 +5,9 @@
   display: block;
 }
 
-// Grid posicionável — mesmo mecanismo de Processos/Advogados (`PanelShellController`), só que
-// aqui o painel só existe quando um processo está selecionado (ver `painelAtivo()` no
-// componente); sem seleção, `.operacoes--panel-hidden` colapsa pra uma coluna só.
+// Grid posicionável — mesmo mecanismo de Processos/Advogados (`PanelShellController`). Painel
+// aberto por padrão; sem processo selecionado mostra `.operacoes-panel-empty` em vez do conteúdo.
+// `.operacoes--panel-hidden` (painel oculto pela preferência salva) colapsa pra uma coluna só.
 .operacoes {
   --painel-largura: 720px;
   --painel-altura: 340px;
@@ -227,6 +227,33 @@
 .operacoes-panel-slot {
   position: relative;
   min-width: 0;
+}
+
+// Estado vazio do painel — sem processo selecionado, ocupa o mesmo espaço que o painel de
+// operações ocuparia, avisando o que fazer em vez de mostrar espaço em branco.
+.operacoes-panel-empty {
+  @include flex-center;
+  flex-direction: column;
+  gap: $spacing-sm;
+  height: 100%;
+  min-height: 220px;
+  padding: $spacing-lg;
+  border: 1px dashed $color-border;
+  border-radius: $border-radius-md;
+  background-color: $color-neutral-light;
+  color: $color-text-muted;
+  text-align: center;
+
+  i {
+    font-size: 1.75rem;
+    color: $color-text-secondary;
+  }
+
+  p {
+    margin: 0;
+    max-width: 32ch;
+    font-size: $font-size-base;
+  }
 }
 
 .operacoes-panel-slot__close {

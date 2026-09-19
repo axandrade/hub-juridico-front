@@ -14,18 +14,18 @@
     ></button>
   }
 
-  @if (processoSelecionado(); as processo) {
-    <div class="operacoes-panel-slot">
-      @if (panelShell.layoutPainel() === 'dialog' && painelAtivo()) {
-        <button
-          type="button"
-          class="operacoes-panel-slot__close"
-          aria-label="Fechar painel"
-          (click)="panelShell.fecharDialog()"
-        >
-          <i class="fa-solid fa-xmark" aria-hidden="true"></i>
-        </button>
-      }
+  <div class="operacoes-panel-slot">
+    @if (panelShell.layoutPainel() === 'dialog' && painelAtivo()) {
+      <button
+        type="button"
+        class="operacoes-panel-slot__close"
+        aria-label="Fechar painel"
+        (click)="panelShell.fecharDialog()"
+      >
+        <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+      </button>
+    }
+    @if (processoSelecionado(); as processo) {
       <app-operacoes-processo-panel
         [processoId]="processo.id"
         [numeroCnj]="processo.numeroCnj"
@@ -33,8 +33,13 @@
         (layoutPainelChange)="onLayoutPainelChange($event)"
         (fechar)="fecharPainelOperacoes()"
       />
-    </div>
-  }
+    } @else {
+      <div class="operacoes-panel-empty">
+        <i class="fa-solid fa-folder-open" aria-hidden="true"></i>
+        <p>Selecione um processo na tabela para visualizar as operações dele aqui.</p>
+      </div>
+    }
+  </div>
 
   @if (painelAtivo() && panelShell.layoutPainel() !== 'dialog') {
     <div
@@ -51,17 +56,15 @@
     <div class="operacoes-actions">
       <h1>Tela de Operações</h1>
 
-      @if (processoSelecionado()) {
-        <button
-          type="button"
-          class="operacoes-panel-toggle"
-          [class.is-active]="panelShell.panelVisible()"
-          (click)="togglePanel()"
-        >
-          <i class="fa-solid fa-table-columns" aria-hidden="true"></i>
-          {{ panelShell.panelVisible() ? 'Ocultar painel' : 'Mostrar painel' }}
-        </button>
-      }
+      <button
+        type="button"
+        class="operacoes-panel-toggle"
+        [class.is-active]="panelShell.panelVisible()"
+        (click)="togglePanel()"
+      >
+        <i class="fa-solid fa-table-columns" aria-hidden="true"></i>
+        {{ panelShell.panelVisible() ? 'Ocultar painel' : 'Mostrar painel' }}
+      </button>
     </div>
 
     <div class="operacoes-search-section">

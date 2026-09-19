@@ -133,3 +133,77 @@ describe('DomainModelTableComponent — favorito fixo no topo, mesmo de outra p�
     expect(asTestAccess(fixture.componentInstance).displayRows().map((row) => row.id)).toEqual([1, 2, 3]);
   });
 });
+
+/**
+ * Regressão real (2026-09-19): carregar a preferência de colunas salva em `localStorage` de
+ * dentro do `computed` de `visibleColumns` (via `isVisible`) dispara NG0600 ("Writing to signals
+ * is not allowed in a computed") assim que já existe algo salvo — só não aparecia em testes/numa
+ * sessão de navegador zerada porque, sem nada no storage, o carregamento nunca chegava a escrever
+ * o signal. Corrigido movendo a carga pra um `effect` do construtor (`ColumnVisibilityController
+ * .carregarStorage`), nunca de dentro da leitura (`isVisible`). Estes testes fixam esse contrato:
+ * a tabela deve renderizar (e aplicar a preferência) mesmo com o storage já preenchido.
+ */
+describe('DomainModelTableComponent — visibilidade de colunas via localStorage', () => {
+  const CHAVE = 'teste.domain-model-table.colunas';
+  let fixture: ComponentFixture<DomainModelTableComponent<Row>>;
+
+  const domainStore = {
+    get: (): Observable<IDomainPage<Row>> => of(page([{ id: 1, nome: 'Ana' }])),
+  };
+  const domainFavoritoStore = {
+    listarTodosFavoritos: () => of(new Map<number, number>()),
+    favoritar: () => of(1),
+    desfavoritar: () => of(undefined),
+  };
+
+  afterEach(() => {
+    localStorage.removeItem(CHAVE);
+  });
+
+  function createFixture(colunas: readonly string[]): void {
+    TestBed.configureTestingModule({
+      imports: [DomainModelTableComponent],
+      providers: [
+        { provide: DomainService, useValue: domainStore },
+        { provide: DomainFavoritoService, useValue: domainFavoritoStore },
+      ],
+    });
+    fixture = TestBed.createComponent(DomainModelTableComponent<Row>);
+    const ref: ComponentRef<DomainModelTableComponent<Row>> = fixture.componentRef;
+    ref.setInput('entityName', 'advogado');
+    ref.setInput('columns', colunas.map((key) => ({ key, header: key })));
+    ref.setInput('columnVisibility', true);
+    ref.setInput('columnsStorageKey', CHAVE);
+    fixture.detectChanges();
+  }
+
+  it('não lança NG0600 quando já existe preferência salva antes da primeira renderização', () => {
+    localStorage.setItem(CHAVE, JSON.stringify(['nome']));
+
+    expect(() => createFixture(['id', 'nome'])).not.toThrow();
+  });
+
+  it('aplica a preferência salva já na primeira renderização', () => {
+    localStorage.setItem(CHAVE, JSON.stringify(['nome']));
+    createFixture(['id', 'nome']);
+
+    expect(fixture.componentInstance.columnVisibilityState.isVisible('nome')).toBe(true);
+    expect(fixture.componentInstance.columnVisibilityState.isVisible('id')).toBe(false);
+  });
+
+  it('ignora do storage colunas que não existem mais e cai no padrão (todas visíveis)', () => {
+    localStorage.setItem(CHAVE, JSON.stringify(['coluna-removida']));
+    createFixture(['id', 'nome']);
+
+    expect(fixture.componentInstance.columnVisibilityState.isVisible('id')).toBe(true);
+    expect(fixture.componentInstance.columnVisibilityState.isVisible('nome')).toBe(true);
+  });
+
+  it('persiste em localStorage ao alternar uma coluna', () => {
+    createFixture(['id', 'nome']);
+
+    fixture.componentInstance.columnVisibilityState.toggle('id');
+
+    expect(JSON.parse(localStorage.getItem(CHAVE)!)).toEqual(['nome']);
+  });
+});

@@ -13,6 +13,7 @@ import {
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { debounceTime, distinctUntilChanged } from 'rxjs';
 
+import { maskDocumento } from '../../core/auth/documentos-br';
 import { contatoPrincipal, emailPrincipal, IContato, IEmail, IPessoa, TipoPessoa } from '../../core/models';
 import { ButtonComponent } from '../../shared/components/button/button.component';
 import { DomainModelTableComponent } from '../../shared/components/domain-table/domain-model-table.component';
@@ -118,7 +119,7 @@ export class ClientsComponent {
       key: 'documento',
       header: 'CPF / CNPJ',
       width: '170px',
-      formatter: (_value, row) => (row.cpf || row.cnpj) || '-',
+      formatter: (_value, row) => maskDocumento(row.cpf || row.cnpj) || '-',
     },
     {
       key: 'email',

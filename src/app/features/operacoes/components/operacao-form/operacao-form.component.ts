@@ -99,6 +99,8 @@ export class OperacaoFormComponent {
   readonly processoId = input.required<number>();
   /** `null` = cadastro novo; com id, carrega a ficha e `salvar()` vira `PATCH`. */
   readonly operacaoId = input<number | null>(null);
+  /** Só pro selo "Processo Nº ..." no topo do formulário — o painel já sabe o CNJ, não precisa buscar de novo aqui. */
+  readonly numeroCnj = input<string | null>(null);
 
   readonly salvo = output<void>();
   readonly cancelado = output<void>();

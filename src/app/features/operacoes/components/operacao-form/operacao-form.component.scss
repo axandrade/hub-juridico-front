@@ -7,6 +7,48 @@
   width: 100%;
 }
 
+// Selo do processo no topo do form — puramente decorativo (o painel já filtra por ele; isso é só
+// pra quem está preenchendo nunca perder de vista em qual processo está mexendo).
+.operacao-form__processo-badge {
+  display: inline-flex;
+  align-self: flex-start;
+  align-items: center;
+  gap: $spacing-sm;
+  padding: 6px $spacing-md 6px 6px;
+  border: 1px solid rgba($rouge-light, 0.4);
+  border-radius: 999px;
+  background: linear-gradient(135deg, rgba($rouge-light, 0.18), rgba($rouge-dark, 0.05));
+  box-shadow: 0 1px 3px rgba($burgundy-deep, 0.1);
+
+  i {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border-radius: 999px;
+    background: $color-primary;
+    color: $color-surface;
+    font-size: 11px;
+  }
+}
+
+.operacao-form__processo-label {
+  font-size: $font-size-xs;
+  font-weight: $font-weight-medium;
+  color: $color-text-muted;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.operacao-form__processo-cnj {
+  font-family: 'Courier New', monospace;
+  font-size: $font-size-base;
+  font-weight: $font-weight-bold;
+  color: $color-primary;
+  letter-spacing: 0.02em;
+}
+
 .operacao-form__grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

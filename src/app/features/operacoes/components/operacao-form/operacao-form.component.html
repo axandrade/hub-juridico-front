@@ -1,4 +1,10 @@
 <form class="operacao-form" [formGroup]="form" (ngSubmit)="salvar()">
+  <div class="operacao-form__processo-badge">
+    <i class="fa-solid fa-scale-balanced" aria-hidden="true"></i>
+    <span class="operacao-form__processo-label">Processo</span>
+    <span class="operacao-form__processo-cnj">{{ numeroCnj() || 'sem número CNJ' }}</span>
+  </div>
+
   <div class="operacao-form__grid">
     <div class="operacao-field">
       <span>Tipo</span>

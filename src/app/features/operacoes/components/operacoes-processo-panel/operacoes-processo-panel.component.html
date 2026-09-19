@@ -56,6 +56,7 @@
     <app-operacao-form
       [processoId]="processoId()"
       [operacaoId]="operacaoIdParaForm()"
+      [numeroCnj]="numeroCnj()"
       (salvo)="onOperacaoSalva()"
       (cancelado)="fecharForm()"
     />

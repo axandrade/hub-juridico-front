@@ -19,10 +19,15 @@ import {
 import { DocumentsPort, UploadEvento, ZipJobApi } from './documents-port';
 
 /**
- * Shape cru de `/domain/pasta-pessoa` e `/domain/documento-pessoa` (ddd-noap) — camelCase, nome
- * literal do campo Java, diferente do `PastaApi`/`DocumentoApi` (snake_case, DTO do
+ * Shape cru de `/domain/pasta` e `/domain/documento` (ddd-noap) — camelCase, nome literal do
+ * campo Java, diferente do `PastaApi`/`DocumentoApi` (snake_case, DTO do
  * `PastaPessoaController`/`DocumentoPessoaController` escritos à mão, ainda usados pelas
  * operações de escrita abaixo — só a LEITURA (`raiz`/`conteudo`) migrou pro genérico).
+ *
+ * 2026-09: backend unificou `PastaPessoa`/`PastaMagistrado`/`PastaPerito` (e os `Documento*`
+ * equivalentes) numa `Pasta`/`Documento` só, discriminada por `donoTipo`+`donoId` — por isso
+ * `entityName` mudou de `pasta-pessoa`/`documento-pessoa` pra `pasta`/`documento`, e os filtros
+ * abaixo passaram a incluir `donoTipo eq 'PESSOA'` (Pessoa é só um dos três donos possíveis).
  */
 interface PastaDomain {
   id: string;
@@ -116,26 +121,26 @@ export class DocumentsService implements DocumentsPort {
 
   /**
    * Raiz de uma pessoa: sem breadcrumb (não tem "pasta atual" — mesma semântica de
-   * `FolderPessoaService.listRootContent`). Migrado pro `/domain/pasta-pessoa` +
-   * `/domain/documento-pessoa` — leitura pura, sem regra de negócio, então dá pra genericizar
-   * com segurança (diferente do upload/mover/renomear, que ficam no `PastaPessoaController`/
-   * `DocumentoPessoaController` escritos à mão — ver decisão nessa sessão). `all: true` porque
-   * o endpoint original devolve a lista inteira sem paginação (`findByXxx` puro).
+   * `FolderService.listRootContent`). Lê via `/domain/pasta` + `/domain/documento` — leitura
+   * pura, sem regra de negócio, então dá pra genericizar com segurança (diferente do upload/
+   * mover/renomear, que ficam no `PastaPessoaController`/`DocumentoPessoaController` escritos à
+   * mão). `all: true` porque o endpoint original devolve a lista inteira sem paginação
+   * (`findByXxx` puro).
    */
   raiz(pessoaId: number): Observable<PastaConteudo> {
     return forkJoin({
       subpastas: this.domainService.get<PastaDomain[]>({
-        entityName: 'pasta-pessoa',
+        entityName: 'pasta',
         all: true,
         fields: DocumentsService.CAMPOS_PASTA,
-        filter: `pessoaId eq ${pessoaId} and pastaPaiId eq null and excluidoEm eq null`,
+        filter: `donoTipo eq 'PESSOA' and donoId eq ${pessoaId} and pastaPaiId eq null and excluidoEm eq null`,
         sort: 'nome',
       }),
       documentos: this.domainService.get<DocumentoDomain[]>({
-        entityName: 'documento-pessoa',
+        entityName: 'documento',
         all: true,
         fields: DocumentsService.CAMPOS_DOCUMENTO,
-        filter: `pessoaId eq ${pessoaId} and pastaId eq null and excluidoEm eq null`,
+        filter: `donoTipo eq 'PESSOA' and donoId eq ${pessoaId} and pastaId eq null and excluidoEm eq null`,
         sort: 'nomeOriginal',
       }),
     }).pipe(
@@ -158,14 +163,14 @@ export class DocumentsService implements DocumentsPort {
     return forkJoin({
       breadcrumb: this.buscarBreadcrumb(pastaId),
       subpastas: this.domainService.get<PastaDomain[]>({
-        entityName: 'pasta-pessoa',
+        entityName: 'pasta',
         all: true,
         fields: DocumentsService.CAMPOS_PASTA,
         filter: `pastaPaiId eq ${pastaId} and excluidoEm eq null`,
         sort: 'nome',
       }),
       documentos: this.domainService.get<DocumentoDomain[]>({
-        entityName: 'documento-pessoa',
+        entityName: 'documento',
         all: true,
         fields: DocumentsService.CAMPOS_DOCUMENTO,
         filter: `pastaId eq ${pastaId} and excluidoEm eq null`,
@@ -182,14 +187,14 @@ export class DocumentsService implements DocumentsPort {
 
   /**
    * Caminho raiz→`pastaId` (inclusive) subindo por `pastaPaiId`, um `GET` por nível — equivalente
-   * à CTE recursiva `PastaPessoaRepository.buscarBreadcrumb`, que o `/domain` genérico não sabe
-   * fazer (sem suporte a recursão). Pastas raramente passam de 3-4 níveis, então isso continua
-   * poucas chamadas sequenciais, não um problema de performance.
+   * à CTE recursiva `PastaRepository.buscarBreadcrumb`, que o `/domain` genérico não sabe fazer
+   * (sem suporte a recursão). Pastas raramente passam de 3-4 níveis, então isso continua poucas
+   * chamadas sequenciais, não um problema de performance.
    */
   private buscarBreadcrumb(pastaId: string): Observable<BreadcrumbItem[]> {
     return this.domainService
       .get<{ id: string; nome: string; pastaPaiId: string | null }>({
-        entityName: 'pasta-pessoa',
+        entityName: 'pasta',
         entityId: pastaId,
         fields: 'id,nome,pastaPaiId',
       })

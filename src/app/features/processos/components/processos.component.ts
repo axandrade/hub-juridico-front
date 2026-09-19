@@ -65,6 +65,8 @@ export class ProcessosComponent {
   protected readonly incluirInativos = signal(false);
   /** Busca livre (número / status / natureza / ação / cidade) — resolvida no servidor, com debounce. */
   protected readonly busca = signal('');
+  /** Filtro de tipo (abas) — `''` = todos. Mesmo padrão de `ClientsComponent.tipoFiltro`. */
+  protected readonly tipoFiltro = signal<TipoProcesso | ''>('');
 
   protected readonly processos = this.processoService.processos;
   protected readonly totalProcessos = this.processoService.totalElements;
@@ -167,6 +169,7 @@ export class ProcessosComponent {
     const query = computed<ProcessoListQuery & { tick: number }>(() => ({
       page: this.page(),
       busca: buscaDebounced(),
+      tipo: this.tipoFiltro() || null,
       incluirInativos: this.incluirInativos(),
       tick: this.reloadTick(),
     }));
@@ -229,6 +232,11 @@ export class ProcessosComponent {
 
   protected onToggleIncluirInativos(event: Event): void {
     this.incluirInativos.set((event.target as HTMLInputElement).checked);
+    this.page.set(0);
+  }
+
+  protected selecionarTipo(tipo: TipoProcesso | ''): void {
+    this.tipoFiltro.set(tipo);
     this.page.set(0);
   }
 

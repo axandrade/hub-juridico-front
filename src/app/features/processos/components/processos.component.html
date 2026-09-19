@@ -115,7 +115,40 @@
       <span class="processos-search-section__count">{{ busca().trim() ? 1 : 0 }} filtro(s)</span>
     </div>
 
-    <div class="processos-filtros">
+    <div class="processos-natureza" role="group" aria-label="Filtrar por tipo">
+      <button
+        type="button"
+        [class.is-active]="tipoFiltro() === ''"
+        [attr.aria-pressed]="tipoFiltro() === ''"
+        (click)="selecionarTipo('')"
+      >
+        Todos
+      </button>
+      <button
+        type="button"
+        [class.is-active]="tipoFiltro() === 'JUDICIAL'"
+        [attr.aria-pressed]="tipoFiltro() === 'JUDICIAL'"
+        (click)="selecionarTipo('JUDICIAL')"
+      >
+        Judicial
+      </button>
+      <button
+        type="button"
+        [class.is-active]="tipoFiltro() === 'ADMINISTRATIVO'"
+        [attr.aria-pressed]="tipoFiltro() === 'ADMINISTRATIVO'"
+        (click)="selecionarTipo('ADMINISTRATIVO')"
+      >
+        Administrativo
+      </button>
+      <button
+        type="button"
+        [class.is-active]="tipoFiltro() === 'ARBITRAL'"
+        [attr.aria-pressed]="tipoFiltro() === 'ARBITRAL'"
+        (click)="selecionarTipo('ARBITRAL')"
+      >
+        Arbitral
+      </button>
+
       <label class="processos-toggle-inativos">
         <input
           type="checkbox"

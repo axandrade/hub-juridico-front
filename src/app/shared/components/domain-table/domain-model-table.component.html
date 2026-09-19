@@ -32,7 +32,7 @@
         }
         @for (column of visibleColumns(); track column.key) {
           <th [style.width]="column.width" [class]="'align-' + (column.align ?? 'left')">
-            @if (sortable()) {
+            @if (sortable() && column.sortable !== false) {
               <button type="button" class="data-table__sort" (click)="sortBy(column.key)">
                 {{ column.header }}
                 <i [class]="sortIcon(column.key)" aria-hidden="true"></i>

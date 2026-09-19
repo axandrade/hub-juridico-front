@@ -77,6 +77,8 @@ export class OperacoesProcessoPanelComponent {
       header: 'Ordem',
       width: '70px',
       align: 'center',
+      // Calculada no cliente (posição cronológica entre as carregadas) — não existe no backend, então não dá pra ordenar por ela via RQL.
+      sortable: false,
       formatter: (_value, row) => {
         const posicao = this.ordemPorId().get(row.id);
         return posicao ? `${posicao}º` : '—';

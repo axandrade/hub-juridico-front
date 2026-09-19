@@ -17,6 +17,24 @@ export const STATUS_OPERACAO_LABEL: Record<StatusOperacao, string> = {
   ATRASADO: 'Atrasado',
 };
 
+/** Ver backend `OrigemOperacao`/migration V31. Só `TipoOperacao.INTIMACAO` usa este campo. */
+export type OrigemOperacao =
+  | 'CADASTRO_MANUAL'
+  | 'ANDAMENTO_AUTOMATICO'
+  | 'DIARIO'
+  | 'EMAIL'
+  | 'TELEFONE_WHATSAPP'
+  | 'SISTEMA_EXTERNO';
+
+export const ORIGEM_OPERACAO_LABEL: Record<OrigemOperacao, string> = {
+  CADASTRO_MANUAL: 'Cadastro manual',
+  ANDAMENTO_AUTOMATICO: 'Andamento automático',
+  DIARIO: 'Diário',
+  EMAIL: 'Email',
+  TELEFONE_WHATSAPP: 'Telefone/WhatsApp',
+  SISTEMA_EXTERNO: 'Sistema externo',
+};
+
 /** Linha crua de `/domain/operacao` (camelCase) — ver backend `Operacao`/migration V31. */
 export interface OperacaoRow {
   id: number;
@@ -42,7 +60,7 @@ export interface OperacaoDetalheRow {
   dataEvento: string | null;
   horaEvento: string | null;
   horaPrazo: string | null;
-  origem: string | null;
+  origem: OrigemOperacao | null;
   link: string | null;
   teor: string | null;
   providencia: string | null;
@@ -66,7 +84,7 @@ export interface OperacaoWriteApi {
   data_evento: string | null;
   hora_evento: string | null;
   hora_prazo: string | null;
-  origem: string | null;
+  origem: OrigemOperacao | null;
   link: string | null;
   teor: string | null;
   providencia: string | null;

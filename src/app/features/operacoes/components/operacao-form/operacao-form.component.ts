@@ -19,6 +19,8 @@ import { DomainModelDropdownComponent } from '../../../../shared/components/doma
 import { ToastService } from '../../../../shared/services/toast.service';
 import { mensagensCamposInvalidos } from '../../../../shared/utils/form-validacao';
 import {
+  ORIGEM_OPERACAO_LABEL,
+  OrigemOperacao,
   OperacaoDetalheRow,
   OperacaoWriteApi,
   STATUS_OPERACAO_LABEL,
@@ -32,6 +34,14 @@ const ENTITY = 'operacao';
 const TIPOS: TipoOperacao[] = ['INTIMACAO', 'TAREFA', 'COMPROMISSO'];
 const IMPORTANCIA_OPCOES = ['Baixa', 'Média', 'Alta', 'Urgente'];
 const STATUS: StatusOperacao[] = ['CUMPRIDO', 'NAO_CUMPRIDO', 'PENDENTE', 'ATRASADO'];
+const ORIGENS: OrigemOperacao[] = [
+  'CADASTRO_MANUAL',
+  'ANDAMENTO_AUTOMATICO',
+  'DIARIO',
+  'EMAIL',
+  'TELEFONE_WHATSAPP',
+  'SISTEMA_EXTERNO',
+];
 
 const ROTULOS_CAMPOS: Record<string, string> = {
   titulo: 'Título',
@@ -46,7 +56,6 @@ type OperacaoForm = FormGroup<{
   dataEvento: FormControl<string>;
   horaEvento: FormControl<string>;
   horaPrazo: FormControl<string>;
-  origem: FormControl<string>;
   link: FormControl<string>;
   teor: FormControl<string>;
   providencia: FormControl<string>;
@@ -64,13 +73,16 @@ function text(validators: ValidatorFn[] = []): FormControl<string> {
  * dedicado, é o merge genérico do ddd-noap).
  *
  * Um dropdown de "Tipo" (Intimação/Tarefa/Compromisso) troca quais campos aparecem — mesma
- * tabela pros 3 tipos no backend, campos que não se aplicam vão `null`. "Status" é outro dropdown
- * fixo (Cumprido/Não cumprido/Pendente/Atrasado — `StatusOperacao` no backend, mesmo mecanismo de
- * enum + `@Enumerated(EnumType.STRING)` de `TipoOperacao`), os dois fora do `FormGroup` reativo
- * (signals `tipo`/`status`, não `FormControl`) pelo mesmo motivo: o valor exibido no combobox é o
- * rótulo em pt-BR, não a constante do enum. Diferente de "Tipo", "Status" fica editável desde o
- * cadastro (nasce "Pendente", mas o usuário pode mudar já na criação). `processoId` não é um
- * campo do formulário: vem fixo do painel que já está filtrado por aquele processo (mesmo em
+ * tabela pros 3 tipos no backend, campos que não se aplicam vão `null`. "Status" e "Origem" (só
+ * Intimação) são outros dropdowns fixos (`StatusOperacao`/`OrigemOperacao` no backend, mesmo
+ * mecanismo de enum + `@Enumerated(EnumType.STRING)` de `TipoOperacao`), os três fora do
+ * `FormGroup` reativo (signals `tipo`/`status`/`origem`, não `FormControl`) pelo mesmo motivo: o
+ * valor exibido no combobox é o rótulo em pt-BR, não a constante do enum. Diferente de "Tipo",
+ * "Status"/"Origem" ficam editáveis desde o cadastro (nascem "Pendente"/"Cadastro manual", mas o
+ * usuário pode mudar já na criação). Os três campos vivem em `<div>`, não `<label>` — um `<label>`
+ * envolvendo `<app-combobox>` reencaminha um clique sintético pro `<input>` interno e reabre a
+ * lista ao selecionar uma opção (achado real, ver `combobox.component.html`). `processoId` não é
+ * um campo do formulário: vem fixo do painel que já está filtrado por aquele processo (mesmo em
  * edição — não dá pra mover a operação pra outro processo por aqui).
  */
 @Component({
@@ -95,11 +107,13 @@ export class OperacaoFormComponent {
   protected readonly tipoOpcoes = TIPOS.map((t) => TIPO_OPERACAO_LABEL[t]);
   protected readonly importanciaOpcoes = IMPORTANCIA_OPCOES;
   protected readonly statusOpcoes = STATUS.map((s) => STATUS_OPERACAO_LABEL[s]);
+  protected readonly origemOpcoes = ORIGENS.map((o) => ORIGEM_OPERACAO_LABEL[o]);
   /** Tipo é imutável após criado (os campos que ele controla mudam demais pra editar sem confusão). */
   protected readonly tipoTravado = computed(() => this.operacaoId() !== null);
 
   protected readonly tipo = signal<TipoOperacao>('INTIMACAO');
   protected readonly status = signal<StatusOperacao>('PENDENTE');
+  protected readonly origem = signal<OrigemOperacao>('CADASTRO_MANUAL');
   protected readonly ehTarefa = computed(() => this.tipo() === 'TAREFA');
   protected readonly ehIntimacao = computed(() => this.tipo() === 'INTIMACAO');
   protected readonly ehTarefaOuCompromisso = computed(() => this.tipo() !== 'INTIMACAO');
@@ -124,7 +138,6 @@ export class OperacaoFormComponent {
     dataEvento: text(),
     horaEvento: text(),
     horaPrazo: text(),
-    origem: text(),
     link: text(),
     teor: text(),
     providencia: text(),
@@ -147,9 +160,9 @@ export class OperacaoFormComponent {
 
   private resetToEmpty(): void {
     this.form.reset();
-    this.form.patchValue({ origem: 'Cadastro manual' });
     this.tipo.set('INTIMACAO');
     this.status.set('PENDENTE');
+    this.origem.set('CADASTRO_MANUAL');
     this.responsavelId.set(null);
     this.responsavelLabel.set('');
   }
@@ -157,6 +170,7 @@ export class OperacaoFormComponent {
   private loadIntoForm(op: OperacaoDetalheRow): void {
     this.tipo.set(op.tipo);
     this.status.set(op.status ?? 'PENDENTE');
+    this.origem.set(op.origem ?? 'CADASTRO_MANUAL');
     this.responsavelId.set(op.responsavelId);
     this.responsavelLabel.set('');
     if (op.responsavelId !== null) {
@@ -174,7 +188,6 @@ export class OperacaoFormComponent {
       dataEvento: op.dataEvento ?? '',
       horaEvento: op.horaEvento ?? '',
       horaPrazo: op.horaPrazo ?? '',
-      origem: op.origem ?? '',
       link: op.link ?? '',
       teor: op.teor ?? '',
       providencia: op.providencia ?? '',
@@ -203,6 +216,17 @@ export class OperacaoFormComponent {
     const achado = STATUS.find((s) => STATUS_OPERACAO_LABEL[s] === rotulo);
     if (achado) {
       this.status.set(achado);
+    }
+  }
+
+  protected origemRotulo(): string {
+    return ORIGEM_OPERACAO_LABEL[this.origem()];
+  }
+
+  protected onOrigemChange(rotulo: string): void {
+    const achado = ORIGENS.find((o) => ORIGEM_OPERACAO_LABEL[o] === rotulo);
+    if (achado) {
+      this.origem.set(achado);
     }
   }
 
@@ -237,7 +261,7 @@ export class OperacaoFormComponent {
       data_evento: intimacao ? raw.dataEvento || null : null,
       hora_evento: intimacao ? raw.horaEvento || null : null,
       hora_prazo: intimacao ? raw.horaPrazo || null : null,
-      origem: intimacao ? raw.origem.trim() || null : null,
+      origem: intimacao ? this.origem() : null,
       link: intimacao ? raw.link.trim() || null : null,
       teor: intimacao ? raw.teor.trim() || null : null,
       providencia: intimacao ? raw.providencia.trim() || null : null,

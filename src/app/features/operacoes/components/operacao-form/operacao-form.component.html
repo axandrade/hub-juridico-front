@@ -29,7 +29,7 @@
     </label>
 
     <label class="operacao-field">
-      <span>Prazo</span>
+      <span>Prazo Fatal</span>
       <input type="date" formControlName="prazoFatal" />
     </label>
 
@@ -90,10 +90,16 @@
         <span>Hora do prazo</span>
         <input type="time" formControlName="horaPrazo" />
       </label>
-      <label class="operacao-field">
+      <div class="operacao-field">
         <span>Origem</span>
-        <input type="text" formControlName="origem" maxlength="60" autocomplete="off" />
-      </label>
+        <app-combobox
+          ariaLabel="Origem da intimação"
+          [pesquisavel]="false"
+          [options]="origemOpcoes"
+          [value]="origemRotulo()"
+          (valueChange)="onOrigemChange($event)"
+        />
+      </div>
       <label class="operacao-field operacao-field--full">
         <span>Link</span>
         <input type="text" formControlName="link" maxlength="500" autocomplete="off" />

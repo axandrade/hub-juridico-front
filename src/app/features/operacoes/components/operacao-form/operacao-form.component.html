@@ -33,6 +33,17 @@
       <input type="date" formControlName="prazoFatal" />
     </label>
 
+    <div class="operacao-field-row">
+      <label class="operacao-field">
+        <span>Data do cadastro</span>
+        <input type="date" formControlName="dataEvento" />
+      </label>
+      <label class="operacao-field">
+        <span>Hora do cadastro</span>
+        <input type="time" formControlName="horaEvento" />
+      </label>
+    </div>
+
     <div class="operacao-field">
       <span>Responsável</span>
       <app-domain-model-dropdown
@@ -53,14 +64,16 @@
     </div>
 
     @if (ehTarefaOuCompromisso()) {
-      <label class="operacao-field">
-        <span>Hora início</span>
-        <input type="time" formControlName="horaInicio" />
-      </label>
-      <label class="operacao-field">
-        <span>Hora fim</span>
-        <input type="time" formControlName="horaFim" />
-      </label>
+      <div class="operacao-field-row">
+        <label class="operacao-field">
+          <span>Hora início</span>
+          <input type="time" formControlName="horaInicio" />
+        </label>
+        <label class="operacao-field">
+          <span>Hora fim</span>
+          <input type="time" formControlName="horaFim" />
+        </label>
+      </div>
     }
 
     @if (ehTarefa()) {
@@ -78,14 +91,6 @@
     }
 
     @if (ehIntimacao()) {
-      <label class="operacao-field">
-        <span>Data do evento</span>
-        <input type="date" formControlName="dataEvento" />
-      </label>
-      <label class="operacao-field">
-        <span>Hora do evento</span>
-        <input type="time" formControlName="horaEvento" />
-      </label>
       <label class="operacao-field">
         <span>Hora do prazo</span>
         <input type="time" formControlName="horaPrazo" />

@@ -14,7 +14,13 @@
 
     <label class="operacao-field">
       <span>Status</span>
-      <input type="text" formControlName="status" maxlength="30" autocomplete="off" />
+      <app-combobox
+        ariaLabel="Status da operação"
+        [pesquisavel]="false"
+        [options]="statusOpcoes"
+        [value]="statusRotulo()"
+        (valueChange)="onStatusChange($event)"
+      />
     </label>
 
     <label class="operacao-field operacao-field--full">

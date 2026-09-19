@@ -7,6 +7,16 @@ export const TIPO_OPERACAO_LABEL: Record<TipoOperacao, string> = {
   COMPROMISSO: 'Compromisso',
 };
 
+/** Ver backend `StatusOperacao`/migration V31. */
+export type StatusOperacao = 'CUMPRIDO' | 'NAO_CUMPRIDO' | 'PENDENTE' | 'ATRASADO';
+
+export const STATUS_OPERACAO_LABEL: Record<StatusOperacao, string> = {
+  CUMPRIDO: 'Cumprido',
+  NAO_CUMPRIDO: 'Não cumprido',
+  PENDENTE: 'Pendente',
+  ATRASADO: 'Atrasado',
+};
+
 /** Linha crua de `/domain/operacao` (camelCase) — ver backend `Operacao`/migration V31. */
 export interface OperacaoRow {
   id: number;
@@ -15,7 +25,7 @@ export interface OperacaoRow {
   titulo: string | null;
   providencia: string | null;
   prazoFatal: string | null;
-  status: string | null;
+  status: StatusOperacao | null;
   criadoEm: string | null;
 }
 
@@ -37,7 +47,7 @@ export interface OperacaoDetalheRow {
   teor: string | null;
   providencia: string | null;
   responsavelId: number | null;
-  status: string | null;
+  status: StatusOperacao | null;
 }
 
 /**
@@ -61,5 +71,5 @@ export interface OperacaoWriteApi {
   teor: string | null;
   providencia: string | null;
   responsavel_id: number | null;
-  status: string;
+  status: StatusOperacao;
 }

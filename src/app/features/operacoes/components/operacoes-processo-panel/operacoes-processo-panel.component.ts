@@ -10,7 +10,7 @@ import { ModalComponent } from '../../../../shared/components/modal/modal.compon
 import { PanelLayoutSwitcherComponent } from '../../../../shared/components/panel-layout-switcher/panel-layout-switcher.component';
 import { PAINEL_LAYOUT_PADRAO, PainelLayout } from '../../../../shared/models/panel-layout';
 import { ToastService } from '../../../../shared/services/toast.service';
-import { OperacaoRow, TIPO_OPERACAO_LABEL } from '../../services/operacao-api.model';
+import { OperacaoRow, STATUS_OPERACAO_LABEL, TIPO_OPERACAO_LABEL } from '../../services/operacao-api.model';
 import { OperacaoFormComponent } from '../operacao-form/operacao-form.component';
 
 /**
@@ -117,7 +117,8 @@ export class OperacoesProcessoPanelComponent {
       key: 'status',
       header: 'Status',
       width: '120px',
-      formatter: (value) => (value ? String(value) : '—'),
+      formatter: (value) =>
+        STATUS_OPERACAO_LABEL[value as NonNullable<OperacaoRow['status']>] ?? String(value ?? '—'),
     },
   ];
 

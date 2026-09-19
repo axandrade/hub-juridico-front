@@ -21,6 +21,8 @@ import { mensagensCamposInvalidos } from '../../../../shared/utils/form-validaca
 import {
   OperacaoDetalheRow,
   OperacaoWriteApi,
+  STATUS_OPERACAO_LABEL,
+  StatusOperacao,
   TIPO_OPERACAO_LABEL,
   TipoOperacao,
 } from '../../services/operacao-api.model';
@@ -29,6 +31,7 @@ const ENTITY = 'operacao';
 
 const TIPOS: TipoOperacao[] = ['INTIMACAO', 'TAREFA', 'COMPROMISSO'];
 const IMPORTANCIA_OPCOES = ['Baixa', 'Média', 'Alta', 'Urgente'];
+const STATUS: StatusOperacao[] = ['CUMPRIDO', 'NAO_CUMPRIDO', 'PENDENTE', 'ATRASADO'];
 
 const ROTULOS_CAMPOS: Record<string, string> = {
   titulo: 'Título',
@@ -37,7 +40,6 @@ const ROTULOS_CAMPOS: Record<string, string> = {
 type OperacaoForm = FormGroup<{
   titulo: FormControl<string>;
   prazoFatal: FormControl<string>;
-  status: FormControl<string>;
   horaInicio: FormControl<string>;
   horaFim: FormControl<string>;
   importancia: FormControl<string>;
@@ -62,7 +64,12 @@ function text(validators: ValidatorFn[] = []): FormControl<string> {
  * dedicado, é o merge genérico do ddd-noap).
  *
  * Um dropdown de "Tipo" (Intimação/Tarefa/Compromisso) troca quais campos aparecem — mesma
- * tabela pros 3 tipos no backend, campos que não se aplicam vão `null`. `processoId` não é um
+ * tabela pros 3 tipos no backend, campos que não se aplicam vão `null`. "Status" é outro dropdown
+ * fixo (Cumprido/Não cumprido/Pendente/Atrasado — `StatusOperacao` no backend, mesmo mecanismo de
+ * enum + `@Enumerated(EnumType.STRING)` de `TipoOperacao`), os dois fora do `FormGroup` reativo
+ * (signals `tipo`/`status`, não `FormControl`) pelo mesmo motivo: o valor exibido no combobox é o
+ * rótulo em pt-BR, não a constante do enum. Diferente de "Tipo", "Status" fica editável desde o
+ * cadastro (nasce "Pendente", mas o usuário pode mudar já na criação). `processoId` não é um
  * campo do formulário: vem fixo do painel que já está filtrado por aquele processo (mesmo em
  * edição — não dá pra mover a operação pra outro processo por aqui).
  */
@@ -87,10 +94,12 @@ export class OperacaoFormComponent {
   protected readonly tipos = TIPOS;
   protected readonly tipoOpcoes = TIPOS.map((t) => TIPO_OPERACAO_LABEL[t]);
   protected readonly importanciaOpcoes = IMPORTANCIA_OPCOES;
+  protected readonly statusOpcoes = STATUS.map((s) => STATUS_OPERACAO_LABEL[s]);
   /** Tipo é imutável após criado (os campos que ele controla mudam demais pra editar sem confusão). */
   protected readonly tipoTravado = computed(() => this.operacaoId() !== null);
 
   protected readonly tipo = signal<TipoOperacao>('INTIMACAO');
+  protected readonly status = signal<StatusOperacao>('PENDENTE');
   protected readonly ehTarefa = computed(() => this.tipo() === 'TAREFA');
   protected readonly ehIntimacao = computed(() => this.tipo() === 'INTIMACAO');
   protected readonly ehTarefaOuCompromisso = computed(() => this.tipo() !== 'INTIMACAO');
@@ -109,7 +118,6 @@ export class OperacaoFormComponent {
   protected readonly form: OperacaoForm = new FormGroup({
     titulo: text([Validators.required]),
     prazoFatal: text(),
-    status: text(),
     horaInicio: text(),
     horaFim: text(),
     importancia: text(),
@@ -139,14 +147,16 @@ export class OperacaoFormComponent {
 
   private resetToEmpty(): void {
     this.form.reset();
-    this.form.patchValue({ status: 'Pendente', origem: 'Cadastro manual' });
+    this.form.patchValue({ origem: 'Cadastro manual' });
     this.tipo.set('INTIMACAO');
+    this.status.set('PENDENTE');
     this.responsavelId.set(null);
     this.responsavelLabel.set('');
   }
 
   private loadIntoForm(op: OperacaoDetalheRow): void {
     this.tipo.set(op.tipo);
+    this.status.set(op.status ?? 'PENDENTE');
     this.responsavelId.set(op.responsavelId);
     this.responsavelLabel.set('');
     if (op.responsavelId !== null) {
@@ -158,7 +168,6 @@ export class OperacaoFormComponent {
     this.form.patchValue({
       titulo: op.titulo ?? '',
       prazoFatal: op.prazoFatal ?? '',
-      status: op.status ?? 'Pendente',
       horaInicio: op.horaInicio ?? '',
       horaFim: op.horaFim ?? '',
       importancia: op.importancia ?? '',
@@ -186,6 +195,17 @@ export class OperacaoFormComponent {
     }
   }
 
+  protected statusRotulo(): string {
+    return STATUS_OPERACAO_LABEL[this.status()];
+  }
+
+  protected onStatusChange(rotulo: string): void {
+    const achado = STATUS.find((s) => STATUS_OPERACAO_LABEL[s] === rotulo);
+    if (achado) {
+      this.status.set(achado);
+    }
+  }
+
   protected onResponsavelChange(valor: string): void {
     this.responsavelId.set(valor ? Number(valor) : null);
     this.responsavelLabel.set('');
@@ -209,7 +229,7 @@ export class OperacaoFormComponent {
       processo_id: this.processoId(),
       titulo: raw.titulo.trim(),
       prazo_fatal: raw.prazoFatal || null,
-      status: raw.status.trim() || 'Pendente',
+      status: this.status(),
       responsavel_id: this.responsavelId(),
       hora_inicio: tarefaOuCompromisso ? raw.horaInicio || null : null,
       hora_fim: tarefaOuCompromisso ? raw.horaFim || null : null,

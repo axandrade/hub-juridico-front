@@ -109,6 +109,12 @@ export class ProcessosComponent {
       formatter: (value) => (value ? String(value) : '—'),
     },
     {
+      key: 'acao',
+      header: 'Ação',
+      width: '140px',
+      formatter: (value) => (value ? String(value) : '—'),
+    },
+    {
       key: 'natureza',
       header: 'Natureza',
       width: '140px',

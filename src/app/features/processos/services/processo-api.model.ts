@@ -191,6 +191,8 @@ export interface ProcessoResumoApi {
   /** Nome da parte contrária principal — vem pronto de `processos.parte_contraria_principal` (cache de texto, sem resolução extra). */
   parte_contraria_principal_nome: string | null;
   advogado_responsavel_id: number | null;
+  acao: string | null;
+  acao_id: number | null;
   natureza: string | null;
   natureza_id: number | null;
   fase: string | null;

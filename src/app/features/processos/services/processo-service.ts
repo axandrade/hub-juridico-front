@@ -112,6 +112,8 @@ interface ProcessoResumoDomain {
   /** Cache de texto (não id) — parte contrária não referencia `Pessoa` (ver `Processo.parteContrariaPrincipal` no backend). */
   parteContrariaPrincipal: string | null;
   advogadoResponsavelId: number | null;
+  acao: string | null;
+  acaoId: number | null;
   natureza: string | null;
   naturezaId: number | null;
   fase: string | null;
@@ -432,8 +434,9 @@ function montarProcessoApi(
 
 const PROCESSO_RESUMO_FIELDS = [
   'id', 'tipo', 'numeroCnj', 'status', 'statusId', 'pasta', 'clientePrincipalId', 'orgaoProcessanteId',
-  'parteContrariaPrincipal', 'advogadoResponsavelId', 'natureza', 'naturezaId', 'fase', 'faseId', 'uf',
-  'cidade', 'cidadeId', 'dataDistribuicao', 'observacoesGerais', 'destacarObservacao', 'ativo', 'atualizadoEm',
+  'parteContrariaPrincipal', 'advogadoResponsavelId', 'acao', 'acaoId', 'natureza', 'naturezaId', 'fase',
+  'faseId', 'uf', 'cidade', 'cidadeId', 'dataDistribuicao', 'observacoesGerais', 'destacarObservacao',
+  'ativo', 'atualizadoEm',
 ].join(',');
 
 function processoResumoFromDomain(
@@ -455,6 +458,8 @@ function processoResumoFromDomain(
     orgao_processante_nome: orgaoProcessanteNome,
     parte_contraria_principal_nome: p.parteContrariaPrincipal,
     advogado_responsavel_id: p.advogadoResponsavelId,
+    acao: p.acao,
+    acao_id: p.acaoId,
     natureza: p.natureza,
     natureza_id: p.naturezaId,
     fase: p.fase,
@@ -901,6 +906,8 @@ function resumoDe(p: ProcessoApi, clienteNome: string | null): ProcessoResumoApi
     orgao_processante_nome: p.orgao_processante?.nome ?? null,
     parte_contraria_principal_nome: p.partes_contrarias.find((pc) => pc.principal)?.nome ?? null,
     advogado_responsavel_id: p.advogado_responsavel_id,
+    acao: p.acao,
+    acao_id: p.acao_id,
     natureza: p.natureza,
     natureza_id: p.natureza_id,
     fase: p.fase,

@@ -39,8 +39,9 @@
 </div>
 
 <div class="processo-clientes__acoes">
-  <button type="button" class="processo-clientes__botao" (click)="adicionar()">
-    <i class="fa-solid fa-plus" aria-hidden="true"></i> Adicionar
+  <button type="button" class="processo-clientes__botao" (click)="confirmar()">
+    <i [class]="modoEdicao() ? 'fa-solid fa-check' : 'fa-solid fa-plus'" aria-hidden="true"></i>
+    {{ modoEdicao() ? 'Salvar' : 'Adicionar' }}
   </button>
   <button
     type="button"

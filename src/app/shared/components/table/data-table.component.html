@@ -1,25 +1,12 @@
 @if (columnVisibility() && columnsToolbar()) {
   <div class="data-table-toolbar">
-    <div class="data-table-columns">
-      <button type="button" class="data-table-columns__toggle" (click)="toggleColumnsMenu()">
-        <i class="fa-solid fa-table-columns" aria-hidden="true"></i>
-        Colunas
-      </button>
-      @if (columnsMenuOpen()) {
-        <div class="data-table-columns__menu" role="menu">
-          @for (column of columns(); track column.key) {
-            <label>
-              <input
-                type="checkbox"
-                [checked]="isColumnVisible(column.key)"
-                (change)="toggleColumnVisibility(column.key)"
-              />
-              <span>{{ column.header }}</span>
-            </label>
-          }
-        </div>
-      }
-    </div>
+    <app-columns-menu
+      [columns]="columns()"
+      [isVisible]="columnVisibilityState.isVisible"
+      [menuOpen]="columnVisibilityState.menuOpen()"
+      (menuOpenChange)="columnVisibilityState.menuOpen.set($event)"
+      (toggleColumn)="columnVisibilityState.toggle($event)"
+    />
   </div>
 }
 

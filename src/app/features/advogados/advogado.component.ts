@@ -12,6 +12,7 @@ import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { debounceTime, distinctUntilChanged } from 'rxjs';
 
 import { ButtonComponent } from '../../shared/components/button/button.component';
+import { ColumnsMenuComponent } from '../../shared/components/columns-menu/columns-menu.component';
 import { DomainModelTableComponent } from '../../shared/components/domain-table/domain-model-table.component';
 import { TableColumn } from '../../shared/components/table/table-column.model';
 import { PanelShellController } from '../../shared/panel-shell/panel-shell.controller';
@@ -35,7 +36,7 @@ const CAMPOS_BUSCA = ['nome', 'oab', 'email', 'cpf'] as const;
 @Component({
   selector: 'app-advogado',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [DomainModelTableComponent, ButtonComponent, AdvogadoFormComponent],
+  imports: [DomainModelTableComponent, ButtonComponent, AdvogadoFormComponent, ColumnsMenuComponent],
   templateUrl: './advogado.component.html',
   styleUrl: './advogado.component.scss',
 })
@@ -168,16 +169,6 @@ export class AdvogadoComponent {
   protected onEscape(): void {
     if (this.panelShell.layoutPainel() === 'dialog' && this.panelShell.panelVisible()) {
       this.panelShell.fecharDialog();
-    }
-  }
-
-  /** Clique fora fecha o menu "Colunas". */
-  @HostListener('document:click', ['$event'])
-  protected onDocumentClick(event: MouseEvent): void {
-    const target = event.target as HTMLElement | null;
-    const grade = this.grade();
-    if (grade?.columnsMenuOpen() && !target?.closest('.advogados-columns')) {
-      grade.columnsMenuOpen.set(false);
     }
   }
 }

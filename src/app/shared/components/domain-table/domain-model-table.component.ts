@@ -1,3 +1,4 @@
+import { DOCUMENT } from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -13,9 +14,11 @@ import { EMPTY, Observable, catchError, map, of, switchMap } from 'rxjs';
 
 import { DomainFavoritoService } from '../../../core/services/domain-favorito.service';
 import { DomainService, IDomainPage } from '../../../core/services/domain.service';
+import { ColumnVisibilityController } from '../../column-visibility/column-visibility.controller';
 import { DateFormatPipe } from '../../pipes/date-format.pipe';
 import { CurrencyFormatPipe } from '../../pipes/currency-format.pipe';
 import { BadgeComponent } from '../badge/badge.component';
+import { ColumnsMenuComponent } from '../columns-menu/columns-menu.component';
 import { TableColumn } from '../table/table-column.model';
 import { TablePagination, TableSort } from '../table/table.model';
 
@@ -54,13 +57,14 @@ import { TablePagination, TableSort } from '../table/table.model';
 @Component({
   selector: 'app-domain-model-table',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [DateFormatPipe, CurrencyFormatPipe, BadgeComponent],
+  imports: [DateFormatPipe, CurrencyFormatPipe, BadgeComponent, ColumnsMenuComponent],
   templateUrl: './domain-model-table.component.html',
   styleUrl: './domain-model-table.component.scss',
 })
 export class DomainModelTableComponent<T extends object> {
   private readonly domainService = inject(DomainService);
   private readonly domainFavoritoService = inject(DomainFavoritoService);
+  private readonly document = inject(DOCUMENT);
 
   /** Nome da entidade em kebab-case, igual ao backend resolve (`EntityFinder`) — ex.: `'advogado'`. */
   readonly entityName = input.required<string>();
@@ -80,6 +84,8 @@ export class DomainModelTableComponent<T extends object> {
   readonly columnVisibility = input<boolean>(false);
   readonly columnsToolbar = input<boolean>(true);
   readonly defaultVisibleColumns = input<readonly string[] | null>(null);
+  /** Chave de `localStorage` pra lembrar a escolha de colunas visíveis entre sessões; `null` = não persiste. */
+  readonly columnsStorageKey = input<string | null>(null);
   /** Toda tabela tem favoritar por padrão — desligue só se a entidade genuinamente não fizer sentido favoritar. */
   readonly favoritable = input<boolean>(true);
   /** Sem isso, todo registro é favoritável. Quando informado, um registro "inativo" nunca fixa como favorito e o botão de favoritar fica desabilitado nele. */
@@ -102,8 +108,12 @@ export class DomainModelTableComponent<T extends object> {
 
   private readonly page = signal(0);
   private readonly sortOverride = signal<TableSort | null>(null);
-  private readonly visibleKeysOverride = signal<Set<string> | null>(null);
-  readonly columnsMenuOpen = signal(false);
+  /** Público: o pai usa isso pra desenhar o próprio `<app-columns-menu>` (`columnsToolbar=false`). */
+  readonly columnVisibilityState = new ColumnVisibilityController<T>(this.document, {
+    columns: () => this.columns(),
+    defaultVisibleColumns: () => this.defaultVisibleColumns(),
+    storageKey: () => this.columnsStorageKey(),
+  });
 
   private readonly rows = signal<T[]>([]);
   readonly loading = signal(false);
@@ -121,8 +131,7 @@ export class DomainModelTableComponent<T extends object> {
     if (!this.columnVisibility()) {
       return this.columns();
     }
-    const keys = this.visibleKeysOverride() ?? this.defaultVisibleKeys();
-    return this.columns().filter((column) => keys.has(column.key));
+    return this.columns().filter((column) => this.columnVisibilityState.isVisible(column.key));
   });
 
   protected readonly hasRowActions = computed(() => this.editAction() !== null || this.deleteAction() !== null);
@@ -138,6 +147,9 @@ export class DomainModelTableComponent<T extends object> {
   private requestSeq = 0;
 
   constructor() {
+    // Nunca dentro do `computed` de `visibleColumns` (ver `ColumnVisibilityController.carregarStorage`).
+    effect(() => this.columnVisibilityState.carregarStorage());
+
     effect(() => {
       const entityName = this.entityName();
       const filter = this.filter();
@@ -159,32 +171,6 @@ export class DomainModelTableComponent<T extends object> {
   /** Refaz a busca da página atual — o pai chama isso (via `viewChild`) depois de salvar/excluir. */
   reload(): void {
     this.fetch(this.entityName(), this.page(), this.currentSort(), this.filter(), this.fields(), this.size());
-  }
-
-  toggleColumnsMenu(): void {
-    this.columnsMenuOpen.update((open) => !open);
-  }
-
-  isColumnVisible(key: string): boolean {
-    const keys = this.visibleKeysOverride() ?? this.defaultVisibleKeys();
-    return keys.has(key);
-  }
-
-  toggleColumnVisibility(key: string): void {
-    const next = new Set(this.visibleKeysOverride() ?? this.defaultVisibleKeys());
-    if (next.has(key)) {
-      if (next.size > 1) {
-        next.delete(key);
-      }
-    } else {
-      next.add(key);
-    }
-    this.visibleKeysOverride.set(next);
-  }
-
-  private defaultVisibleKeys(): Set<string> {
-    const defaults = this.defaultVisibleColumns();
-    return defaults ? new Set(defaults) : new Set(this.columns().map((column) => column.key));
   }
 
   protected sortBy(key: string): void {

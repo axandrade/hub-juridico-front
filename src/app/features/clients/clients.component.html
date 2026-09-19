@@ -58,31 +58,15 @@
           (clicked)="newRecord()"
         />
 
-        <div class="clients-columns">
-          <button
-            type="button"
-            class="clients-menu-button"
-            [class.is-active]="clientsTable()?.columnsMenuOpen()"
-            (click)="clientsTable()?.toggleColumnsMenu()"
-          >
-            <i class="fa-solid fa-table-columns" aria-hidden="true"></i>
-            Colunas
-          </button>
-          @if (clientsTable()?.columnsMenuOpen()) {
-            <div class="clients-dropdown clients-columns__menu" role="menu">
-              @for (col of clientColumns; track col.key) {
-                <label>
-                  <input
-                    type="checkbox"
-                    [checked]="clientsTable()?.isColumnVisible(col.key)"
-                    (change)="clientsTable()?.toggleColumnVisibility(col.key)"
-                  />
-                  {{ col.header }}
-                </label>
-              }
-            </div>
-          }
-        </div>
+        @if (clientsTable(); as tabela) {
+          <app-columns-menu
+            [columns]="clientColumns"
+            [isVisible]="tabela.columnVisibilityState.isVisible"
+            [menuOpen]="tabela.columnVisibilityState.menuOpen()"
+            (menuOpenChange)="tabela.columnVisibilityState.menuOpen.set($event)"
+            (toggleColumn)="tabela.columnVisibilityState.toggle($event)"
+          />
+        }
       </div>
 
       <button
@@ -164,6 +148,7 @@
         emptyMessage="Nenhum cliente encontrado."
         [sortable]="true"
         [columnVisibility]="true"
+        columnsStorageKey="hub-juridico.clients.colunas"
         [defaultVisibleColumns]="['natureza','nome','documento','email','contato','status']"
         [rowClass]="clientRowClass"
         [isRowActive]="clientIsActive"

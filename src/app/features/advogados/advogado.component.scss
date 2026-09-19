@@ -206,28 +206,7 @@
   }
 }
 
-.advogados-columns {
-  position: relative;
-
-  &__menu {
-    width: 220px;
-
-    label {
-      display: flex;
-      align-items: center;
-      gap: $spacing-xs;
-      min-height: 30px;
-      padding: 0 $spacing-xs;
-      font-size: $font-size-xs;
-      color: $color-text-secondary;
-      cursor: pointer;
-    }
-  }
-}
-
-.advogados-menu-button,
-.advogados-panel-toggle,
-.advogados-dropdown button {
+.advogados-panel-toggle {
   border: 1px solid $color-border;
   border-radius: $border-radius-sm;
   background-color: $color-neutral-light;
@@ -248,7 +227,6 @@
   }
 }
 
-.advogados-menu-button,
 .advogados-panel-toggle {
   display: inline-flex;
   min-height: 34px;
@@ -258,27 +236,6 @@
   white-space: nowrap;
   font-size: $font-size-xs;
   font-weight: $font-weight-medium;
-}
-
-.advogados-dropdown {
-  position: absolute;
-  z-index: 5;
-  top: calc(100% + #{$spacing-xs});
-  left: 0;
-  display: grid;
-  width: 230px;
-  gap: $spacing-xs;
-  padding: $spacing-sm;
-  border: 1px solid $color-border;
-  border-radius: $border-radius-md;
-  background-color: $color-surface;
-  box-shadow: $shadow-md;
-
-  button {
-    min-height: 32px;
-    padding: 0 $spacing-sm;
-    text-align: left;
-  }
 }
 
 .advogados-main__footer {

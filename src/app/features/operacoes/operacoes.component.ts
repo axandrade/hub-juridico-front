@@ -1,15 +1,16 @@
 import { DOCUMENT } from '@angular/common';
-import { ChangeDetectionStrategy, Component, HostListener, computed, inject, signal, viewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, HostListener, computed, inject, signal, viewChild } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { debounceTime, distinctUntilChanged } from 'rxjs';
 
+import { PastaClienteService } from '../clients/services/pasta-cliente.service';
 import { DomainModelTableComponent } from '../../shared/components/domain-table/domain-model-table.component';
 import { TableColumn } from '../../shared/components/table/table-column.model';
 import { PainelLayout } from '../../shared/models/panel-layout';
 import { PanelShellController } from '../../shared/panel-shell/panel-shell.controller';
 import { OperacoesProcessoPanelComponent } from './components/operacoes-processo-panel/operacoes-processo-panel.component';
 
-/** Linha crua de `/domain/processo-operacoes` (camelCase) — view só-leitura, ver backend `ProcessoOperacoes`/migration V30. */
+/** Linha crua de `/domain/processo-operacoes` (camelCase) — view só-leitura, ver backend `ProcessoOperacoes`/migration V30/V35. */
 interface ProcessoOperacoesRow {
   id: number;
   numeroCnj: string | null;
@@ -17,6 +18,7 @@ interface ProcessoOperacoesRow {
   status: string | null;
   clientePrincipalNome: string | null;
   contrarioPrincipalNome: string | null;
+  clientePrincipalId: number | null;
 }
 
 /** Processo cujas operações estão abertas no painel lateral. */
@@ -55,6 +57,8 @@ const CAMPOS_BUSCA = ['numeroCnj', 'clientePrincipalNome', 'contrarioPrincipalNo
 })
 export class OperacoesComponent {
   private readonly document = inject(DOCUMENT);
+  private readonly destroyRef = inject(DestroyRef);
+  private readonly pastaCliente = inject(PastaClienteService);
 
   /** A grade principal — usada pra reload manual e pro resumo de resultados no rodapé. */
   protected readonly grade = viewChild(DomainModelTableComponent<ProcessoOperacoesRow>);
@@ -113,6 +117,11 @@ export class OperacoesComponent {
     },
   ];
 
+  constructor() {
+    // Ao sair de /operacoes, esquece o cliente publicado — mesma regra de `ProcessosComponent`.
+    this.destroyRef.onDestroy(() => this.pastaCliente.definirCliente(null));
+  }
+
   /** Monta o filtro RQL: `campo1 ilike '*x*' or campo2 ilike '*x*' or campo3 ilike '*x*'`. */
   private buildFilter(busca: string): string {
     const termo = busca.trim().replace(/'/g, '');
@@ -130,10 +139,25 @@ export class OperacoesComponent {
   protected abrirOperacoesDoProcesso(row: ProcessoOperacoesRow): void {
     this.processoSelecionado.set({ id: row.id, numeroCnj: row.numeroCnj });
     this.panelShell.setPanelVisible(true);
+    this.publicarClientePrincipal(row);
   }
 
   protected fecharPainelOperacoes(): void {
     this.processoSelecionado.set(null);
+    this.pastaCliente.definirCliente(null);
+  }
+
+  /**
+   * Publica o cliente principal do processo selecionado pro diálogo global "Abrir pasta do
+   * cliente" — mesma ponte que `ProcessosComponent` usa. Diferente de lá, o nome já vem pronto da
+   * view (`clientePrincipalNome`), sem precisar de uma segunda busca.
+   */
+  private publicarClientePrincipal(row: ProcessoOperacoesRow): void {
+    if (row.clientePrincipalId === null) {
+      this.pastaCliente.definirCliente(null);
+      return;
+    }
+    this.pastaCliente.definirCliente({ id: row.clientePrincipalId, nome: row.clientePrincipalNome ?? '' });
   }
 
   protected togglePanel(): void {

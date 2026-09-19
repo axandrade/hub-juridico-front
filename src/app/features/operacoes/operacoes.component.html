@@ -98,6 +98,7 @@
         trackKey="id"
         emptyMessage="Nenhum processo encontrado."
         [sortable]="true"
+        [rowClass]="processoRowClass"
         (rowClick)="abrirOperacoesDoProcesso($event)"
       />
     </div>

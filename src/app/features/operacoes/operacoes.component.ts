@@ -84,6 +84,11 @@ export class OperacoesComponent {
 
   protected readonly filtro = computed(() => this.buildFilter(this.buscaDebounced()));
 
+  /** Linha do processo cujas operações estão abertas no painel — destaque inequívoco (tinta + fita lateral), mesmo padrão de Clientes/Processos. */
+  protected readonly processoRowClass = (row: ProcessoOperacoesRow): Record<string, boolean> => ({
+    'is-selected': this.processoSelecionado()?.id === row.id,
+  });
+
   protected readonly operacoesColumns: TableColumn<ProcessoOperacoesRow>[] = [
     {
       key: 'numeroCnj',

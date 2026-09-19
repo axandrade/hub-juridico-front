@@ -188,6 +188,8 @@ export interface ProcessoResumoApi {
   cliente_principal_nome: string | null;
   /** Nome do órgão processante atual ("TRIBUNAL - descrição"), resolvido à parte — `null` sem órgão definido. */
   orgao_processante_nome: string | null;
+  /** Nome da parte contrária principal — vem pronto de `processos.parte_contraria_principal` (cache de texto, sem resolução extra). */
+  parte_contraria_principal_nome: string | null;
   advogado_responsavel_id: number | null;
   natureza: string | null;
   natureza_id: number | null;

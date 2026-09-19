@@ -91,6 +91,12 @@ export class ProcessosComponent {
       formatter: (value) => (value ? String(value) : '—'),
     },
     {
+      key: 'parte_contraria_principal_nome',
+      header: 'Parte contrária principal',
+      width: '200px',
+      formatter: (value) => (value ? String(value) : '—'),
+    },
+    {
       key: 'tipo',
       header: 'Tipo',
       width: '130px',

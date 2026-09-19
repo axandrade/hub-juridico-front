@@ -45,7 +45,7 @@ export class PeritoDocumentsService implements DocumentsPort {
   criarPasta(peritoId: number, pastaPaiId: string | null, nome: string): Observable<Pasta> {
     return this.http
       .post<PastaApi>(`${this.base}/pastas-perito`, {
-        perito_id: peritoId,
+        dono_id: peritoId,
         pasta_pai_id: pastaPaiId,
         nome,
       })
@@ -137,7 +137,7 @@ export class PeritoDocumentsService implements DocumentsPort {
   ): Observable<UploadEvento> {
     return this.http
       .post<UploadUrlApi>(`${this.base}/documentos-perito/upload-url`, {
-        perito_id: peritoId,
+        dono_id: peritoId,
         pasta_id: pastaId,
         content_type: arquivo.type,
         tamanho_bytes: arquivo.size,
@@ -153,7 +153,7 @@ export class PeritoDocumentsService implements DocumentsPort {
           );
           const confirmar$ = this.http
             .post<DocumentoApi>(`${this.base}/documentos-perito/confirmar`, {
-              perito_id: peritoId,
+              dono_id: peritoId,
               pasta_id: pastaId,
               storage_key: alvo.storage_key,
               nome_original: arquivo.name,

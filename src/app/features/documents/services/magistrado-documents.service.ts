@@ -44,7 +44,7 @@ export class MagistradoDocumentsService implements DocumentsPort {
   criarPasta(magistradoId: number, pastaPaiId: string | null, nome: string): Observable<Pasta> {
     return this.http
       .post<PastaApi>(`${this.base}/pastas-magistrado`, {
-        magistrado_id: magistradoId,
+        dono_id: magistradoId,
         pasta_pai_id: pastaPaiId,
         nome,
       })
@@ -136,7 +136,7 @@ export class MagistradoDocumentsService implements DocumentsPort {
   ): Observable<UploadEvento> {
     return this.http
       .post<UploadUrlApi>(`${this.base}/documentos-magistrado/upload-url`, {
-        magistrado_id: magistradoId,
+        dono_id: magistradoId,
         pasta_id: pastaId,
         content_type: arquivo.type,
         tamanho_bytes: arquivo.size,
@@ -152,7 +152,7 @@ export class MagistradoDocumentsService implements DocumentsPort {
           );
           const confirmar$ = this.http
             .post<DocumentoApi>(`${this.base}/documentos-magistrado/confirmar`, {
-              magistrado_id: magistradoId,
+              dono_id: magistradoId,
               pasta_id: pastaId,
               storage_key: alvo.storage_key,
               nome_original: arquivo.name,

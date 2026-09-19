@@ -21,8 +21,8 @@ import { DocumentsPort, UploadEvento, ZipJobApi } from './documents-port';
 /**
  * Shape cru de `/domain/pasta` e `/domain/documento` (ddd-noap) — camelCase, nome literal do
  * campo Java, diferente do `PastaApi`/`DocumentoApi` (snake_case, DTO do
- * `PastaPessoaController`/`DocumentoPessoaController` escritos à mão, ainda usados pelas
- * operações de escrita abaixo — só a LEITURA (`raiz`/`conteudo`) migrou pro genérico).
+ * `PastaController`/`DocumentoController` escritos à mão, ainda usados pelas operações de escrita
+ * abaixo — só a LEITURA (`raiz`/`conteudo`) migrou pro genérico).
  *
  * 2026-09: backend unificou `PastaPessoa`/`PastaMagistrado`/`PastaPerito` (e os `Documento*`
  * equivalentes) numa `Pasta`/`Documento` só, discriminada por `donoTipo`+`donoId` — por isso
@@ -211,7 +211,7 @@ export class DocumentsService implements DocumentsPort {
 
   criarPasta(pessoaId: number, pastaPaiId: string | null, nome: string): Observable<Pasta> {
     return this.http
-      .post<PastaApi>(`${this.base}/pastas`, { pessoa_id: pessoaId, pasta_pai_id: pastaPaiId, nome })
+      .post<PastaApi>(`${this.base}/pastas`, { dono_id: pessoaId, pasta_pai_id: pastaPaiId, nome })
       .pipe(map(pastaFromApi));
   }
 
@@ -330,7 +330,7 @@ export class DocumentsService implements DocumentsPort {
   ): Observable<UploadEvento> {
     return this.http
       .post<UploadUrlApi>(`${this.base}/documentos/upload-url`, {
-        pessoa_id: pessoaId,
+        dono_id: pessoaId,
         pasta_id: pastaId,
         content_type: arquivo.type,
         tamanho_bytes: arquivo.size,
@@ -346,7 +346,7 @@ export class DocumentsService implements DocumentsPort {
           );
           const confirmar$ = this.http
             .post<DocumentoApi>(`${this.base}/documentos/confirmar`, {
-              pessoa_id: pessoaId,
+              dono_id: pessoaId,
               pasta_id: pastaId,
               storage_key: alvo.storage_key,
               nome_original: arquivo.name,

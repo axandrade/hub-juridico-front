@@ -86,7 +86,12 @@
         <i class="fa-solid fa-chevron-down combobox__seta" aria-hidden="true"></i>
 
         @if (aberto()) {
-          <ul class="combobox__lista" role="listbox" (scroll)="onScrollLista($event)">
+          <ul
+            class="combobox__lista"
+            [class.combobox__lista--cima]="abrirParaCima()"
+            role="listbox"
+            (scroll)="onScrollLista($event)"
+          >
             @for (opcao of filtradas(); track opcao.value; let i = $index) {
               <li
                 role="option"

@@ -82,6 +82,12 @@
   border-radius: $border-radius-sm;
   background-color: $color-surface;
   box-shadow: $shadow-md;
+
+  // Sem espaço embaixo (ex.: campo perto do fim de um `app-modal` com `overflow`) — abre pra cima.
+  &--cima {
+    top: auto;
+    bottom: calc(100% + 4px);
+  }
 }
 
 .combobox__opcao {

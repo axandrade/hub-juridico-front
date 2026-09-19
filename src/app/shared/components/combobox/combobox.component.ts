@@ -132,9 +132,13 @@ export class ComboboxComponent {
   private readonly campo = viewChild<ElementRef<HTMLInputElement>>('campo');
 
   protected readonly aberto = signal(false);
+  /** `true` quando não cabe embaixo (ex.: campo perto do fim de um modal com `overflow`) — a lista abre pra cima. */
+  protected readonly abrirParaCima = signal(false);
   /** Texto digitado enquanto a lista está aberta (fechada, o campo mostra o rótulo do valor). */
   protected readonly consulta = signal('');
   protected readonly destaque = signal(0);
+  /** Altura reservada pra lista (`max-height` do `.combobox__lista`) — usada só pra decidir a direção do `abrirParaCima`. */
+  private static readonly ALTURA_LISTA = 240;
 
   // --- gestão do catálogo (menu "⋮") ---
   protected readonly modo = signal<Modo>('busca');
@@ -260,11 +264,25 @@ export class ComboboxComponent {
     this.menuAberto.set(false);
     this.consulta.set('');
     this.destaque.set(0);
+    this.abrirParaCima.set(this.deveAbrirParaCima());
     this.aberto.set(true);
     if (this.remoto()) {
       this.remotoItens.set([]);
       this.carregarPagina(0);
     }
+  }
+
+  /**
+   * Decide se a lista abre pra cima — quando o campo está perto do fim da tela (ou de um
+   * ancestral com `overflow`, tipo `app-modal`) e não sobra `ALTURA_LISTA` de espaço embaixo, mas
+   * sobra mais em cima. Sem isso a lista fica cortada pelo `overflow: auto` do modal em vez de
+   * simplesmente rolar a página (é `position: absolute`, não empurra o layout).
+   */
+  private deveAbrirParaCima(): boolean {
+    const rect = this.host.nativeElement.getBoundingClientRect();
+    const espacoAbaixo = window.innerHeight - rect.bottom;
+    const espacoAcima = rect.top;
+    return espacoAbaixo < ComboboxComponent.ALTURA_LISTA && espacoAcima > espacoAbaixo;
   }
 
   /** Foco no campo: abre a lista só quando há busca (senão o clique é que abre/fecha). */

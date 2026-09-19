@@ -1,6 +1,6 @@
 <form class="operacao-form" [formGroup]="form" (ngSubmit)="salvar()">
   <div class="operacao-form__grid">
-    <label class="operacao-field">
+    <div class="operacao-field">
       <span>Tipo</span>
       <app-combobox
         ariaLabel="Tipo da operação"
@@ -10,9 +10,9 @@
         [value]="tipoRotulo()"
         (valueChange)="onTipoChange($event)"
       />
-    </label>
+    </div>
 
-    <label class="operacao-field">
+    <div class="operacao-field">
       <span>Status</span>
       <app-combobox
         ariaLabel="Status da operação"
@@ -21,7 +21,7 @@
         [value]="statusRotulo()"
         (valueChange)="onStatusChange($event)"
       />
-    </label>
+    </div>
 
     <label class="operacao-field operacao-field--full">
       <span>Título</span>
@@ -64,7 +64,7 @@
     }
 
     @if (ehTarefa()) {
-      <label class="operacao-field">
+      <div class="operacao-field">
         <span>Importância</span>
         <app-combobox
           ariaLabel="Importância da tarefa"
@@ -74,7 +74,7 @@
           [value]="form.controls.importancia.value"
           (valueChange)="form.controls.importancia.setValue($event)"
         />
-      </label>
+      </div>
     }
 
     @if (ehIntimacao()) {

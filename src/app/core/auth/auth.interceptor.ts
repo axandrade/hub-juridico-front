@@ -17,7 +17,12 @@ import { TokenStore } from './token-store';
 const AUTH_BYPASS = ['/auth/login', '/auth/refresh', '/api/v1/storage/', 'https://graph.microsoft.com/'];
 
 function isBypassed(url: string): boolean {
-  return AUTH_BYPASS.some((path) => url.includes(path));
+  if (AUTH_BYPASS.some((path) => url.includes(path))) {
+    return true;
+  }
+  // URLs do Azure já são autorizadas pela SAS. Nunca enviar o JWT da API.
+  const target = new URL(url, window.location.origin);
+  return target.protocol === 'https:' && target.hostname.endsWith('.blob.core.windows.net');
 }
 
 function withBearer<T>(req: HttpRequest<T>, token: string): HttpRequest<T> {

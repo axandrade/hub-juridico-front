@@ -365,7 +365,7 @@ export class DocumentsService implements DocumentsPort {
     return this.http
       .request(alvo.http_method, alvo.upload_url, {
         body: arquivo,
-        headers: { 'Content-Type': arquivo.type },
+        headers: { 'Content-Type': arquivo.type, ...alvo.headers },
         responseType: 'text',
         observe: 'events',
         reportProgress: true,

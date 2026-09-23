@@ -1,117 +1,31 @@
-<form class="operacao-form" [formGroup]="form" (ngSubmit)="salvar()">
+<section class="operacao-form" aria-label="Cadastro de operação">
   <div class="operacao-form__processo-badge">
     <i class="fa-solid fa-scale-balanced" aria-hidden="true"></i>
     <span class="operacao-form__processo-label">Processo</span>
     <span class="operacao-form__processo-cnj">{{ numeroCnj() || 'sem número CNJ' }}</span>
   </div>
 
-  <div class="operacao-form__grid">
-    <div class="operacao-field">
-      <span>Tipo</span>
-      <app-combobox
-        ariaLabel="Tipo da operação"
-        [pesquisavel]="false"
-        [disabled]="tipoTravado()"
-        [options]="tipoOpcoes"
-        [value]="tipoRotulo()"
-        (valueChange)="onTipoChange($event)"
-      />
-    </div>
-
-    <div class="operacao-field">
-      <span>Status</span>
-      <app-combobox
-        ariaLabel="Status da operação"
-        [pesquisavel]="false"
-        [options]="statusOpcoes"
-        [value]="statusRotulo()"
-        (valueChange)="onStatusChange($event)"
-      />
-    </div>
-
-    <label class="operacao-field operacao-field--full">
-      <span>Título</span>
-      <input type="text" formControlName="titulo" maxlength="70" autocomplete="off" />
-    </label>
-
-    <label class="operacao-field">
-      <span>Prazo Fatal</span>
-      <input type="datetime-local" formControlName="prazoFatal" />
-    </label>
-
-    <div class="operacao-field">
-      <span>Responsável</span>
-      <app-domain-model-dropdown
-        ariaLabel="Responsável pela operação"
-        placeholder="Buscar usuário..."
-        emptyLabel="— Sem responsável —"
-        noResultsText="Nenhum usuário encontrado"
-        entityName="user"
-        fields="id,name"
-        [searchFields]="['name']"
-        filter="status eq 'ACTIVE'"
-        sort="name"
-        [displayFormatter]="rotuloUsuario"
-        [value]="responsavelValor()"
-        [valueLabel]="responsavelLabel()"
-        (valueChange)="onResponsavelChange($event)"
-      />
-    </div>
-
-    @if (ehTarefaOuCompromisso()) {
-      <div class="operacao-field-row">
-        <label class="operacao-field">
-          <span>Hora início</span>
-          <input type="time" formControlName="horaInicio" />
-        </label>
-        <label class="operacao-field">
-          <span>Hora fim</span>
-          <input type="time" formControlName="horaFim" />
-        </label>
-      </div>
+  <nav class="operacao-form__tabs" aria-label="Abas da operação">
+    @for (aba of abas; track aba) {
+      <button type="button" [class.is-active]="abaAtiva() === aba" (click)="trocarAba(aba)">
+        @switch (aba) {
+          @case ('informacoesGerais') {
+            Informações gerais
+          }
+          @case ('checklists') {
+            Checklists
+          }
+        }
+      </button>
     }
+  </nav>
 
-    @if (ehTarefa()) {
-      <div class="operacao-field">
-        <span>Importância</span>
-        <app-combobox
-          ariaLabel="Importância da tarefa"
-          [pesquisavel]="false"
-          [emptyLabel]="'— Sem importância —'"
-          [options]="importanciaOpcoes"
-          [value]="form.controls.importancia.value"
-          (valueChange)="form.controls.importancia.setValue($event)"
-        />
-      </div>
-    }
-
-    @if (ehIntimacao()) {
-      <div class="operacao-field">
-        <span>Origem</span>
-        <app-combobox
-          ariaLabel="Origem da intimação"
-          [pesquisavel]="false"
-          [options]="origemOpcoes"
-          [value]="origemRotulo()"
-          (valueChange)="onOrigemChange($event)"
-        />
-      </div>
-      <label class="operacao-field operacao-field--full">
-        <span>Link</span>
-        <input type="text" formControlName="link" maxlength="500" autocomplete="off" />
-      </label>
-      <label class="operacao-field operacao-field--full">
-        <span>Teor</span>
-        <textarea formControlName="teor" rows="3"></textarea>
-      </label>
-      <label class="operacao-field operacao-field--full">
-        <span>Providência</span>
-        <textarea formControlName="providencia" rows="3"></textarea>
-      </label>
-    }
+  <div class="operacao-form__conteudo">
+    <app-operacao-informacoes-gerais [hidden]="abaAtiva() !== 'informacoesGerais'" />
+    <app-operacao-checklists [hidden]="abaAtiva() !== 'checklists'" />
   </div>
 
-  <div class="operacao-form__acoes">
+  <footer class="operacao-form__acoes">
     <app-button variant="tertiary" size="sm" label="Cancelar" (clicked)="cancelar()" />
     <app-button
       variant="primary"
@@ -121,5 +35,5 @@
       [disabled]="salvando()"
       (clicked)="salvar()"
     />
-  </div>
-</form>
+  </footer>
+</section>

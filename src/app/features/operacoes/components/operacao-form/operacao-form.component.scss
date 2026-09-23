@@ -1,19 +1,23 @@
 @use 'variables' as *;
 
-.operacao-form {
-  display: flex;
-  flex-direction: column;
-  gap: $spacing-md;
-  width: 100%;
+:host {
+  display: block;
+  min-width: 0;
 }
 
-// Selo do processo no topo do form — puramente decorativo (o painel já filtra por ele; isso é só
-// pra quem está preenchendo nunca perder de vista em qual processo está mexendo).
+.operacao-form {
+  display: flex;
+  width: 100%;
+  min-height: 0;
+  flex-direction: column;
+}
+
 .operacao-form__processo-badge {
   display: inline-flex;
   align-self: flex-start;
   align-items: center;
   gap: $spacing-sm;
+  margin: 0 0 $spacing-md;
   padding: 6px $spacing-md 6px 6px;
   border: 1px solid rgba($rouge-light, 0.4);
   border-radius: 999px;
@@ -34,73 +38,60 @@
 }
 
 .operacao-form__processo-label {
+  color: $color-text-muted;
   font-size: $font-size-xs;
   font-weight: $font-weight-medium;
-  color: $color-text-muted;
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
 
 .operacao-form__processo-cnj {
+  color: $color-primary;
   font-family: 'Courier New', monospace;
   font-size: $font-size-base;
   font-weight: $font-weight-bold;
-  color: $color-primary;
   letter-spacing: 0.02em;
 }
 
-.operacao-form__grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: $spacing-sm $spacing-md;
-}
-
-// Par de campos que sempre fica na mesma linha, independente de quantos campos vieram antes
-// (a paridade do auto-flow do grid pai não garante isso sozinha) — ver "Data/Hora do cadastro".
-.operacao-field-row {
-  display: grid;
-  grid-column: 1 / -1;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: $spacing-sm $spacing-md;
-}
-
-.operacao-field {
+.operacao-form__tabs {
   display: flex;
-  min-width: 0;
-  flex-direction: column;
-  gap: $spacing-xs;
-  font-size: $font-size-xs;
-  font-weight: $font-weight-medium;
-  color: $color-text-secondary;
+  flex-shrink: 0;
+  gap: $spacing-sm;
+  padding: 0 0 $spacing-sm;
+  border-bottom: 1px solid rgba($color-border, 0.7);
 
-  &--full {
-    grid-column: 1 / -1;
-  }
-
-  input,
-  textarea {
-    box-sizing: border-box;
-    width: 100%;
-    max-width: 100%;
-    min-height: 36px;
+  button {
+    flex: 1 1 auto;
+    min-height: 34px;
     padding: $spacing-xs $spacing-sm;
     border: 1px solid $color-border;
     border-radius: $border-radius-sm;
-    background: $color-neutral-light;
-    color: $color-text-primary;
+    background-color: $color-neutral-light;
+    color: $color-text-secondary;
     font: inherit;
-    outline: none;
+    font-size: $font-size-xs;
+    font-weight: $font-weight-medium;
+    white-space: nowrap;
+    cursor: pointer;
+    transition:
+      background-color $transition-fast,
+      border-color $transition-fast,
+      color $transition-fast;
 
-    &:focus {
+    &:hover,
+    &.is-active {
       border-color: $color-primary-light;
-      box-shadow: 0 0 0 3px rgba($rouge-light, 0.16);
+      background-color: rgba($color-primary-pale, 0.55);
+      color: $color-primary;
     }
   }
+}
 
-  textarea {
-    min-height: 72px;
-    resize: vertical;
-  }
+.operacao-form__conteudo {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  flex-direction: column;
 }
 
 .operacao-form__acoes {
@@ -109,10 +100,4 @@
   gap: $spacing-sm;
   padding-top: $spacing-sm;
   border-top: 1px solid rgba($color-border, 0.6);
-}
-
-@media (max-width: 560px) {
-  .operacao-form__grid {
-    grid-template-columns: 1fr;
-  }
 }

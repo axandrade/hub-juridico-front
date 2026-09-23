@@ -1,118 +1,35 @@
 import {
   ChangeDetectionStrategy,
   Component,
-  computed,
   effect,
   inject,
   input,
   output,
   signal,
   untracked,
+  viewChild,
 } from '@angular/core';
-import { FormControl, FormGroup, ReactiveFormsModule, ValidatorFn, Validators } from '@angular/forms';
 import { map } from 'rxjs';
 
 import { DomainService } from '../../../../core/services/domain.service';
 import { ButtonComponent } from '../../../../shared/components/button/button.component';
-import { ComboboxComponent } from '../../../../shared/components/combobox/combobox.component';
-import { DomainModelDropdownComponent } from '../../../../shared/components/domain-dropdown/domain-model-dropdown.component';
 import { ToastService } from '../../../../shared/services/toast.service';
-import { mensagensCamposInvalidos } from '../../../../shared/utils/form-validacao';
-import {
-  ORIGEM_OPERACAO_LABEL,
-  OrigemOperacao,
-  OperacaoDetalheRow,
-  OperacaoWriteApi,
-  STATUS_OPERACAO_LABEL,
-  StatusOperacao,
-  TIPO_OPERACAO_LABEL,
-  TipoOperacao,
-} from '../../services/operacao-api.model';
+import { OperacaoChecklistsComponent } from '../operacao-checklists/operacao-checklists.component';
+import { OperacaoInformacoesGeraisComponent } from '../operacao-informacoes-gerais/operacao-informacoes-gerais.component';
+import { OperacaoDetalheRow, OperacaoWriteApi } from '../../services/operacao-api.model';
 
 const ENTITY = 'operacao';
 
-const TIPOS: TipoOperacao[] = ['INTIMACAO', 'TAREFA', 'COMPROMISSO'];
-const IMPORTANCIA_OPCOES = ['Baixa', 'Média', 'Alta', 'Urgente'];
-const STATUS: StatusOperacao[] = ['CUMPRIDO', 'NAO_CUMPRIDO', 'PENDENTE', 'ATRASADO'];
-const ORIGENS: OrigemOperacao[] = [
-  'CADASTRO_MANUAL',
-  'ANDAMENTO_AUTOMATICO',
-  'DIARIO',
-  'EMAIL',
-  'TELEFONE_WHATSAPP',
-  'SISTEMA_EXTERNO',
-];
-
-const ROTULOS_CAMPOS: Record<string, string> = {
-  titulo: 'Título',
-};
-
-type OperacaoForm = FormGroup<{
-  titulo: FormControl<string>;
-  prazoFatal: FormControl<string>;
-  horaInicio: FormControl<string>;
-  horaFim: FormControl<string>;
-  importancia: FormControl<string>;
-  link: FormControl<string>;
-  teor: FormControl<string>;
-  providencia: FormControl<string>;
-}>;
-
-function text(validators: ValidatorFn[] = []): FormControl<string> {
-  return new FormControl('', { nonNullable: true, validators });
-}
-
-/** ISO com timezone (`Operacao.prazoFatal`, `Instant`) → valor de `<input type="datetime-local">` (hora local, sem timezone). */
-function instantParaDatetimeLocal(iso: string | null): string {
-  if (!iso) {
-    return '';
-  }
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) {
-    return '';
-  }
-  const pad = (n: number) => String(n).padStart(2, '0');
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-}
-
-/** Valor de `<input type="datetime-local">` (hora local, sem timezone) → ISO com timezone pro payload. */
-function datetimeLocalParaInstant(valor: string): string | null {
-  if (!valor) {
-    return null;
-  }
-  const d = new Date(valor);
-  return Number.isNaN(d.getTime()) ? null : d.toISOString();
-}
+type OperacaoAba = 'informacoesGerais' | 'checklists';
 
 /**
- * Formulário de cadastro/edição de operação — vive dentro do `app-modal` do
- * `app-operacoes-processo-panel` (mesmo padrão de `app-usuario-form`). Sem service dedicado: como
- * `Advogado`, `Operacao` é `POST`ada (criar) ou `PATCH`ada (editar) direto em `/domain/operacao`
- * via `DomainService` (ver `Operacao.criarOperacao` no backend — o `PATCH` não precisa de método
- * dedicado, é o merge genérico do ddd-noap).
- *
- * Um dropdown de "Tipo" (Intimação/Tarefa/Compromisso) troca quais campos aparecem — mesma
- * tabela pros 3 tipos no backend, campos que não se aplicam vão `null`. "Status" e "Origem" (só
- * Intimação) são outros dropdowns fixos (`StatusOperacao`/`OrigemOperacao` no backend, mesmo
- * mecanismo de enum + `@Enumerated(EnumType.STRING)` de `TipoOperacao`), os três fora do
- * `FormGroup` reativo (signals `tipo`/`status`/`origem`, não `FormControl`) pelo mesmo motivo: o
- * valor exibido no combobox é o rótulo em pt-BR, não a constante do enum. Diferente de "Tipo",
- * "Status"/"Origem" ficam editáveis desde o cadastro (nascem "Pendente"/"Cadastro manual", mas o
- * usuário pode mudar já na criação). Os três campos vivem em `<div>`, não `<label>` — um `<label>`
- * envolvendo `<app-combobox>` reencaminha um clique sintético pro `<input>` interno e reabre a
- * lista ao selecionar uma opção (achado real, ver `combobox.component.html`). `processoId` não é
- * um campo do formulário: vem fixo do painel que já está filtrado por aquele processo (mesmo em
- * edição — não dá pra mover a operação pra outro processo por aqui). Sem campo de "data de
- * cadastro" aqui — `Operacao.dataCadastro` (datetime, automático via `@PrePersist`) já registra
- * isso sozinho, sem precisar espelhar no formulário nem no `OperacaoWriteApi`. "Prazo Fatal"
- * também virou datetime único (`<input type="datetime-local">`, calendário + hora nativos do
- * navegador — sem lib nenhuma) — substituiu o par antigo data+hora separados
- * (`instantParaDatetimeLocal`/`datetimeLocalParaInstant` convertem pra/da hora local do form).
+ * Shell do cadastro/edição de operação: selo do processo, abas, rodapé e persistência. Os campos
+ * moram nas abas, seguindo o mesmo desenho do painel de Processos.
  */
 @Component({
   selector: 'app-operacao-form',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ReactiveFormsModule, ButtonComponent, ComboboxComponent, DomainModelDropdownComponent],
+  imports: [ButtonComponent, OperacaoInformacoesGeraisComponent, OperacaoChecklistsComponent],
   templateUrl: './operacao-form.component.html',
   styleUrl: './operacao-form.component.scss',
 })
@@ -123,165 +40,71 @@ export class OperacaoFormComponent {
   readonly processoId = input.required<number>();
   /** `null` = cadastro novo; com id, carrega a ficha e `salvar()` vira `PATCH`. */
   readonly operacaoId = input<number | null>(null);
-  /** Só pro selo "Processo Nº ..." no topo do formulário — o painel já sabe o CNJ, não precisa buscar de novo aqui. */
+  /** Só pro selo "Processo Nº ..." no topo do formulário — o painel já sabe o CNJ. */
   readonly numeroCnj = input<string | null>(null);
 
   readonly salvo = output<void>();
   readonly cancelado = output<void>();
 
-  protected readonly tipos = TIPOS;
-  protected readonly tipoOpcoes = TIPOS.map((t) => TIPO_OPERACAO_LABEL[t]);
-  protected readonly importanciaOpcoes = IMPORTANCIA_OPCOES;
-  protected readonly statusOpcoes = STATUS.map((s) => STATUS_OPERACAO_LABEL[s]);
-  protected readonly origemOpcoes = ORIGENS.map((o) => ORIGEM_OPERACAO_LABEL[o]);
-  /** Tipo é imutável após criado (os campos que ele controla mudam demais pra editar sem confusão). */
-  protected readonly tipoTravado = computed(() => this.operacaoId() !== null);
+  private readonly informacoesGerais = viewChild(OperacaoInformacoesGeraisComponent);
 
-  protected readonly tipo = signal<TipoOperacao>('INTIMACAO');
-  protected readonly status = signal<StatusOperacao>('PENDENTE');
-  protected readonly origem = signal<OrigemOperacao>('CADASTRO_MANUAL');
-  protected readonly ehTarefa = computed(() => this.tipo() === 'TAREFA');
-  protected readonly ehIntimacao = computed(() => this.tipo() === 'INTIMACAO');
-  protected readonly ehTarefaOuCompromisso = computed(() => this.tipo() !== 'INTIMACAO');
-
-  protected readonly responsavelId = signal<number | null>(null);
-  protected readonly responsavelLabel = signal('');
-  protected readonly responsavelValor = computed(() =>
-    this.responsavelId() === null ? '' : String(this.responsavelId()),
-  );
-
-  protected readonly rotuloUsuario = (item: Record<string, unknown>): string =>
-    String(item['name'] ?? '(sem nome)');
-
+  protected readonly abas: readonly OperacaoAba[] = ['informacoesGerais', 'checklists'];
+  protected readonly abaAtiva = signal<OperacaoAba>('informacoesGerais');
   protected readonly salvando = signal(false);
-
-  protected readonly form: OperacaoForm = new FormGroup({
-    titulo: text([Validators.required]),
-    prazoFatal: text(),
-    horaInicio: text(),
-    horaFim: text(),
-    importancia: text(),
-    link: text(),
-    teor: text(),
-    providencia: text(),
-  });
 
   constructor() {
     effect(() => {
+      const form = this.informacoesGerais();
       const id = this.operacaoId();
+      if (!form) {
+        return;
+      }
+
       untracked(() => {
+        this.abaAtiva.set('informacoesGerais');
         if (id === null) {
-          this.resetToEmpty();
+          form.limpar();
           return;
         }
         this.domainService
           .get<OperacaoDetalheRow>({ entityName: ENTITY, entityId: id })
-          .subscribe((op) => this.loadIntoForm(op));
+          .subscribe((op) => form.carregar(op));
       });
     });
   }
 
-  private resetToEmpty(): void {
-    this.form.reset();
-    this.tipo.set('INTIMACAO');
-    this.status.set('PENDENTE');
-    this.origem.set('CADASTRO_MANUAL');
-    this.responsavelId.set(null);
-    this.responsavelLabel.set('');
-  }
-
-  private loadIntoForm(op: OperacaoDetalheRow): void {
-    this.tipo.set(op.tipo);
-    this.status.set(op.status ?? 'PENDENTE');
-    this.origem.set(op.origem ?? 'CADASTRO_MANUAL');
-    this.responsavelId.set(op.responsavelId);
-    this.responsavelLabel.set('');
-    if (op.responsavelId !== null) {
-      this.domainService
-        .get<{ name: string }>({ entityName: 'user', entityId: op.responsavelId, fields: 'name' })
-        .subscribe((u) => this.responsavelLabel.set(u?.name ?? ''));
-    }
-    this.form.reset();
-    this.form.patchValue({
-      titulo: op.titulo ?? '',
-      prazoFatal: instantParaDatetimeLocal(op.prazoFatal),
-      horaInicio: op.horaInicio ?? '',
-      horaFim: op.horaFim ?? '',
-      importancia: op.importancia ?? '',
-      link: op.link ?? '',
-      teor: op.teor ?? '',
-      providencia: op.providencia ?? '',
-    });
-  }
-
-  protected tipoRotulo(): string {
-    return TIPO_OPERACAO_LABEL[this.tipo()];
-  }
-
-  protected onTipoChange(rotulo: string): void {
-    if (this.tipoTravado()) {
-      return;
-    }
-    const achado = this.tipos.find((t) => TIPO_OPERACAO_LABEL[t] === rotulo);
-    if (achado) {
-      this.tipo.set(achado);
-    }
-  }
-
-  protected statusRotulo(): string {
-    return STATUS_OPERACAO_LABEL[this.status()];
-  }
-
-  protected onStatusChange(rotulo: string): void {
-    const achado = STATUS.find((s) => STATUS_OPERACAO_LABEL[s] === rotulo);
-    if (achado) {
-      this.status.set(achado);
-    }
-  }
-
-  protected origemRotulo(): string {
-    return ORIGEM_OPERACAO_LABEL[this.origem()];
-  }
-
-  protected onOrigemChange(rotulo: string): void {
-    const achado = ORIGENS.find((o) => ORIGEM_OPERACAO_LABEL[o] === rotulo);
-    if (achado) {
-      this.origem.set(achado);
-    }
-  }
-
-  protected onResponsavelChange(valor: string): void {
-    this.responsavelId.set(valor ? Number(valor) : null);
-    this.responsavelLabel.set('');
+  protected trocarAba(aba: OperacaoAba): void {
+    this.abaAtiva.set(aba);
   }
 
   protected salvar(): void {
-    if (this.form.invalid) {
-      this.form.markAllAsTouched();
-      const mensagens = mensagensCamposInvalidos(this.form, ROTULOS_CAMPOS);
-      this.toast.erro(`Preencha corretamente: ${mensagens.join('; ')}`);
+    const informacoes = this.informacoesGerais();
+    if (!informacoes) {
       return;
     }
 
-    const raw = this.form.getRawValue();
-    const tipo = this.tipo();
-    const tarefaOuCompromisso = this.ehTarefaOuCompromisso();
-    const intimacao = this.ehIntimacao();
+    const validacao = informacoes.validar();
+    if (!validacao.ok) {
+      this.abaAtiva.set('informacoesGerais');
+      this.toast.erro(validacao.mensagem);
+      return;
+    }
 
+    const dados = informacoes.coletar();
     const payload: OperacaoWriteApi = {
-      tipo,
+      tipo: dados.tipo,
       processo_id: this.processoId(),
-      titulo: raw.titulo.trim(),
-      prazo_fatal: datetimeLocalParaInstant(raw.prazoFatal),
-      status: this.status(),
-      responsavel_id: this.responsavelId(),
-      hora_inicio: tarefaOuCompromisso ? raw.horaInicio || null : null,
-      hora_fim: tarefaOuCompromisso ? raw.horaFim || null : null,
-      importancia: this.ehTarefa() ? raw.importancia || null : null,
-      origem: intimacao ? this.origem() : null,
-      link: intimacao ? raw.link.trim() || null : null,
-      teor: intimacao ? raw.teor.trim() || null : null,
-      providencia: intimacao ? raw.providencia.trim() || null : null,
+      titulo: dados.titulo,
+      prazo_fatal: dados.prazoFatal,
+      status: dados.status,
+      responsavel_id: dados.responsavelId,
+      hora_inicio: dados.horaInicio,
+      hora_fim: dados.horaFim,
+      importancia: dados.importancia,
+      origem: dados.origem,
+      link: dados.link,
+      teor: dados.teor,
+      providencia: dados.providencia,
     };
 
     const id = this.operacaoId();

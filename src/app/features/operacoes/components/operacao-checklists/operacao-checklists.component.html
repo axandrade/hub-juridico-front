@@ -5,87 +5,198 @@
       <p>Salve a operação antes de adicionar itens ao checklist.</p>
     </div>
   } @else {
-    <section class="operacao-checklist-card">
+    @let resumoAtual = resumo();
+    @let completo = resumoAtual.total > 0 && resumoAtual.concluidos === resumoAtual.total;
+    <section class="operacao-checklist-card" [class.is-completo]="completo">
       <header class="operacao-checklist-card__header">
-        <h3>Checklist</h3>
+        <div
+          class="operacao-checklist-anel"
+          [class.is-comemorando]="comemorando()"
+          role="progressbar"
+          aria-label="Progresso do checklist"
+          [attr.aria-valuenow]="progresso()"
+          aria-valuemin="0"
+          aria-valuemax="100"
+        >
+          <svg viewBox="0 0 36 36" aria-hidden="true">
+            <circle class="operacao-checklist-anel__trilho" cx="18" cy="18" r="15.915" />
+            <circle
+              class="operacao-checklist-anel__valor"
+              cx="18"
+              cy="18"
+              r="15.915"
+              [attr.stroke-dasharray]="progresso() + ' 100'"
+            />
+          </svg>
+          @if (completo) {
+            <i class="fa-solid fa-check operacao-checklist-anel__check" aria-hidden="true"></i>
+          } @else {
+            <span class="operacao-checklist-anel__texto">{{ progresso() }}%</span>
+          }
+        </div>
+
+        <div class="operacao-checklist-card__titulo">
+          <h3>Checklist</h3>
+          <span class="operacao-checklist-card__resumo" aria-live="polite">
+            @if (comemorando()) {
+              Checklist concluído! 🎉
+            } @else if (!resumoAtual.total) {
+              Nenhum item ainda
+            } @else {
+              {{ resumoAtual.concluidos }} de {{ resumoAtual.total }} concluídos
+            }
+          </span>
+        </div>
+
+        @if (resumoAtual.concluidos > 0) {
+          <button
+            type="button"
+            class="operacao-checklist-card__filtro"
+            [class.is-ativo]="ocultarConcluidos()"
+            [attr.aria-pressed]="ocultarConcluidos()"
+            (click)="ocultarConcluidos.set(!ocultarConcluidos())"
+          >
+            <i class="fa-solid" [class.fa-eye-slash]="!ocultarConcluidos()" [class.fa-eye]="ocultarConcluidos()" aria-hidden="true"></i>
+            {{ ocultarConcluidos() ? 'Mostrar' : 'Ocultar' }} concluídos ({{ resumoAtual.concluidos }})
+          </button>
+        }
       </header>
 
-      <div class="operacao-checklist-card__progress">
-        <div class="operacao-checklist-card__bar" aria-hidden="true">
-          <span [style.width.%]="progresso()"></span>
-        </div>
-        <strong>{{ progresso() }}%</strong>
-      </div>
-
-      <div class="operacao-checklist-card__novo-item">
-        <input
-          #itemInput
-          type="text"
-          maxlength="255"
-          placeholder="Adicionar item"
-          [disabled]="salvando()"
-          (keydown.enter)="$event.preventDefault(); adicionarItem(itemInput)"
-        />
-        <button type="button" [disabled]="salvando()" (click)="adicionarItem(itemInput)">
-          <i class="fa-solid fa-plus" aria-hidden="true"></i>
-          Item
-        </button>
-      </div>
-
-      <h4>Itens</h4>
-
-      @if (carregando()) {
-        <div class="operacao-checklists__empty operacao-checklists__empty--compact">
-          <i class="fa-solid fa-spinner fa-spin" aria-hidden="true"></i>
-          <p>Carregando itens...</p>
+      @if (carregando() && !itens().length) {
+        <div class="operacao-checklist-skeleton" aria-label="Carregando itens">
+          @for (linha of [1, 2, 3]; track linha) {
+            <div class="operacao-checklist-skeleton__linha"></div>
+          }
         </div>
       } @else if (erro()) {
         <div class="operacao-checklists__empty operacao-checklists__empty--compact">
           <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
           <p>{{ erro() }}</p>
-        </div>
-      } @else if (!itens().length) {
-        <div class="operacao-checklists__empty operacao-checklists__empty--compact">
-          <i class="fa-solid fa-list-check" aria-hidden="true"></i>
-          <p>Nenhum item no checklist desta operação.</p>
+          <button type="button" class="operacao-checklist-card__link" (click)="recarregar()">Tentar novamente</button>
         </div>
       } @else {
         <div
           class="operacao-checklist-card__itens"
           cdkDropList
-          [cdkDropListData]="itens()"
+          [cdkDropListData]="itensVisiveis()"
           (cdkDropListDropped)="reordenarItens($event)"
         >
-          @for (item of itens(); track item.id) {
-            <div class="operacao-checklist-item" [class.is-done]="item.concluido" cdkDrag>
-              <span class="operacao-checklist-item__ordem">{{ item.ordem || $index + 1 }}</span>
-              <input
-                type="checkbox"
-                [checked]="item.concluido"
-                [attr.aria-label]="'Concluir ' + (item.descricao || 'item')"
-                (change)="alternarItem(item)"
-              />
-              <span>{{ item.descricao }}</span>
+          @for (item of itensVisiveis(); track item.chave; let i = $index) {
+            @let editando = editandoChave() === item.chave;
+            <div
+              class="operacao-checklist-item"
+              [class.is-done]="item.concluido"
+              [class.is-pendente]="item.pendente"
+              [class.is-editando]="editando"
+              cdkDrag
+              [cdkDragDisabled]="item.pendente || editando"
+              animate.enter="is-entrando"
+              animate.leave="is-saindo"
+            >
               <button
+                #alca
                 type="button"
-                class="operacao-checklist-card__icon operacao-checklist-card__icon--danger"
-                aria-label="Excluir item"
-                title="Excluir item"
-                (click)="excluirItem(item)"
-              >
-                  <i class="fa-solid fa-trash-can" aria-hidden="true"></i>
-                </button>
-              <button
-                type="button"
-                class="operacao-checklist-card__icon operacao-checklist-card__icon--drag"
+                class="operacao-checklist-item__alca"
                 cdkDragHandle
-                aria-label="Mover item"
-                title="Mover item"
+                aria-label="Mover item (Alt + setas)"
+                title="Arraste ou use Alt + ↑/↓"
+                (keydown.alt.arrowup)="moverPeloTeclado($event, i, -1, alca)"
+                (keydown.alt.arrowdown)="moverPeloTeclado($event, i, 1, alca)"
               >
-                <i class="fa-solid fa-grip-lines" aria-hidden="true"></i>
+                <i class="fa-solid fa-grip-vertical" aria-hidden="true"></i>
               </button>
+
+              <button
+                type="button"
+                class="operacao-checklist-check"
+                role="checkbox"
+                [attr.aria-checked]="!!item.concluido"
+                [attr.aria-label]="'Concluir ' + (item.descricao || 'item')"
+                [disabled]="item.pendente"
+                (click)="alternarItem(item)"
+              >
+                <svg viewBox="0 0 16 16" aria-hidden="true">
+                  <path d="M4 8.5l2.6 2.6L12 5.6" />
+                </svg>
+              </button>
+
+              @if (editando) {
+                <input
+                  #campoEdicao
+                  type="text"
+                  class="operacao-checklist-item__edicao"
+                  maxlength="255"
+                  aria-label="Editar item"
+                  [value]="item.descricao ?? ''"
+                  (keydown.enter)="$event.preventDefault(); salvarEdicao(item, campoEdicao)"
+                  (keydown.escape)="$event.stopPropagation(); cancelarEdicao()"
+                  (blur)="salvarEdicao(item, campoEdicao)"
+                />
+              } @else {
+                <span class="operacao-checklist-item__texto" (dblclick)="iniciarEdicao(item)">
+                  <span>{{ item.descricao }}</span>
+                </span>
+              }
+
+              <div class="operacao-checklist-item__acoes">
+                @if (item.pendente) {
+                  <i class="fa-solid fa-spinner fa-spin operacao-checklist-item__salvando" aria-label="Salvando"></i>
+                } @else if (!editando) {
+                  <button
+                    type="button"
+                    class="operacao-checklist-card__icon"
+                    aria-label="Editar item"
+                    title="Editar (ou duplo clique no texto)"
+                    (click)="iniciarEdicao(item)"
+                  >
+                    <i class="fa-solid fa-pen" aria-hidden="true"></i>
+                  </button>
+                  <button
+                    type="button"
+                    class="operacao-checklist-card__icon operacao-checklist-card__icon--danger"
+                    aria-label="Excluir item"
+                    title="Excluir item"
+                    (click)="excluirItem(item)"
+                  >
+                    <i class="fa-solid fa-trash-can" aria-hidden="true"></i>
+                  </button>
+                }
+              </div>
+            </div>
+          } @empty {
+            <div class="operacao-checklist-card__vazio">
+              @if (resumoAtual.total) {
+                <i class="fa-solid fa-circle-check" aria-hidden="true"></i>
+                Todos os itens estão concluídos (ocultos).
+              } @else {
+                <i class="fa-solid fa-list-check" aria-hidden="true"></i>
+                Comece adicionando o primeiro item abaixo.
+              }
             </div>
           }
+        </div>
+
+        <div class="operacao-checklist-novo">
+          <i class="fa-solid fa-plus" aria-hidden="true"></i>
+          <input
+            #itemInput
+            type="text"
+            maxlength="255"
+            placeholder="Adicionar item..."
+            aria-label="Adicionar item ao checklist"
+            (keydown.enter)="$event.preventDefault(); adicionarDoCampo(itemInput)"
+            (paste)="colarNoCampo($event, itemInput)"
+          />
+        </div>
+        <span class="operacao-checklist-novo__dica">Enter adiciona · colar várias linhas cria um item por linha</span>
+      }
+
+      @if (excluido(); as ex) {
+        <div class="operacao-checklist-desfazer" role="status" animate.enter="is-entrando">
+          <span>
+            Item <strong>{{ ex.item.descricao }}</strong> excluído.
+          </span>
+          <button type="button" class="operacao-checklist-card__link" (click)="desfazerExclusao()">Desfazer</button>
         </div>
       }
     </section>

@@ -1,3 +1,4 @@
+@use 'sass:color';
 @use 'variables' as *;
 
 :host {
@@ -84,6 +85,23 @@
       background-color: rgba($color-primary-pale, 0.55);
       color: $color-primary;
     }
+  }
+}
+
+.operacao-form__aba-contador {
+  display: inline-block;
+  margin-left: $spacing-xs;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: rgba($color-primary-pale, 0.7);
+  color: $color-primary;
+  font-size: 10px;
+  font-weight: $font-weight-bold;
+  line-height: 16px;
+
+  &.is-completo {
+    background: rgba($color-success, 0.18);
+    color: color.adjust($color-success, $lightness: -12%);
   }
 }
 

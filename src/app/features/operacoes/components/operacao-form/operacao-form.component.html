@@ -14,6 +14,17 @@
           }
           @case ('checklists') {
             Checklists
+            @if (checklists()?.resumo(); as resumo) {
+              @if (resumo.total) {
+                <span
+                  class="operacao-form__aba-contador"
+                  [class.is-completo]="resumo.concluidos === resumo.total"
+                  [attr.aria-label]="resumo.concluidos + ' de ' + resumo.total + ' concluídos'"
+                >
+                  {{ resumo.concluidos }}/{{ resumo.total }}
+                </span>
+              }
+            }
           }
           @case ('comentarios') {
             Comentários

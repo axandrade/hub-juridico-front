@@ -18,37 +18,70 @@
           placeholder="Escreva um comentário..."
           [disabled]="enviandoComentario()"
         ></textarea>
-        <app-button
-          variant="primary"
-          size="sm"
-          icon="fa-solid fa-paper-plane"
-          [label]="enviandoComentario() ? 'Enviando...' : 'Comentar'"
-          [disabled]="enviandoComentario()"
-          (clicked)="adicionarComentario(comentarioInput)"
-        />
+
+        @if (arquivoSelecionado(); as arquivo) {
+          <span class="operacao-comentario-card__anexo-selecionado">
+            <i class="fa-solid fa-paperclip" aria-hidden="true"></i>
+            {{ arquivo.name }}
+            <button
+              type="button"
+              class="operacao-comentario__icon"
+              aria-label="Remover anexo selecionado"
+              title="Remover anexo selecionado"
+              [disabled]="enviandoComentario()"
+              (click)="removerArquivoSelecionado(arquivoInput)"
+            >
+              <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+            </button>
+          </span>
+        }
+
+        <div class="operacao-comentario-card__novo-acoes">
+          <label class="operacao-comentario__anexar operacao-comentario__anexar--secundario" [class.is-enviando]="enviandoComentario()">
+            <input
+              #arquivoInput
+              type="file"
+              hidden
+              [disabled]="enviandoComentario()"
+              (change)="selecionarArquivo(arquivoInput)"
+            />
+            <i class="fa-solid fa-paperclip" aria-hidden="true"></i>
+            Anexar arquivo
+          </label>
+
+          <app-button
+            variant="primary"
+            size="sm"
+            icon="fa-solid fa-paper-plane"
+            [label]="enviandoComentario() ? (progressoArquivo() !== null ? 'Enviando ' + progressoArquivo() + '%' : 'Enviando...') : 'Comentar'"
+            [disabled]="enviandoComentario()"
+            (clicked)="adicionarComentario(comentarioInput, arquivoInput)"
+          />
+        </div>
       </div>
 
-      @if (carregando()) {
-        <div class="operacao-comentarios__empty operacao-comentarios__empty--compact">
-          <i class="fa-solid fa-spinner fa-spin" aria-hidden="true"></i>
-          <p>Carregando comentários...</p>
-        </div>
-      } @else if (erro()) {
-        <div class="operacao-comentarios__empty operacao-comentarios__empty--compact">
-          <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
-          <p>{{ erro() }}</p>
-        </div>
-      } @else if (!comentarios().length) {
-        <div class="operacao-comentarios__empty operacao-comentarios__empty--compact">
-          <i class="fa-solid fa-comments" aria-hidden="true"></i>
-          <p>Nenhum comentário nesta operação.</p>
-        </div>
-      } @else {
-        <div class="operacao-comentario-lista">
-          @for (comentario of comentarios(); track comentario.id) {
-            @let meu = ehMeuComentario(comentario);
-            <article class="operacao-comentario" [class.operacao-comentario--proprio]="meu">
-              <span class="operacao-comentario__autor">{{ comentario.autorNome || 'Carregando...' }}</span>
+      <div class="operacao-comentario-card__mensagens">
+        @if (carregando()) {
+          <div class="operacao-comentarios__empty operacao-comentarios__empty--compact">
+            <i class="fa-solid fa-spinner fa-spin" aria-hidden="true"></i>
+            <p>Carregando comentários...</p>
+          </div>
+        } @else if (erro()) {
+          <div class="operacao-comentarios__empty operacao-comentarios__empty--compact">
+            <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
+            <p>{{ erro() }}</p>
+          </div>
+        } @else if (!comentarios().length) {
+          <div class="operacao-comentarios__empty operacao-comentarios__empty--compact">
+            <i class="fa-solid fa-comments" aria-hidden="true"></i>
+            <p>Nenhum comentário nesta operação.</p>
+          </div>
+        } @else {
+          <div class="operacao-comentario-lista">
+            @for (comentario of comentarios(); track comentario.id) {
+              @let meu = ehMeuComentario(comentario);
+              <article class="operacao-comentario" [class.operacao-comentario--proprio]="meu">
+                <span class="operacao-comentario__autor">{{ comentario.autorNome || 'Carregando...' }}</span>
 
               <div class="operacao-comentario__balao">
                 @if (meu) {
@@ -96,26 +129,13 @@
                   </div>
                 }
 
-                @if (meu) {
-                  <label class="operacao-comentario__anexar" [class.is-enviando]="comentario.enviando">
-                    <input
-                      #arquivoInput
-                      type="file"
-                      hidden
-                      [disabled]="comentario.enviando"
-                      (change)="anexarArquivo(comentario, arquivoInput)"
-                    />
-                    <i [class]="'fa-solid ' + (comentario.enviando ? 'fa-spinner fa-spin' : 'fa-plus')" aria-hidden="true"></i>
-                    {{ comentario.enviando ? 'Enviando ' + (comentario.progresso ?? 0) + '%' : 'Anexar arquivo' }}
-                  </label>
-                }
-
                 <span class="operacao-comentario__data">{{ comentario.criadoEm | dateFormat: 'dd/MM/yyyy HH:mm' }}</span>
               </div>
             </article>
-          }
-        </div>
-      }
+            }
+          </div>
+        }
+      </div>
     </section>
   }
 </div>

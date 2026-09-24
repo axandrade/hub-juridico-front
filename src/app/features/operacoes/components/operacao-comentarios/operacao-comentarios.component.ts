@@ -23,8 +23,6 @@ interface ComentarioView extends OperacaoComentarioRow {
   autorNome: string;
   documentos: Documento[];
   carregandoDocumentos: boolean;
-  enviando: boolean;
-  progresso: number | null;
 }
 
 /** Aba "Comentários": zero, um ou vários comentários por operação, cada um com documentos anexados (lista simples, ver `ComentarioDocumentsService`). */
@@ -49,6 +47,8 @@ export class OperacaoComentariosComponent {
   protected readonly enviandoComentario = signal(false);
   protected readonly comentarios = signal<ComentarioView[]>([]);
   protected readonly erro = signal('');
+  protected readonly arquivoSelecionado = signal<File | null>(null);
+  protected readonly progressoArquivo = signal<number | null>(null);
 
   constructor() {
     effect(() => {
@@ -68,20 +68,54 @@ export class OperacaoComentariosComponent {
     return comentario.autorId === this.auth.user()?.id;
   }
 
-  protected adicionarComentario(textarea: HTMLTextAreaElement): void {
+  protected selecionarArquivo(input: HTMLInputElement): void {
+    this.arquivoSelecionado.set(input.files?.[0] ?? null);
+  }
+
+  protected removerArquivoSelecionado(input: HTMLInputElement): void {
+    this.arquivoSelecionado.set(null);
+    input.value = '';
+  }
+
+  protected adicionarComentario(textarea: HTMLTextAreaElement, arquivoInput: HTMLInputElement): void {
     const texto = textarea.value.trim();
     const operacaoId = this.operacaoId();
     if (!texto || operacaoId === null) {
       return;
     }
+    const arquivo = this.arquivoSelecionado();
     this.enviandoComentario.set(true);
     this.domainService
       .post({ entityName: ENTITY, body: { operacao_id: operacaoId, texto } })
       .subscribe({
-        next: () => {
+        next: (criado) => {
           textarea.value = '';
-          this.enviandoComentario.set(false);
-          this.carregar(operacaoId);
+          if (!arquivo) {
+            this.enviandoComentario.set(false);
+            this.carregar(operacaoId);
+            return;
+          }
+          this.documentsService.enviar(criado.id, arquivo).subscribe({
+            next: (evento) => {
+              if (evento.tipo === 'progresso') {
+                const percentual = evento.total ? Math.round((evento.enviados / evento.total) * 100) : 0;
+                this.progressoArquivo.set(percentual);
+              }
+            },
+            error: (err: unknown) => {
+              this.enviandoComentario.set(false);
+              this.progressoArquivo.set(null);
+              this.removerArquivoSelecionado(arquivoInput);
+              this.toast.erro(`Comentário criado, mas não foi possível enviar o anexo: ${this.httpErrorMessage(err)}`);
+              this.carregar(operacaoId);
+            },
+            complete: () => {
+              this.enviandoComentario.set(false);
+              this.progressoArquivo.set(null);
+              this.removerArquivoSelecionado(arquivoInput);
+              this.carregar(operacaoId);
+            },
+          });
         },
         error: (err: unknown) => {
           this.enviandoComentario.set(false);
@@ -103,37 +137,6 @@ export class OperacaoComentariosComponent {
         }
       },
       error: (err: unknown) => this.toast.erro(`Não foi possível excluir o comentário: ${this.httpErrorMessage(err)}`),
-    });
-  }
-
-  protected anexarArquivo(comentario: ComentarioView, input: HTMLInputElement): void {
-    const arquivo = input.files?.[0];
-    if (!arquivo) {
-      return;
-    }
-    this.atualizarComentario(comentario.id, { enviando: true, progresso: 0 });
-    this.documentsService.enviar(comentario.id, arquivo).subscribe({
-      next: (evento) => {
-        if (evento.tipo === 'progresso') {
-          const percentual = evento.total ? Math.round((evento.enviados / evento.total) * 100) : 0;
-          this.atualizarComentario(comentario.id, { progresso: percentual });
-          return;
-        }
-        this.comentarios.update((lista) =>
-          lista.map((c) =>
-            c.id === comentario.id
-              ? { ...c, enviando: false, progresso: null, documentos: [...c.documentos, evento.documento] }
-              : c,
-          ),
-        );
-      },
-      error: (err: unknown) => {
-        this.atualizarComentario(comentario.id, { enviando: false, progresso: null });
-        this.toast.erro(`Não foi possível enviar o arquivo: ${this.httpErrorMessage(err)}`);
-      },
-      complete: () => {
-        input.value = '';
-      },
     });
   }
 
@@ -176,8 +179,6 @@ export class OperacaoComentariosComponent {
               autorNome: this.nomesAutores.get(c.autorId) ?? '',
               documentos: [],
               carregandoDocumentos: true,
-              enviando: false,
-              progresso: null,
             })),
           );
           this.carregando.set(false);

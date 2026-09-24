@@ -13,14 +13,13 @@
 }
 
 .operacao-comentarios {
-  @include thin-scrollbar;
   display: flex;
   flex: 1;
   min-height: 0;
   flex-direction: column;
   gap: $spacing-md;
   padding: $spacing-md;
-  overflow: auto;
+  overflow: hidden;
 }
 
 .operacao-comentarios__empty {
@@ -49,12 +48,23 @@
 
 .operacao-comentario-card {
   display: flex;
+  flex: 1;
+  min-height: 0;
   flex-direction: column;
   gap: $spacing-md;
   padding: $spacing-md;
   border: 1px solid $color-border;
   border-radius: $border-radius-md;
   background: $color-surface;
+}
+
+.operacao-comentario-card__mensagens {
+  @include thin-scrollbar;
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  flex-direction: column;
+  overflow-y: auto;
 }
 
 .operacao-comentario-card__header h3 {
@@ -68,7 +78,6 @@
   display: flex;
   flex-direction: column;
   gap: $spacing-sm;
-  align-items: flex-end;
 
   textarea {
     box-sizing: border-box;
@@ -88,6 +97,27 @@
       box-shadow: 0 0 0 3px rgba($rouge-light, 0.16);
     }
   }
+}
+
+.operacao-comentario-card__anexo-selecionado {
+  display: inline-flex;
+  align-self: flex-start;
+  align-items: center;
+  gap: $spacing-xs;
+  max-width: 100%;
+  padding: 4px $spacing-xs;
+  border-radius: $border-radius-sm;
+  background: rgba($color-primary, 0.1);
+  color: $color-text-primary;
+  font-size: $font-size-xs;
+  overflow-wrap: anywhere;
+}
+
+.operacao-comentario-card__novo-acoes {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $spacing-sm;
 }
 
 .operacao-comentario-lista {
@@ -221,6 +251,18 @@
     cursor: default;
     opacity: 0.75;
     pointer-events: none;
+  }
+}
+
+.operacao-comentario__anexar--secundario {
+  border-color: $color-border;
+  background-color: transparent;
+  color: $color-text-secondary;
+
+  &:hover {
+    border-color: $color-primary-light;
+    background-color: rgba($color-primary, 0.08);
+    color: $color-primary;
   }
 }
 

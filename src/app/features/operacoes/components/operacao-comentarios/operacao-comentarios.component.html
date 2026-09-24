@@ -50,9 +50,9 @@
 
                 @if (menuAberto) {
                   <div class="operacao-comentario__menu" [class.operacao-comentario__menu--acima]="menuParaCima()" role="menu">
-                    <button type="button" class="operacao-comentario__menu-item" role="menuitem" (click)="copiarTexto(textoEl)">
+                    <button type="button" class="operacao-comentario__menu-item" role="menuitem" (click)="copiarMensagem(comentario, textoEl)">
                       <i class="fa-regular fa-copy" aria-hidden="true"></i>
-                      Copiar texto
+                      Copiar
                     </button>
                     @if (meu) {
                       <button

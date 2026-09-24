@@ -55,6 +55,7 @@ export class OperacaoComentariosComponent {
   private readonly document = inject(DOCUMENT);
   private readonly auth = inject(AuthService);
   private readonly nomesAutores = new Map<number, string>();
+  private readonly dateFormat = new DateFormatPipe();
 
   readonly operacaoId = input<number | null>(null);
 
@@ -270,16 +271,22 @@ export class OperacaoComentariosComponent {
     this.menuAbertoId.set(null);
   }
 
-  /** Copia o texto já renderizado (sem `**`/`[](url)` do markdown) — é o que se cola num documento. */
-  protected copiarTexto(elemento: HTMLElement): void {
+  /**
+   * Copia a mensagem com cabeçalho — "Autor — dd/MM/yyyy HH:mm" e o conteúdo na linha de baixo.
+   * O conteúdo sai do texto já renderizado (sem `**`/`[](url)` do markdown): é o que se cola num
+   * documento.
+   */
+  protected copiarMensagem(comentario: ComentarioView, elemento: HTMLElement): void {
     this.fecharMenu();
-    const texto = elemento.innerText.trim();
-    if (!texto || !navigator.clipboard) {
+    const conteudo = elemento.innerText.trim();
+    if (!conteudo || !navigator.clipboard) {
       return;
     }
-    navigator.clipboard.writeText(texto).then(
-      () => this.toast.sucesso('Texto copiado.'),
-      () => this.toast.erro('Não foi possível copiar o texto.'),
+    const dataHora = this.dateFormat.transform(comentario.criadoEm, 'dd/MM/yyyy HH:mm');
+    const autor = comentario.autorNome || 'Autor desconhecido';
+    navigator.clipboard.writeText(`${autor} — ${dataHora}\n${conteudo}`).then(
+      () => this.toast.sucesso('Mensagem copiada.'),
+      () => this.toast.erro('Não foi possível copiar a mensagem.'),
     );
   }
 

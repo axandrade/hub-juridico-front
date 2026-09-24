@@ -1,4 +1,3 @@
-@use 'sass:color';
 @use 'variables' as *;
 
 :host {
@@ -100,8 +99,8 @@
   line-height: 16px;
 
   &.is-completo {
-    background: rgba($color-success, 0.18);
-    color: color.adjust($color-success, $lightness: -12%);
+    background: $color-primary;
+    color: $color-surface;
   }
 }
 

@@ -126,20 +126,42 @@
               <article class="operacao-comentario" [class.operacao-comentario--proprio]="meu">
                 <span class="operacao-comentario__autor">{{ comentario.autorNome || 'Carregando...' }}</span>
 
+              @let menuAberto = menuAbertoId() === comentario.id;
               <div class="operacao-comentario__balao">
-                @if (meu) {
-                  <button
-                    type="button"
-                    class="operacao-comentario__icon operacao-comentario__icon--danger"
-                    aria-label="Excluir comentário"
-                    title="Excluir comentário"
-                    (click)="excluirComentario(comentario)"
-                  >
-                    <i class="fa-solid fa-trash-can" aria-hidden="true"></i>
-                  </button>
+                <button
+                  type="button"
+                  class="operacao-comentario__menu-toggle"
+                  [class.is-aberto]="menuAberto"
+                  aria-label="Opções do comentário"
+                  title="Opções"
+                  aria-haspopup="menu"
+                  [attr.aria-expanded]="menuAberto"
+                  (click)="alternarMenu(comentario.id)"
+                >
+                  <i class="fa-solid fa-chevron-down" aria-hidden="true"></i>
+                </button>
+
+                @if (menuAberto) {
+                  <div class="operacao-comentario__menu" role="menu">
+                    <button type="button" class="operacao-comentario__menu-item" role="menuitem" (click)="copiarTexto(textoEl)">
+                      <i class="fa-regular fa-copy" aria-hidden="true"></i>
+                      Copiar texto
+                    </button>
+                    @if (meu) {
+                      <button
+                        type="button"
+                        class="operacao-comentario__menu-item operacao-comentario__menu-item--danger"
+                        role="menuitem"
+                        (click)="excluirComentario(comentario)"
+                      >
+                        <i class="fa-solid fa-trash-can" aria-hidden="true"></i>
+                        Excluir
+                      </button>
+                    }
+                  </div>
                 }
 
-                <div class="operacao-comentario__texto" [innerHTML]="comentario.texto | markdownLite"></div>
+                <div #textoEl class="operacao-comentario__texto" [innerHTML]="comentario.texto | markdownLite"></div>
 
                 @if (comentario.carregandoDocumentos) {
                   <span class="operacao-comentario__anexos-status">Carregando anexos...</span>
@@ -159,7 +181,7 @@
                         @if (meu) {
                           <button
                             type="button"
-                            class="operacao-comentario__icon operacao-comentario__icon--danger"
+                            class="operacao-comentario__icon operacao-comentario__icon--danger operacao-comentario__anexo-excluir"
                             aria-label="Excluir anexo"
                             title="Excluir anexo"
                             (click)="excluirDocumento(comentario, documento)"
@@ -195,6 +217,24 @@
           label="Excluir"
           [disabled]="excluindoComentario()"
           (clicked)="confirmarExclusaoComentario()"
+        />
+      </div>
+    </app-modal>
+
+    <app-modal
+      [open]="anexoParaExcluir() !== null"
+      [elevated]="true"
+      title="Excluir anexo"
+      (closed)="cancelarExclusaoAnexo()"
+    >
+      <p>Excluir o anexo "{{ anexoParaExcluir()?.documento?.nome }}"? O arquivo será apagado definitivamente.</p>
+      <div modalFooter class="operacao-comentario-card__modal-footer">
+        <app-button variant="tertiary" label="Cancelar" (clicked)="cancelarExclusaoAnexo()" />
+        <app-button
+          variant="primary"
+          label="Excluir"
+          [disabled]="excluindoAnexo()"
+          (clicked)="confirmarExclusaoAnexo()"
         />
       </div>
     </app-modal>

@@ -1,5 +1,5 @@
 import { DOCUMENT } from '@angular/common';
-import { ChangeDetectionStrategy, Component, effect, inject, input, signal, untracked } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, effect, inject, input, signal, untracked } from '@angular/core';
 
 import { AuthService } from '../../../../core/services/auth.service';
 import { DomainService, IDomainPage } from '../../../../core/services/domain.service';
@@ -53,6 +53,10 @@ export class OperacaoComentariosComponent {
   protected readonly progressoArquivo = signal<number | null>(null);
   protected readonly comentarioParaExcluir = signal<ComentarioView | null>(null);
   protected readonly excluindoComentario = signal(false);
+  protected readonly anexoParaExcluir = signal<{ comentario: ComentarioView; documento: Documento } | null>(null);
+  protected readonly excluindoAnexo = signal(false);
+  /** Balão com o menu da setinha aberto (estilo WhatsApp) — um por vez; fecha com clique fora/Esc. */
+  protected readonly menuAbertoId = signal<number | null>(null);
 
   constructor() {
     effect(() => {
@@ -65,6 +69,36 @@ export class OperacaoComentariosComponent {
         }
         this.carregar(operacaoId);
       });
+    });
+
+    // Fecha o menu da setinha ao clicar fora / Esc. Ouve o `document` na **fase de captura**
+    // (mesmo motivo do `app-combobox`): o `app-modal` que hospeda a operação dá
+    // `stopPropagation()` no clique dentro do diálogo, então um listener de bolha nunca receberia.
+    // No Esc, a captura também deixa barrar o evento antes do `(document:keydown.escape)` do
+    // modal — senão o mesmo Esc fecharia o menu E a operação inteira.
+    const aoClicarFora = (event: Event): void => {
+      if (this.menuAbertoId() === null) {
+        return;
+      }
+      const alvo = event.target as Element | null;
+      // A própria setinha alterna o menu no `(click)` dela; itens do menu fecham ao executar.
+      if (alvo?.closest('.operacao-comentario__menu, .operacao-comentario__menu-toggle')) {
+        return;
+      }
+      this.fecharMenu();
+    };
+    const aoApertarEsc = (event: KeyboardEvent): void => {
+      if (event.key !== 'Escape' || this.menuAbertoId() === null) {
+        return;
+      }
+      event.stopPropagation();
+      this.fecharMenu();
+    };
+    this.document.addEventListener('pointerdown', aoClicarFora, true);
+    this.document.addEventListener('keydown', aoApertarEsc, true);
+    inject(DestroyRef).onDestroy(() => {
+      this.document.removeEventListener('pointerdown', aoClicarFora, true);
+      this.document.removeEventListener('keydown', aoApertarEsc, true);
     });
   }
 
@@ -192,7 +226,29 @@ export class OperacaoComentariosComponent {
     this.comentarios.update((lista) => [novo, ...lista]);
   }
 
+  protected alternarMenu(comentarioId: number): void {
+    this.menuAbertoId.update((atual) => (atual === comentarioId ? null : comentarioId));
+  }
+
+  protected fecharMenu(): void {
+    this.menuAbertoId.set(null);
+  }
+
+  /** Copia o texto já renderizado (sem `**`/`[](url)` do markdown) — é o que se cola num documento. */
+  protected copiarTexto(elemento: HTMLElement): void {
+    this.fecharMenu();
+    const texto = elemento.innerText.trim();
+    if (!texto || !navigator.clipboard) {
+      return;
+    }
+    navigator.clipboard.writeText(texto).then(
+      () => this.toast.sucesso('Texto copiado.'),
+      () => this.toast.erro('Não foi possível copiar o texto.'),
+    );
+  }
+
   protected excluirComentario(comentario: ComentarioView): void {
+    this.fecharMenu();
     this.comentarioParaExcluir.set(comentario);
   }
 
@@ -223,15 +279,38 @@ export class OperacaoComentariosComponent {
   }
 
   protected excluirDocumento(comentario: ComentarioView, documento: Documento): void {
+    this.anexoParaExcluir.set({ comentario, documento });
+  }
+
+  protected cancelarExclusaoAnexo(): void {
+    if (this.excluindoAnexo()) {
+      return;
+    }
+    this.anexoParaExcluir.set(null);
+  }
+
+  /** Diferente do comentário (soft-delete), o anexo é apagado de vez — por isso também pede confirmação. */
+  protected confirmarExclusaoAnexo(): void {
+    const alvo = this.anexoParaExcluir();
+    if (!alvo || this.excluindoAnexo()) {
+      return;
+    }
+    const { comentario, documento } = alvo;
+    this.excluindoAnexo.set(true);
     this.documentsService.excluir(documento.id).subscribe({
       next: () => {
+        this.excluindoAnexo.set(false);
+        this.anexoParaExcluir.set(null);
         this.comentarios.update((lista) =>
           lista.map((c) =>
             c.id === comentario.id ? { ...c, documentos: c.documentos.filter((d) => d.id !== documento.id) } : c,
           ),
         );
       },
-      error: (err: unknown) => this.toast.erro(`Não foi possível excluir o anexo: ${this.httpErrorMessage(err)}`),
+      error: (err: unknown) => {
+        this.excluindoAnexo.set(false);
+        this.toast.erro(`Não foi possível excluir o anexo: ${this.httpErrorMessage(err)}`);
+      },
     });
   }
 

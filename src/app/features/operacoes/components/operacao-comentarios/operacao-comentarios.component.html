@@ -10,6 +10,105 @@
         <h3>Comentários</h3>
       </header>
 
+      <div #mensagens class="operacao-comentario-card__mensagens">
+        @if (carregando()) {
+          <div class="operacao-comentarios__empty operacao-comentarios__empty--compact">
+            <i class="fa-solid fa-spinner fa-spin" aria-hidden="true"></i>
+            <p>Carregando comentários...</p>
+          </div>
+        } @else if (erro()) {
+          <div class="operacao-comentarios__empty operacao-comentarios__empty--compact">
+            <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
+            <p>{{ erro() }}</p>
+          </div>
+        } @else if (!comentarios().length) {
+          <div class="operacao-comentarios__empty operacao-comentarios__empty--compact">
+            <i class="fa-solid fa-comments" aria-hidden="true"></i>
+            <p>Nenhum comentário nesta operação.</p>
+          </div>
+        } @else {
+          <div class="operacao-comentario-lista">
+            @for (comentario of comentarios(); track comentario.id) {
+              @let meu = ehMeuComentario(comentario);
+              <article class="operacao-comentario" [class.operacao-comentario--proprio]="meu">
+                <span class="operacao-comentario__autor">{{ comentario.autorNome || 'Carregando...' }}</span>
+
+              @let menuAberto = menuAbertoId() === comentario.id;
+              <div class="operacao-comentario__balao">
+                <button
+                  type="button"
+                  class="operacao-comentario__menu-toggle"
+                  [class.is-aberto]="menuAberto"
+                  aria-label="Opções do comentário"
+                  title="Opções"
+                  aria-haspopup="menu"
+                  [attr.aria-expanded]="menuAberto"
+                  (click)="alternarMenu(comentario.id, $event)"
+                >
+                  <i class="fa-solid fa-chevron-down" aria-hidden="true"></i>
+                </button>
+
+                @if (menuAberto) {
+                  <div class="operacao-comentario__menu" [class.operacao-comentario__menu--acima]="menuParaCima()" role="menu">
+                    <button type="button" class="operacao-comentario__menu-item" role="menuitem" (click)="copiarTexto(textoEl)">
+                      <i class="fa-regular fa-copy" aria-hidden="true"></i>
+                      Copiar texto
+                    </button>
+                    @if (meu) {
+                      <button
+                        type="button"
+                        class="operacao-comentario__menu-item operacao-comentario__menu-item--danger"
+                        role="menuitem"
+                        (click)="excluirComentario(comentario)"
+                      >
+                        <i class="fa-solid fa-trash-can" aria-hidden="true"></i>
+                        Excluir
+                      </button>
+                    }
+                  </div>
+                }
+
+                <div #textoEl class="operacao-comentario__texto" [innerHTML]="comentario.texto | markdownLite"></div>
+
+                @if (comentario.carregandoDocumentos) {
+                  <span class="operacao-comentario__anexos-status">Carregando anexos...</span>
+                } @else if (comentario.documentos.length) {
+                  <div class="operacao-comentario__anexos">
+                    @for (documento of comentario.documentos; track documento.id) {
+                      <span class="operacao-comentario__anexo">
+                        <button
+                          type="button"
+                          class="operacao-comentario__anexo-nome"
+                          (click)="baixarDocumento(documento)"
+                          [title]="'Baixar ' + documento.nome"
+                        >
+                          <i class="fa-solid fa-paperclip" aria-hidden="true"></i>
+                          {{ documento.nome }}
+                        </button>
+                        @if (meu) {
+                          <button
+                            type="button"
+                            class="operacao-comentario__icon operacao-comentario__icon--danger operacao-comentario__anexo-excluir"
+                            aria-label="Excluir anexo"
+                            title="Excluir anexo"
+                            (click)="excluirDocumento(comentario, documento)"
+                          >
+                            <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+                          </button>
+                        }
+                      </span>
+                    }
+                  </div>
+                }
+
+                <span class="operacao-comentario__data">{{ comentario.criadoEm | dateFormat: 'dd/MM/yyyy HH:mm' }}</span>
+              </div>
+            </article>
+            }
+          </div>
+        }
+      </div>
+
       <div class="operacao-comentario-card__novo">
         <div class="operacao-comentario-card__toolbar">
           <button
@@ -101,105 +200,6 @@
             (clicked)="adicionarComentario(comentarioInput, arquivoInput)"
           />
         </div>
-      </div>
-
-      <div class="operacao-comentario-card__mensagens">
-        @if (carregando()) {
-          <div class="operacao-comentarios__empty operacao-comentarios__empty--compact">
-            <i class="fa-solid fa-spinner fa-spin" aria-hidden="true"></i>
-            <p>Carregando comentários...</p>
-          </div>
-        } @else if (erro()) {
-          <div class="operacao-comentarios__empty operacao-comentarios__empty--compact">
-            <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
-            <p>{{ erro() }}</p>
-          </div>
-        } @else if (!comentarios().length) {
-          <div class="operacao-comentarios__empty operacao-comentarios__empty--compact">
-            <i class="fa-solid fa-comments" aria-hidden="true"></i>
-            <p>Nenhum comentário nesta operação.</p>
-          </div>
-        } @else {
-          <div class="operacao-comentario-lista">
-            @for (comentario of comentarios(); track comentario.id) {
-              @let meu = ehMeuComentario(comentario);
-              <article class="operacao-comentario" [class.operacao-comentario--proprio]="meu">
-                <span class="operacao-comentario__autor">{{ comentario.autorNome || 'Carregando...' }}</span>
-
-              @let menuAberto = menuAbertoId() === comentario.id;
-              <div class="operacao-comentario__balao">
-                <button
-                  type="button"
-                  class="operacao-comentario__menu-toggle"
-                  [class.is-aberto]="menuAberto"
-                  aria-label="Opções do comentário"
-                  title="Opções"
-                  aria-haspopup="menu"
-                  [attr.aria-expanded]="menuAberto"
-                  (click)="alternarMenu(comentario.id)"
-                >
-                  <i class="fa-solid fa-chevron-down" aria-hidden="true"></i>
-                </button>
-
-                @if (menuAberto) {
-                  <div class="operacao-comentario__menu" role="menu">
-                    <button type="button" class="operacao-comentario__menu-item" role="menuitem" (click)="copiarTexto(textoEl)">
-                      <i class="fa-regular fa-copy" aria-hidden="true"></i>
-                      Copiar texto
-                    </button>
-                    @if (meu) {
-                      <button
-                        type="button"
-                        class="operacao-comentario__menu-item operacao-comentario__menu-item--danger"
-                        role="menuitem"
-                        (click)="excluirComentario(comentario)"
-                      >
-                        <i class="fa-solid fa-trash-can" aria-hidden="true"></i>
-                        Excluir
-                      </button>
-                    }
-                  </div>
-                }
-
-                <div #textoEl class="operacao-comentario__texto" [innerHTML]="comentario.texto | markdownLite"></div>
-
-                @if (comentario.carregandoDocumentos) {
-                  <span class="operacao-comentario__anexos-status">Carregando anexos...</span>
-                } @else if (comentario.documentos.length) {
-                  <div class="operacao-comentario__anexos">
-                    @for (documento of comentario.documentos; track documento.id) {
-                      <span class="operacao-comentario__anexo">
-                        <button
-                          type="button"
-                          class="operacao-comentario__anexo-nome"
-                          (click)="baixarDocumento(documento)"
-                          [title]="'Baixar ' + documento.nome"
-                        >
-                          <i class="fa-solid fa-paperclip" aria-hidden="true"></i>
-                          {{ documento.nome }}
-                        </button>
-                        @if (meu) {
-                          <button
-                            type="button"
-                            class="operacao-comentario__icon operacao-comentario__icon--danger operacao-comentario__anexo-excluir"
-                            aria-label="Excluir anexo"
-                            title="Excluir anexo"
-                            (click)="excluirDocumento(comentario, documento)"
-                          >
-                            <i class="fa-solid fa-xmark" aria-hidden="true"></i>
-                          </button>
-                        }
-                      </span>
-                    }
-                  </div>
-                }
-
-                <span class="operacao-comentario__data">{{ comentario.criadoEm | dateFormat: 'dd/MM/yyyy HH:mm' }}</span>
-              </div>
-            </article>
-            }
-          </div>
-        }
       </div>
     </section>
 

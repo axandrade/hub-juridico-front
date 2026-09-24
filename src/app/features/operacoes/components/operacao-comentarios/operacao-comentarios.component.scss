@@ -64,7 +64,10 @@
   display: flex;
   flex: 1;
   min-height: 0;
-  flex-direction: column;
+  // Estilo chat: ancora a conversa embaixo (abre já na mensagem mais nova e continua lá enquanto
+  // os anexos carregam e o conteúdo cresce). O único filho é a lista (ou um estado vazio), então
+  // a ordem visual das mensagens não inverte — quem ordena é o componente.
+  flex-direction: column-reverse;
   overflow-y: auto;
 }
 
@@ -79,6 +82,9 @@
   display: flex;
   flex-direction: column;
   gap: $spacing-sm;
+  // Caixa de escrever fica embaixo da conversa (estilo chat): separa das mensagens.
+  padding-top: $spacing-sm;
+  border-top: 1px solid $color-border;
 
   .operacao-comentario-card__toolbar {
     display: flex;
@@ -235,6 +241,12 @@
   border-radius: $border-radius-sm;
   background: $color-surface;
   box-shadow: $shadow-lg;
+}
+
+// Sem espaço embaixo (ex.: último balão), abre pra cima da setinha — ver `alternarMenu`.
+.operacao-comentario__menu--acima {
+  top: auto;
+  bottom: calc(100% - 2px);
 }
 
 // Balão próprio fica à direita: o menu abre pra esquerda pra não sair do card.

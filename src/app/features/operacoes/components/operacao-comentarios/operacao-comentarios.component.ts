@@ -1,5 +1,16 @@
 import { DOCUMENT } from '@angular/common';
-import { ChangeDetectionStrategy, Component, DestroyRef, effect, inject, input, signal, untracked } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  DestroyRef,
+  ElementRef,
+  effect,
+  inject,
+  input,
+  signal,
+  untracked,
+  viewChild,
+} from '@angular/core';
 
 import { AuthService } from '../../../../core/services/auth.service';
 import { DomainService, IDomainPage } from '../../../../core/services/domain.service';
@@ -12,6 +23,8 @@ import { Documento } from '../../../documents/models/document-explorer.model';
 import { ComentarioDocumentsService } from '../../services/comentario-documents.service';
 
 const ENTITY = 'operacao-comentario';
+/** Altura aproximada do menu da setinha (2 itens + padding), com folga. */
+const ALTURA_MENU_PX = 100;
 
 interface OperacaoComentarioRow {
   id: number;
@@ -57,6 +70,8 @@ export class OperacaoComentariosComponent {
   protected readonly excluindoAnexo = signal(false);
   /** Balão com o menu da setinha aberto (estilo WhatsApp) — um por vez; fecha com clique fora/Esc. */
   protected readonly menuAbertoId = signal<number | null>(null);
+  protected readonly menuParaCima = signal(false);
+  private readonly mensagensEl = viewChild<ElementRef<HTMLElement>>('mensagens');
 
   constructor() {
     effect(() => {
@@ -223,10 +238,31 @@ export class OperacaoComentariosComponent {
       documentos: [],
       carregandoDocumentos: false,
     };
-    this.comentarios.update((lista) => [novo, ...lista]);
+    this.comentarios.update((lista) => [...lista, novo]);
+    this.rolarParaUltimo();
   }
 
-  protected alternarMenu(comentarioId: number): void {
+  /**
+   * Leva a conversa pro fim (mensagem mais nova). O container rola em `column-reverse` (ver
+   * `.operacao-comentario-card__mensagens` no SCSS), onde `scrollTop = 0` é o FUNDO — é isso que
+   * mantém a conversa ancorada embaixo sozinha enquanto os anexos carregam depois.
+   */
+  private rolarParaUltimo(): void {
+    const el = this.mensagensEl();
+    if (el) {
+      el.nativeElement.scrollTop = 0;
+    }
+  }
+
+  protected alternarMenu(comentarioId: number, evento: MouseEvent): void {
+    // Em `column-reverse` o que transborda pra BAIXO do container não é alcançável pelo scroll —
+    // o menu do último balão sairia cortado. Sem espaço embaixo, abre pra cima.
+    const toggle = evento.currentTarget as HTMLElement;
+    const container = this.mensagensEl()?.nativeElement;
+    if (container) {
+      const espacoAbaixo = container.getBoundingClientRect().bottom - toggle.getBoundingClientRect().bottom;
+      this.menuParaCima.set(espacoAbaixo < ALTURA_MENU_PX);
+    }
     this.menuAbertoId.update((atual) => (atual === comentarioId ? null : comentarioId));
   }
 
@@ -329,18 +365,22 @@ export class OperacaoComentariosComponent {
         entityName: ENTITY,
         fields: 'id,operacaoId,texto,autorId,criadoEm',
         filter: `operacaoId eq ${operacaoId} and ativo eq true`,
+        // Busca os 500 MAIS NOVOS (se passar disso, corta os antigos, não os recentes)...
         sort: '-criadoEm',
         size: 500,
       })
       .subscribe({
         next: (pagina) => {
+          // ...e inverte pra exibir estilo chat: mais antigo em cima, mais novo embaixo.
           this.comentarios.set(
-            pagina.content.map((c) => ({
-              ...c,
-              autorNome: this.nomesAutores.get(c.autorId) ?? '',
-              documentos: [],
-              carregandoDocumentos: true,
-            })),
+            pagina.content
+              .map((c) => ({
+                ...c,
+                autorNome: this.nomesAutores.get(c.autorId) ?? '',
+                documentos: [],
+                carregandoDocumentos: true,
+              }))
+              .reverse(),
           );
           this.carregando.set(false);
           pagina.content.forEach((c) => {

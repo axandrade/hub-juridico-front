@@ -11,6 +11,49 @@
       </header>
 
       <div class="operacao-comentario-card__novo">
+        <div class="operacao-comentario-card__toolbar">
+          <button
+            type="button"
+            class="operacao-comentario__icon"
+            aria-label="Negrito"
+            title="Negrito"
+            [disabled]="enviandoComentario()"
+            (click)="aplicarFormato(comentarioInput, 'negrito')"
+          >
+            <i class="fa-solid fa-bold" aria-hidden="true"></i>
+          </button>
+          <button
+            type="button"
+            class="operacao-comentario__icon"
+            aria-label="Itálico"
+            title="Itálico"
+            [disabled]="enviandoComentario()"
+            (click)="aplicarFormato(comentarioInput, 'italico')"
+          >
+            <i class="fa-solid fa-italic" aria-hidden="true"></i>
+          </button>
+          <button
+            type="button"
+            class="operacao-comentario__icon"
+            aria-label="Lista com marcador"
+            title="Lista com marcador"
+            [disabled]="enviandoComentario()"
+            (click)="aplicarFormato(comentarioInput, 'lista')"
+          >
+            <i class="fa-solid fa-list-ul" aria-hidden="true"></i>
+          </button>
+          <button
+            type="button"
+            class="operacao-comentario__icon"
+            aria-label="Link"
+            title="Link"
+            [disabled]="enviandoComentario()"
+            (click)="aplicarFormato(comentarioInput, 'link')"
+          >
+            <i class="fa-solid fa-link" aria-hidden="true"></i>
+          </button>
+        </div>
+
         <textarea
           #comentarioInput
           rows="3"
@@ -96,7 +139,7 @@
                   </button>
                 }
 
-                <p class="operacao-comentario__texto">{{ comentario.texto }}</p>
+                <div class="operacao-comentario__texto" [innerHTML]="comentario.texto | markdownLite"></div>
 
                 @if (comentario.carregandoDocumentos) {
                   <span class="operacao-comentario__anexos-status">Carregando anexos...</span>
@@ -137,5 +180,23 @@
         }
       </div>
     </section>
+
+    <app-modal
+      [open]="comentarioParaExcluir() !== null"
+      [elevated]="true"
+      title="Excluir comentário"
+      (closed)="cancelarExclusaoComentario()"
+    >
+      <p>Excluir este comentário? Essa ação não pode ser desfeita por aqui.</p>
+      <div modalFooter class="operacao-comentario-card__modal-footer">
+        <app-button variant="tertiary" label="Cancelar" (clicked)="cancelarExclusaoComentario()" />
+        <app-button
+          variant="primary"
+          label="Excluir"
+          [disabled]="excluindoComentario()"
+          (clicked)="confirmarExclusaoComentario()"
+        />
+      </div>
+    </app-modal>
   }
 </div>

@@ -79,6 +79,13 @@
   flex-direction: column;
   gap: $spacing-sm;
 
+  .operacao-comentario-card__toolbar {
+    display: flex;
+    gap: 2px;
+    padding-bottom: $spacing-xs;
+    border-bottom: 1px solid $color-border;
+  }
+
   textarea {
     box-sizing: border-box;
     width: 100%;
@@ -188,6 +195,15 @@
   font-size: $font-size-base;
   overflow-wrap: anywhere;
   white-space: pre-wrap;
+
+  ul {
+    margin: $spacing-xs 0;
+    padding-left: 1.2em;
+  }
+
+  a {
+    color: $color-primary;
+  }
 }
 
 .operacao-comentario__anexos {
@@ -291,6 +307,12 @@
     color: $color-error;
     background: rgba($color-error, 0.08);
   }
+}
+
+.operacao-comentario-card__modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: $spacing-sm;
 }
 
 @media (max-width: 560px) {

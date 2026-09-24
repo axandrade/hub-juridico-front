@@ -4,7 +4,9 @@ import { ChangeDetectionStrategy, Component, effect, inject, input, signal, untr
 import { AuthService } from '../../../../core/services/auth.service';
 import { DomainService, IDomainPage } from '../../../../core/services/domain.service';
 import { ButtonComponent } from '../../../../shared/components/button/button.component';
+import { ModalComponent } from '../../../../shared/components/modal/modal.component';
 import { DateFormatPipe } from '../../../../shared/pipes/date-format.pipe';
+import { MarkdownLitePipe } from '../../../../shared/pipes/markdown-lite.pipe';
 import { ToastService } from '../../../../shared/services/toast.service';
 import { Documento } from '../../../documents/models/document-explorer.model';
 import { ComentarioDocumentsService } from '../../services/comentario-documents.service';
@@ -29,7 +31,7 @@ interface ComentarioView extends OperacaoComentarioRow {
 @Component({
   selector: 'app-operacao-comentarios',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ButtonComponent, DateFormatPipe],
+  imports: [ButtonComponent, ModalComponent, DateFormatPipe, MarkdownLitePipe],
   templateUrl: './operacao-comentarios.component.html',
   styleUrl: './operacao-comentarios.component.scss',
 })
@@ -49,6 +51,8 @@ export class OperacaoComentariosComponent {
   protected readonly erro = signal('');
   protected readonly arquivoSelecionado = signal<File | null>(null);
   protected readonly progressoArquivo = signal<number | null>(null);
+  protected readonly comentarioParaExcluir = signal<ComentarioView | null>(null);
+  protected readonly excluindoComentario = signal(false);
 
   constructor() {
     effect(() => {
@@ -66,6 +70,55 @@ export class OperacaoComentariosComponent {
 
   protected ehMeuComentario(comentario: ComentarioView): boolean {
     return comentario.autorId === this.auth.user()?.id;
+  }
+
+  protected aplicarFormato(textarea: HTMLTextAreaElement, tipo: 'negrito' | 'italico' | 'lista' | 'link'): void {
+    const inicio = textarea.selectionStart ?? 0;
+    const fim = textarea.selectionEnd ?? 0;
+    const valor = textarea.value;
+    const selecionado = valor.slice(inicio, fim);
+
+    let novoTrecho: string;
+    let cursorInicio: number;
+    let cursorFim: number;
+
+    switch (tipo) {
+      case 'negrito': {
+        const texto = selecionado || 'negrito';
+        novoTrecho = `**${texto}**`;
+        cursorInicio = inicio + 2;
+        cursorFim = cursorInicio + texto.length;
+        break;
+      }
+      case 'italico': {
+        const texto = selecionado || 'itálico';
+        novoTrecho = `*${texto}*`;
+        cursorInicio = inicio + 1;
+        cursorFim = cursorInicio + texto.length;
+        break;
+      }
+      case 'lista': {
+        const trecho = selecionado || 'item';
+        novoTrecho = trecho
+          .split('\n')
+          .map((linha) => (linha.trim() ? `- ${linha}` : linha))
+          .join('\n');
+        cursorInicio = inicio;
+        cursorFim = inicio + novoTrecho.length;
+        break;
+      }
+      case 'link': {
+        const texto = selecionado || 'texto do link';
+        novoTrecho = `[${texto}](url)`;
+        cursorInicio = inicio + texto.length + 3;
+        cursorFim = cursorInicio + 3;
+        break;
+      }
+    }
+
+    textarea.value = valor.slice(0, inicio) + novoTrecho + valor.slice(fim);
+    textarea.focus();
+    textarea.setSelectionRange(cursorInicio, cursorFim);
   }
 
   protected selecionarArquivo(input: HTMLInputElement): void {
@@ -90,9 +143,9 @@ export class OperacaoComentariosComponent {
       .subscribe({
         next: (criado) => {
           textarea.value = '';
+          this.inserirComentarioLocal(criado.id, texto, operacaoId);
           if (!arquivo) {
             this.enviandoComentario.set(false);
-            this.carregar(operacaoId);
             return;
           }
           this.documentsService.enviar(criado.id, arquivo).subscribe({
@@ -100,20 +153,20 @@ export class OperacaoComentariosComponent {
               if (evento.tipo === 'progresso') {
                 const percentual = evento.total ? Math.round((evento.enviados / evento.total) * 100) : 0;
                 this.progressoArquivo.set(percentual);
+                return;
               }
+              this.atualizarComentario(criado.id, { documentos: [evento.documento] });
             },
             error: (err: unknown) => {
               this.enviandoComentario.set(false);
               this.progressoArquivo.set(null);
               this.removerArquivoSelecionado(arquivoInput);
               this.toast.erro(`Comentário criado, mas não foi possível enviar o anexo: ${this.httpErrorMessage(err)}`);
-              this.carregar(operacaoId);
             },
             complete: () => {
               this.enviandoComentario.set(false);
               this.progressoArquivo.set(null);
               this.removerArquivoSelecionado(arquivoInput);
-              this.carregar(operacaoId);
             },
           });
         },
@@ -124,19 +177,48 @@ export class OperacaoComentariosComponent {
       });
   }
 
+  private inserirComentarioLocal(id: number, texto: string, operacaoId: number): void {
+    const usuario = this.auth.user();
+    const novo: ComentarioView = {
+      id,
+      operacaoId,
+      texto,
+      autorId: usuario?.id ?? 0,
+      criadoEm: new Date().toISOString(),
+      autorNome: usuario?.name ?? '',
+      documentos: [],
+      carregandoDocumentos: false,
+    };
+    this.comentarios.update((lista) => [novo, ...lista]);
+  }
+
   protected excluirComentario(comentario: ComentarioView): void {
-    const operacaoId = this.operacaoId();
-    const confirmado = this.document.defaultView?.confirm('Excluir este comentário? Essa ação não pode ser desfeita por aqui.');
-    if (!confirmado) {
+    this.comentarioParaExcluir.set(comentario);
+  }
+
+  protected cancelarExclusaoComentario(): void {
+    if (this.excluindoComentario()) {
       return;
     }
+    this.comentarioParaExcluir.set(null);
+  }
+
+  protected confirmarExclusaoComentario(): void {
+    const comentario = this.comentarioParaExcluir();
+    if (!comentario || this.excluindoComentario()) {
+      return;
+    }
+    this.excluindoComentario.set(true);
     this.domainService.patch({ entityName: ENTITY, entityId: comentario.id, body: { ativo: false } }).subscribe({
       next: () => {
-        if (operacaoId !== null) {
-          this.carregar(operacaoId);
-        }
+        this.excluindoComentario.set(false);
+        this.comentarioParaExcluir.set(null);
+        this.comentarios.update((lista) => lista.filter((c) => c.id !== comentario.id));
       },
-      error: (err: unknown) => this.toast.erro(`Não foi possível excluir o comentário: ${this.httpErrorMessage(err)}`),
+      error: (err: unknown) => {
+        this.excluindoComentario.set(false);
+        this.toast.erro(`Não foi possível excluir o comentário: ${this.httpErrorMessage(err)}`);
+      },
     });
   }
 

@@ -57,31 +57,16 @@
           (clicked)="novoAdvogado()"
         />
 
-        <div class="advogados-columns">
-          <button
-            type="button"
-            class="advogados-menu-button"
-            [class.is-active]="grade()?.columnsMenuOpen()"
-            (click)="grade()?.toggleColumnsMenu()"
-          >
-            <i class="fa-solid fa-table-columns" aria-hidden="true"></i>
-            Colunas
-          </button>
-          @if (grade()?.columnsMenuOpen()) {
-            <div class="advogados-dropdown advogados-columns__menu" role="menu">
-              @for (col of advogadoColumns; track col.key) {
-                <label>
-                  <input
-                    type="checkbox"
-                    [checked]="grade()?.isColumnVisible(col.key)"
-                    (change)="grade()?.toggleColumnVisibility(col.key)"
-                  />
-                  {{ col.header }}
-                </label>
-              }
-            </div>
-          }
-        </div>
+        @if (grade(); as tabela) {
+          <app-columns-menu
+            [columns]="advogadoColumns"
+            [isVisible]="tabela.columnVisibilityState.isVisible"
+            [menuOpen]="tabela.columnVisibilityState.menuOpen()"
+            (menuOpenChange)="tabela.columnVisibilityState.menuOpen.set($event)"
+            (toggleColumn)="tabela.columnVisibilityState.toggle($event)"
+            (toggleAll)="tabela.columnVisibilityState.toggleAll($event)"
+          />
+        }
       </div>
 
       <button
@@ -138,6 +123,8 @@
         emptyMessage="Nenhum advogado encontrado."
         [sortable]="true"
         [columnVisibility]="true"
+        [columnReorder]="true"
+        columnsStorageKey="hub-juridico.advogados.colunas"
         [rowClass]="advogadoRowClass"
         [isRowActive]="advogadoIsActive"
         (rowClick)="selectAdvogado($event)"

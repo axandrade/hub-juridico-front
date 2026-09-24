@@ -16,6 +16,7 @@ import { debounceTime, distinctUntilChanged } from 'rxjs';
 import { maskDocumento } from '../../core/auth/documentos-br';
 import { contatoPrincipal, emailPrincipal, IContato, IEmail, IPessoa, TipoPessoa } from '../../core/models';
 import { ButtonComponent } from '../../shared/components/button/button.component';
+import { ColumnsMenuComponent } from '../../shared/components/columns-menu/columns-menu.component';
 import { DomainModelTableComponent } from '../../shared/components/domain-table/domain-model-table.component';
 import { PanelShellController } from '../../shared/panel-shell/panel-shell.controller';
 import { PastaClienteService } from './services/pasta-cliente.service';
@@ -64,7 +65,7 @@ const CAMPOS_BUSCA = ['nome', 'razaoSocial', 'nomeFantasia', 'cpf', 'cnpj'] as c
 @Component({
   selector: 'app-clients',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ButtonComponent, ClientFormComponent, DomainModelTableComponent],
+  imports: [ButtonComponent, ClientFormComponent, DomainModelTableComponent, ColumnsMenuComponent],
   templateUrl: './clients.component.html',
   styleUrl: './clients.component.scss',
 })
@@ -254,18 +255,10 @@ export class ClientsComponent {
     this.panelShell.setPanelVisible(true);
   }
 
-  /**
-   * Clique fora fecha o menu "Colunas" e — se o cadeado não estiver travado — também desmarca o
-   * cliente (clique fora de uma linha da tabela e do painel).
-   */
+  /** Clique fora — se o cadeado não estiver travado — desmarca o cliente (fora de uma linha da tabela e do painel). */
   @HostListener('document:click', ['$event'])
   protected onDocumentClick(event: MouseEvent): void {
     const target = event.target as HTMLElement | null;
-
-    const tabela = this.clientsTable();
-    if (tabela?.columnsMenuOpen() && !target?.closest('.clients-columns')) {
-      tabela.columnsMenuOpen.set(false);
-    }
 
     if (this.selectedPersonId() === null || this.editor()?.locked() || this.panelShell.redimensionando) {
       return;

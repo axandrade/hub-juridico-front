@@ -1,0 +1,632 @@
+@use 'variables' as *;
+@use 'mixins' as *;
+
+:host {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  flex-direction: column;
+}
+
+:host([hidden]) {
+  display: none;
+}
+
+.operacao-checklists {
+  @include thin-scrollbar;
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  flex-direction: column;
+  gap: $spacing-md;
+  padding: $spacing-md;
+  overflow: auto;
+}
+
+.operacao-checklists__empty {
+  @include flex-center;
+  flex: 1;
+  min-height: 180px;
+  flex-direction: column;
+  gap: $spacing-sm;
+  color: $color-text-muted;
+  text-align: center;
+
+  i {
+    color: $color-primary;
+    font-size: 24px;
+  }
+
+  p {
+    margin: 0;
+    font-size: $font-size-base;
+  }
+}
+
+.operacao-checklists__empty--compact {
+  min-height: 140px;
+}
+
+// ------------------------------------------------------------
+// Card
+// ------------------------------------------------------------
+
+.operacao-checklist-card {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-md;
+  padding: $spacing-md $spacing-lg;
+  border: 1px solid $color-border;
+  border-radius: $border-radius-md;
+  background: $color-surface;
+  transition: border-color $transition-normal;
+
+  &.is-completo {
+    border-color: $color-primary-light;
+  }
+}
+
+.operacao-checklist-card__header {
+  display: flex;
+  align-items: center;
+  gap: $spacing-md;
+  padding-bottom: $spacing-sm;
+  border-bottom: 1px solid rgba($color-border, 0.7);
+}
+
+.operacao-checklist-card__titulo {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 1px;
+
+  h3 {
+    margin: 0;
+    color: $color-text-primary;
+    font-size: $font-size-lg;
+    font-weight: $font-weight-bold;
+  }
+}
+
+.operacao-checklist-card__resumo {
+  color: $color-text-muted;
+  font-size: $font-size-xs;
+
+  .is-completo & {
+    color: $color-primary;
+    font-weight: $font-weight-bold;
+  }
+}
+
+.operacao-checklist-card__filtro {
+  display: inline-flex;
+  align-items: center;
+  gap: $spacing-xs;
+  min-height: 28px;
+  padding: 0 $spacing-sm;
+  border: 1px solid $color-border;
+  border-radius: 999px;
+  background: transparent;
+  color: $color-text-secondary;
+  cursor: pointer;
+  font: inherit;
+  font-size: $font-size-xs;
+  white-space: nowrap;
+  transition:
+    background-color $transition-fast,
+    border-color $transition-fast;
+
+  &:hover,
+  &.is-ativo {
+    border-color: $color-primary-light;
+    background: rgba($color-primary-pale, 0.45);
+  }
+}
+
+.operacao-checklist-card__link {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: $color-primary;
+  cursor: pointer;
+  font: inherit;
+  font-size: $font-size-xs;
+  font-weight: $font-weight-bold;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+// ------------------------------------------------------------
+// Anel de progresso
+// ------------------------------------------------------------
+
+.operacao-checklist-anel {
+  position: relative;
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+
+  svg {
+    width: 100%;
+    height: 100%;
+    transform: rotate(-90deg); // começa no "meio-dia"
+  }
+
+  circle {
+    fill: none;
+    stroke-width: 3.2;
+  }
+}
+
+.operacao-checklist-anel__trilho {
+  stroke: rgba($color-border, 0.7);
+}
+
+.operacao-checklist-anel__valor {
+  stroke: $color-primary;
+  stroke-linecap: round;
+  transition:
+    stroke-dasharray $transition-slow,
+    stroke $transition-normal;
+
+}
+
+.operacao-checklist-anel__texto,
+.operacao-checklist-anel__check {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.operacao-checklist-anel__texto {
+  color: $color-text-primary;
+  font-size: 11px;
+  font-weight: $font-weight-bold;
+}
+
+.operacao-checklist-anel__check {
+  // Completo vira um "selo": disco cheio na cor da marca dentro do anel, com o ✓ claro.
+  inset: 5px;
+  border-radius: 50%;
+  background: $color-primary;
+  color: $color-surface;
+  font-size: 14px;
+  animation: checklist-pop 0.4s ease-out;
+}
+
+.operacao-checklist-anel.is-comemorando {
+  animation: checklist-pulso 0.9s ease-out 2;
+  border-radius: 50%;
+}
+
+// ------------------------------------------------------------
+// Itens
+// ------------------------------------------------------------
+
+.operacao-checklist-card__itens {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.operacao-checklist-item {
+  display: grid;
+  grid-template-columns: auto auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: $spacing-xs;
+  min-height: 40px;
+  padding: 2px $spacing-xs 2px 0;
+  border-radius: $border-radius-sm;
+  background: $color-surface;
+  transition: background-color $transition-fast;
+
+  &:hover {
+    background: rgba($color-primary-pale, 0.22);
+  }
+
+  &.is-pendente {
+    opacity: 0.65;
+  }
+
+  &.is-entrando {
+    animation: checklist-entrar 0.25s ease-out;
+  }
+
+  &.is-saindo {
+    animation: checklist-sair 0.2s ease-in forwards;
+  }
+}
+
+.operacao-checklist-item__alca {
+  @include flex-center;
+  width: 20px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: $border-radius-sm;
+  background: transparent;
+  color: $color-text-muted;
+  cursor: grab;
+  font-size: 12px;
+  opacity: 0.35;
+  transition: opacity $transition-fast;
+
+  &:active {
+    cursor: grabbing;
+  }
+
+  &:focus-visible {
+    opacity: 1;
+    outline: 2px solid $color-primary-light;
+  }
+}
+
+.operacao-checklist-item:hover .operacao-checklist-item__alca {
+  opacity: 1;
+}
+
+// Checkbox redondo: o círculo enche com a cor da marca e o ✓ "se desenha".
+.operacao-checklist-check {
+  @include flex-center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 2px solid $color-primary-light;
+  border-radius: 50%;
+  background: transparent;
+  cursor: pointer;
+  transition:
+    background-color $transition-fast,
+    border-color $transition-fast,
+    transform $transition-fast;
+
+  svg {
+    width: 14px;
+    height: 14px;
+  }
+
+  path {
+    fill: none;
+    stroke: $color-surface;
+    stroke-width: 2.2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-dasharray: 12;
+    stroke-dashoffset: 12;
+    transition: stroke-dashoffset 0.25s ease-out 0.05s;
+  }
+
+  &:hover:not(:disabled) {
+    background: rgba($color-primary-pale, 0.5);
+    transform: scale(1.08);
+  }
+
+  &:focus-visible {
+    outline: 2px solid $color-primary-light;
+    outline-offset: 2px;
+  }
+
+  &:disabled {
+    cursor: default;
+  }
+
+  &[aria-checked='true'] {
+    border-color: $color-primary;
+    background: $color-primary;
+    animation: checklist-pop 0.3s ease-out;
+
+    path {
+      stroke-dashoffset: 0;
+    }
+  }
+}
+
+.operacao-checklist-item__texto {
+  min-width: 0;
+  padding: 0 $spacing-xs;
+  color: $color-text-primary;
+  font-size: $font-size-base;
+  overflow-wrap: anywhere;
+  cursor: text;
+  transition: color $transition-normal;
+
+  // Risco animado: um "sublinhado" no meio da linha que cresce da esquerda pra direita.
+  span {
+    background: linear-gradient(currentColor, currentColor) no-repeat 0 55% / 0 1.5px;
+    box-decoration-break: clone;
+    transition: background-size 0.3s ease-out;
+  }
+
+  .is-done & {
+    color: $color-text-muted;
+
+    span {
+      background-size: 100% 1.5px;
+    }
+  }
+}
+
+.operacao-checklist-item__edicao {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 30px;
+  padding: 2px $spacing-xs;
+  border: 1px solid $color-primary-light;
+  border-radius: $border-radius-sm;
+  background: $color-neutral-light;
+  color: $color-text-primary;
+  font: inherit;
+  outline: none;
+  box-shadow: 0 0 0 3px rgba($rouge-light, 0.16);
+}
+
+.operacao-checklist-item__acoes {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  opacity: 0;
+  transition: opacity $transition-fast;
+}
+
+.operacao-checklist-item:hover .operacao-checklist-item__acoes,
+.operacao-checklist-item:focus-within .operacao-checklist-item__acoes,
+.operacao-checklist-item.is-pendente .operacao-checklist-item__acoes {
+  opacity: 1;
+}
+
+.operacao-checklist-item__salvando {
+  padding: 0 $spacing-xs;
+  color: $color-text-muted;
+  font-size: 12px;
+}
+
+.operacao-checklist-card__icon {
+  @include flex-center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: $border-radius-sm;
+  background: transparent;
+  color: $color-text-secondary;
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  transition:
+    background-color $transition-fast,
+    color $transition-fast;
+
+  &:hover {
+    background: rgba($color-primary-pale, 0.45);
+    color: $color-primary;
+  }
+}
+
+.operacao-checklist-card__icon--danger {
+  color: $color-error;
+
+  &:hover {
+    background: rgba($color-error, 0.08);
+    color: $color-error;
+  }
+}
+
+// Arrastar (CDK)
+.operacao-checklist-item.cdk-drag-preview {
+  border: 1px solid $color-primary-light;
+  box-shadow: $shadow-lg;
+  transform: rotate(1deg);
+}
+
+.operacao-checklist-item.cdk-drag-placeholder {
+  border: 1px dashed $color-primary-light;
+  background: rgba($color-primary-pale, 0.2);
+  opacity: 0.5;
+}
+
+.operacao-checklist-item.cdk-drag-animating,
+.operacao-checklist-card__itens.cdk-drop-list-dragging .operacao-checklist-item:not(.cdk-drag-placeholder) {
+  transition: transform $transition-fast;
+}
+
+.operacao-checklist-card__vazio {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  padding: $spacing-md $spacing-sm;
+  color: $color-text-muted;
+  font-size: $font-size-base;
+
+  i {
+    color: $color-primary-light;
+  }
+}
+
+// ------------------------------------------------------------
+// Novo item (última linha da lista)
+// ------------------------------------------------------------
+
+.operacao-checklist-novo {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  min-height: 38px;
+  padding: 0 $spacing-sm 0 26px; // alinha o "+" com a coluna do checkbox
+  border: 1px dashed $color-border;
+  border-radius: $border-radius-sm;
+  transition:
+    border-color $transition-fast,
+    background-color $transition-fast;
+
+  i {
+    color: $color-primary-light;
+    font-size: 12px;
+  }
+
+  input {
+    flex: 1;
+    min-width: 0;
+    min-height: 34px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: $color-text-primary;
+    font: inherit;
+    outline: none;
+
+    &::placeholder {
+      color: $color-text-muted;
+    }
+  }
+
+  &:focus-within {
+    border-style: solid;
+    border-color: $color-primary-light;
+    background: $color-neutral-light;
+    box-shadow: 0 0 0 3px rgba($rouge-light, 0.16);
+  }
+}
+
+.operacao-checklist-novo__dica {
+  margin-top: -6px;
+  color: $color-text-muted;
+  font-size: 11px;
+  opacity: 0;
+  transition: opacity $transition-fast;
+}
+
+.operacao-checklist-novo:focus-within + .operacao-checklist-novo__dica {
+  opacity: 1;
+}
+
+// ------------------------------------------------------------
+// Desfazer exclusão
+// ------------------------------------------------------------
+
+.operacao-checklist-desfazer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $spacing-sm;
+  padding: $spacing-sm $spacing-md;
+  border-radius: $border-radius-sm;
+  background: $color-secondary;
+  color: $color-surface;
+  font-size: $font-size-xs;
+
+  strong {
+    overflow-wrap: anywhere;
+  }
+
+  .operacao-checklist-card__link {
+    color: $color-primary-pale;
+  }
+
+  &.is-entrando {
+    animation: checklist-entrar 0.2s ease-out;
+  }
+}
+
+// ------------------------------------------------------------
+// Skeleton
+// ------------------------------------------------------------
+
+.operacao-checklist-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-sm;
+}
+
+.operacao-checklist-skeleton__linha {
+  height: 32px;
+  border-radius: $border-radius-sm;
+  background: linear-gradient(
+    90deg,
+    rgba($color-border, 0.25) 0%,
+    rgba($color-border, 0.55) 50%,
+    rgba($color-border, 0.25) 100%
+  );
+  background-size: 200% 100%;
+  animation: checklist-shimmer 1.2s linear infinite;
+
+  &:nth-child(2) {
+    width: 80%;
+  }
+
+  &:nth-child(3) {
+    width: 60%;
+  }
+}
+
+// ------------------------------------------------------------
+// Toque / acessibilidade
+// ------------------------------------------------------------
+
+// Sem mouse não existe "passar por cima": alça e ações ficam sempre visíveis.
+@media (hover: none) {
+  .operacao-checklist-item__alca,
+  .operacao-checklist-item__acoes {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .operacao-checklist-card *,
+  .operacao-checklist-card {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+@media (max-width: 560px) {
+  .operacao-checklist-card__header {
+    flex-wrap: wrap;
+  }
+}
+
+// ------------------------------------------------------------
+// Keyframes
+// ------------------------------------------------------------
+
+@keyframes checklist-entrar {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+
+@keyframes checklist-sair {
+  to {
+    opacity: 0;
+    transform: translateX(12px);
+  }
+}
+
+@keyframes checklist-pop {
+  50% {
+    transform: scale(1.18);
+  }
+}
+
+@keyframes checklist-pulso {
+  0% {
+    box-shadow: 0 0 0 0 rgba($color-primary-light, 0.45);
+  }
+
+  100% {
+    box-shadow: 0 0 0 12px rgba($color-primary-light, 0);
+  }
+}
+
+@keyframes checklist-shimmer {
+  from {
+    background-position: 200% 0;
+  }
+
+  to {
+    background-position: -200% 0;
+  }
+}

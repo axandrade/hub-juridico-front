@@ -40,7 +40,9 @@ export interface UploadUrlApi {
   http_method: string;
   expires_in_seconds: number;
   chunked: boolean;
-  chunk_size_bytes: number | null;
+  chunk_size_bytes?: number | null;
+  /** Cabeçalhos exigidos pelo storage; opcional para APIs anteriores. */
+  headers?: Record<string, string>;
 }
 
 export interface DownloadUrlApi {

@@ -4,13 +4,14 @@ import { ChangeDetectionStrategy, Component, computed, inject, input, output, si
 import { DATE_FORMAT } from '../../../../core/constants/app-constants';
 import { DomainService } from '../../../../core/services/domain.service';
 import { ButtonComponent } from '../../../../shared/components/button/button.component';
+import { ColumnsMenuComponent } from '../../../../shared/components/columns-menu/columns-menu.component';
 import { DomainModelTableComponent } from '../../../../shared/components/domain-table/domain-model-table.component';
 import { TableColumn } from '../../../../shared/components/table/table-column.model';
 import { ModalComponent } from '../../../../shared/components/modal/modal.component';
 import { PanelLayoutSwitcherComponent } from '../../../../shared/components/panel-layout-switcher/panel-layout-switcher.component';
 import { PAINEL_LAYOUT_PADRAO, PainelLayout } from '../../../../shared/models/panel-layout';
 import { ToastService } from '../../../../shared/services/toast.service';
-import { OperacaoRow, TIPO_OPERACAO_LABEL } from '../../services/operacao-api.model';
+import { OperacaoRow, STATUS_OPERACAO_LABEL, TIPO_OPERACAO_LABEL } from '../../services/operacao-api.model';
 import { OperacaoFormComponent } from '../operacao-form/operacao-form.component';
 
 /**
@@ -19,10 +20,13 @@ import { OperacaoFormComponent } from '../operacao-form/operacao-form.component'
  * Advogados: divide espaço com a tabela, não fica por cima dela; o dono do controller é o pai,
  * este componente só recebe `layoutPainel`/emite `layoutPainelChange`, igual
  * `AdvogadoFormComponent`). Uma segunda `app-domain-model-table`, apontada pra `/domain/operacao`,
- * filtrada por `processoId eq {processoId} and ativo eq true`. "Novo" e o ícone de editar de
- * cada linha (`editAction`) abrem `app-operacao-form` dentro de um `app-modal` (mesmo padrão de
- * Usuários — dialog, não painel, porque este painel já mostra a tabela). O ícone de excluir
- * (`deleteAction`) inativa direto (soft-delete), sem abrir o form.
+ * filtrada por `processoId eq {processoId} and ativo eq true`. "Novo" e clicar numa linha
+ * (`rowClick`, sem ícone de editar dedicado) abrem `app-operacao-form` dentro de um `app-modal`
+ * (mesmo padrão de Usuários — dialog, não painel, porque este painel já mostra a tabela). Os dois
+ * ícones de ação ficam na linha (com `stopPropagation`, não disparam o `rowClick`): o que era
+ * "editar" virou "marcar como cumprido" (`editAction` reaproveitado — `PATCH status='CUMPRIDO'`
+ * direto, com confirmação, sem abrir o form) e "excluir" (`deleteAction`) inativa direto
+ * (soft-delete), também sem abrir o form.
  *
  * A coluna "Ordem" é derivada no cliente (não existe na entidade): posição cronológica de
  * cadastro (1º = mais antiga), calculada a partir de `criadoEm`/`id` de TODA a lista carregada —
@@ -35,7 +39,14 @@ import { OperacaoFormComponent } from '../operacao-form/operacao-form.component'
 @Component({
   selector: 'app-operacoes-processo-panel',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [DomainModelTableComponent, ButtonComponent, ModalComponent, PanelLayoutSwitcherComponent, OperacaoFormComponent],
+  imports: [
+    DomainModelTableComponent,
+    ButtonComponent,
+    ModalComponent,
+    PanelLayoutSwitcherComponent,
+    OperacaoFormComponent,
+    ColumnsMenuComponent,
+  ],
   templateUrl: './operacoes-processo-panel.component.html',
   styleUrl: './operacoes-processo-panel.component.scss',
 })
@@ -51,7 +62,7 @@ export class OperacoesProcessoPanelComponent {
   readonly layoutPainelChange = output<PainelLayout>();
   readonly fechar = output<void>();
 
-  private readonly grade = viewChild(DomainModelTableComponent<OperacaoRow>);
+  protected readonly grade = viewChild(DomainModelTableComponent<OperacaoRow>);
 
   /** `null` = fechado, `'novo'` = cadastro, `número` = editando a operação daquele id. */
   protected readonly formAberto = signal<'novo' | number | null>(null);
@@ -77,6 +88,8 @@ export class OperacoesProcessoPanelComponent {
       header: 'Ordem',
       width: '70px',
       align: 'center',
+      // Calculada no cliente (posição cronológica entre as carregadas) — não existe no backend, então não dá pra ordenar por ela via RQL.
+      sortable: false,
       formatter: (_value, row) => {
         const posicao = this.ordemPorId().get(row.id);
         return posicao ? `${posicao}º` : '—';
@@ -107,14 +120,16 @@ export class OperacoesProcessoPanelComponent {
     {
       key: 'prazoFatal',
       header: 'Prazo',
-      width: '110px',
-      formatter: (value) => (value ? formatDate(String(value), DATE_FORMAT.SHORT, DATE_FORMAT.LOCALE) : '—'),
+      width: '140px',
+      // Agora datetime único (data + hora, ver Operacao.prazoFatal) — LONG mostra os dois.
+      formatter: (value) => (value ? formatDate(String(value), DATE_FORMAT.LONG, DATE_FORMAT.LOCALE) : '—'),
     },
     {
       key: 'status',
       header: 'Status',
       width: '120px',
-      formatter: (value) => (value ? String(value) : '—'),
+      formatter: (value) =>
+        STATUS_OPERACAO_LABEL[value as NonNullable<OperacaoRow['status']>] ?? String(value ?? '—'),
     },
   ];
 
@@ -137,7 +152,7 @@ export class OperacoesProcessoPanelComponent {
     this.formAberto.set('novo');
   }
 
-  /** Ícone "editar" da grade (`editAction`) — arrow function de propósito, ver `DomainModelTableComponent.editAction`. */
+  /** Clique na linha da grade (`rowClick`) — sem ícone de editar dedicado. */
   protected readonly abrirEdicao = (row: OperacaoRow): void => {
     this.formAberto.set(row.id);
   };
@@ -145,6 +160,28 @@ export class OperacoesProcessoPanelComponent {
   protected fecharForm(): void {
     this.formAberto.set(null);
   }
+
+  /**
+   * Ícone "marcar como cumprido" da grade (`editAction` — reaproveita o slot que antes abria o
+   * form de edição, ver comentário da classe) — `PATCH status='CUMPRIDO'` direto, sem abrir o
+   * form. Confirma antes, mesmo padrão de `excluirOperacao`. Arrow function de propósito, ver
+   * `DomainModelTableComponent.editAction`.
+   */
+  protected readonly marcarComoCumprido = (row: OperacaoRow): void => {
+    const confirmado = this.document.defaultView?.confirm(
+      `Marcar a operação "${row.titulo ?? 'sem título'}" como cumprida?`,
+    );
+    if (!confirmado) {
+      return;
+    }
+    this.domainService.patch({ entityName: 'operacao', entityId: row.id, body: { status: 'CUMPRIDO' } }).subscribe({
+      next: () => {
+        this.toast.sucesso('Operação marcada como cumprida.');
+        this.grade()?.reload();
+      },
+      error: () => this.toast.erro('Não foi possível atualizar o status.'),
+    });
+  };
 
   /**
    * Ícone "excluir" da grade (`deleteAction`) — soft-delete: `PATCH ativo=false`, mesma

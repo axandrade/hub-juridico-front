@@ -5,10 +5,10 @@
   display: block;
 }
 
-// Grid posicionável — mesmo mecanismo de Processos/Advogados (`PanelShellController`), só que
-// aqui o painel só existe quando um processo está selecionado (ver `painelAtivo()` no
-// componente); sem seleção, `.operacoes--panel-hidden` colapsa pra uma coluna só.
-.operacoes {
+// Grid posicionável — mesmo mecanismo de Processos/Advogados (`PanelShellController`). Painel
+// aberto por padrão; sem processo selecionado mostra `.processo-lista-panel-empty` em vez do conteúdo.
+// `.processo-lista--panel-hidden` (painel oculto pela preferência salva) colapsa pra uma coluna só.
+.processo-lista {
   --painel-largura: 720px;
   --painel-altura: 340px;
 
@@ -21,10 +21,10 @@
   &[data-layout='right'] {
     grid-template-columns: minmax(0, 1fr) var(--painel-largura);
 
-    .operacoes-panel-slot {
+    .processo-lista-panel-slot {
       order: 2;
     }
-    .operacoes-main {
+    .processo-lista-main {
       order: 1;
     }
   }
@@ -34,12 +34,12 @@
     grid-template-columns: minmax(0, 1fr);
     grid-template-rows: minmax(0, 1fr) var(--painel-altura);
 
-    .operacoes-panel-slot {
+    .processo-lista-panel-slot {
       order: 2;
       min-height: 0;
       overflow: auto;
     }
-    .operacoes-main {
+    .processo-lista-main {
       order: 1;
       min-height: 0;
       max-height: none;
@@ -49,7 +49,7 @@
   &[data-layout='dialog'] {
     grid-template-columns: minmax(0, 1fr);
 
-    .operacoes-panel-slot {
+    .processo-lista-panel-slot {
       position: fixed;
       z-index: $z-overlay;
       top: 50%;
@@ -62,16 +62,16 @@
 
   // Painel oculto (ou sem processo selecionado) — vale para todos os layouts, então precisa
   // vencer os seletores acima.
-  &.operacoes--panel-hidden {
+  &.processo-lista--panel-hidden {
     grid-template-columns: minmax(0, 1fr);
 
-    .operacoes-panel-slot {
+    .processo-lista-panel-slot {
       display: none;
     }
   }
 }
 
-.operacoes-main {
+.processo-lista-main {
   display: flex;
   flex-direction: column;
   min-width: 0;
@@ -84,7 +84,7 @@
   box-shadow: $shadow-sm;
 }
 
-.operacoes-actions {
+.processo-lista-actions {
   @include flex-between;
   gap: $spacing-md;
   margin-bottom: $spacing-md;
@@ -92,9 +92,15 @@
   h1 {
     margin: 0;
   }
+
+  &__buttons {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+  }
 }
 
-.operacoes-panel-toggle {
+.processo-lista-panel-toggle {
   display: inline-flex;
   min-height: 34px;
   align-items: center;
@@ -123,7 +129,7 @@
 }
 
 // Seção "Pesquisar" — mesmo desenho de Advogados/Clientes (rótulo em cima, contador à direita).
-.operacoes-search-section {
+.processo-lista-search-section {
   display: grid;
   grid-template-columns: 1fr auto;
   grid-template-areas:
@@ -148,7 +154,7 @@
   }
 }
 
-.operacoes-search {
+.processo-lista-search {
   grid-area: input;
   display: flex;
   align-items: center;
@@ -198,14 +204,14 @@
   }
 }
 
-.operacoes-table-wrap {
+.processo-lista-table-wrap {
   @include thin-scrollbar;
   flex: 1;
   min-height: 0;
   overflow: auto;
 }
 
-.operacoes-main__footer {
+.processo-lista-main__footer {
   display: flex;
   align-items: center;
   gap: $spacing-xs;
@@ -214,7 +220,7 @@
   font-size: $font-size-xs;
 }
 
-.operacoes-link-button {
+.processo-lista-link-button {
   border: 0;
   padding: 0;
   background: none;
@@ -224,12 +230,39 @@
   text-decoration: underline;
 }
 
-.operacoes-panel-slot {
+.processo-lista-panel-slot {
   position: relative;
   min-width: 0;
 }
 
-.operacoes-panel-slot__close {
+// Estado vazio do painel — sem processo selecionado, ocupa o mesmo espaço que o painel de
+// operações ocuparia, avisando o que fazer em vez de mostrar espaço em branco.
+.processo-lista-panel-empty {
+  @include flex-center;
+  flex-direction: column;
+  gap: $spacing-sm;
+  height: 100%;
+  min-height: 220px;
+  padding: $spacing-lg;
+  border: 1px dashed $color-border;
+  border-radius: $border-radius-md;
+  background-color: $color-neutral-light;
+  color: $color-text-muted;
+  text-align: center;
+
+  i {
+    font-size: 1.75rem;
+    color: $color-text-secondary;
+  }
+
+  p {
+    margin: 0;
+    max-width: 32ch;
+    font-size: $font-size-base;
+  }
+}
+
+.processo-lista-panel-slot__close {
   @include flex-center;
   position: absolute;
   top: -14px;
@@ -253,7 +286,7 @@
   }
 }
 
-.operacoes-panel-backdrop {
+.processo-lista-panel-backdrop {
   position: fixed;
   inset: 0;
   z-index: $z-overlay - 1;
@@ -263,7 +296,7 @@
   cursor: pointer;
 }
 
-.operacoes-resizer {
+.processo-lista-resizer {
   position: absolute;
   z-index: 4;
   touch-action: none;
@@ -282,7 +315,7 @@
   }
 }
 
-.operacoes-resizer--left {
+.processo-lista-resizer--left {
   top: 0;
   bottom: 0;
   left: var(--painel-largura);
@@ -299,7 +332,7 @@
   }
 }
 
-.operacoes-resizer--right {
+.processo-lista-resizer--right {
   top: 0;
   bottom: 0;
   right: var(--painel-largura);
@@ -316,7 +349,7 @@
   }
 }
 
-.operacoes-resizer--bottom {
+.processo-lista-resizer--bottom {
   left: 0;
   right: 0;
   bottom: var(--painel-altura);
@@ -336,25 +369,25 @@
 @include respond-below($breakpoint-lg) {
   // Telas estreitas: qualquer layout dockeado vira coluna única e sem redimensionador
   // (o modo diálogo continua flutuando).
-  .operacoes[data-layout='left'],
-  .operacoes[data-layout='right'],
-  .operacoes[data-layout='bottom'] {
+  .processo-lista[data-layout='left'],
+  .processo-lista[data-layout='right'],
+  .processo-lista[data-layout='bottom'] {
     height: auto;
     grid-template-columns: minmax(0, 1fr);
     grid-template-rows: none;
   }
 
-  .operacoes-resizer {
+  .processo-lista-resizer {
     display: none;
   }
 
-  .operacoes-main {
+  .processo-lista-main {
     max-height: none;
   }
 }
 
 @include respond-below($breakpoint-sm) {
-  .operacoes-actions {
+  .processo-lista-actions {
     align-items: stretch;
     flex-direction: column;
   }

@@ -12,6 +12,7 @@ export const ROUTES = {
   ADVOGADOS: 'advogados',
   PROCESSOS: 'processos',
   OPERACOES: 'operacoes',
+  ANDAMENTOS_AUTOMATICOS: 'andamentos-automaticos',
   USUARIOS: 'usuarios',
   LOGIN: 'login',
   CHANGE_PASSWORD: 'trocar-senha',
@@ -35,6 +36,12 @@ export const SIDEBAR_NAV: readonly NavItem[] = [
   { label: 'Tarefas', icon: 'fa-solid fa-square-check', emphasis: 'neutral' },
   { label: 'Compromissos', icon: 'fa-solid fa-clock', emphasis: 'neutral' },
   { label: 'Operações', icon: 'fa-solid fa-bell', route: `/${ROUTES.OPERACOES}`, emphasis: 'accent' },
+  {
+    label: 'Andamentos Automáticos',
+    icon: 'fa-solid fa-robot',
+    route: `/${ROUTES.ANDAMENTOS_AUTOMATICOS}`,
+    emphasis: 'accent',
+  },
   { label: 'Rastreamentos', icon: 'fa-solid fa-tower-broadcast', emphasis: 'accent' },
   {
     label: 'Clientes',

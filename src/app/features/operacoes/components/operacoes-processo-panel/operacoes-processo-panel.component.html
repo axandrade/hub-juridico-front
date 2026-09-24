@@ -25,6 +25,17 @@
       label="Novo"
       (clicked)="abrirNovo()"
     />
+
+    @if (grade(); as tabela) {
+      <app-columns-menu
+        [columns]="colunas"
+        [isVisible]="tabela.columnVisibilityState.isVisible"
+        [menuOpen]="tabela.columnVisibilityState.menuOpen()"
+        (menuOpenChange)="tabela.columnVisibilityState.menuOpen.set($event)"
+        (toggleColumn)="tabela.columnVisibilityState.toggle($event)"
+        (toggleAll)="tabela.columnVisibilityState.toggleAll($event)"
+      />
+    }
   </div>
 
   <div class="operacoes-processo-panel__table-wrap">
@@ -33,17 +44,23 @@
       fields="id,tipo,titulo,providencia,prazoFatal,status,criadoEm,processoId"
       [columns]="colunas"
       [columnsToolbar]="false"
+      [columnVisibility]="true"
+      [columnReorder]="true"
+      columnsStorageKey="hub-juridico.operacoes.operacao.colunas"
       [filter]="filtro()"
       [size]="200"
       sort="-criadoEm"
       trackKey="id"
       emptyMessage="Nenhuma operação cadastrada para este processo."
+      [sortable]="true"
       [favoritable]="false"
-      [editAction]="abrirEdicao"
-      editAriaLabel="Editar operação"
+      [editAction]="marcarComoCumprido"
+      editIcon="fa-solid fa-check"
+      editAriaLabel="Marcar como cumprido"
       [deleteAction]="excluirOperacao"
       deleteAriaLabel="Excluir operação"
       (dataLoaded)="onDataLoaded($event)"
+      (rowClick)="abrirEdicao($event)"
     />
   </div>
 </section>
@@ -53,6 +70,7 @@
     <app-operacao-form
       [processoId]="processoId()"
       [operacaoId]="operacaoIdParaForm()"
+      [numeroCnj]="numeroCnj()"
       (salvo)="onOperacaoSalva()"
       (cancelado)="fecharForm()"
     />

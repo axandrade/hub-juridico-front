@@ -1,109 +1,50 @@
-<form class="operacao-form" [formGroup]="form" (ngSubmit)="salvar()">
-  <div class="operacao-form__grid">
-    <label class="operacao-field">
-      <span>Tipo</span>
-      <app-combobox
-        ariaLabel="Tipo da operação"
-        [pesquisavel]="false"
-        [disabled]="tipoTravado()"
-        [options]="tipoOpcoes"
-        [value]="tipoRotulo()"
-        (valueChange)="onTipoChange($event)"
-      />
-    </label>
-
-    <label class="operacao-field">
-      <span>Status</span>
-      <input type="text" formControlName="status" maxlength="30" autocomplete="off" />
-    </label>
-
-    <label class="operacao-field operacao-field--full">
-      <span>Título</span>
-      <input type="text" formControlName="titulo" maxlength="70" autocomplete="off" />
-    </label>
-
-    <label class="operacao-field">
-      <span>Prazo</span>
-      <input type="date" formControlName="prazoFatal" />
-    </label>
-
-    <div class="operacao-field">
-      <span>Responsável</span>
-      <app-domain-model-dropdown
-        ariaLabel="Responsável pela operação"
-        placeholder="Buscar usuário..."
-        emptyLabel="— Sem responsável —"
-        noResultsText="Nenhum usuário encontrado"
-        entityName="user"
-        fields="id,name"
-        [searchFields]="['name']"
-        filter="status eq 'ACTIVE'"
-        sort="name"
-        [displayFormatter]="rotuloUsuario"
-        [value]="responsavelValor()"
-        [valueLabel]="responsavelLabel()"
-        (valueChange)="onResponsavelChange($event)"
-      />
-    </div>
-
-    @if (ehTarefaOuCompromisso()) {
-      <label class="operacao-field">
-        <span>Hora início</span>
-        <input type="time" formControlName="horaInicio" />
-      </label>
-      <label class="operacao-field">
-        <span>Hora fim</span>
-        <input type="time" formControlName="horaFim" />
-      </label>
-    }
-
-    @if (ehTarefa()) {
-      <label class="operacao-field">
-        <span>Importância</span>
-        <app-combobox
-          ariaLabel="Importância da tarefa"
-          [pesquisavel]="false"
-          [emptyLabel]="'— Sem importância —'"
-          [options]="importanciaOpcoes"
-          [value]="form.controls.importancia.value"
-          (valueChange)="form.controls.importancia.setValue($event)"
-        />
-      </label>
-    }
-
-    @if (ehIntimacao()) {
-      <label class="operacao-field">
-        <span>Data do evento</span>
-        <input type="date" formControlName="dataEvento" />
-      </label>
-      <label class="operacao-field">
-        <span>Hora do evento</span>
-        <input type="time" formControlName="horaEvento" />
-      </label>
-      <label class="operacao-field">
-        <span>Hora do prazo</span>
-        <input type="time" formControlName="horaPrazo" />
-      </label>
-      <label class="operacao-field">
-        <span>Origem</span>
-        <input type="text" formControlName="origem" maxlength="60" autocomplete="off" />
-      </label>
-      <label class="operacao-field operacao-field--full">
-        <span>Link</span>
-        <input type="text" formControlName="link" maxlength="500" autocomplete="off" />
-      </label>
-      <label class="operacao-field operacao-field--full">
-        <span>Teor</span>
-        <textarea formControlName="teor" rows="3"></textarea>
-      </label>
-      <label class="operacao-field operacao-field--full">
-        <span>Providência</span>
-        <textarea formControlName="providencia" rows="3"></textarea>
-      </label>
-    }
+<section class="operacao-form" aria-label="Cadastro de operação">
+  <div class="operacao-form__processo-badge">
+    <i class="fa-solid fa-scale-balanced" aria-hidden="true"></i>
+    <span class="operacao-form__processo-label">Processo</span>
+    <span class="operacao-form__processo-cnj">{{ numeroCnj() || 'sem número CNJ' }}</span>
   </div>
 
-  <div class="operacao-form__acoes">
+  <nav class="operacao-form__tabs" aria-label="Abas da operação">
+    @for (aba of abas; track aba) {
+      <button type="button" [class.is-active]="abaAtiva() === aba" (click)="trocarAba(aba)">
+        @switch (aba) {
+          @case ('informacoesGerais') {
+            Informações gerais
+          }
+          @case ('checklists') {
+            Checklists
+            @if (checklists()?.resumo(); as resumo) {
+              @if (resumo.total) {
+                <span
+                  class="operacao-form__aba-contador"
+                  [class.is-completo]="resumo.concluidos === resumo.total"
+                  [attr.aria-label]="resumo.concluidos + ' de ' + resumo.total + ' concluídos'"
+                >
+                  {{ resumo.concluidos }}/{{ resumo.total }}
+                </span>
+              }
+            }
+          }
+          @case ('comentarios') {
+            Comentários
+          }
+          @case ('historico') {
+            Histórico
+          }
+        }
+      </button>
+    }
+  </nav>
+
+  <div class="operacao-form__conteudo">
+    <app-operacao-informacoes-gerais [hidden]="abaAtiva() !== 'informacoesGerais'" />
+    <app-operacao-checklists [hidden]="abaAtiva() !== 'checklists'" [operacaoId]="entityId()" />
+    <app-operacao-comentarios [hidden]="abaAtiva() !== 'comentarios'" [operacaoId]="entityId()" />
+    <app-operacao-historico [hidden]="abaAtiva() !== 'historico'" [operacaoId]="entityId()" />
+  </div>
+
+  <footer class="operacao-form__acoes">
     <app-button variant="tertiary" size="sm" label="Cancelar" (clicked)="cancelar()" />
     <app-button
       variant="primary"
@@ -113,5 +54,5 @@
       [disabled]="salvando()"
       (clicked)="salvar()"
     />
-  </div>
-</form>
+  </footer>
+</section>

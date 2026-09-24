@@ -1,8 +1,12 @@
-import { ChangeDetectionStrategy, Component, computed, input, output, signal } from '@angular/core';
+import { DOCUMENT } from '@angular/common';
+import { CdkDrag, CdkDragDrop, CdkDropList } from '@angular/cdk/drag-drop';
+import { ChangeDetectionStrategy, Component, computed, effect, inject, input, output, signal } from '@angular/core';
 
+import { ColumnVisibilityController } from '../../column-visibility/column-visibility.controller';
 import { DateFormatPipe } from '../../pipes/date-format.pipe';
 import { CurrencyFormatPipe } from '../../pipes/currency-format.pipe';
 import { BadgeComponent } from '../badge/badge.component';
+import { ColumnsMenuComponent } from '../columns-menu/columns-menu.component';
 import { TableColumn } from './table-column.model';
 import { TablePagination, TablePinAction, TableSort } from './table.model';
 
@@ -21,11 +25,13 @@ import { TablePagination, TablePinAction, TableSort } from './table.model';
 @Component({
   selector: 'app-data-table',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [DateFormatPipe, CurrencyFormatPipe, BadgeComponent],
+  imports: [DateFormatPipe, CurrencyFormatPipe, BadgeComponent, ColumnsMenuComponent, CdkDropList, CdkDrag],
   templateUrl: './data-table.component.html',
   styleUrl: './data-table.component.scss',
 })
 export class DataTableComponent<T extends object> {
+  private readonly document = inject(DOCUMENT);
+
   readonly columns = input.required<TableColumn<T>[]>();
   readonly data = input.required<T[]>();
   readonly loading = input<boolean>(false);
@@ -42,13 +48,17 @@ export class DataTableComponent<T extends object> {
   /** Habilita o recurso de mostrar/ocultar colunas. */
   readonly columnVisibility = input<boolean>(false);
   /**
-   * `true` (padrão): a tabela desenha o próprio botão "Colunas" acima dela.
-   * `false`: o pai desenha o botão/menu e comanda via a API pública
-   * (`columnsMenuOpen`, `toggleColumnsMenu`, `isColumnVisible`, `toggleColumnVisibility`, `columns`).
+   * `true` (padrão): a tabela desenha o próprio `<app-columns-menu>` acima dela.
+   * `false`: o pai desenha o `<app-columns-menu>` e comanda via a API pública
+   * (`columnVisibilityState`, `columns`).
    */
   readonly columnsToolbar = input<boolean>(true);
   /** Colunas visíveis por padrão (por `key`); `null` = todas. */
   readonly defaultVisibleColumns = input<readonly string[] | null>(null);
+  /** Chave de `localStorage` pra lembrar a escolha de colunas visíveis entre sessões; `null` = não persiste. */
+  readonly columnsStorageKey = input<string | null>(null);
+  /** Habilita arrastar o cabeçalho da coluna pra reordenar (persiste junto de `columnsStorageKey`). */
+  readonly columnReorder = input<boolean>(false);
 
   /** Busca livre client-side (aplicada sobre `data`, não refaz requisição). */
   readonly searchQuery = input<string>('');
@@ -77,20 +87,23 @@ export class DataTableComponent<T extends object> {
   readonly pageChange = output<number>();
 
   private readonly sortOverride = signal<TableSort | null>(null);
-  private readonly visibleKeysOverride = signal<Set<string> | null>(null);
+  /** Público: o pai usa isso pra desenhar o próprio `<app-columns-menu>` (`columnsToolbar=false`). */
+  readonly columnVisibilityState = new ColumnVisibilityController<T>(this.document, {
+    columns: () => this.columns(),
+    defaultVisibleColumns: () => this.defaultVisibleColumns(),
+    storageKey: () => this.columnsStorageKey(),
+  });
   /** Tooltip customizado atualmente exibido (linha sob o mouse), com posição em coordenadas de viewport. */
   protected readonly hoveredTooltip = signal<{ text: string; top: number; left: number } | null>(null);
-  /** Público: o pai pode ler/fechar o menu quando desenha o próprio botão (`columnsToolbar=false`). */
-  readonly columnsMenuOpen = signal(false);
 
   protected readonly effectiveSort = computed(() => this.sortOverride() ?? this.initialSort());
 
   protected readonly visibleColumns = computed(() => {
+    const ordered = this.columnVisibilityState.orderedColumns();
     if (!this.columnVisibility()) {
-      return this.columns();
+      return ordered;
     }
-    const keys = this.visibleKeysOverride() ?? this.defaultVisibleKeys();
-    return this.columns().filter((column) => keys.has(column.key));
+    return ordered.filter((column) => this.columnVisibilityState.isVisible(column.key));
   });
 
   protected readonly rows = computed(() => {
@@ -137,6 +150,12 @@ export class DataTableComponent<T extends object> {
 
   protected readonly hasColumnFilters = computed(() => this.visibleColumns().some((column) => column.filter));
 
+  constructor() {
+    // Nunca dentro do `computed` de `visibleColumns` (ver `ColumnVisibilityController.carregarStorage`).
+    effect(() => this.columnVisibilityState.carregarStorage());
+    effect(() => this.columnVisibilityState.carregarOrdemStorage());
+  }
+
   protected columnFilterValue(key: string): string {
     return this.columnFilterValues()?.[key] ?? '';
   }
@@ -145,30 +164,8 @@ export class DataTableComponent<T extends object> {
     this.columnFilterChange.emit({ key, value });
   }
 
-  toggleColumnsMenu(): void {
-    this.columnsMenuOpen.update((open) => !open);
-  }
-
-  isColumnVisible(key: string): boolean {
-    const keys = this.visibleKeysOverride() ?? this.defaultVisibleKeys();
-    return keys.has(key);
-  }
-
-  toggleColumnVisibility(key: string): void {
-    const next = new Set(this.visibleKeysOverride() ?? this.defaultVisibleKeys());
-    if (next.has(key)) {
-      if (next.size > 1) {
-        next.delete(key);
-      }
-    } else {
-      next.add(key);
-    }
-    this.visibleKeysOverride.set(next);
-  }
-
-  private defaultVisibleKeys(): Set<string> {
-    const defaults = this.defaultVisibleColumns();
-    return defaults ? new Set(defaults) : new Set(this.columns().map((column) => column.key));
+  protected onColumnDropped(event: CdkDragDrop<TableColumn<T>[]>): void {
+    this.columnVisibilityState.reorder(event.previousIndex, event.currentIndex);
   }
 
   protected sortBy(key: string): void {

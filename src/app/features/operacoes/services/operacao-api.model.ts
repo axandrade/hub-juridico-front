@@ -7,7 +7,38 @@ export const TIPO_OPERACAO_LABEL: Record<TipoOperacao, string> = {
   COMPROMISSO: 'Compromisso',
 };
 
-/** Linha crua de `/domain/operacao` (camelCase) — ver backend `Operacao`/migration V31. */
+/** Ver backend `StatusOperacao`/migration V31. */
+export type StatusOperacao = 'CUMPRIDO' | 'NAO_CUMPRIDO' | 'PENDENTE' | 'ATRASADO';
+
+export const STATUS_OPERACAO_LABEL: Record<StatusOperacao, string> = {
+  CUMPRIDO: 'Cumprido',
+  NAO_CUMPRIDO: 'Não cumprido',
+  PENDENTE: 'Pendente',
+  ATRASADO: 'Atrasado',
+};
+
+/** Ver backend `OrigemOperacao`/migration V31. Só `TipoOperacao.INTIMACAO` usa este campo. */
+export type OrigemOperacao =
+  | 'CADASTRO_MANUAL'
+  | 'ANDAMENTO_AUTOMATICO'
+  | 'DIARIO'
+  | 'EMAIL'
+  | 'TELEFONE_WHATSAPP'
+  | 'SISTEMA_EXTERNO';
+
+export const ORIGEM_OPERACAO_LABEL: Record<OrigemOperacao, string> = {
+  CADASTRO_MANUAL: 'Cadastro manual',
+  ANDAMENTO_AUTOMATICO: 'Andamento automático',
+  DIARIO: 'Diário',
+  EMAIL: 'Email',
+  TELEFONE_WHATSAPP: 'Telefone/WhatsApp',
+  SISTEMA_EXTERNO: 'Sistema externo',
+};
+
+/**
+ * Linha crua de `/domain/operacao` (camelCase) — ver backend `Operacao`/migration V31.
+ * `prazoFatal` é datetime (data + hora), ISO com timezone — `Instant` no backend.
+ */
 export interface OperacaoRow {
   id: number;
   tipo: TipoOperacao;
@@ -15,7 +46,7 @@ export interface OperacaoRow {
   titulo: string | null;
   providencia: string | null;
   prazoFatal: string | null;
-  status: string | null;
+  status: StatusOperacao | null;
   criadoEm: string | null;
 }
 
@@ -29,15 +60,12 @@ export interface OperacaoDetalheRow {
   horaInicio: string | null;
   horaFim: string | null;
   importancia: string | null;
-  dataEvento: string | null;
-  horaEvento: string | null;
-  horaPrazo: string | null;
-  origem: string | null;
+  origem: OrigemOperacao | null;
   link: string | null;
   teor: string | null;
   providencia: string | null;
   responsavelId: number | null;
-  status: string | null;
+  status: StatusOperacao | null;
 }
 
 /**
@@ -53,13 +81,10 @@ export interface OperacaoWriteApi {
   hora_inicio: string | null;
   hora_fim: string | null;
   importancia: string | null;
-  data_evento: string | null;
-  hora_evento: string | null;
-  hora_prazo: string | null;
-  origem: string | null;
+  origem: OrigemOperacao | null;
   link: string | null;
   teor: string | null;
   providencia: string | null;
   responsavel_id: number | null;
-  status: string;
+  status: StatusOperacao;
 }

@@ -1,0 +1,25 @@
+<div class="columns-menu">
+  <button type="button" class="columns-menu__toggle" [class.is-active]="menuOpen()" (click)="toggleMenu()">
+    <i class="fa-solid fa-table-columns" aria-hidden="true"></i>
+    Colunas
+  </button>
+  @if (menuOpen()) {
+    <div class="columns-menu__dropdown" role="menu">
+      <label class="columns-menu__select-all">
+        <input
+          type="checkbox"
+          [checked]="allVisible()"
+          [indeterminate]="someVisible() && !allVisible()"
+          (change)="onToggleAllClick()"
+        />
+        <span>Todas</span>
+      </label>
+      @for (column of columns(); track column.key) {
+        <label>
+          <input type="checkbox" [checked]="isVisible()(column.key)" (change)="toggleColumn.emit(column.key)" />
+          <span>{{ column.header }}</span>
+        </label>
+      }
+    </div>
+  }
+</div>

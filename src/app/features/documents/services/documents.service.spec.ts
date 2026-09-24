@@ -68,7 +68,7 @@ describe('DocumentsService', () => {
 
     const urlReq = http.expectOne(`${BASE}/documentos/upload-url`);
     expect(urlReq.request.body).toEqual({
-      pessoa_id: 1,
+      dono_id: 1,
       pasta_id: null,
       content_type: 'application/pdf',
       tamanho_bytes: arquivo.size,

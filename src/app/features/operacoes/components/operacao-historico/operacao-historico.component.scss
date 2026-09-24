@@ -1,0 +1,132 @@
+@use 'variables' as *;
+@use 'mixins' as *;
+
+:host {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  flex-direction: column;
+}
+
+:host([hidden]) {
+  display: none;
+}
+
+.operacao-historico {
+  @include thin-scrollbar;
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  flex-direction: column;
+  gap: $spacing-md;
+  padding: $spacing-md;
+  overflow: auto;
+}
+
+.operacao-historico__empty {
+  @include flex-center;
+  flex: 1;
+  min-height: 180px;
+  flex-direction: column;
+  gap: $spacing-sm;
+  color: $color-text-muted;
+  text-align: center;
+
+  i {
+    color: $color-primary;
+    font-size: 24px;
+  }
+
+  p {
+    margin: 0;
+    font-size: $font-size-base;
+  }
+}
+
+.operacao-historico-lista {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-xs;
+}
+
+.operacao-historico-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: $spacing-sm;
+  border-radius: $border-radius-sm;
+  background: rgba($color-border, 0.22);
+}
+
+.operacao-historico-item__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $spacing-sm;
+}
+
+.operacao-historico-item__campo {
+  color: $color-text-primary;
+  font-size: $font-size-xs;
+  font-weight: $font-weight-bold;
+}
+
+.operacao-historico-item__data {
+  color: $color-text-muted;
+  font-size: $font-size-xs;
+}
+
+.operacao-historico-item__mudanca {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: $spacing-xs;
+  margin: 0;
+  font-size: $font-size-base;
+
+  i {
+    color: $color-text-muted;
+    font-size: $font-size-xs;
+  }
+}
+
+.operacao-historico-item__evento {
+  display: flex;
+  align-items: baseline;
+  gap: $spacing-xs;
+  margin: 0;
+  color: $color-text-primary;
+  font-size: $font-size-base;
+  overflow-wrap: anywhere;
+
+  i {
+    color: $color-primary;
+    font-size: $font-size-xs;
+  }
+
+  &.is-remocao {
+    color: $color-text-muted;
+    text-decoration: line-through;
+
+    i {
+      color: $color-error;
+    }
+  }
+}
+
+.operacao-historico-item__anterior {
+  color: $color-text-muted;
+  text-decoration: line-through;
+  overflow-wrap: anywhere;
+}
+
+.operacao-historico-item__novo {
+  color: $color-text-primary;
+  font-weight: $font-weight-bold;
+  overflow-wrap: anywhere;
+}
+
+.operacao-historico-item__autor {
+  color: $color-text-muted;
+  font-size: $font-size-xs;
+}

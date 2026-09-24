@@ -72,6 +72,8 @@
 
 .operacoes-processo-panel__acoes {
   display: flex;
+  align-items: center;
+  gap: $spacing-sm;
   padding: $spacing-md $spacing-md 0;
 }
 

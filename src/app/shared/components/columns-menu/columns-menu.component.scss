@@ -1,0 +1,70 @@
+@use 'variables' as *;
+@use 'mixins' as *;
+
+.columns-menu {
+  position: relative;
+
+  &__toggle {
+    display: inline-flex;
+    min-height: 34px;
+    align-items: center;
+    gap: $spacing-xs;
+    padding: 0 $spacing-sm;
+    border: 1px solid $color-border;
+    border-radius: $border-radius-sm;
+    background-color: $color-neutral-light;
+    color: $color-text-secondary;
+    cursor: pointer;
+    font: inherit;
+    font-size: $font-size-xs;
+    font-weight: $font-weight-medium;
+    white-space: nowrap;
+    transition:
+      background-color $transition-fast,
+      border-color $transition-fast,
+      color $transition-fast;
+
+    &:hover,
+    &.is-active {
+      border-color: $color-primary-light;
+      background-color: rgba($color-primary-pale, 0.55);
+      color: $color-primary;
+    }
+  }
+
+  &__dropdown {
+    position: absolute;
+    z-index: 5;
+    top: calc(100% + #{$spacing-xs});
+    left: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    width: max-content;
+    max-width: 420px;
+    gap: $spacing-xs $spacing-sm;
+    padding: $spacing-sm;
+    border: 1px solid $color-border;
+    border-radius: $border-radius-md;
+    background-color: $color-surface;
+    box-shadow: $shadow-md;
+
+    label {
+      display: flex;
+      align-items: center;
+      gap: $spacing-xs;
+      color: $color-text-secondary;
+      font-size: $font-size-xs;
+      white-space: nowrap;
+      cursor: pointer;
+    }
+
+    .columns-menu__select-all {
+      grid-column: 1 / -1;
+      margin-bottom: $spacing-xs;
+      padding-bottom: $spacing-xs;
+      border-bottom: 1px solid rgba($color-border, 0.7);
+      color: $color-text-primary;
+      font-weight: $font-weight-medium;
+    }
+  }
+}

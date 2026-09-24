@@ -33,7 +33,7 @@ describe('DataTableComponent — baseline (sem inputs opcionais)', () => {
 
     const el = fixture.nativeElement as HTMLElement;
     expect(el.querySelector('th button')).toBeNull();
-    expect(el.querySelector('.data-table-columns__toggle')).toBeNull();
+    expect(el.querySelector('app-columns-menu')).toBeNull();
     expect(el.querySelector('.data-table-pagination')).toBeNull();
     expect(el.querySelectorAll('tbody tr').length).toBe(3);
   });
@@ -79,11 +79,92 @@ describe('DataTableComponent — visibilidade de colunas', () => {
     fixture.componentRef.setInput('columnVisibility', true);
     fixture.detectChanges();
 
-    fixture.componentInstance['toggleColumnVisibility']('name');
+    fixture.componentInstance.columnVisibilityState.toggle('name');
     fixture.detectChanges();
 
-    expect(fixture.componentInstance['isColumnVisible']('name')).toBe(true);
+    expect(fixture.componentInstance.columnVisibilityState.isVisible('name')).toBe(true);
     expect((fixture.nativeElement as HTMLElement).querySelectorAll('thead th').length).toBe(1);
+  });
+
+  /**
+   * Regressão real (2026-09-19): carregar a preferência salva de dentro do `computed` de
+   * `visibleColumns` (via `isVisible`) dispara NG0600 assim que já existe algo em `localStorage` —
+   * só não aparecia numa sessão de navegador zerada. Corrigido via `effect` no construtor
+   * (`ColumnVisibilityController.carregarStorage`), nunca dentro da leitura (`isVisible`).
+   */
+  describe('persistência em localStorage', () => {
+    const CHAVE = 'teste.data-table.colunas';
+
+    afterEach(() => {
+      localStorage.removeItem(CHAVE);
+    });
+
+    it('não lança NG0600 quando já existe preferência salva antes da primeira renderização', () => {
+      localStorage.setItem(CHAVE, JSON.stringify(['name']));
+      const fixture = createFixture();
+      fixture.componentRef.setInput('columns', COLUMNS);
+      fixture.componentRef.setInput('data', ROWS);
+      fixture.componentRef.setInput('columnVisibility', true);
+      fixture.componentRef.setInput('columnsStorageKey', CHAVE);
+
+      expect(() => fixture.detectChanges()).not.toThrow();
+      expect(fixture.componentInstance.columnVisibilityState.isVisible('name')).toBe(true);
+      expect(fixture.componentInstance.columnVisibilityState.isVisible('age')).toBe(false);
+    });
+
+    it('ignora do storage colunas que não existem mais e cai no padrão (todas visíveis)', () => {
+      localStorage.setItem(CHAVE, JSON.stringify(['coluna-removida']));
+      const fixture = createFixture();
+      fixture.componentRef.setInput('columns', COLUMNS);
+      fixture.componentRef.setInput('data', ROWS);
+      fixture.componentRef.setInput('columnVisibility', true);
+      fixture.componentRef.setInput('columnsStorageKey', CHAVE);
+      fixture.detectChanges();
+
+      expect(fixture.componentInstance.columnVisibilityState.isVisible('name')).toBe(true);
+      expect(fixture.componentInstance.columnVisibilityState.isVisible('age')).toBe(true);
+    });
+
+    it('persiste em localStorage ao alternar uma coluna', () => {
+      const fixture = createFixture();
+      fixture.componentRef.setInput('columns', COLUMNS);
+      fixture.componentRef.setInput('data', ROWS);
+      fixture.componentRef.setInput('columnVisibility', true);
+      fixture.componentRef.setInput('columnsStorageKey', CHAVE);
+      fixture.detectChanges();
+
+      fixture.componentInstance.columnVisibilityState.toggle('age');
+
+      expect(JSON.parse(localStorage.getItem(CHAVE)!)).toEqual(['name']);
+    });
+  });
+
+  describe('reordenar colunas arrastando o cabeçalho', () => {
+    const CHAVE = 'teste.data-table.colunas.reorder';
+
+    afterEach(() => {
+      localStorage.removeItem(CHAVE);
+      localStorage.removeItem(`${CHAVE}.ordem`);
+    });
+
+    it('onColumnDropped() reordena visibleColumns e persiste a nova ordem', () => {
+      const fixture = createFixture();
+      fixture.componentRef.setInput('columns', COLUMNS);
+      fixture.componentRef.setInput('data', ROWS);
+      fixture.componentRef.setInput('columnReorder', true);
+      fixture.componentRef.setInput('columnsStorageKey', CHAVE);
+      fixture.detectChanges();
+
+      (fixture.componentInstance as unknown as { onColumnDropped: (e: { previousIndex: number; currentIndex: number }) => void })
+        .onColumnDropped({ previousIndex: 0, currentIndex: 1 });
+      fixture.detectChanges();
+
+      const headerTexts = Array.from(
+        (fixture.nativeElement as HTMLElement).querySelectorAll('thead th'),
+      ).map((th) => th.textContent?.trim());
+      expect(headerTexts).toEqual(['Idade', 'Nome']);
+      expect(JSON.parse(localStorage.getItem(`${CHAVE}.ordem`)!)).toEqual(['age', 'name']);
+    });
   });
 });
 

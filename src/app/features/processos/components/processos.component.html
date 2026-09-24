@@ -57,31 +57,14 @@
           (clicked)="novoProcesso()"
         />
 
-        <div class="processos-columns">
-          <button
-            type="button"
-            class="processos-menu-button"
-            [class.is-active]="gradeProcessos.columnsMenuOpen()"
-            (click)="gradeProcessos.toggleColumnsMenu()"
-          >
-            <i class="fa-solid fa-table-columns" aria-hidden="true"></i>
-            Colunas
-          </button>
-          @if (gradeProcessos.columnsMenuOpen()) {
-            <div class="processos-dropdown processos-columns__menu" role="menu">
-              @for (col of gradeProcessos.columns(); track col.key) {
-                <label>
-                  <input
-                    type="checkbox"
-                    [checked]="gradeProcessos.isColumnVisible(col.key)"
-                    (change)="gradeProcessos.toggleColumnVisibility(col.key)"
-                  />
-                  {{ col.header }}
-                </label>
-              }
-            </div>
-          }
-        </div>
+        <app-columns-menu
+          [columns]="processoColumns"
+          [isVisible]="gradeProcessos.columnVisibilityState.isVisible"
+          [menuOpen]="gradeProcessos.columnVisibilityState.menuOpen()"
+          (menuOpenChange)="gradeProcessos.columnVisibilityState.menuOpen.set($event)"
+          (toggleColumn)="gradeProcessos.columnVisibilityState.toggle($event)"
+          (toggleAll)="gradeProcessos.columnVisibilityState.toggleAll($event)"
+        />
       </div>
 
       <button
@@ -161,7 +144,7 @@
     </div>
 
     <div class="processos-table-wrap">
-      <app-data-table
+      <app-domain-model-table
         #gradeProcessos
         [columnsToolbar]="false"
         [columns]="processoColumns"
@@ -172,6 +155,8 @@
         [sortable]="true"
         [initialSort]="{ key: 'data_distribuicao', direction: 'desc' }"
         [columnVisibility]="true"
+        [columnReorder]="true"
+        columnsStorageKey="hub-juridico.processos.colunas"
         [rowClass]="processoRowClass"
         [rowTitle]="processoRowTitle"
         [pinFirst]="processoPinFirst"

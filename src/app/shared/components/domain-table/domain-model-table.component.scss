@@ -32,6 +32,25 @@
     white-space: nowrap;
   }
 
+  // Arrastar o cabeçalho pra reordenar (`columnReorder`) — só nas colunas com `cdkDrag` ligado.
+  .data-table__th--draggable {
+    cursor: grab;
+
+    &:active {
+      cursor: grabbing;
+    }
+
+    &.cdk-drag-preview {
+      z-index: 10;
+      box-shadow: $shadow-lg;
+      background-color: $color-surface;
+    }
+
+    &.cdk-drag-placeholder {
+      opacity: 0.3;
+    }
+  }
+
   tbody td {
     padding: $spacing-sm $spacing-md;
     border-bottom: 1px solid rgba($burgundy-deep, 0.08); // divisória neutra e discreta
@@ -232,61 +251,37 @@
   padding: $spacing-sm 0;
 }
 
-.data-table-columns {
-  position: relative;
+// Tooltip customizado da linha (rowTitle, modo `data`): `position: fixed` em coordenadas de
+// viewport, calculadas no mouseenter — evita o corte que um `position: absolute`
+// sofreria por causa do `overflow` do `.table-wrap`.
+.data-table__tooltip {
+  position: fixed;
+  z-index: $z-toast;
+  max-width: 320px;
+  padding: $spacing-sm $spacing-md;
+  border: 1px solid $color-border;
+  border-radius: $border-radius-md;
+  background-color: $color-surface;
+  box-shadow: $shadow-lg;
+  pointer-events: none;
+}
 
-  &__toggle {
-    display: inline-flex;
-    min-height: 34px;
-    align-items: center;
-    gap: $spacing-xs;
-    padding: 0 $spacing-sm;
-    border: 1px solid $color-border;
-    border-radius: $border-radius-sm;
-    background-color: $color-neutral-light;
-    color: $color-text-secondary;
-    cursor: pointer;
-    font: inherit;
-    font-size: $font-size-xs;
-    font-weight: $font-weight-medium;
-    white-space: nowrap;
-    transition:
-      background-color $transition-fast,
-      border-color $transition-fast,
-      color $transition-fast;
+.data-table__tooltip-label {
+  display: block;
+  margin-bottom: 2px;
+  color: $color-primary;
+  font-family: $font-family-heading;
+  font-size: $font-size-lg;
+  font-weight: $font-weight-bold;
+}
 
-    &:hover {
-      border-color: $color-primary-light;
-      background-color: rgba($color-primary-pale, 0.55);
-      color: $color-primary;
-    }
-  }
-
-  &__menu {
-    position: absolute;
-    z-index: 5;
-    top: calc(100% + #{$spacing-xs});
-    left: 0;
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-    width: max-content;
-    max-width: 420px;
-    gap: $spacing-xs $spacing-sm;
-    padding: $spacing-sm;
-    border: 1px solid $color-border;
-    border-radius: $border-radius-md;
-    background-color: $color-surface;
-    box-shadow: $shadow-md;
-
-    label {
-      display: flex;
-      align-items: center;
-      gap: $spacing-xs;
-      color: $color-text-secondary;
-      font-size: $font-size-xs;
-      white-space: nowrap;
-    }
-  }
+.data-table__tooltip-text {
+  margin: 0;
+  color: $color-text-primary;
+  font-size: $font-size-base;
+  line-height: $line-height-base;
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 
 .data-table-pagination {

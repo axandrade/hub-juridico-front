@@ -1,0 +1,138 @@
+<div
+  class="processo-lista"
+  [attr.data-layout]="panelShell.layoutPainel()"
+  [class.processo-lista--panel-hidden]="!panelShell.panelVisible()"
+  [style.--painel-largura.px]="panelShell.painelLargura()"
+  [style.--painel-altura.px]="panelShell.painelAltura()"
+>
+  @if (panelShell.layoutPainel() === 'dialog' && panelShell.panelVisible()) {
+    <button
+      type="button"
+      class="processo-lista-panel-backdrop"
+      aria-label="Fechar painel"
+      (click)="panelShell.fecharDialog()"
+    ></button>
+  }
+
+  <div class="processo-lista-panel-slot">
+    @if (panelShell.layoutPainel() === 'dialog' && panelShell.panelVisible()) {
+      <button
+        type="button"
+        class="processo-lista-panel-slot__close"
+        aria-label="Fechar painel"
+        (click)="panelShell.fecharDialog()"
+      >
+        <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+      </button>
+    }
+    @if (processoSelecionado(); as processo) {
+      <ng-container
+        [ngTemplateOutlet]="painel()"
+        [ngTemplateOutletContext]="contextoPainel(processo)"
+      />
+    } @else {
+      <div class="processo-lista-panel-empty">
+        <i class="fa-solid fa-folder-open" aria-hidden="true"></i>
+        <p>{{ textoPainelVazio() }}</p>
+      </div>
+    }
+  </div>
+
+  @if (panelShell.panelVisible() && panelShell.layoutPainel() !== 'dialog') {
+    <div
+      class="processo-lista-resizer"
+      [class]="'processo-lista-resizer--' + panelShell.layoutPainel()"
+      role="separator"
+      [attr.aria-orientation]="panelShell.layoutPainel() === 'bottom' ? 'horizontal' : 'vertical'"
+      aria-label="Redimensionar painel"
+      (pointerdown)="panelShell.iniciarResize($event)"
+    ></div>
+  }
+
+  <section class="processo-lista-main" aria-label="Tabela de processos">
+    <div class="processo-lista-actions">
+      <h1>{{ titulo() }}</h1>
+
+      <div class="processo-lista-actions__buttons">
+        @if (grade(); as tabela) {
+          <app-columns-menu
+            [columns]="columns"
+            [isVisible]="tabela.columnVisibilityState.isVisible"
+            [menuOpen]="tabela.columnVisibilityState.menuOpen()"
+            (menuOpenChange)="tabela.columnVisibilityState.menuOpen.set($event)"
+            (toggleColumn)="tabela.columnVisibilityState.toggle($event)"
+            (toggleAll)="tabela.columnVisibilityState.toggleAll($event)"
+          />
+        }
+
+        <button
+          type="button"
+          class="processo-lista-panel-toggle"
+          [class.is-active]="panelShell.panelVisible()"
+          (click)="togglePanel()"
+        >
+          <i class="fa-solid fa-table-columns" aria-hidden="true"></i>
+          {{ panelShell.panelVisible() ? 'Ocultar painel' : 'Mostrar painel' }}
+        </button>
+      </div>
+    </div>
+
+    <div class="processo-lista-search-section">
+      <span class="processo-lista-search-section__label">Pesquisar</span>
+      <label class="processo-lista-search">
+        <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+        <input
+          type="text"
+          placeholder="número CNJ, cliente principal ou contrário principal"
+          [value]="busca()"
+          (input)="onBuscaInput($event)"
+          aria-label="Buscar por número CNJ, cliente principal ou contrário principal"
+        />
+        @if (busca()) {
+          <button type="button" aria-label="Limpar busca" (click)="limparBusca()">
+            <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+          </button>
+        }
+      </label>
+      <span class="processo-lista-search-section__count">{{ busca().trim() ? 1 : 0 }} filtro(s)</span>
+    </div>
+
+    <div class="processo-lista-table-wrap">
+      <app-domain-model-table
+        entityName="processo-operacoes"
+        [favoritoTipo]="favoritoTipo()"
+        fields="id,numeroCnj,acao,status,clientePrincipalNome,contrarioPrincipalNome,clientePrincipalId"
+        [columns]="columns"
+        [columnsToolbar]="false"
+        [columnVisibility]="true"
+        [columnReorder]="true"
+        [columnsStorageKey]="'hub-juridico.' + chave() + '.processos.colunas'"
+        [filter]="filtro()"
+        sort="-id"
+        trackKey="id"
+        emptyMessage="Nenhum processo encontrado."
+        [sortable]="true"
+        [rowClass]="processoRowClass"
+        (rowClick)="selecionarProcesso($event)"
+      />
+    </div>
+
+    <footer class="processo-lista-main__footer">
+      <span>
+        @if (busca().trim()) {
+          {{ grade()?.pagination()?.totalElements ?? 0 }} resultado(s) para "{{ busca().trim() }}"
+        } @else {
+          {{ grade()?.pagination()?.totalElements ?? 0 }} processo(s) encontrado(s)
+        }
+      </span>
+      @if (grade()?.loadError()) {
+        <span>
+          · Não foi possível carregar a lista.
+          <button type="button" class="processo-lista-link-button" (click)="reloadList()">
+            Tentar de novo
+          </button>
+        </span>
+      }
+    </footer>
+  </section>
+</div>

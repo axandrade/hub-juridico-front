@@ -364,28 +364,7 @@
   }
 }
 
-.clients-columns {
-  position: relative;
-
-  &__menu {
-    width: 220px;
-
-    label {
-      display: flex;
-      align-items: center;
-      gap: $spacing-xs;
-      min-height: 30px;
-      padding: 0 $spacing-xs;
-      font-size: $font-size-xs;
-      color: $color-text-secondary;
-      cursor: pointer;
-    }
-  }
-}
-
-.clients-menu-button,
-.clients-panel-toggle,
-.clients-dropdown button {
+.clients-panel-toggle {
   border: 1px solid $color-border;
   border-radius: $border-radius-sm;
   background-color: $color-neutral-light;
@@ -406,7 +385,6 @@
   }
 }
 
-.clients-menu-button,
 .clients-panel-toggle {
   display: inline-flex;
   min-height: 34px;
@@ -428,27 +406,6 @@
 .clients-actions {
   @include flex-between;
   gap: $spacing-md;
-}
-
-.clients-dropdown {
-  position: absolute;
-  z-index: 5;
-  top: calc(100% + #{$spacing-xs});
-  left: 0;
-  display: grid;
-  width: 230px;
-  gap: $spacing-xs;
-  padding: $spacing-sm;
-  border: 1px solid $color-border;
-  border-radius: $border-radius-md;
-  background-color: $color-surface;
-  box-shadow: $shadow-md;
-
-  button {
-    min-height: 32px;
-    padding: 0 $spacing-sm;
-    text-align: left;
-  }
 }
 
 .clients-summary {

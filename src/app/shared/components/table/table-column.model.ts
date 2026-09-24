@@ -27,6 +27,12 @@ export interface TableColumn<T = Record<string, unknown>> {
   format?: TableCellFormat;
   /** Transforma o valor bruto em texto para exibição; também vira a chave de ordenação. */
   formatter?: (value: unknown, row: T) => string;
+  /**
+   * `false` desliga o botão de ordenar só nesta coluna, mesmo com `sortable` ligado na tabela —
+   * necessário pra colunas derivadas no cliente (ex.: "Ordem" do painel de Operações), que não
+   * correspondem a nenhum campo real no backend pra ordenar via RQL. Sem isso, ordena normalmente.
+   */
+  sortable?: boolean;
   /** Só usado com `format: 'badge'`. Sem isso, o tom fica `'primary'`. */
   badgeTone?: (value: unknown, row: T) => BadgeTone;
   /** Só usado com `format: 'badge'`. */

@@ -14,7 +14,8 @@ import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-i
 import { EMPTY, catchError, debounceTime, distinctUntilChanged, skip, switchMap } from 'rxjs';
 
 import { ButtonComponent } from '../../../shared/components/button/button.component';
-import { DataTableComponent } from '../../../shared/components/table/data-table.component';
+import { ColumnsMenuComponent } from '../../../shared/components/columns-menu/columns-menu.component';
+import { DomainModelTableComponent } from '../../../shared/components/domain-table/domain-model-table.component';
 import { TableColumn } from '../../../shared/components/table/table-column.model';
 import { TablePagination, TablePinAction } from '../../../shared/components/table/table.model';
 import { PanelShellController } from '../../../shared/panel-shell/panel-shell.controller';
@@ -36,7 +37,7 @@ import { ProcessoFormComponent } from './processo-form/processo-form.component';
 @Component({
   selector: 'app-processos',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [DataTableComponent, ButtonComponent, ProcessoFormComponent],
+  imports: [DomainModelTableComponent, ButtonComponent, ProcessoFormComponent, ColumnsMenuComponent],
   templateUrl: './processos.component.html',
   styleUrl: './processos.component.scss',
 })
@@ -47,8 +48,6 @@ export class ProcessosComponent {
   private readonly pastaCliente = inject(PastaClienteService);
 
   private readonly form = viewChild(ProcessoFormComponent);
-  /** A grade — o botão "Colunas" da barra de ações comanda esta instância. */
-  protected readonly grade = viewChild(DataTableComponent);
 
   protected readonly panelShell = new PanelShellController(this.document, {
     storagePrefix: 'hub-juridico.processos',
@@ -308,16 +307,6 @@ export class ProcessosComponent {
   protected onEscape(): void {
     if (this.panelShell.layoutPainel() === 'dialog' && this.panelShell.panelVisible()) {
       this.panelShell.fecharDialog();
-    }
-  }
-
-  /** Clique fora fecha o menu "Colunas". */
-  @HostListener('document:click', ['$event'])
-  protected onDocumentClick(event: MouseEvent): void {
-    const target = event.target as HTMLElement | null;
-    const grade = this.grade();
-    if (grade?.columnsMenuOpen() && !target?.closest('.processos-columns')) {
-      grade.columnsMenuOpen.set(false);
     }
   }
 }

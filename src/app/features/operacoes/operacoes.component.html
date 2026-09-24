@@ -1,120 +1,20 @@
-<div
-  class="operacoes"
-  [attr.data-layout]="panelShell.layoutPainel()"
-  [class.operacoes--panel-hidden]="!painelAtivo()"
-  [style.--painel-largura.px]="panelShell.painelLargura()"
-  [style.--painel-altura.px]="panelShell.painelAltura()"
+<app-processo-lista-painel
+  titulo="Tela de Operações"
+  chave="operacoes"
+  textoPainelVazio="Selecione um processo na tabela para visualizar as operações dele aqui."
 >
-  @if (panelShell.layoutPainel() === 'dialog' && painelAtivo()) {
-    <button
-      type="button"
-      class="operacoes-panel-backdrop"
-      aria-label="Fechar painel"
-      (click)="panelShell.fecharDialog()"
-    ></button>
-  }
-
-  @if (processoSelecionado(); as processo) {
-    <div class="operacoes-panel-slot">
-      @if (panelShell.layoutPainel() === 'dialog' && painelAtivo()) {
-        <button
-          type="button"
-          class="operacoes-panel-slot__close"
-          aria-label="Fechar painel"
-          (click)="panelShell.fecharDialog()"
-        >
-          <i class="fa-solid fa-xmark" aria-hidden="true"></i>
-        </button>
-      }
-      <app-operacoes-processo-panel
-        [processoId]="processo.id"
-        [numeroCnj]="processo.numeroCnj"
-        [layoutPainel]="panelShell.layoutPainel()"
-        (layoutPainelChange)="onLayoutPainelChange($event)"
-        (fechar)="fecharPainelOperacoes()"
-      />
-    </div>
-  }
-
-  @if (painelAtivo() && panelShell.layoutPainel() !== 'dialog') {
-    <div
-      class="operacoes-resizer"
-      [class]="'operacoes-resizer--' + panelShell.layoutPainel()"
-      role="separator"
-      [attr.aria-orientation]="panelShell.layoutPainel() === 'bottom' ? 'horizontal' : 'vertical'"
-      aria-label="Redimensionar painel"
-      (pointerdown)="panelShell.iniciarResize($event)"
-    ></div>
-  }
-
-  <section class="operacoes-main" aria-label="Tabela de operações">
-    <div class="operacoes-actions">
-      <h1>Tela de Operações</h1>
-
-      @if (processoSelecionado()) {
-        <button
-          type="button"
-          class="operacoes-panel-toggle"
-          [class.is-active]="panelShell.panelVisible()"
-          (click)="togglePanel()"
-        >
-          <i class="fa-solid fa-table-columns" aria-hidden="true"></i>
-          {{ panelShell.panelVisible() ? 'Ocultar painel' : 'Mostrar painel' }}
-        </button>
-      }
-    </div>
-
-    <div class="operacoes-search-section">
-      <span class="operacoes-search-section__label">Pesquisar</span>
-      <label class="operacoes-search">
-        <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
-        <input
-          type="text"
-          placeholder="número CNJ, cliente principal ou contrário principal"
-          [value]="busca()"
-          (input)="onBuscaInput($event)"
-          aria-label="Buscar por número CNJ, cliente principal ou contrário principal"
-        />
-        @if (busca()) {
-          <button type="button" aria-label="Limpar busca" (click)="limparBusca()">
-            <i class="fa-solid fa-xmark" aria-hidden="true"></i>
-          </button>
-        }
-      </label>
-      <span class="operacoes-search-section__count">{{ busca().trim() ? 1 : 0 }} filtro(s)</span>
-    </div>
-
-    <div class="operacoes-table-wrap">
-      <app-domain-model-table
-        entityName="processo-operacoes"
-        fields="id,numeroCnj,acao,status,clientePrincipalNome,contrarioPrincipalNome"
-        [columns]="operacoesColumns"
-        [columnsToolbar]="false"
-        [filter]="filtro()"
-        sort="-id"
-        trackKey="id"
-        emptyMessage="Nenhum processo encontrado."
-        [favoritable]="false"
-        (rowClick)="abrirOperacoesDoProcesso($event)"
-      />
-    </div>
-
-    <footer class="operacoes-main__footer">
-      <span>
-        @if (busca().trim()) {
-          {{ grade()?.pagination()?.totalElements ?? 0 }} resultado(s) para "{{ busca().trim() }}"
-        } @else {
-          {{ grade()?.pagination()?.totalElements ?? 0 }} operação(ões) encontrada(s)
-        }
-      </span>
-      @if (grade()?.loadError()) {
-        <span>
-          · Não foi possível carregar a lista.
-          <button type="button" class="operacoes-link-button" (click)="reloadList()">
-            Tentar de novo
-          </button>
-        </span>
-      }
-    </footer>
-  </section>
-</div>
+  <ng-template
+    let-processo
+    let-layoutPainel="layoutPainel"
+    let-mudarLayout="mudarLayout"
+    let-fechar="fechar"
+  >
+    <app-operacoes-processo-panel
+      [processoId]="processo.id"
+      [numeroCnj]="processo.numeroCnj"
+      [layoutPainel]="layoutPainel"
+      (layoutPainelChange)="mudarLayout($event)"
+      (fechar)="fechar()"
+    />
+  </ng-template>
+</app-processo-lista-painel>

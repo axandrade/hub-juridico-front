@@ -90,7 +90,8 @@
 .operacao-form__conteudo {
   display: flex;
   flex: 1;
-  min-height: 0;
+  height: min(560px, calc(100vh - 260px));
+  min-height: 420px;
   flex-direction: column;
 }
 
@@ -100,4 +101,11 @@
   gap: $spacing-sm;
   padding-top: $spacing-sm;
   border-top: 1px solid rgba($color-border, 0.6);
+}
+
+@media (max-width: 560px) {
+  .operacao-form__conteudo {
+    height: min(520px, calc(100vh - 250px));
+    min-height: 360px;
+  }
 }

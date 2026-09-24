@@ -50,6 +50,7 @@ export class OperacaoFormComponent {
 
   protected readonly abas: readonly OperacaoAba[] = ['informacoesGerais', 'checklists'];
   protected readonly abaAtiva = signal<OperacaoAba>('informacoesGerais');
+  protected readonly entityId = signal<number | null>(null);
   protected readonly salvando = signal(false);
 
   constructor() {
@@ -63,12 +64,16 @@ export class OperacaoFormComponent {
       untracked(() => {
         this.abaAtiva.set('informacoesGerais');
         if (id === null) {
+          this.entityId.set(null);
           form.limpar();
           return;
         }
         this.domainService
           .get<OperacaoDetalheRow>({ entityName: ENTITY, entityId: id })
-          .subscribe((op) => form.carregar(op));
+          .subscribe((op) => {
+            this.entityId.set(op.id);
+            form.carregar(op);
+          });
       });
     });
   }
@@ -112,13 +117,16 @@ export class OperacaoFormComponent {
       id === null
         ? this.domainService
             .post<OperacaoWriteApi>({ entityName: ENTITY, body: payload })
-            .pipe(map(() => undefined))
-        : this.domainService.patch<OperacaoWriteApi>({ entityName: ENTITY, entityId: id, body: payload });
+            .pipe(map((criado) => criado.id))
+        : this.domainService
+            .patch<OperacaoWriteApi>({ entityName: ENTITY, entityId: id, body: payload })
+            .pipe(map(() => id));
 
     this.salvando.set(true);
     request$.subscribe({
-      next: () => {
+      next: (salvoId) => {
         this.salvando.set(false);
+        this.entityId.set(salvoId);
         this.toast.sucesso(id === null ? 'Operação cadastrada.' : 'Operação atualizada.');
         this.salvo.emit();
       },

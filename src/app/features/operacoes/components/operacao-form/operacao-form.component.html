@@ -22,7 +22,7 @@
 
   <div class="operacao-form__conteudo">
     <app-operacao-informacoes-gerais [hidden]="abaAtiva() !== 'informacoesGerais'" />
-    <app-operacao-checklists [hidden]="abaAtiva() !== 'checklists'" />
+    <app-operacao-checklists [hidden]="abaAtiva() !== 'checklists'" [operacaoId]="entityId()" />
   </div>
 
   <footer class="operacao-form__acoes">

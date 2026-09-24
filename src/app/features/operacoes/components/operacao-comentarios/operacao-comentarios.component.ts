@@ -1,6 +1,7 @@
 import { DOCUMENT } from '@angular/common';
 import { ChangeDetectionStrategy, Component, effect, inject, input, signal, untracked } from '@angular/core';
 
+import { AuthService } from '../../../../core/services/auth.service';
 import { DomainService, IDomainPage } from '../../../../core/services/domain.service';
 import { ButtonComponent } from '../../../../shared/components/button/button.component';
 import { DateFormatPipe } from '../../../../shared/pipes/date-format.pipe';
@@ -39,6 +40,7 @@ export class OperacaoComentariosComponent {
   private readonly documentsService = inject(ComentarioDocumentsService);
   private readonly toast = inject(ToastService);
   private readonly document = inject(DOCUMENT);
+  private readonly auth = inject(AuthService);
   private readonly nomesAutores = new Map<number, string>();
 
   readonly operacaoId = input<number | null>(null);
@@ -60,6 +62,10 @@ export class OperacaoComentariosComponent {
         this.carregar(operacaoId);
       });
     });
+  }
+
+  protected ehMeuComentario(comentario: ComentarioView): boolean {
+    return comentario.autorId === this.auth.user()?.id;
   }
 
   protected adicionarComentario(textarea: HTMLTextAreaElement): void {

@@ -98,32 +98,58 @@
 
 .operacao-comentario {
   display: flex;
+  max-width: 75%;
   flex-direction: column;
-  gap: $spacing-xs;
-  padding: $spacing-sm;
-  border-radius: $border-radius-sm;
-  background: rgba($color-border, 0.22);
+  align-self: flex-start;
+  align-items: flex-start;
+  gap: 2px;
 }
 
-.operacao-comentario__header {
-  display: flex;
-  align-items: center;
-  gap: $spacing-sm;
-
-  .operacao-comentario__icon {
-    margin-left: auto;
-  }
+.operacao-comentario--proprio {
+  align-self: flex-end;
+  align-items: flex-end;
 }
 
 .operacao-comentario__autor {
-  color: $color-text-primary;
+  padding: 0 $spacing-xs;
+  color: $color-text-muted;
   font-size: $font-size-xs;
   font-weight: $font-weight-bold;
 }
 
+.operacao-comentario--proprio .operacao-comentario__autor {
+  display: none;
+}
+
+.operacao-comentario__balao {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-xs;
+  padding: $spacing-sm $spacing-sm;
+  padding-right: 32px;
+  border-radius: $border-radius-md;
+  border-top-left-radius: 4px;
+  background: $color-surface;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+
+  .operacao-comentario__icon {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+  }
+}
+
+.operacao-comentario--proprio .operacao-comentario__balao {
+  border-top-right-radius: 4px;
+  border-top-left-radius: $border-radius-md;
+  background: rgba($color-primary, 0.14);
+}
+
 .operacao-comentario__data {
+  align-self: flex-end;
   color: $color-text-muted;
-  font-size: $font-size-xs;
+  font-size: 10px;
 }
 
 .operacao-comentario__texto {
@@ -200,15 +226,16 @@
 
 .operacao-comentario__icon {
   @include flex-center;
-  width: 28px;
-  height: 28px;
+  width: 22px;
+  height: 22px;
   padding: 0;
   border: 0;
   border-radius: $border-radius-sm;
-  background: $color-surface;
+  background: transparent;
   color: $color-text-secondary;
   cursor: pointer;
   font: inherit;
+  font-size: 12px;
 
   &:hover {
     color: $color-primary;

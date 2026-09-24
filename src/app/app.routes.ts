@@ -55,6 +55,14 @@ export const routes: Routes = [
         title: 'Hub Jurídico · Operações',
       },
       {
+        path: 'andamentos-automaticos',
+        loadChildren: () =>
+          import('./features/andamentos-automaticos/andamentos-automaticos.routes').then(
+            (m) => m.ANDAMENTOS_AUTOMATICOS_ROUTES,
+          ),
+        title: 'Hub Jurídico · Andamentos Automáticos',
+      },
+      {
         path: 'usuarios',
         canActivate: [adminGuard],
         loadChildren: () =>

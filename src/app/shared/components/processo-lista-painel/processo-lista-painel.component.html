@@ -1,24 +1,24 @@
 <div
-  class="operacoes"
+  class="processo-lista"
   [attr.data-layout]="panelShell.layoutPainel()"
-  [class.operacoes--panel-hidden]="!painelAtivo()"
+  [class.processo-lista--panel-hidden]="!panelShell.panelVisible()"
   [style.--painel-largura.px]="panelShell.painelLargura()"
   [style.--painel-altura.px]="panelShell.painelAltura()"
 >
-  @if (panelShell.layoutPainel() === 'dialog' && painelAtivo()) {
+  @if (panelShell.layoutPainel() === 'dialog' && panelShell.panelVisible()) {
     <button
       type="button"
-      class="operacoes-panel-backdrop"
+      class="processo-lista-panel-backdrop"
       aria-label="Fechar painel"
       (click)="panelShell.fecharDialog()"
     ></button>
   }
 
-  <div class="operacoes-panel-slot">
-    @if (panelShell.layoutPainel() === 'dialog' && painelAtivo()) {
+  <div class="processo-lista-panel-slot">
+    @if (panelShell.layoutPainel() === 'dialog' && panelShell.panelVisible()) {
       <button
         type="button"
-        class="operacoes-panel-slot__close"
+        class="processo-lista-panel-slot__close"
         aria-label="Fechar painel"
         (click)="panelShell.fecharDialog()"
       >
@@ -26,25 +26,22 @@
       </button>
     }
     @if (processoSelecionado(); as processo) {
-      <app-operacoes-processo-panel
-        [processoId]="processo.id"
-        [numeroCnj]="processo.numeroCnj"
-        [layoutPainel]="panelShell.layoutPainel()"
-        (layoutPainelChange)="onLayoutPainelChange($event)"
-        (fechar)="fecharPainelOperacoes()"
+      <ng-container
+        [ngTemplateOutlet]="painel()"
+        [ngTemplateOutletContext]="contextoPainel(processo)"
       />
     } @else {
-      <div class="operacoes-panel-empty">
+      <div class="processo-lista-panel-empty">
         <i class="fa-solid fa-folder-open" aria-hidden="true"></i>
-        <p>Selecione um processo na tabela para visualizar as operações dele aqui.</p>
+        <p>{{ textoPainelVazio() }}</p>
       </div>
     }
   </div>
 
-  @if (painelAtivo() && panelShell.layoutPainel() !== 'dialog') {
+  @if (panelShell.panelVisible() && panelShell.layoutPainel() !== 'dialog') {
     <div
-      class="operacoes-resizer"
-      [class]="'operacoes-resizer--' + panelShell.layoutPainel()"
+      class="processo-lista-resizer"
+      [class]="'processo-lista-resizer--' + panelShell.layoutPainel()"
       role="separator"
       [attr.aria-orientation]="panelShell.layoutPainel() === 'bottom' ? 'horizontal' : 'vertical'"
       aria-label="Redimensionar painel"
@@ -52,14 +49,14 @@
     ></div>
   }
 
-  <section class="operacoes-main" aria-label="Tabela de operações">
-    <div class="operacoes-actions">
-      <h1>Tela de Operações</h1>
+  <section class="processo-lista-main" aria-label="Tabela de processos">
+    <div class="processo-lista-actions">
+      <h1>{{ titulo() }}</h1>
 
-      <div class="operacoes-actions__buttons">
+      <div class="processo-lista-actions__buttons">
         @if (grade(); as tabela) {
           <app-columns-menu
-            [columns]="operacoesColumns"
+            [columns]="columns"
             [isVisible]="tabela.columnVisibilityState.isVisible"
             [menuOpen]="tabela.columnVisibilityState.menuOpen()"
             (menuOpenChange)="tabela.columnVisibilityState.menuOpen.set($event)"
@@ -70,7 +67,7 @@
 
         <button
           type="button"
-          class="operacoes-panel-toggle"
+          class="processo-lista-panel-toggle"
           [class.is-active]="panelShell.panelVisible()"
           (click)="togglePanel()"
         >
@@ -80,9 +77,9 @@
       </div>
     </div>
 
-    <div class="operacoes-search-section">
-      <span class="operacoes-search-section__label">Pesquisar</span>
-      <label class="operacoes-search">
+    <div class="processo-lista-search-section">
+      <span class="processo-lista-search-section__label">Pesquisar</span>
+      <label class="processo-lista-search">
         <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
         <input
           type="text"
@@ -97,40 +94,41 @@
           </button>
         }
       </label>
-      <span class="operacoes-search-section__count">{{ busca().trim() ? 1 : 0 }} filtro(s)</span>
+      <span class="processo-lista-search-section__count">{{ busca().trim() ? 1 : 0 }} filtro(s)</span>
     </div>
 
-    <div class="operacoes-table-wrap">
+    <div class="processo-lista-table-wrap">
       <app-domain-model-table
         entityName="processo-operacoes"
+        [favoritoTipo]="favoritoTipo()"
         fields="id,numeroCnj,acao,status,clientePrincipalNome,contrarioPrincipalNome,clientePrincipalId"
-        [columns]="operacoesColumns"
+        [columns]="columns"
         [columnsToolbar]="false"
         [columnVisibility]="true"
         [columnReorder]="true"
-        columnsStorageKey="hub-juridico.operacoes.processos.colunas"
+        [columnsStorageKey]="'hub-juridico.' + chave() + '.processos.colunas'"
         [filter]="filtro()"
         sort="-id"
         trackKey="id"
         emptyMessage="Nenhum processo encontrado."
         [sortable]="true"
         [rowClass]="processoRowClass"
-        (rowClick)="abrirOperacoesDoProcesso($event)"
+        (rowClick)="selecionarProcesso($event)"
       />
     </div>
 
-    <footer class="operacoes-main__footer">
+    <footer class="processo-lista-main__footer">
       <span>
         @if (busca().trim()) {
           {{ grade()?.pagination()?.totalElements ?? 0 }} resultado(s) para "{{ busca().trim() }}"
         } @else {
-          {{ grade()?.pagination()?.totalElements ?? 0 }} operação(ões) encontrada(s)
+          {{ grade()?.pagination()?.totalElements ?? 0 }} processo(s) encontrado(s)
         }
       </span>
       @if (grade()?.loadError()) {
         <span>
           · Não foi possível carregar a lista.
-          <button type="button" class="operacoes-link-button" (click)="reloadList()">
+          <button type="button" class="processo-lista-link-button" (click)="reloadList()">
             Tentar de novo
           </button>
         </span>

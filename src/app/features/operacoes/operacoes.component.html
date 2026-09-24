@@ -1,0 +1,20 @@
+<app-processo-lista-painel
+  titulo="Tela de Operações"
+  chave="operacoes"
+  textoPainelVazio="Selecione um processo na tabela para visualizar as operações dele aqui."
+>
+  <ng-template
+    let-processo
+    let-layoutPainel="layoutPainel"
+    let-mudarLayout="mudarLayout"
+    let-fechar="fechar"
+  >
+    <app-operacoes-processo-panel
+      [processoId]="processo.id"
+      [numeroCnj]="processo.numeroCnj"
+      [layoutPainel]="layoutPainel"
+      (layoutPainelChange)="mudarLayout($event)"
+      (fechar)="fechar()"
+    />
+  </ng-template>
+</app-processo-lista-painel>

@@ -18,6 +18,9 @@
           @case ('comentarios') {
             Comentários
           }
+          @case ('historico') {
+            Histórico
+          }
         }
       </button>
     }
@@ -27,6 +30,7 @@
     <app-operacao-informacoes-gerais [hidden]="abaAtiva() !== 'informacoesGerais'" />
     <app-operacao-checklists [hidden]="abaAtiva() !== 'checklists'" [operacaoId]="entityId()" />
     <app-operacao-comentarios [hidden]="abaAtiva() !== 'comentarios'" [operacaoId]="entityId()" />
+    <app-operacao-historico [hidden]="abaAtiva() !== 'historico'" [operacaoId]="entityId()" />
   </div>
 
   <footer class="operacao-form__acoes">

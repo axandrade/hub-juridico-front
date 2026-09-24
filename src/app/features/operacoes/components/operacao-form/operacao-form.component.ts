@@ -16,12 +16,13 @@ import { ButtonComponent } from '../../../../shared/components/button/button.com
 import { ToastService } from '../../../../shared/services/toast.service';
 import { OperacaoChecklistsComponent } from '../operacao-checklists/operacao-checklists.component';
 import { OperacaoComentariosComponent } from '../operacao-comentarios/operacao-comentarios.component';
+import { OperacaoHistoricoComponent } from '../operacao-historico/operacao-historico.component';
 import { OperacaoInformacoesGeraisComponent } from '../operacao-informacoes-gerais/operacao-informacoes-gerais.component';
 import { OperacaoDetalheRow, OperacaoWriteApi } from '../../services/operacao-api.model';
 
 const ENTITY = 'operacao';
 
-type OperacaoAba = 'informacoesGerais' | 'checklists' | 'comentarios';
+type OperacaoAba = 'informacoesGerais' | 'checklists' | 'comentarios' | 'historico';
 
 /**
  * Shell do cadastro/edição de operação: selo do processo, abas, rodapé e persistência. Os campos
@@ -35,6 +36,7 @@ type OperacaoAba = 'informacoesGerais' | 'checklists' | 'comentarios';
     OperacaoInformacoesGeraisComponent,
     OperacaoChecklistsComponent,
     OperacaoComentariosComponent,
+    OperacaoHistoricoComponent,
   ],
   templateUrl: './operacao-form.component.html',
   styleUrl: './operacao-form.component.scss',
@@ -54,7 +56,7 @@ export class OperacaoFormComponent {
 
   private readonly informacoesGerais = viewChild(OperacaoInformacoesGeraisComponent);
 
-  protected readonly abas: readonly OperacaoAba[] = ['informacoesGerais', 'checklists', 'comentarios'];
+  protected readonly abas: readonly OperacaoAba[] = ['informacoesGerais', 'checklists', 'comentarios', 'historico'];
   protected readonly abaAtiva = signal<OperacaoAba>('informacoesGerais');
   protected readonly entityId = signal<number | null>(null);
   protected readonly salvando = signal(false);

@@ -1,0 +1,47 @@
+<div class="operacao-historico">
+  @if (operacaoId() === null) {
+    <div class="operacao-historico__empty">
+      <i class="fa-solid fa-clock-rotate-left" aria-hidden="true"></i>
+      <p>Salve a operação para ver o histórico de alterações.</p>
+    </div>
+  } @else if (carregando()) {
+    <div class="operacao-historico__empty">
+      <i class="fa-solid fa-spinner fa-spin" aria-hidden="true"></i>
+      <p>Carregando histórico...</p>
+    </div>
+  } @else if (erro()) {
+    <div class="operacao-historico__empty">
+      <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
+      <p>{{ erro() }}</p>
+    </div>
+  } @else if (!historico().length) {
+    <div class="operacao-historico__empty">
+      <i class="fa-solid fa-clock-rotate-left" aria-hidden="true"></i>
+      <p>Nenhuma alteração registrada nesta operação.</p>
+    </div>
+  } @else {
+    <div class="operacao-historico-lista">
+      @for (item of historico(); track item.id) {
+        <article class="operacao-historico-item">
+          <header class="operacao-historico-item__header">
+            <span class="operacao-historico-item__campo">{{ item.campoLabel }}</span>
+            <span class="operacao-historico-item__data">{{ item.alteradoEm | dateFormat: 'dd/MM/yyyy HH:mm' }}</span>
+          </header>
+          @if (item.ehEvento) {
+            <p class="operacao-historico-item__evento" [class.is-remocao]="item.ehRemocao">
+              <i [class]="item.icone" aria-hidden="true"></i>
+              {{ item.ehRemocao ? item.valorAnteriorLabel : item.valorNovoLabel }}
+            </p>
+          } @else {
+            <p class="operacao-historico-item__mudanca">
+              <span class="operacao-historico-item__anterior">{{ item.valorAnteriorLabel }}</span>
+              <i class="fa-solid fa-arrow-right-long" aria-hidden="true"></i>
+              <span class="operacao-historico-item__novo">{{ item.valorNovoLabel }}</span>
+            </p>
+          }
+          <span class="operacao-historico-item__autor">{{ item.autorNome || 'Sistema' }}</span>
+        </article>
+      }
+    </div>
+  }
+</div>

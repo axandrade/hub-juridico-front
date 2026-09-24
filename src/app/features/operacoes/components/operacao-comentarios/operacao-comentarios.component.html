@@ -1,0 +1,112 @@
+<div class="operacao-comentarios">
+  @if (operacaoId() === null) {
+    <div class="operacao-comentarios__empty">
+      <i class="fa-solid fa-comments" aria-hidden="true"></i>
+      <p>Salve a operação antes de adicionar comentários.</p>
+    </div>
+  } @else {
+    <section class="operacao-comentario-card">
+      <header class="operacao-comentario-card__header">
+        <h3>Comentários</h3>
+      </header>
+
+      <div class="operacao-comentario-card__novo">
+        <textarea
+          #comentarioInput
+          rows="3"
+          maxlength="4000"
+          placeholder="Escreva um comentário..."
+          [disabled]="enviandoComentario()"
+        ></textarea>
+        <app-button
+          variant="primary"
+          size="sm"
+          icon="fa-solid fa-paper-plane"
+          [label]="enviandoComentario() ? 'Enviando...' : 'Comentar'"
+          [disabled]="enviandoComentario()"
+          (clicked)="adicionarComentario(comentarioInput)"
+        />
+      </div>
+
+      @if (carregando()) {
+        <div class="operacao-comentarios__empty operacao-comentarios__empty--compact">
+          <i class="fa-solid fa-spinner fa-spin" aria-hidden="true"></i>
+          <p>Carregando comentários...</p>
+        </div>
+      } @else if (erro()) {
+        <div class="operacao-comentarios__empty operacao-comentarios__empty--compact">
+          <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
+          <p>{{ erro() }}</p>
+        </div>
+      } @else if (!comentarios().length) {
+        <div class="operacao-comentarios__empty operacao-comentarios__empty--compact">
+          <i class="fa-solid fa-comments" aria-hidden="true"></i>
+          <p>Nenhum comentário nesta operação.</p>
+        </div>
+      } @else {
+        <div class="operacao-comentario-lista">
+          @for (comentario of comentarios(); track comentario.id) {
+            <article class="operacao-comentario">
+              <header class="operacao-comentario__header">
+                <span class="operacao-comentario__autor">{{ comentario.autorNome || 'Carregando...' }}</span>
+                <span class="operacao-comentario__data">{{ comentario.criadoEm | dateFormat: 'dd/MM/yyyy HH:mm' }}</span>
+                <button
+                  type="button"
+                  class="operacao-comentario__icon operacao-comentario__icon--danger"
+                  aria-label="Excluir comentário"
+                  title="Excluir comentário"
+                  (click)="excluirComentario(comentario)"
+                >
+                  <i class="fa-solid fa-trash-can" aria-hidden="true"></i>
+                </button>
+              </header>
+
+              <p class="operacao-comentario__texto">{{ comentario.texto }}</p>
+
+              @if (comentario.carregandoDocumentos) {
+                <span class="operacao-comentario__anexos-status">Carregando anexos...</span>
+              } @else if (comentario.documentos.length) {
+                <div class="operacao-comentario__anexos">
+                  @for (documento of comentario.documentos; track documento.id) {
+                    <span class="operacao-comentario__anexo">
+                      <button
+                        type="button"
+                        class="operacao-comentario__anexo-nome"
+                        (click)="baixarDocumento(documento)"
+                        [title]="'Baixar ' + documento.nome"
+                      >
+                        <i class="fa-solid fa-paperclip" aria-hidden="true"></i>
+                        {{ documento.nome }}
+                      </button>
+                      <button
+                        type="button"
+                        class="operacao-comentario__icon operacao-comentario__icon--danger"
+                        aria-label="Excluir anexo"
+                        title="Excluir anexo"
+                        (click)="excluirDocumento(comentario, documento)"
+                      >
+                        <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+                      </button>
+                    </span>
+                  }
+                </div>
+              }
+
+              <label class="operacao-comentario__anexar" [class.is-enviando]="comentario.enviando">
+                <input
+                  #arquivoInput
+                  type="file"
+                  hidden
+                  [disabled]="comentario.enviando"
+                  (change)="anexarArquivo(comentario, arquivoInput)"
+                />
+                <i [class]="'fa-solid ' + (comentario.enviando ? 'fa-spinner fa-spin' : 'fa-plus')" aria-hidden="true"></i>
+                {{ comentario.enviando ? 'Enviando ' + (comentario.progresso ?? 0) + '%' : 'Anexar arquivo' }}
+              </label>
+            </article>
+          }
+        </div>
+      }
+    </section>
+  }
+</div>

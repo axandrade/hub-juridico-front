@@ -15,12 +15,13 @@ import { DomainService } from '../../../../core/services/domain.service';
 import { ButtonComponent } from '../../../../shared/components/button/button.component';
 import { ToastService } from '../../../../shared/services/toast.service';
 import { OperacaoChecklistsComponent } from '../operacao-checklists/operacao-checklists.component';
+import { OperacaoComentariosComponent } from '../operacao-comentarios/operacao-comentarios.component';
 import { OperacaoInformacoesGeraisComponent } from '../operacao-informacoes-gerais/operacao-informacoes-gerais.component';
 import { OperacaoDetalheRow, OperacaoWriteApi } from '../../services/operacao-api.model';
 
 const ENTITY = 'operacao';
 
-type OperacaoAba = 'informacoesGerais' | 'checklists';
+type OperacaoAba = 'informacoesGerais' | 'checklists' | 'comentarios';
 
 /**
  * Shell do cadastro/edição de operação: selo do processo, abas, rodapé e persistência. Os campos
@@ -29,7 +30,12 @@ type OperacaoAba = 'informacoesGerais' | 'checklists';
 @Component({
   selector: 'app-operacao-form',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ButtonComponent, OperacaoInformacoesGeraisComponent, OperacaoChecklistsComponent],
+  imports: [
+    ButtonComponent,
+    OperacaoInformacoesGeraisComponent,
+    OperacaoChecklistsComponent,
+    OperacaoComentariosComponent,
+  ],
   templateUrl: './operacao-form.component.html',
   styleUrl: './operacao-form.component.scss',
 })
@@ -48,7 +54,7 @@ export class OperacaoFormComponent {
 
   private readonly informacoesGerais = viewChild(OperacaoInformacoesGeraisComponent);
 
-  protected readonly abas: readonly OperacaoAba[] = ['informacoesGerais', 'checklists'];
+  protected readonly abas: readonly OperacaoAba[] = ['informacoesGerais', 'checklists', 'comentarios'];
   protected readonly abaAtiva = signal<OperacaoAba>('informacoesGerais');
   protected readonly entityId = signal<number | null>(null);
   protected readonly salvando = signal(false);

@@ -1,0 +1,118 @@
+@use 'variables' as *;
+@use 'mixins' as *;
+
+:host {
+  display: block;
+}
+
+:host([hidden]) {
+  display: none;
+}
+
+.andamentos-lista-publicacoes {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-md;
+}
+
+.andamentos-lista-publicacoes__aviso {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  padding: $spacing-sm $spacing-md;
+  border: 1px solid $color-border;
+  border-radius: $border-radius-sm;
+  font-size: $font-size-xs;
+
+  &--erro {
+    border-color: rgba($color-error, 0.4);
+    background-color: rgba($color-error, 0.06);
+    color: $color-error;
+  }
+}
+
+.andamentos-lista-publicacoes__tabela {
+  min-height: 140px;
+
+  // `is-selected` já tem estilo no app-data-table; aqui só a publicação cancelada.
+  ::ng-deep tr.is-cancelada td {
+    color: $color-text-muted;
+    text-decoration: line-through;
+  }
+}
+
+// Detalhe da publicação selecionada — texto monoespaçado com rolagem, como no protótipo.
+.andamentos-lista-publicacoes__detalhe {
+  @include thin-scrollbar;
+  min-height: 140px;
+  max-height: 320px;
+  overflow: auto;
+  padding: $spacing-sm $spacing-md;
+  border: 1px solid $color-border;
+  border-radius: $border-radius-sm;
+  background-color: #fff;
+
+  pre {
+    margin: 0;
+    color: $color-text-primary;
+    font-family: Consolas, 'Courier New', monospace;
+    font-size: $font-size-xs;
+    line-height: 1.45;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+}
+
+.andamentos-lista-publicacoes__detalhe-vazio {
+  margin: 0;
+  color: $color-text-muted;
+  font-size: $font-size-xs;
+}
+
+.andamentos-lista-publicacoes__acoes {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: $spacing-sm;
+
+  button {
+    display: inline-flex;
+    align-items: center;
+    gap: $spacing-xs;
+    min-height: 30px;
+    padding: 0 $spacing-lg;
+    border: 1px solid $color-border;
+    border-radius: $border-radius-sm;
+    background-color: $color-surface;
+    color: $color-text-secondary;
+    font: inherit;
+    font-size: $font-size-xs;
+    font-weight: $font-weight-medium;
+    cursor: pointer;
+    transition:
+      color $transition-fast,
+      border-color $transition-fast,
+      background-color $transition-fast;
+
+    &:hover:not(:disabled) {
+      border-color: $color-primary-light;
+      color: $color-primary;
+    }
+
+    &.is-primary {
+      border-color: $color-primary;
+      background-color: $color-primary;
+      color: #fff;
+
+      &:hover:not(:disabled) {
+        background-color: $color-primary-light;
+        color: #fff;
+      }
+    }
+
+    &:disabled {
+      cursor: default;
+      opacity: 0.55;
+    }
+  }
+}

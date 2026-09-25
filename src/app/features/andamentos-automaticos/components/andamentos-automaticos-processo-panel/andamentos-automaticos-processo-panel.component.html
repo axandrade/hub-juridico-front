@@ -27,6 +27,9 @@
           @case ('andamentos') {
             Andamentos
           }
+          @case ('publicacoes') {
+            Publicações
+          }
         }
       </button>
     }
@@ -40,5 +43,6 @@
       [clienteNome]="clienteNome()"
     />
     <app-andamentos-lista-andamentos [hidden]="abaAtiva() !== 'andamentos'" [processoId]="processoId()" />
+    <app-andamentos-lista-publicacoes [hidden]="abaAtiva() !== 'publicacoes'" [processoId]="processoId()" />
   </div>
 </section>

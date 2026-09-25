@@ -1,0 +1,51 @@
+<div class="andamentos-lista-publicacoes">
+  @if (erro()) {
+    <div class="andamentos-lista-publicacoes__aviso andamentos-lista-publicacoes__aviso--erro" role="alert">
+      <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
+      {{ erro() }}
+    </div>
+  }
+
+  <div class="andamentos-lista-publicacoes__tabela" [attr.aria-busy]="carregando()">
+    <app-data-table
+      [columns]="colunas"
+      [data]="publicacoes()"
+      [columnsToolbar]="false"
+      [sortable]="true"
+      [loading]="carregando()"
+      [rowClass]="linhaSelecionada"
+      [emptyMessage]="carregando() ? '' : 'Nenhuma publicação deste processo no DJEN.'"
+      (rowClick)="selecionar($event)"
+    />
+  </div>
+
+  <div class="andamentos-lista-publicacoes__detalhe" aria-label="Detalhe da publicação">
+    @if (selecionada()) {
+      <pre>{{ detalhe() }}</pre>
+    } @else {
+      <p class="andamentos-lista-publicacoes__detalhe-vazio">
+        Selecione uma publicação na tabela para ver o texto completo.
+      </p>
+    }
+  </div>
+
+  <div class="andamentos-lista-publicacoes__acoes">
+    <button type="button" [disabled]="!selecionada()?.texto" (click)="copiarTexto()">
+      <i class="fa-regular fa-copy" aria-hidden="true"></i>
+      Copiar texto
+    </button>
+    <button type="button" [disabled]="!selecionada()?.certidao_url" (click)="abrir(selecionada()?.certidao_url)">
+      <i class="fa-solid fa-file-pdf" aria-hidden="true"></i>
+      Abrir certidão
+    </button>
+    <button
+      type="button"
+      class="is-primary"
+      [disabled]="!selecionada()?.link"
+      (click)="abrir(selecionada()?.link)"
+    >
+      <i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i>
+      Abrir publicação
+    </button>
+  </div>
+</div>

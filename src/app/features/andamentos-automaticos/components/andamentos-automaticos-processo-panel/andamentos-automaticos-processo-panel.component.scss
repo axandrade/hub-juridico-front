@@ -70,6 +70,40 @@
   }
 }
 
+.andamentos-processo-panel__tabs {
+  display: flex;
+  flex-shrink: 0;
+  gap: $spacing-sm;
+  padding: $spacing-md $spacing-md $spacing-sm;
+  border-bottom: 1px solid rgba($color-border, 0.7);
+
+  button {
+    flex: 1 1 auto;
+    min-height: 34px;
+    padding: $spacing-xs $spacing-sm;
+    border: 1px solid $color-border;
+    border-radius: $border-radius-sm;
+    background-color: $color-neutral-light;
+    color: $color-text-secondary;
+    font: inherit;
+    font-size: $font-size-xs;
+    font-weight: $font-weight-medium;
+    white-space: nowrap;
+    cursor: pointer;
+    transition:
+      background-color $transition-fast,
+      border-color $transition-fast,
+      color $transition-fast;
+
+    &:hover,
+    &.is-active {
+      border-color: $color-primary-light;
+      background-color: rgba($color-primary-pale, 0.55);
+      color: $color-primary;
+    }
+  }
+}
+
 .andamentos-processo-panel__body {
   @include thin-scrollbar;
   flex: 1;

@@ -17,7 +17,24 @@
     </div>
   </header>
 
+  <nav class="andamentos-processo-panel__tabs" aria-label="Abas do painel de andamentos">
+    @for (aba of abas; track aba) {
+      <button type="button" [class.is-active]="abaAtiva() === aba" (click)="trocarAba(aba)">
+        @switch (aba) {
+          @case ('visaoGeral') {
+            Visão Geral
+          }
+          @case ('andamentos') {
+            Andamentos
+          }
+        }
+      </button>
+    }
+  </nav>
+
   <div class="andamentos-processo-panel__body">
-    <p>Andamentos automáticos do processo {{ numeroCnj() ?? processoId() }}</p>
+    <div [hidden]="abaAtiva() !== 'andamentos'">
+      <p>Andamentos automáticos do processo {{ numeroCnj() ?? processoId() }}</p>
+    </div>
   </div>
 </section>

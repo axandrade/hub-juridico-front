@@ -1,11 +1,14 @@
-import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, input, output, signal } from '@angular/core';
 
 import { PanelLayoutSwitcherComponent } from '../../../../shared/components/panel-layout-switcher/panel-layout-switcher.component';
 import { PAINEL_LAYOUT_PADRAO, PainelLayout } from '../../../../shared/models/panel-layout';
 
+type AndamentosAba = 'visaoGeral' | 'andamentos';
+
 /**
  * Conteúdo do painel de Andamentos Automáticos — mesmo cabeçalho de `OperacoesProcessoPanelComponent`
- * (título + número CNJ, fechar e seletor de posição). O dono do `PanelShellController` é o
+ * (título + número CNJ, fechar e seletor de posição), com as abas "Visão Geral" e "Andamentos" no
+ * mesmo desenho das abas do cadastro de operação. O dono do `PanelShellController` é o
  * `app-processo-lista-painel`; este componente só recebe `layoutPainel`/emite `layoutPainelChange`.
  */
 @Component({
@@ -22,6 +25,13 @@ export class AndamentosAutomaticosProcessoPanelComponent {
   readonly layoutPainel = input<PainelLayout>(PAINEL_LAYOUT_PADRAO);
   readonly layoutPainelChange = output<PainelLayout>();
   readonly fechar = output<void>();
+
+  protected readonly abas: readonly AndamentosAba[] = ['visaoGeral', 'andamentos'];
+  protected readonly abaAtiva = signal<AndamentosAba>('visaoGeral');
+
+  protected trocarAba(aba: AndamentosAba): void {
+    this.abaAtiva.set(aba);
+  }
 
   protected escolherLayout(layout: PainelLayout): void {
     this.layoutPainelChange.emit(layout);

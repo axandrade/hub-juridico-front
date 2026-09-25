@@ -1,0 +1,154 @@
+@use 'variables' as *;
+@use 'mixins' as *;
+
+:host {
+  display: block;
+}
+
+:host([hidden]) {
+  display: none;
+}
+
+.andamentos-lista-andamentos {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-md;
+}
+
+// Barra de filtros numa linha só, como no protótipo — quebra pra baixo em painel estreito.
+.andamentos-lista-andamentos__filtros {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: $spacing-sm $spacing-lg;
+  padding: $spacing-sm $spacing-md;
+  border: 1px solid $color-border;
+  border-radius: $border-radius-sm;
+  background-color: $color-neutral-light;
+  font-size: $font-size-xs;
+}
+
+.andamentos-lista-andamentos__campo {
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+
+  > span {
+    color: $color-text-primary;
+    font-weight: $font-weight-bold;
+    white-space: nowrap;
+  }
+
+  input[type='text'] {
+    width: 200px;
+    min-height: 28px;
+    padding: 0 $spacing-sm;
+    border: 1px solid $color-border;
+    border-radius: $border-radius-sm;
+    background-color: $color-surface;
+    color: $color-text-primary;
+    font: inherit;
+  }
+}
+
+.andamentos-lista-andamentos__combo {
+  width: 170px;
+}
+
+.andamentos-lista-andamentos__check {
+  display: inline-flex;
+  align-items: center;
+  gap: $spacing-xs;
+  color: $color-text-primary;
+  white-space: nowrap;
+  cursor: pointer;
+
+  &.is-disabled {
+    color: $color-text-muted;
+    cursor: not-allowed;
+  }
+}
+
+.andamentos-lista-andamentos__limpar {
+  min-height: 28px;
+  padding: 0 $spacing-lg;
+  border: 1px solid $color-border;
+  border-radius: $border-radius-sm;
+  background-color: $color-surface;
+  color: $color-text-secondary;
+  font: inherit;
+  font-weight: $font-weight-medium;
+  cursor: pointer;
+  transition:
+    color $transition-fast,
+    border-color $transition-fast;
+
+  &:hover:not(:disabled) {
+    border-color: $color-primary-light;
+    color: $color-primary;
+  }
+
+  &:disabled {
+    cursor: default;
+    opacity: 0.6;
+  }
+}
+
+.andamentos-lista-andamentos__contador {
+  margin-left: auto;
+  color: $color-text-secondary;
+  white-space: nowrap;
+}
+
+.andamentos-lista-andamentos__aviso {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  padding: $spacing-sm $spacing-md;
+  border: 1px solid $color-border;
+  border-radius: $border-radius-sm;
+  font-size: $font-size-xs;
+
+  &--erro {
+    border-color: rgba($color-error, 0.4);
+    background-color: rgba($color-error, 0.06);
+    color: $color-error;
+  }
+}
+
+.andamentos-lista-andamentos__tabela {
+  position: relative;
+  min-height: 180px;
+}
+
+// Mesma camada de carregamento da Visão geral.
+.andamentos-lista-andamentos__loading {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: $spacing-xs;
+  border-radius: $border-radius-sm;
+  background-color: rgba($color-surface, 0.82);
+  text-align: center;
+
+  i {
+    margin-bottom: $spacing-xs;
+    color: $color-primary;
+    font-size: $font-size-2xl;
+  }
+
+  strong {
+    color: $color-text-primary;
+    font-size: $font-size-base;
+    font-weight: $font-weight-medium;
+  }
+
+  span {
+    color: $color-text-muted;
+    font-size: $font-size-xs;
+  }
+}

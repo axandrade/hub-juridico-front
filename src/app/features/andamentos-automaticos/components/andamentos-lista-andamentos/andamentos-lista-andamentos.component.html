@@ -1,0 +1,95 @@
+<div class="andamentos-lista-andamentos">
+  <div class="andamentos-lista-andamentos__filtros" role="search" aria-label="Pesquisar e filtrar andamentos">
+    <label class="andamentos-lista-andamentos__campo andamentos-lista-andamentos__campo--busca">
+      <span>Pesquisar:</span>
+      <input
+        type="text"
+        placeholder="Pesquisar e filtrar andamentos"
+        [value]="busca()"
+        (input)="onBusca($event)"
+        aria-label="Pesquisar andamentos"
+      />
+    </label>
+
+    <div class="andamentos-lista-andamentos__campo">
+      <span>Fonte:</span>
+      <app-combobox
+        class="andamentos-lista-andamentos__combo"
+        ariaLabel="Fonte"
+        [pesquisavel]="false"
+        [options]="fonteOpcoes()"
+        [value]="fonte()"
+        (valueChange)="fonte.set($event)"
+      />
+    </div>
+
+    <div class="andamentos-lista-andamentos__campo">
+      <span>Tipo:</span>
+      <app-combobox
+        class="andamentos-lista-andamentos__combo"
+        ariaLabel="Tipo"
+        [pesquisavel]="false"
+        [options]="tipoOpcoes()"
+        [value]="tipo()"
+        (valueChange)="tipo.set($event)"
+      />
+    </div>
+
+    <label
+      class="andamentos-lista-andamentos__check is-disabled"
+      title="Disponível quando as consultas ao DataJud passarem a ser gravadas (pra comparar com a anterior)."
+    >
+      <input type="checkbox" disabled />
+      Somente novos
+    </label>
+
+    <label class="andamentos-lista-andamentos__check">
+      <input type="checkbox" [checked]="comDocumentoOuLink()" (change)="onComDocumentoOuLink($event)" />
+      Com documento/link
+    </label>
+
+    <button type="button" class="andamentos-lista-andamentos__limpar" [disabled]="!temFiltro()" (click)="limpar()">
+      Limpar
+    </button>
+
+    <span class="andamentos-lista-andamentos__contador">
+      @if (temFiltro()) {
+        {{ filtrados().length }} de {{ andamentos().length }} item(ns)
+      } @else {
+        {{ andamentos().length }} item(ns)
+      }
+    </span>
+  </div>
+
+  @if (erro()) {
+    <div class="andamentos-lista-andamentos__aviso andamentos-lista-andamentos__aviso--erro" role="alert">
+      <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
+      {{ erro() }}
+    </div>
+  }
+
+  <div class="andamentos-lista-andamentos__tabela" [attr.aria-busy]="carregando()">
+    <app-data-table
+      [columns]="colunas"
+      [data]="filtrados()"
+      [columnsToolbar]="false"
+      [sortable]="true"
+      [rowTitle]="tituloLinha"
+      [emptyMessage]="
+        carregando()
+          ? ''
+          : temFiltro()
+            ? 'Nenhum andamento com esses filtros.'
+            : 'Nenhum andamento encontrado no DataJud.'
+      "
+    />
+
+    @if (carregando()) {
+      <div class="andamentos-lista-andamentos__loading" role="status" aria-live="polite">
+        <i class="fa-solid fa-spinner fa-spin" aria-hidden="true"></i>
+        <strong>Consultando o DataJud...</strong>
+        <span>A resposta pode levar até 1 minuto. · {{ segundosEsperando() }}s</span>
+      </div>
+    }
+  </div>
+</div>

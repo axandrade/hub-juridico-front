@@ -4,7 +4,7 @@ import { Subscription, interval } from 'rxjs';
 
 import { DATE_FORMAT } from '../../../../core/constants/app-constants';
 import { DateFormatPipe } from '../../../../shared/pipes/date-format.pipe';
-import { DatajudService, DatajudVisaoGeralApi, STATUS_DATAJUD_LABEL } from '../../services/datajud.service';
+import { DatajudProcessoApi, DatajudService, STATUS_DATAJUD_LABEL } from '../../services/datajud.service';
 
 interface CampoVisaoGeral {
   label: string;
@@ -16,8 +16,8 @@ interface CampoVisaoGeral {
 /**
  * Aba "Visão geral" do painel de Andamentos Automáticos — o que o DataJud diz do processo
  * (capa de referência), no layout de duas colunas "rótulo: valor" do protótipo (Monitor de
- * Processos). Consulta o DataJud na hora a cada processo selecionado e no botão "Atualizar";
- * nada é gravado ainda.
+ * Processos). Carrega pelo `processoId` (padrão das abas do projeto); a consulta ao DataJud é
+ * compartilhada com a aba "Andamentos" pelo `DatajudService`, e "Atualizar" recarrega as duas.
  *
  * Referência, Status Comunica/DJEN, Status/Identificação STF e Ativo no monitoramento estão no
  * protótipo mas ainda não têm fonte — aparecem com "—"/"Não integrado" até existirem.
@@ -33,7 +33,7 @@ export class AndamentosVisaoGeralComponent {
   private readonly datajudService = inject(DatajudService);
   private readonly destroyRef = inject(DestroyRef);
 
-  /** Consulta em andamento + contador de segundos — cancelados ao trocar de processo/atualizar/destruir. */
+  /** Consulta em andamento + contador de segundos — cancelados ao trocar de processo/recarregar/destruir. */
   private consulta?: Subscription;
   private cronometro?: Subscription;
 
@@ -41,9 +41,9 @@ export class AndamentosVisaoGeralComponent {
   readonly numeroCnj = input<string | null>(null);
   readonly clienteNome = input<string | null>(null);
 
+  protected readonly visao = signal<DatajudProcessoApi | null>(null);
   protected readonly carregando = signal(false);
   protected readonly erro = signal('');
-  protected readonly visao = signal<DatajudVisaoGeralApi | null>(null);
   /** Segundos desde o início da consulta — o DataJud chega a levar ~1 min, o contador mostra que não travou. */
   protected readonly segundosEsperando = signal(0);
 
@@ -117,13 +117,15 @@ export class AndamentosVisaoGeralComponent {
   constructor() {
     effect(() => {
       const processoId = this.processoId();
+      this.datajudService.versao();
       untracked(() => this.carregar(processoId));
     });
     this.destroyRef.onDestroy(() => this.cancelar());
   }
 
+  /** Descarta o cache do processo — esta aba e a de Andamentos refazem a consulta juntas. */
   protected atualizar(): void {
-    this.carregar(this.processoId());
+    this.datajudService.recarregar(this.processoId());
   }
 
   private carregar(processoId: number): void {
@@ -134,13 +136,13 @@ export class AndamentosVisaoGeralComponent {
     this.visao.set(null);
     this.segundosEsperando.set(0);
     this.cronometro = interval(1000).subscribe(() => this.segundosEsperando.update((s) => s + 1));
-    this.consulta = this.datajudService.visaoGeral(processoId).subscribe({
+    this.consulta = this.datajudService.consultar(processoId).subscribe({
       next: (visao) => {
         this.visao.set(visao);
         this.finalizar();
       },
       error: (err: unknown) => {
-        this.erro.set(this.httpErrorMessage(err));
+        this.erro.set(httpErrorMessage(err));
         this.finalizar();
       },
     });
@@ -178,12 +180,12 @@ export class AndamentosVisaoGeralComponent {
     const data = new Date(valor);
     return Number.isNaN(data.getTime()) ? valor : formatDate(data, formato, DATE_FORMAT.LOCALE);
   }
+}
 
-  private httpErrorMessage(err: unknown): string {
-    const e = err as { error?: { detail?: string; title?: string }; message?: string; status?: number };
-    if (e?.status === 0) {
-      return 'Sem conexão com o servidor.';
-    }
-    return e?.error?.detail || e?.error?.title || 'Não foi possível consultar o DataJud.';
+function httpErrorMessage(err: unknown): string {
+  const e = err as { error?: { detail?: string; title?: string }; status?: number };
+  if (e?.status === 0) {
+    return 'Sem conexão com o servidor.';
   }
+  return e?.error?.detail || e?.error?.title || 'Não foi possível consultar o DataJud.';
 }

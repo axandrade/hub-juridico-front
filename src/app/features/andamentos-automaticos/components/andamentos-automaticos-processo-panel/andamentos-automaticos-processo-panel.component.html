@@ -39,8 +39,6 @@
       [numeroCnj]="numeroCnj()"
       [clienteNome]="clienteNome()"
     />
-    <div [hidden]="abaAtiva() !== 'andamentos'">
-      <p>Andamentos automáticos do processo {{ numeroCnj() ?? processoId() }}</p>
-    </div>
+    <app-andamentos-lista-andamentos [hidden]="abaAtiva() !== 'andamentos'" [processoId]="processoId()" />
   </div>
 </section>

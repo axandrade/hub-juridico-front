@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, input, output, signal } from '@angu
 
 import { PanelLayoutSwitcherComponent } from '../../../../shared/components/panel-layout-switcher/panel-layout-switcher.component';
 import { PAINEL_LAYOUT_PADRAO, PainelLayout } from '../../../../shared/models/panel-layout';
+import { AndamentosListaAndamentosComponent } from '../andamentos-lista-andamentos/andamentos-lista-andamentos.component';
 import { AndamentosVisaoGeralComponent } from '../andamentos-visao-geral/andamentos-visao-geral.component';
 
 type AndamentosAba = 'visaoGeral' | 'andamentos';
@@ -11,11 +12,14 @@ type AndamentosAba = 'visaoGeral' | 'andamentos';
  * (título + número CNJ, fechar e seletor de posição), com as abas "Visão Geral" e "Andamentos" no
  * mesmo desenho das abas do cadastro de operação. O dono do `PanelShellController` é o
  * `app-processo-lista-painel`; este componente só recebe `layoutPainel`/emite `layoutPainelChange`.
+ *
+ * Cada aba é um componente próprio que recebe o `processoId` e carrega seus dados (padrão das abas
+ * de Operação/Processo) — a consulta ao DataJud é compartilhada entre elas pelo `DatajudService`.
  */
 @Component({
   selector: 'app-andamentos-automaticos-processo-panel',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [PanelLayoutSwitcherComponent, AndamentosVisaoGeralComponent],
+  imports: [PanelLayoutSwitcherComponent, AndamentosVisaoGeralComponent, AndamentosListaAndamentosComponent],
   templateUrl: './andamentos-automaticos-processo-panel.component.html',
   styleUrl: './andamentos-automaticos-processo-panel.component.scss',
 })

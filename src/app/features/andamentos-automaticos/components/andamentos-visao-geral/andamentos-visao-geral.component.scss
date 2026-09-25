@@ -1,0 +1,212 @@
+@use 'variables' as *;
+@use 'mixins' as *;
+
+:host {
+  display: block;
+}
+
+:host([hidden]) {
+  display: none;
+}
+
+.visao-geral {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-md;
+}
+
+.visao-geral__toolbar {
+  @include flex-between;
+  gap: $spacing-sm;
+}
+
+.visao-geral__fonte {
+  color: $color-text-muted;
+  font-size: $font-size-xs;
+}
+
+.visao-geral__atualizar {
+  display: inline-flex;
+  align-items: center;
+  gap: $spacing-xs;
+  min-height: 28px;
+  padding: 0 $spacing-sm;
+  border: 1px solid $color-border;
+  border-radius: $border-radius-sm;
+  background-color: $color-neutral-light;
+  color: $color-text-secondary;
+  font: inherit;
+  font-size: $font-size-xs;
+  font-weight: $font-weight-medium;
+  cursor: pointer;
+  transition:
+    color $transition-fast,
+    border-color $transition-fast;
+
+  &:hover:not(:disabled) {
+    border-color: $color-primary-light;
+    color: $color-primary;
+  }
+
+  &:disabled {
+    cursor: default;
+    opacity: 0.6;
+  }
+}
+
+.visao-geral__aviso {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  padding: $spacing-sm $spacing-md;
+  border: 1px solid $color-border;
+  border-radius: $border-radius-sm;
+  background-color: $color-neutral-light;
+  color: $color-text-secondary;
+  font-size: $font-size-xs;
+
+  &--erro {
+    border-color: rgba($color-error, 0.4);
+    background-color: rgba($color-error, 0.06);
+    color: $color-error;
+  }
+}
+
+// Área dos dados — referência de posição pra camada de carregamento cobrir campos + KPIs.
+.visao-geral__dados {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-md;
+}
+
+.visao-geral__loading {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: $spacing-xs;
+  border-radius: $border-radius-sm;
+  background-color: rgba($color-surface, 0.82);
+  color: $color-text-secondary;
+  text-align: center;
+
+  i {
+    margin-bottom: $spacing-xs;
+    color: $color-primary;
+    font-size: $font-size-2xl;
+  }
+
+  strong {
+    color: $color-text-primary;
+    font-size: $font-size-base;
+    font-weight: $font-weight-medium;
+  }
+
+  span {
+    color: $color-text-muted;
+    font-size: $font-size-xs;
+  }
+}
+
+// Grade fixa de 4 colunas como no protótipo: rótulo | valor | rótulo | valor. Cada par
+// `.visao-geral__campo` usa `display: contents`, então dt/dd caem direto nas colunas da grade
+// e os rótulos de cada lado ficam alinhados pela largura do maior.
+.visao-geral__campos {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr) max-content minmax(0, 1fr);
+  align-items: baseline;
+  column-gap: $spacing-xl;
+  row-gap: $spacing-md;
+  margin: 0;
+  padding: $spacing-lg;
+  border: 1px solid $color-border;
+  border-radius: $border-radius-sm;
+  background-color: $color-neutral-light;
+  font-size: $font-size-xs;
+}
+
+.visao-geral__campo {
+  display: contents;
+
+  dt {
+    color: $color-text-primary;
+    font-weight: $font-weight-bold;
+  }
+
+  dd {
+    min-width: 0;
+    margin: 0;
+    color: $color-text-primary;
+    overflow-wrap: anywhere;
+
+    &.is-truncado {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+  }
+}
+
+.visao-geral__conteudo {
+  margin: 0;
+  padding: $spacing-sm $spacing-lg $spacing-lg;
+  border: 1px solid $color-border;
+  border-radius: $border-radius-sm;
+
+  legend {
+    padding: 0 $spacing-xs;
+    color: $color-text-secondary;
+    font-size: $font-size-xs;
+  }
+}
+
+.visao-geral__kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: $spacing-md;
+}
+
+.visao-geral__kpi {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+
+  strong {
+    color: $color-primary;
+    font-size: $font-size-2xl;
+    font-weight: $font-weight-bold;
+  }
+
+  span {
+    color: $color-text-secondary;
+    font-size: $font-size-xs;
+  }
+}
+
+// Caixa de diagnóstico abaixo do Conteúdo armazenado — texto monoespaçado com rolagem, como no protótipo.
+.visao-geral__diagnostico {
+  @include thin-scrollbar;
+  max-height: 160px;
+  margin: 0;
+  padding: $spacing-sm $spacing-md;
+  overflow: auto;
+  border: 1px solid $color-border;
+  border-radius: $border-radius-sm;
+  background-color: #fff;
+  color: $color-text-primary;
+  font-family: Consolas, 'Courier New', monospace;
+  font-size: $font-size-xs;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+
+  // Linha em branco (separador antes do erro) mantém a altura.
+  > div {
+    min-height: 1.45em;
+  }
+}

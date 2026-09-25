@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, input, output, signal } from '@angu
 
 import { PanelLayoutSwitcherComponent } from '../../../../shared/components/panel-layout-switcher/panel-layout-switcher.component';
 import { PAINEL_LAYOUT_PADRAO, PainelLayout } from '../../../../shared/models/panel-layout';
+import { AndamentosVisaoGeralComponent } from '../andamentos-visao-geral/andamentos-visao-geral.component';
 
 type AndamentosAba = 'visaoGeral' | 'andamentos';
 
@@ -14,13 +15,14 @@ type AndamentosAba = 'visaoGeral' | 'andamentos';
 @Component({
   selector: 'app-andamentos-automaticos-processo-panel',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [PanelLayoutSwitcherComponent],
+  imports: [PanelLayoutSwitcherComponent, AndamentosVisaoGeralComponent],
   templateUrl: './andamentos-automaticos-processo-panel.component.html',
   styleUrl: './andamentos-automaticos-processo-panel.component.scss',
 })
 export class AndamentosAutomaticosProcessoPanelComponent {
   readonly processoId = input.required<number>();
   readonly numeroCnj = input<string | null>(null);
+  readonly clienteNome = input<string | null>(null);
   /** Posição atual do painel na tela (quem aplica/persiste é o `app-processo-lista-painel`). */
   readonly layoutPainel = input<PainelLayout>(PAINEL_LAYOUT_PADRAO);
   readonly layoutPainelChange = output<PainelLayout>();

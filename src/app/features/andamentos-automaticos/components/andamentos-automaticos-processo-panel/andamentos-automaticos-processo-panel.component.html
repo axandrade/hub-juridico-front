@@ -33,6 +33,12 @@
   </nav>
 
   <div class="andamentos-processo-panel__body">
+    <app-andamentos-visao-geral
+      [hidden]="abaAtiva() !== 'visaoGeral'"
+      [processoId]="processoId()"
+      [numeroCnj]="numeroCnj()"
+      [clienteNome]="clienteNome()"
+    />
     <div [hidden]="abaAtiva() !== 'andamentos'">
       <p>Andamentos automáticos do processo {{ numeroCnj() ?? processoId() }}</p>
     </div>

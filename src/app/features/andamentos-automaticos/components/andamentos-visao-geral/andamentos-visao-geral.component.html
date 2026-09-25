@@ -1,0 +1,71 @@
+<div class="visao-geral">
+  <div class="visao-geral__toolbar">
+    <span class="visao-geral__fonte">
+      @if (visao(); as v) {
+        Consultado no DataJud em {{ v.consultado_em | dateFormat: 'dd/MM/yyyy HH:mm' }}
+      } @else if (carregando()) {
+        Consultando o DataJud...
+      }
+    </span>
+    <button
+      type="button"
+      class="visao-geral__atualizar"
+      [disabled]="carregando()"
+      (click)="atualizar()"
+    >
+      <i class="fa-solid fa-rotate" [class.fa-spin]="carregando()" aria-hidden="true"></i>
+      Atualizar
+    </button>
+  </div>
+
+  @if (erro()) {
+    <div class="visao-geral__aviso visao-geral__aviso--erro" role="alert">
+      <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
+      {{ erro() }}
+    </div>
+  } @else if (visao()?.status === 'NAO_ENCONTRADO') {
+    <div class="visao-geral__aviso" role="status">
+      <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
+      O DataJud não tem dados deste processo (consultado: {{ visao()!.tribunais_consultados.join(', ') || 'nenhum índice público' }}).
+    </div>
+  }
+
+  <div class="visao-geral__dados" [attr.aria-busy]="carregando()">
+    <dl class="visao-geral__campos">
+      @for (campo of campos(); track campo.label) {
+        <div class="visao-geral__campo">
+          <dt>{{ campo.label }}:</dt>
+          <dd [class.is-truncado]="campo.truncar" [attr.title]="campo.truncar ? campo.valor : null">{{ campo.valor }}</dd>
+        </div>
+      }
+    </dl>
+
+    <fieldset class="visao-geral__conteudo">
+      <legend>Conteúdo armazenado</legend>
+      <div class="visao-geral__kpis">
+        <div class="visao-geral__kpi">
+          <strong>{{ visao()?.total_capas ?? 0 }}</strong>
+          <span>Capas DataJud</span>
+        </div>
+        <div class="visao-geral__kpi">
+          <strong>{{ visao()?.total_andamentos ?? 0 }}</strong>
+          <span>Andamentos</span>
+        </div>
+      </div>
+    </fieldset>
+
+    <div class="visao-geral__diagnostico" aria-label="Diagnóstico das fontes">
+      @for (linha of diagnostico(); track $index) {
+        <div>{{ linha }}</div>
+      }
+    </div>
+
+    @if (carregando()) {
+      <div class="visao-geral__loading" role="status" aria-live="polite">
+        <i class="fa-solid fa-spinner fa-spin" aria-hidden="true"></i>
+        <strong>Consultando o DataJud...</strong>
+        <span>A resposta pode levar até 1 minuto. · {{ segundosEsperando() }}s</span>
+      </div>
+    }
+  </div>
+</div>

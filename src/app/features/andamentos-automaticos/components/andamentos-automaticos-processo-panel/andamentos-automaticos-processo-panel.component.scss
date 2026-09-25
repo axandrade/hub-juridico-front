@@ -1,0 +1,84 @@
+@use 'variables' as *;
+@use 'mixins' as *;
+
+:host {
+  display: block;
+  min-width: 0;
+  height: 100%;
+}
+
+.andamentos-processo-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid $color-border;
+  border-radius: $border-radius-md;
+  background-color: $color-surface;
+  box-shadow: $shadow-sm;
+}
+
+.andamentos-processo-panel__header {
+  @include flex-between;
+  align-items: flex-start;
+  gap: $spacing-sm;
+  padding: $spacing-md;
+  border-bottom: 1px solid rgba($color-border, 0.75);
+
+  h2 {
+    display: flex;
+    align-items: baseline;
+    gap: $spacing-xs;
+    margin: 0;
+    font-size: $font-size-lg;
+    font-weight: $font-weight-medium;
+    color: $color-text-primary;
+  }
+}
+
+.andamentos-processo-panel__cnj {
+  color: $color-text-secondary;
+  font-size: $font-size-base;
+  font-weight: $font-weight-regular;
+}
+
+.andamentos-processo-panel__tools {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.andamentos-processo-panel__close {
+  @include flex-center;
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  border: 1px solid $color-border;
+  border-radius: $border-radius-sm;
+  background-color: $color-neutral-light;
+  color: $color-text-secondary;
+  cursor: pointer;
+  transition:
+    color $transition-fast,
+    border-color $transition-fast;
+
+  &:hover {
+    border-color: $color-primary-light;
+    color: $color-primary;
+  }
+}
+
+.andamentos-processo-panel__body {
+  @include thin-scrollbar;
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: $spacing-md;
+
+  p {
+    margin: 0;
+    color: $color-text-secondary;
+  }
+}

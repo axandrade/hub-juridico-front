@@ -5,7 +5,18 @@
   filtroFixo="tipo eq 'JUDICIAL'"
   textoPainelVazio="Selecione um processo na tabela para visualizar os andamentos automáticos dele aqui."
 >
-  <ng-template let-processo>
-    <p>Andamentos automáticos do processo {{ processo.numeroCnj ?? processo.id }}</p>
+  <ng-template
+    let-processo
+    let-layoutPainel="layoutPainel"
+    let-mudarLayout="mudarLayout"
+    let-fechar="fechar"
+  >
+    <app-andamentos-automaticos-processo-panel
+      [processoId]="processo.id"
+      [numeroCnj]="processo.numeroCnj"
+      [layoutPainel]="layoutPainel"
+      (layoutPainelChange)="mudarLayout($event)"
+      (fechar)="fechar()"
+    />
   </ng-template>
 </app-processo-lista-painel>

@@ -1,0 +1,23 @@
+<section class="andamentos-processo-panel" aria-label="Andamentos automáticos do processo">
+  <header class="andamentos-processo-panel__header">
+    <h2>
+      Andamentos automáticos
+      <span class="andamentos-processo-panel__cnj">{{ numeroCnj() || 'sem número CNJ' }}</span>
+    </h2>
+    <div class="andamentos-processo-panel__tools" aria-label="Ferramentas do painel">
+      <button
+        type="button"
+        class="andamentos-processo-panel__close"
+        aria-label="Fechar painel"
+        (click)="onFechar()"
+      >
+        <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+      </button>
+      <app-panel-layout-switcher [layoutPainel]="layoutPainel()" (layoutPainelChange)="escolherLayout($event)" />
+    </div>
+  </header>
+
+  <div class="andamentos-processo-panel__body">
+    <p>Andamentos automáticos do processo {{ numeroCnj() ?? processoId() }}</p>
+  </div>
+</section>

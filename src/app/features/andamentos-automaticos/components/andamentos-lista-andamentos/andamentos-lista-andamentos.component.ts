@@ -6,7 +6,7 @@ import { DATE_FORMAT } from '../../../../core/constants/app-constants';
 import { ComboboxComponent } from '../../../../shared/components/combobox/combobox.component';
 import { DataTableComponent } from '../../../../shared/components/table/data-table.component';
 import { TableColumn } from '../../../../shared/components/table/table-column.model';
-import { DatajudAndamentoApi, DatajudService } from '../../services/datajud.service';
+import { AndamentoApi, AndamentosService } from '../../services/andamentos.service';
 
 const TODAS_AS_FONTES = 'Todas as fontes';
 const TODOS_OS_TIPOS = 'Todos os tipos';
@@ -15,7 +15,7 @@ const TODOS_OS_TIPOS = 'Todos os tipos';
  * Aba "Andamentos" do painel de Andamentos Automáticos — linha do tempo do processo no layout do
  * protótipo (Monitor de Processos): barra de filtros (pesquisa, fonte, tipo, somente novos, com
  * documento/link, limpar, contador) + tabela. Carrega pelo `processoId` (padrão das abas do
- * projeto); a consulta ao DataJud é compartilhada com a aba "Visão geral" pelo `DatajudService` —
+ * projeto); a consulta ao DataJud é compartilhada com a aba "Visão geral" pelo `AndamentosService` —
  * os andamentos já vêm consolidados entre as capas, do mais recente pro mais antigo.
  *
  * Fonte/Tipo listam o que veio nos dados (hoje só "DataJud"/"Movimento" — crescem sozinhos quando
@@ -30,7 +30,7 @@ const TODOS_OS_TIPOS = 'Todos os tipos';
   styleUrl: './andamentos-lista-andamentos.component.scss',
 })
 export class AndamentosListaAndamentosComponent {
-  private readonly datajudService = inject(DatajudService);
+  private readonly andamentosService = inject(AndamentosService);
   private readonly destroyRef = inject(DestroyRef);
 
   /** Consulta em andamento + contador de segundos — cancelados ao trocar de processo/recarregar/destruir. */
@@ -39,7 +39,7 @@ export class AndamentosListaAndamentosComponent {
 
   readonly processoId = input.required<number>();
 
-  protected readonly andamentos = signal<DatajudAndamentoApi[]>([]);
+  protected readonly andamentos = signal<AndamentoApi[]>([]);
   protected readonly carregando = signal(false);
   protected readonly erro = signal('');
   /** Segundos desde o início da consulta — o DataJud chega a levar ~1 min, o contador mostra que não travou. */
@@ -75,7 +75,7 @@ export class AndamentosListaAndamentosComponent {
       this.comDocumentoOuLink(),
   );
 
-  protected readonly colunas: TableColumn<DatajudAndamentoApi>[] = [
+  protected readonly colunas: TableColumn<AndamentoApi>[] = [
     { key: 'ordem', header: 'Ord.', width: '64px', align: 'center', formatter: (v) => `${v}º` },
     {
       key: 'data_hora',
@@ -100,8 +100,8 @@ export class AndamentosListaAndamentosComponent {
     },
   ];
 
-  /** Tooltip da linha: código TPU + complementos do movimento (ex.: "tipo de conclusao: para julgamento"). */
-  protected readonly tituloLinha = (a: DatajudAndamentoApi): string | null => {
+  /** Tooltip da linha: código TPU (DataJud) + complementos (ex.: "tipo de conclusao: para julgamento", "Peça: Termo de baixa"). */
+  protected readonly tituloLinha = (a: AndamentoApi): string | null => {
     const partes = [a.codigo != null ? `TPU ${a.codigo}` : '', ...a.complementos].filter(Boolean);
     return partes.length ? partes.join(' · ') : null;
   };
@@ -109,7 +109,7 @@ export class AndamentosListaAndamentosComponent {
   constructor() {
     effect(() => {
       const processoId = this.processoId();
-      this.datajudService.versao();
+      this.andamentosService.versao();
       untracked(() => this.carregar(processoId));
     });
     this.destroyRef.onDestroy(() => this.cancelar());
@@ -138,7 +138,7 @@ export class AndamentosListaAndamentosComponent {
     this.andamentos.set([]);
     this.segundosEsperando.set(0);
     this.cronometro = interval(1000).subscribe(() => this.segundosEsperando.update((s) => s + 1));
-    this.consulta = this.datajudService.consultar(processoId).subscribe({
+    this.consulta = this.andamentosService.consultar(processoId).subscribe({
       next: (dados) => {
         this.andamentos.set(dados.andamentos);
         this.finalizar();
@@ -160,11 +160,11 @@ export class AndamentosListaAndamentosComponent {
     this.cronometro?.unsubscribe();
   }
 
-  private distintos(campo: (a: DatajudAndamentoApi) => string): string[] {
+  private distintos(campo: (a: AndamentoApi) => string): string[] {
     return [...new Set(this.andamentos().map(campo).filter(Boolean))].sort();
   }
 
-  private textoPesquisavel(a: DatajudAndamentoApi): string {
+  private textoPesquisavel(a: AndamentoApi): string {
     return [a.nome, a.orgao_julgador, a.tipo, a.fonte, a.codigo, ...a.graus, ...a.complementos].join(' ');
   }
 

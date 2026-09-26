@@ -80,14 +80,14 @@
           ? ''
           : temFiltro()
             ? 'Nenhum andamento com esses filtros.'
-            : 'Nenhum andamento encontrado no DataJud.'
+            : 'Nenhum andamento encontrado no DataJud nem no STF.'
       "
     />
 
     @if (carregando()) {
       <div class="andamentos-lista-andamentos__loading" role="status" aria-live="polite">
         <i class="fa-solid fa-spinner fa-spin" aria-hidden="true"></i>
-        <strong>Consultando o DataJud...</strong>
+        <strong>Consultando DataJud e STF...</strong>
         <span>A resposta pode levar até 1 minuto. · {{ segundosEsperando() }}s</span>
       </div>
     }

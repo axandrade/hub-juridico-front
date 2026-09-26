@@ -12,7 +12,15 @@ export const STATUS_DATAJUD_LABEL: Record<StatusDatajud, string> = {
   NAO_ENCONTRADO: 'Não encontrado no DataJud',
 };
 
-/** Resumo de uma capa do DataJud (uma por grau/órgão) — `DatajudProcessoResponse.Capa` do backend. */
+export type StatusStf = 'ENCONTRADO' | 'NAO_ENCONTRADO' | 'FALHA';
+
+export const STATUS_STF_LABEL: Record<StatusStf, string> = {
+  ENCONTRADO: 'OK',
+  NAO_ENCONTRADO: 'Não localizado no STF',
+  FALHA: 'Erro',
+};
+
+/** Resumo de uma capa do DataJud (uma por grau/órgão) — `AndamentosProcessoResponse.Capa` do backend. */
 export interface DatajudCapaResumoApi {
   tribunal: string | null;
   grau: string | null;
@@ -23,12 +31,15 @@ export interface DatajudCapaResumoApi {
 }
 
 /**
- * Uma linha da aba "Andamentos" — movimento consolidado entre as capas (`graus` acumula G1/G2...).
- * `data_hora` vem sem fuso (hora como o tribunal informou). `tipo`/`fonte` por enquanto são sempre
- * "Movimento"/"DataJud"; `link` e `data_disponibilizacao_djen` são sempre `null` (DataJud não tem;
- * a data de disponibilização vem com a integração Comunica/DJEN).
+ * Uma linha da aba "Andamentos" — linha do tempo única de todas as fontes (`fonte`).
+ * - `DataJud`: movimento consolidado entre as capas (`graus` acumula G1/G2...), `tipo` "Movimento",
+ *   `link` `null`, `data_hora` sem fuso (hora como o tribunal informou).
+ * - `STF`: andamento da consulta pública do portal — `data_hora` só com a data (00:00), `tipo`
+ *   classificado pelo nome (Acórdão/Decisão/Despacho...), `codigo` `null`, `graus` ["STF"],
+ *   `orgao_julgador` = ministro/órgão, `complementos` = observação e "Peça: ...", `link` = 1ª peça.
+ * `data_disponibilizacao_djen` segue `null` (vem com a integração Comunica/DJEN).
  */
-export interface DatajudAndamentoApi {
+export interface AndamentoApi {
   /** Posição cronológica (1 = mais antigo). A lista já vem do mais recente pro mais antigo. */
   ordem: number;
   data_hora: string | null;
@@ -45,12 +56,22 @@ export interface DatajudAndamentoApi {
   data_disponibilizacao_djen: string | null;
 }
 
+/** Processo do STF com o mesmo número único — `identificacao` = classe + número ("RE 1610218"). */
+export interface ProcessoStfApi {
+  identificacao: string | null;
+  incidente: string;
+  url: string;
+  total_andamentos: number;
+}
+
 /**
- * `DatajudProcessoResponse` do backend (`GET /api/v1/processos/{id}/datajud`) — alimenta as abas
- * "Visão geral" e "Andamentos" numa consulta só (o DataJud chega a levar ~1 min). Bean comum, então
- * vem em snake_case (`JacksonConfig`). Campos da capa são `null` quando `status = 'NAO_ENCONTRADO'`.
+ * `AndamentosProcessoResponse` do backend (`GET /api/v1/processos/{id}/andamentos`) — alimenta as
+ * abas "Visão geral" e "Andamentos" numa consulta só, juntando DataJud e STF (o DataJud chega a
+ * levar ~1 min). Bean comum, então vem em snake_case (`JacksonConfig`). `status` e os campos da
+ * capa são do DataJud (capa `null` quando `status = 'NAO_ENCONTRADO'`); `stf` resume a consulta ao
+ * STF; `andamentos`, `total_andamentos` e `ultimo_movimento` contam todas as fontes.
  */
-export interface DatajudProcessoApi {
+export interface AndamentosProcessoApi {
   processo_id: number;
   numero_cnj: string;
   status: StatusDatajud;
@@ -71,14 +92,15 @@ export interface DatajudProcessoApi {
   data_ultima_atualizacao: string | null;
   total_capas: number;
   total_andamentos: number;
-  /** Movimento mais recente entre todas as capas (sem fuso); `null` se não houver nenhum. */
+  /** Andamento mais recente entre todas as fontes (sem fuso); `null` se não houver nenhum. */
   ultimo_movimento: { data_hora: string | null; nome: string | null } | null;
   capas: DatajudCapaResumoApi[];
-  andamentos: DatajudAndamentoApi[];
+  andamentos: AndamentoApi[];
+  stf: { status: StatusStf; processos: ProcessoStfApi[] };
 }
 
 /**
- * Consulta ao DataJud — feita pelo backend (`DatajudClient`), aqui só chama.
+ * Consulta dos andamentos automáticos (DataJud + STF) — feita pelo backend, aqui só chama.
  *
  * As abas "Visão geral" e "Andamentos" carregam cada uma por conta própria (padrão das abas do
  * projeto), mas o DataJud chega a levar ~1 min: por isso a resposta é compartilhada por processo —
@@ -88,19 +110,19 @@ export interface DatajudProcessoApi {
  * requisição só.
  */
 @Injectable({ providedIn: 'root' })
-export class DatajudService {
+export class AndamentosService {
   private readonly http = inject(HttpClient);
-  private readonly cache = new Map<number, Observable<DatajudProcessoApi>>();
+  private readonly cache = new Map<number, Observable<AndamentosProcessoApi>>();
   private readonly versaoInterna = signal(0);
 
   /** Muda a cada `recarregar` — as abas leem num `effect` pra refazer a consulta. */
   readonly versao = this.versaoInterna.asReadonly();
 
-  consultar(processoId: number): Observable<DatajudProcessoApi> {
+  consultar(processoId: number): Observable<AndamentosProcessoApi> {
     let consulta = this.cache.get(processoId);
     if (!consulta) {
       consulta = this.http
-        .get<DatajudProcessoApi>(`${environment.apiBaseUrl}/processos/${processoId}/datajud`)
+        .get<AndamentosProcessoApi>(`${environment.apiBaseUrl}/processos/${processoId}/andamentos`)
         .pipe(
           catchError((err: unknown) => {
             this.cache.delete(processoId);

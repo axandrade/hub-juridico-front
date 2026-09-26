@@ -15,7 +15,7 @@ type AndamentosAba = 'visaoGeral' | 'andamentos' | 'publicacoes';
  * `app-processo-lista-painel`; este componente só recebe `layoutPainel`/emite `layoutPainelChange`.
  *
  * Cada aba é um componente próprio que recebe o `processoId` e carrega seus dados (padrão das abas
- * de Operação/Processo) — a consulta ao DataJud é compartilhada entre elas pelo `DatajudService`.
+ * de Operação/Processo) — a consulta (DataJud + STF) é compartilhada entre elas pelo `AndamentosService`.
  */
 @Component({
   selector: 'app-andamentos-automaticos-processo-panel',

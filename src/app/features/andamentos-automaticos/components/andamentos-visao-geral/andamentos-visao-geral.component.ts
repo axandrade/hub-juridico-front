@@ -4,7 +4,12 @@ import { Subscription, interval } from 'rxjs';
 
 import { DATE_FORMAT } from '../../../../core/constants/app-constants';
 import { DateFormatPipe } from '../../../../shared/pipes/date-format.pipe';
-import { DatajudProcessoApi, DatajudService, STATUS_DATAJUD_LABEL } from '../../services/datajud.service';
+import {
+  AndamentosProcessoApi,
+  AndamentosService,
+  STATUS_DATAJUD_LABEL,
+  STATUS_STF_LABEL,
+} from '../../services/andamentos.service';
 
 interface CampoVisaoGeral {
   label: string;
@@ -15,12 +20,12 @@ interface CampoVisaoGeral {
 
 /**
  * Aba "Visão geral" do painel de Andamentos Automáticos — o que o DataJud diz do processo
- * (capa de referência), no layout de duas colunas "rótulo: valor" do protótipo (Monitor de
- * Processos). Carrega pelo `processoId` (padrão das abas do projeto); a consulta ao DataJud é
- * compartilhada com a aba "Andamentos" pelo `DatajudService`, e "Atualizar" recarrega as duas.
+ * (capa de referência) e o resultado da consulta ao STF, no layout de duas colunas "rótulo: valor" do protótipo (Monitor de
+ * Processos). Carrega pelo `processoId` (padrão das abas do projeto); a consulta é
+ * compartilhada com a aba "Andamentos" pelo `AndamentosService`, e "Atualizar" recarrega as duas.
  *
- * Referência, Status Comunica/DJEN, Status/Identificação STF e Ativo no monitoramento estão no
- * protótipo mas ainda não têm fonte — aparecem com "—"/"Não integrado" até existirem.
+ * Referência, Status Comunica/DJEN e Ativo no monitoramento estão no protótipo mas ainda não têm
+ * fonte — aparecem com "—"/"Não integrado" até existirem.
  */
 @Component({
   selector: 'app-andamentos-visao-geral',
@@ -30,7 +35,7 @@ interface CampoVisaoGeral {
   styleUrl: './andamentos-visao-geral.component.scss',
 })
 export class AndamentosVisaoGeralComponent {
-  private readonly datajudService = inject(DatajudService);
+  private readonly andamentosService = inject(AndamentosService);
   private readonly destroyRef = inject(DestroyRef);
 
   /** Consulta em andamento + contador de segundos — cancelados ao trocar de processo/recarregar/destruir. */
@@ -41,7 +46,7 @@ export class AndamentosVisaoGeralComponent {
   readonly numeroCnj = input<string | null>(null);
   readonly clienteNome = input<string | null>(null);
 
-  protected readonly visao = signal<DatajudProcessoApi | null>(null);
+  protected readonly visao = signal<AndamentosProcessoApi | null>(null);
   protected readonly carregando = signal(false);
   protected readonly erro = signal('');
   /** Segundos desde o início da consulta — o DataJud chega a levar ~1 min, o contador mostra que não travou. */
@@ -66,19 +71,19 @@ export class AndamentosVisaoGeralComponent {
       { label: 'Última atualização DataJud', valor: this.data(v?.data_ultima_atualizacao, DATE_FORMAT.LONG) },
       { label: 'Status DataJud', valor: this.statusDatajud() },
       { label: 'Status Comunica/DJEN', valor: 'Não integrado' },
-      { label: 'Status STF', valor: 'Não integrado' },
-      { label: 'Identificação STF', valor: '—' },
+      { label: 'Status STF', valor: this.statusStf() },
+      { label: 'Identificação STF', valor: this.identificacaoStf() },
       { label: 'Ativo no monitoramento', valor: '—' },
     ];
   });
 
   /**
    * Caixa "Diagnóstico das fontes" abaixo do Conteúdo armazenado — resumo em texto, no formato do
-   * protótipo (Monitor de Processos). Comunica/DJEN e STF ainda não integrados.
+   * protótipo (Monitor de Processos). Comunica/DJEN ainda não integrado.
    */
   protected readonly diagnostico = computed<string[]>(() => {
     if (this.carregando()) {
-      return ['Consultando o DataJud...'];
+      return ['Consultando DataJud e STF...'];
     }
     const v = this.visao();
     const erro = this.erro();
@@ -93,17 +98,21 @@ export class AndamentosVisaoGeralComponent {
       linhas.push(`Capas DataJud encontradas: ${v.total_capas}`);
       const ultimo = v.ultimo_movimento;
       linhas.push(
-        `Último movimento DataJud exibido: ${
+        `Último movimento exibido: ${
           ultimo ? `${this.data(ultimo.data_hora, DATE_FORMAT.LONG)} — ${ultimo.nome ?? 'sem descrição'}` : '—'
         }`,
       );
     }
     linhas.push('Comunica/DJEN: Não integrado');
     linhas.push('Publicações Comunica/DJEN/STF armazenadas: 0');
-    linhas.push('STF: Não integrado');
+    linhas.push(`STF: ${this.statusStf()}`);
+    if (v?.stf.status === 'ENCONTRADO') {
+      linhas.push(`Processo(s) no STF: ${this.identificacaoStf()}`);
+    }
     if (v) {
+      const fontes = v.stf.status === 'ENCONTRADO' ? 'DataJud e STF' : 'DataJud';
       linhas.push(
-        `Linha do tempo consolidada: DataJud, com ${v.total_andamentos} andamento(s) e 0 publicação(ões) armazenada(s).`,
+        `Linha do tempo consolidada: ${fontes}, com ${v.total_andamentos} andamento(s) e 0 publicação(ões) armazenada(s).`,
       );
       linhas.push('As datas processuais são exibidas como informadas pela fonte.');
       linhas.push(`Última consulta DataJud: ${this.data(v.consultado_em, DATE_FORMAT.LONG)}`);
@@ -117,7 +126,7 @@ export class AndamentosVisaoGeralComponent {
   constructor() {
     effect(() => {
       const processoId = this.processoId();
-      this.datajudService.versao();
+      this.andamentosService.versao();
       untracked(() => this.carregar(processoId));
     });
     this.destroyRef.onDestroy(() => this.cancelar());
@@ -125,7 +134,7 @@ export class AndamentosVisaoGeralComponent {
 
   /** Descarta o cache do processo — esta aba e a de Andamentos refazem a consulta juntas. */
   protected atualizar(): void {
-    this.datajudService.recarregar(this.processoId());
+    this.andamentosService.recarregar(this.processoId());
   }
 
   private carregar(processoId: number): void {
@@ -136,7 +145,7 @@ export class AndamentosVisaoGeralComponent {
     this.visao.set(null);
     this.segundosEsperando.set(0);
     this.cronometro = interval(1000).subscribe(() => this.segundosEsperando.update((s) => s + 1));
-    this.consulta = this.datajudService.consultar(processoId).subscribe({
+    this.consulta = this.andamentosService.consultar(processoId).subscribe({
       next: (visao) => {
         this.visao.set(visao);
         this.finalizar();
@@ -171,6 +180,21 @@ export class AndamentosVisaoGeralComponent {
     }
     const label = STATUS_DATAJUD_LABEL[v.status];
     return v.tribunais_com_falha.length ? `${label} — falhou: ${v.tribunais_com_falha.join(', ')}` : label;
+  }
+
+  /** Sem resposta (erro no DataJud de origem derruba a consulta toda), o STF fica sem status: "—". */
+  private statusStf(): string {
+    if (this.carregando()) {
+      return 'Consultando...';
+    }
+    const stf = this.visao()?.stf;
+    return stf ? STATUS_STF_LABEL[stf.status] : '—';
+  }
+
+  /** "RE 1610218" (ou mais de um, separados por vírgula) quando o número único subiu ao STF. */
+  private identificacaoStf(): string {
+    const processos = this.visao()?.stf.processos ?? [];
+    return processos.map((p) => p.identificacao || `incidente ${p.incidente}`).join(', ') || '—';
   }
 
   private data(valor: string | null | undefined, formato: string): string {

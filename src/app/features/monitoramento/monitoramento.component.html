@@ -73,6 +73,16 @@
 
       <div class="monitoramento-panel-slot">
         @if (processo(); as p) {
+          <div class="monitoramento-vinculo" [class.monitoramento-vinculo--ok]="p.processoId">
+            @if (p.processoId) {
+              <i class="fa-solid fa-link" aria-hidden="true"></i>
+              <span>No cadastro de processos como <strong>{{ p.processoPasta }}</strong>.</span>
+            } @else {
+              <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
+              <span>Este processo não está no cadastro.</span>
+              <app-button variant="secondary" size="sm" icon="fa-solid fa-folder-plus" label="Cadastrar no sistema" (clicked)="aCadastrar.set(p)" />
+            }
+          </div>
           @if (!p.numeroValido) {
             <div class="monitoramento-invalido">
               <div class="monitoramento-invalido__topo">
@@ -268,6 +278,10 @@
       (fechar)="processoEmEdicao.set(null)"
     />
   }
+}
+
+@if (aCadastrar(); as p) {
+  <app-monitoramento-cadastrar-processo [processo]="p" (cadastrado)="onCadastradoNoSistema()" (fechar)="aCadastrar.set(null)" />
 }
 
 <app-modal [open]="aRemover() !== null" title="Remover do monitoramento" (closed)="aRemover.set(null)">

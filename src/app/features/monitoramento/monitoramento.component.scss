@@ -210,8 +210,48 @@
 
 .monitoramento-panel-slot {
   position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-sm;
   min-width: 0;
   height: calc(100vh - 132px);
+
+  > app-andamentos-automaticos-processo-panel,
+  > .monitoramento-invalido {
+    flex: 1;
+    min-height: 0;
+  }
+}
+
+// Faixa acima do painel: vínculo com o cadastro de processos, ou o botão pra cadastrar.
+.monitoramento-vinculo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: $spacing-sm;
+  padding: $spacing-sm $spacing-md;
+  border: 1px solid $color-border;
+  border-radius: $border-radius-sm;
+  background-color: $color-neutral-light;
+  color: $color-text-muted;
+  font-size: $font-size-xs;
+
+  span {
+    flex: 1;
+  }
+
+  strong {
+    color: $color-text-primary;
+  }
+
+  &--ok {
+    border-color: rgba($color-success, 0.4);
+    background-color: rgba($color-success, 0.1);
+
+    i {
+      color: darken-color($color-success, 14%);
+    }
+  }
 }
 
 .monitoramento-panel-backdrop {

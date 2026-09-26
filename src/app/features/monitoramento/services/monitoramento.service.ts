@@ -1,6 +1,6 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
-import { Observable, map } from 'rxjs';
+import { Observable, map, switchMap } from 'rxjs';
 
 import { DomainService } from '../../../core/services/domain.service';
 import { environment } from '../../../../environments/environment';
@@ -79,6 +79,17 @@ export interface MonitoramentoProcessoCorpo {
   observacao: string | null;
 }
 
+/** Corpo de `POST /domain/processo` no "Cadastrar no sistema" (snake_case — escrita do ddd-noap). */
+export interface ProcessoNovoCorpo {
+  tipo: 'JUDICIAL';
+  numero_cnj: string;
+  acao_id: number | null;
+  status_id: number | null;
+  observacoes_gerais: string | null;
+  clientes: { pessoa_id: number; posicao_id: null; principal: boolean }[];
+  partes_contrarias: { nome: string; posicao_id: null; documento: null; principal: boolean }[];
+}
+
 /** Andamento do "Atualizar" do monitoramento (`MonitoramentoAtualizacaoService.Situacao` no backend). */
 export interface AtualizacaoApi {
   monitoramento_id: number;
@@ -105,6 +116,10 @@ export class MonitoramentoService {
 
   buscarResumo(id: number): Observable<MonitoramentoResumoRow> {
     return this.domain.get<MonitoramentoResumoRow>({ entityName: 'monitoramento-resumo', entityId: id });
+  }
+
+  buscarProcessoResumo(id: number): Observable<MonitoramentoProcessoRow> {
+    return this.domain.get<MonitoramentoProcessoRow>({ entityName: 'monitoramento-processo-resumo', entityId: id });
   }
 
   criar(corpo: MonitoramentoCorpo): Observable<number> {
@@ -157,6 +172,17 @@ export class MonitoramentoService {
    */
   consultarFontes(numeroCnj: string): Observable<unknown> {
     return this.http.get(`${environment.apiBaseUrl}/andamentos/${numeroCnj.replace(/\D/g, '')}`);
+  }
+
+  /**
+   * "Cadastrar no sistema": cria o processo em `/domain/processo` e devolve a `pasta` gerada
+   * (`PROC-000123`) — o `POST` do ddd-noap só devolve o id.
+   */
+  cadastrarNoSistema(corpo: ProcessoNovoCorpo): Observable<string | null> {
+    return this.domain.post<ProcessoNovoCorpo>({ entityName: 'processo', body: corpo }).pipe(
+      switchMap(({ id }) => this.domain.get<{ pasta: string | null }>({ entityName: 'processo', entityId: id, fields: 'id,pasta' })),
+      map((p) => p.pasta ?? null),
+    );
   }
 
   /** Processo do cadastro com este número (máscara exata), pra oferecer "usar dados do cadastro". */

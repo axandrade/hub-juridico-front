@@ -21,6 +21,7 @@ import { BadgeTone } from '../../shared/components/badge/badge.component';
 import { TableColumn } from '../../shared/components/table/table-column.model';
 import { ToastService } from '../../shared/services/toast.service';
 import { AndamentosAutomaticosProcessoPanelComponent } from '../andamentos-automaticos/components/andamentos-automaticos-processo-panel/andamentos-automaticos-processo-panel.component';
+import { MonitoramentoCadastrarProcessoComponent } from './components/monitoramento-cadastrar-processo/monitoramento-cadastrar-processo.component';
 import { MonitoramentoFormComponent } from './components/monitoramento-form/monitoramento-form.component';
 import {
   MonitoramentoProcessoFormComponent,
@@ -85,6 +86,7 @@ function termoRql(texto: string): string {
     AndamentosAutomaticosProcessoPanelComponent,
     MonitoramentoFormComponent,
     MonitoramentoProcessoFormComponent,
+    MonitoramentoCadastrarProcessoComponent,
   ],
   templateUrl: './monitoramento.component.html',
   styleUrl: './monitoramento.component.scss',
@@ -262,6 +264,8 @@ export class MonitoramentoComponent {
   /** `null` fechado; `'novo'` adicionando; linha editando. */
   protected readonly processoEmEdicao = signal<MonitoramentoProcessoRow | 'novo' | null>(null);
   protected readonly aRemover = signal<MonitoramentoProcessoRow | null>(null);
+  /** Processo do monitoramento sendo cadastrado no sistema ("Cadastrar no sistema"). */
+  protected readonly aCadastrar = signal<MonitoramentoProcessoRow | null>(null);
 
   protected readonly editarMonitoramentoAcao = (row: MonitoramentoResumoRow): void => this.monitoramentoEmEdicao.set(row);
 
@@ -381,6 +385,22 @@ export class MonitoramentoComponent {
         error: () => this.toast.erro(`Não foi possível consultar as fontes de ${salvo.numeroCnj} agora.`),
       });
     }
+  }
+
+  /** Depois do "Cadastrar no sistema": a linha aberta passa a mostrar o vínculo (`processoPasta`). */
+  protected onCadastradoNoSistema(): void {
+    const aberto = this.processo();
+    this.recarregarMonitoramento();
+    if (!aberto) {
+      return;
+    }
+    this.service.buscarProcessoResumo(aberto.id).subscribe({
+      next: (linha) => {
+        if (this.processo()?.id === linha.id) {
+          this.processo.set(linha);
+        }
+      },
+    });
   }
 
   protected confirmarRemocao(): void {

@@ -1,0 +1,57 @@
+<app-modal [open]="true" [wide]="true" title="Cadastrar no sistema" (closed)="fechar.emit()">
+  <div class="mp-form">
+    <p class="mp-form__contexto">
+      Cria o processo no cadastro com os dados do monitoramento. O processo continua no monitoramento, agora
+      vinculado ao cadastro.
+    </p>
+
+    <dl class="mp-resumo">
+      <div><dt>Número CNJ</dt><dd>{{ processo().numeroCnj }}</dd></div>
+      <div><dt>Tipo</dt><dd>Judicial</dd></div>
+      <div><dt>Ação</dt><dd>{{ processo().acao || '—' }}</dd></div>
+      <div><dt>Status</dt><dd>{{ processo().status || '—' }}</dd></div>
+      <div><dt>Parte contrária principal</dt><dd>{{ processo().contrario || '—' }}</dd></div>
+      <div><dt>Cliente no monitoramento</dt><dd>{{ processo().cliente }}</dd></div>
+    </dl>
+
+    <div class="mp-form__field">
+      <span>Cliente no cadastro (pessoa)</span>
+      <app-domain-model-dropdown
+        ariaLabel="Cliente do processo"
+        placeholder="Buscar pessoa..."
+        emptyLabel="— Sem cliente por enquanto —"
+        noResultsText="Nenhuma pessoa encontrada"
+        itemNoun="pessoa"
+        entityName="pessoa"
+        fields="id,nome,razaoSocial,nomeFantasia"
+        [searchFields]="['nome', 'razaoSocial', 'nomeFantasia']"
+        [displayFormatter]="rotuloPessoa"
+        [value]="pessoa() ? '' + pessoa()!.id : ''"
+        [valueLabel]="pessoa()?.nome ?? ''"
+        (itemSelected)="onPessoa($event)"
+      />
+      <small class="mp-form__aviso mp-form__aviso--neutro">
+        Procure “{{ processo().cliente }}”. Se ainda não estiver no cadastro de pessoas, deixe em branco e complete
+        depois na tela de Processos.
+      </small>
+    </div>
+
+    @if (processo().observacao) {
+      <label class="mp-form__check">
+        <input type="checkbox" [checked]="levarObservacao()" (change)="levarObservacao.set(!levarObservacao())" />
+        Levar a observação para o processo: “{{ processo().observacao }}”
+      </label>
+    }
+  </div>
+
+  <app-button modalFooter variant="tertiary" size="sm" label="Cancelar" (clicked)="fechar.emit()" />
+  <app-button
+    modalFooter
+    variant="primary"
+    size="sm"
+    icon="fa-solid fa-folder-plus"
+    label="Cadastrar processo"
+    [disabled]="salvando()"
+    (clicked)="cadastrar()"
+  />
+</app-modal>

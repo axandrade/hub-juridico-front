@@ -124,6 +124,37 @@
   }
 }
 
+// Resumo só-leitura (diálogo "Cadastrar no sistema").
+.mp-resumo {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: $spacing-sm $spacing-lg;
+  margin: 0;
+  padding: $spacing-md;
+  border: 1px solid $color-border;
+  border-radius: $border-radius-sm;
+  background-color: $color-neutral-light;
+
+  div {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+  }
+
+  dt {
+    color: $color-text-muted;
+    font-size: $font-size-xs;
+  }
+
+  dd {
+    margin: 0;
+    color: $color-text-primary;
+    font-weight: $font-weight-medium;
+    overflow-wrap: anywhere;
+  }
+}
+
 @include respond-below($breakpoint-sm) {
   .mp-form__row {
     grid-template-columns: minmax(0, 1fr);

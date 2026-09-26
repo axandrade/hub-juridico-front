@@ -2,9 +2,9 @@
   <div class="visao-geral__toolbar">
     <span class="visao-geral__fonte">
       @if (visao(); as v) {
-        Consultado no DataJud em {{ v.consultado_em | dateFormat: 'dd/MM/yyyy HH:mm' }}
+        Atualizado em {{ v.consultado_em | dateFormat: 'dd/MM/yyyy HH:mm' }}
       } @else if (carregando()) {
-        Consultando o DataJud...
+        Consultando...
       }
     </span>
     <button

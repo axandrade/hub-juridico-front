@@ -69,9 +69,10 @@ function termoRql(texto: string): string {
  *
  * "Atualizar" consulta todos os números em segundo plano no backend (o DataJud chega a ~1 min por
  * número); a tela acompanha por polling, recarregando a tabela a cada número concluído. Novidades
- * são por usuário e não cabem nas views: vêm do `MonitoramentoController` e entram como coluna.
+ * são por usuário e não cabem nas views: vêm do `MonitoramentoService` do backend
+ * (`/domain/service`) e entram como coluna, casadas pelo `id` da linha.
  *
- * "Com novidades" filtra pelos números com novidade (`numeroCnjDigitos eq ... or ...`). O RQL do
+ * "Com novidades" filtra pelas linhas com novidade (`id eq ... or ...`). O RQL do
  * ddd-noap não tem parênteses nem `in` e avalia da esquerda pra direita — somar a busca livre
  * (outra sequência de `or`) misturaria as duas, então nesse filtro a busca fica desligada.
  */
@@ -122,7 +123,7 @@ export class MonitoramentoComponent {
 
   protected readonly monitoramento = signal<MonitoramentoResumoRow | null>(null);
   /** Novidades não vistas por monitoramento (`{id: total}`). */
-  private readonly novidadesMonitoramentos = signal<Record<string, number>>({});
+  private readonly novidadesMonitoramentos = signal<Record<number, number>>({});
 
   protected readonly colunasMonitoramentos: TableColumn<MonitoramentoResumoRow>[] = [
     { key: 'nome', header: 'Nome' },
@@ -134,7 +135,7 @@ export class MonitoramentoComponent {
       sortable: false,
       format: 'badge',
       badgeTone: () => 'danger',
-      formatter: (_, row) => this.rotuloNovidades(this.novidadesMonitoramentos()[String(row.id)] ?? 0),
+      formatter: (_, row) => this.rotuloNovidades(this.novidadesMonitoramentos()[row.id] ?? 0),
     },
   ];
 
@@ -153,8 +154,8 @@ export class MonitoramentoComponent {
     toObservable(this.buscaProcesso).pipe(debounceTime(300), distinctUntilChanged()),
     { initialValue: '' },
   );
-  /** Novidades não vistas por número CNJ (20 dígitos) do monitoramento selecionado. */
-  private readonly novidadesProcessos = signal<Record<string, number>>({});
+  /** Novidades não vistas por processo (id da linha) do monitoramento selecionado. */
+  private readonly novidadesProcessos = signal<Record<number, number>>({});
 
   protected readonly processo = signal<MonitoramentoProcessoRow | null>(null);
 
@@ -166,11 +167,11 @@ export class MonitoramentoComponent {
     const doMonitoramento = `monitoramentoId eq ${m.id}`;
     const situacao = this.filtroSituacao();
     if (situacao === 'novidades') {
-      const numeros = Object.keys(this.novidadesProcessos());
-      if (!numeros.length) {
+      const ids = Object.keys(this.novidadesProcessos());
+      if (!ids.length) {
         return 'id eq 0';
       }
-      return [numeros.map((n) => `numeroCnjDigitos eq '${n}'`).join(' or '), doMonitoramento].join(' and ');
+      return [ids.map((id) => `id eq ${id}`).join(' or '), doMonitoramento].join(' and ');
     }
     const termo = termoRql(this.buscaProcessoDebounced());
     const busca = termo
@@ -227,7 +228,7 @@ export class MonitoramentoComponent {
       sortable: false,
       format: 'badge',
       badgeTone: () => 'danger',
-      formatter: (_, row) => this.rotuloNovidades(this.novidadesProcessos()[row.numeroCnjDigitos] ?? 0),
+      formatter: (_, row) => this.rotuloNovidades(this.novidadesProcessos()[row.id] ?? 0),
     },
     { key: 'processoPasta', header: 'No sistema', width: '120px', formatter: (v) => (v ? String(v) : '—') },
     { key: 'tribunal', header: 'Tribunal', width: '100px', formatter: (v) => (v ? String(v) : '—') },
@@ -251,7 +252,7 @@ export class MonitoramentoComponent {
 
   protected readonly classeProcesso = (row: MonitoramentoProcessoRow): Record<string, boolean> => ({
     'is-selected': this.processo()?.id === row.id,
-    'tem-novidade': (this.novidadesProcessos()[row.numeroCnjDigitos] ?? 0) > 0,
+    'tem-novidade': (this.novidadesProcessos()[row.id] ?? 0) > 0,
   });
   protected readonly tituloProcesso = (row: MonitoramentoProcessoRow): string | null => row.observacao;
 
@@ -519,7 +520,7 @@ export class MonitoramentoComponent {
       this.novidadesProcessos.set({});
       return;
     }
-    this.service.novidadesPorNumero(m.id).subscribe({
+    this.service.novidadesDoMonitoramento(m.id).subscribe({
       next: (mapa) => {
         if (this.monitoramento()?.id === m.id) {
           this.novidadesProcessos.set(mapa);

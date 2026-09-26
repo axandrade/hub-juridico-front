@@ -90,6 +90,18 @@ export interface ProcessoNovoCorpo {
   partes_contrarias: { nome: string; posicao_id: null; documento: null; principal: boolean }[];
 }
 
+/** Uma linha das novidades do backend: `id` do monitoramento ou da linha do processo no monitoramento. */
+interface NovidadesApi {
+  id: number;
+  total: number;
+}
+
+const SERVICE = 'monitoramento-service';
+
+function porId(linhas: NovidadesApi[]): Record<number, number> {
+  return Object.fromEntries(linhas.map((l) => [l.id, l.total]));
+}
+
 /** Andamento do "Atualizar" do monitoramento (`MonitoramentoAtualizacaoService.Situacao` no backend). */
 export interface AtualizacaoApi {
   monitoramento_id: number;
@@ -105,8 +117,8 @@ export interface AtualizacaoApi {
 /**
  * Tela de Monitoramento. Listagens vão direto pelo `app-domain-model-table` (views
  * `monitoramento-resumo`/`monitoramento-processo-resumo`); aqui fica a escrita genérica em
- * `/domain/monitoramento` e `/domain/monitoramento-processo` e o que é específico do
- * `MonitoramentoController`: novidades por usuário e o "Atualizar" em segundo plano.
+ * `/domain/monitoramento` e `/domain/monitoramento-processo`, as novidades por usuário
+ * (`/domain/service/monitoramento-service`) e o "Atualizar" em segundo plano (`MonitoramentoController`).
  */
 @Injectable({ providedIn: 'root' })
 export class MonitoramentoService {
@@ -142,14 +154,25 @@ export class MonitoramentoService {
     return this.domain.delete({ entityName: 'monitoramento-processo', entityId: id });
   }
 
-  /** Novidades não vistas pelo usuário logado, por monitoramento (`{id: total}`, só os que têm). */
-  novidadesPorMonitoramento(): Observable<Record<string, number>> {
-    return this.http.get<Record<string, number>>(`${this.base}/novidades`);
+  /**
+   * Novidades não vistas pelo usuário logado, por monitoramento (`{id do monitoramento: total}`, só
+   * os que têm) — `MonitoramentoService` do backend via `/domain/service`; o usuário sai do token.
+   */
+  novidadesPorMonitoramento(): Observable<Record<number, number>> {
+    return this.domain
+      .postServiceMethod<NovidadesApi[]>({ serviceName: SERVICE, method: 'novidades-por-monitoramento' })
+      .pipe(map(porId));
   }
 
-  /** Novidades não vistas pelo usuário logado, por número CNJ (20 dígitos) do monitoramento. */
-  novidadesPorNumero(monitoramentoId: number): Observable<Record<string, number>> {
-    return this.http.get<Record<string, number>>(`${this.base}/${monitoramentoId}/novidades`);
+  /** Novidades não vistas pelo usuário logado em cada processo do monitoramento (`{id da linha: total}`). */
+  novidadesDoMonitoramento(monitoramentoId: number): Observable<Record<number, number>> {
+    return this.domain
+      .postServiceMethod<NovidadesApi[]>({
+        serviceName: SERVICE,
+        method: 'novidades-do-monitoramento',
+        args: { monitoramentoId },
+      })
+      .pipe(map(porId));
   }
 
   iniciarAtualizacao(monitoramentoId: number): Observable<AtualizacaoApi> {

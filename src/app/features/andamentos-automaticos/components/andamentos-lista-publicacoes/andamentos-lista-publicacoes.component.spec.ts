@@ -50,8 +50,22 @@ describe('AndamentosListaPublicacoesComponent — novidades', () => {
     expect(el.textContent).toContain('1 publicação(ões) nova(s)');
   });
 
-  it('selecionar a publicação marca como vista — e ela sai do negrito na aba Andamentos também', () => {
+  it('selecionar a publicação só mostra o detalhe — não marca como vista', () => {
     linha('Intimação nova').click();
+    fixture.detectChanges();
+
+    http.expectNone(`${URL}/vistos`);
+    expect(linha('Intimação nova').classList).toContain('is-novo');
+  });
+
+  it('"Marcar como vista" confirmado tira do negrito — e da aba Andamentos também', () => {
+    expect(linha('Despacho antigo').querySelector('.data-table__action-button')).toBeNull();
+    linha('Intimação nova').querySelector<HTMLButtonElement>('.data-table__action-button')!.click();
+    fixture.detectChanges();
+    http.expectNone(`${URL}/vistos`);
+    Array.from(el.querySelectorAll<HTMLButtonElement>('[role="dialog"] button'))
+      .find((b) => b.textContent?.includes('Marcar como vista'))!
+      .click();
     fixture.detectChanges();
 
     const req = http.expectOne(`${URL}/vistos`);

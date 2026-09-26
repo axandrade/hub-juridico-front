@@ -2,8 +2,11 @@ import { DOCUMENT } from '@angular/common';
 import { ChangeDetectionStrategy, Component, DestroyRef, computed, effect, inject, input, signal, untracked } from '@angular/core';
 import { Subscription, interval } from 'rxjs';
 
+import { ButtonComponent } from '../../../../shared/components/button/button.component';
+import { ModalComponent } from '../../../../shared/components/modal/modal.component';
 import { DataTableComponent } from '../../../../shared/components/table/data-table.component';
 import { TableColumn } from '../../../../shared/components/table/table-column.model';
+import { TableRowAction } from '../../../../shared/components/table/table.model';
 import { ToastService } from '../../../../shared/services/toast.service';
 import { AndamentosService, PublicacaoApi } from '../../services/andamentos.service';
 
@@ -17,13 +20,14 @@ import { AndamentosService, PublicacaoApi } from '../../services/andamentos.serv
  * Comunica ou no STF não vira erro: a lista sai com a outra fonte e um aviso diz o que ficou de fora.
  *
  * Novidades (publicação que apareceu num "Atualizar" e o usuário ainda não viu) ficam em negrito
- * (`is-novo`) até ele selecionar a linha ou clicar em "Marcar todos como vistos" — mesmo estado da
+ * (`is-novo`) até ele usar "Marcar como vista" na última coluna (pede confirmação) ou "Marcar
+ * todos como vistos" — selecionar a linha só mostra o detalhe. Mesmo estado da
  * aba Andamentos (`AndamentosService`): a publicação do DJEN vista aqui sai do negrito lá também.
  */
 @Component({
   selector: 'app-andamentos-lista-publicacoes',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [DataTableComponent],
+  imports: [ButtonComponent, DataTableComponent, ModalComponent],
   templateUrl: './andamentos-lista-publicacoes.component.html',
   styleUrl: './andamentos-lista-publicacoes.component.scss',
 })
@@ -43,6 +47,8 @@ export class AndamentosListaPublicacoesComponent {
   protected readonly carregando = signal(false);
   protected readonly erro = signal('');
   protected readonly selecionada = signal<PublicacaoApi | null>(null);
+  /** Publicação cujo "Marcar como vista" espera confirmação no modal. */
+  protected readonly aConfirmar = signal<PublicacaoApi | null>(null);
   /** Segundos desde o início da consulta — espera o DataJud (~1 min), o contador mostra que não travou. */
   protected readonly segundosEsperando = signal(0);
 
@@ -99,6 +105,15 @@ export class AndamentosListaPublicacoesComponent {
     ].join('\n');
   });
 
+  /** Só nas novidades ainda não vistas; confirma antes de marcar. */
+  protected readonly acaoVisto: TableRowAction<PublicacaoApi> = {
+    label: 'Marcar como vista',
+    icon: 'fa-regular fa-eye',
+    iconOnly: true,
+    visible: (p) => this.andamentosService.ehNovo(this.processoId(), p),
+    onClick: (p) => this.aConfirmar.set(p),
+  };
+
   // Pela própria linha, não pelo `id`: publicação do STF não tem id (todas seriam "a selecionada").
   protected readonly linhaSelecionada = (p: PublicacaoApi): Record<string, boolean> => ({
     'is-selected': this.selecionada() === p,
@@ -115,10 +130,12 @@ export class AndamentosListaPublicacoesComponent {
     this.destroyRef.onDestroy(() => this.cancelar());
   }
 
-  /** Selecionar é o sinal de que o usuário viu a publicação. */
-  protected selecionar(p: PublicacaoApi): void {
-    this.selecionada.set(p);
-    this.andamentosService.marcarVistos(this.processoId(), [p]);
+  protected confirmarVisto(): void {
+    const p = this.aConfirmar();
+    this.aConfirmar.set(null);
+    if (p) {
+      this.andamentosService.marcarVistos(this.processoId(), [p]);
+    }
   }
 
   protected marcarTodosVistos(): void {

@@ -161,3 +161,9 @@
     font-size: $font-size-xs;
   }
 }
+
+.andamentos-lista-andamentos__modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: $spacing-sm;
+}

@@ -89,7 +89,7 @@
             ? 'Nenhum andamento com esses filtros.'
             : 'Nenhum andamento encontrado no DataJud, no STF nem no Comunica/DJEN.'
       "
-      (rowClick)="selecionar($event)"
+      [rowAction]="acaoVisto"
     />
 
     @if (carregando()) {
@@ -101,3 +101,11 @@
     }
   </div>
 </div>
+
+<app-modal [open]="aConfirmar() !== null" [elevated]="true" title="Marcar como visto" (closed)="aConfirmar.set(null)">
+  <p>Deseja marcar o andamento "{{ aConfirmar()?.nome }}" como visto?</p>
+  <div modalFooter class="andamentos-lista-andamentos__modal-footer">
+    <app-button variant="tertiary" label="Cancelar" (clicked)="aConfirmar.set(null)" />
+    <app-button variant="primary" label="Marcar como visto" (clicked)="confirmarVisto()" />
+  </div>
+</app-modal>

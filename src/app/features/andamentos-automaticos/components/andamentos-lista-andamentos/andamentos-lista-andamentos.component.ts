@@ -3,9 +3,12 @@ import { ChangeDetectionStrategy, Component, DestroyRef, computed, effect, injec
 import { Subscription, interval } from 'rxjs';
 
 import { DATE_FORMAT } from '../../../../core/constants/app-constants';
+import { ButtonComponent } from '../../../../shared/components/button/button.component';
+import { ModalComponent } from '../../../../shared/components/modal/modal.component';
 import { ComboboxComponent } from '../../../../shared/components/combobox/combobox.component';
 import { DataTableComponent } from '../../../../shared/components/table/data-table.component';
 import { TableColumn } from '../../../../shared/components/table/table-column.model';
+import { TableRowAction } from '../../../../shared/components/table/table.model';
 import { AndamentoApi, AndamentosService } from '../../services/andamentos.service';
 
 const TODAS_AS_FONTES = 'Todas as fontes';
@@ -19,14 +22,15 @@ const TODOS_OS_TIPOS = 'Todos os tipos';
  * os andamentos já vêm consolidados entre as capas, do mais recente pro mais antigo.
  *
  * Fonte/Tipo listam o que veio nos dados. Novidades (andamento que apareceu num "Atualizar" e o
- * usuário ainda não viu) ficam em negrito (`is-novo`): clicar na linha marca como visto, "Marcar
- * todos como vistos" marca todas do processo (as publicações também) e "Somente novos" filtra —
+ * usuário ainda não viu) ficam em negrito (`is-novo`) com o botão "Marcar como visto" na última
+ * coluna (pede confirmação), "Marcar todos como vistos" marca todas do processo (as publicações
+ * também) e "Somente novos" filtra —
  * estado em `AndamentosService` (`ehNovo`/`marcarVistos`), compartilhado com a aba "Publicações".
  */
 @Component({
   selector: 'app-andamentos-lista-andamentos',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ComboboxComponent, DataTableComponent],
+  imports: [ButtonComponent, ComboboxComponent, DataTableComponent, ModalComponent],
   templateUrl: './andamentos-lista-andamentos.component.html',
   styleUrl: './andamentos-lista-andamentos.component.scss',
 })
@@ -51,6 +55,8 @@ export class AndamentosListaAndamentosComponent {
   protected readonly tipo = signal(TODOS_OS_TIPOS);
   protected readonly comDocumentoOuLink = signal(false);
   protected readonly somenteNovos = signal(false);
+  /** Andamento cujo "Marcar como visto" espera confirmação no modal. */
+  protected readonly aConfirmar = signal<AndamentoApi | null>(null);
 
   protected readonly totalNovos = computed(() => this.andamentos().filter((a) => this.ehNovo(a)).length);
 
@@ -113,6 +119,15 @@ export class AndamentosListaAndamentosComponent {
     return partes.length ? partes.join(' · ') : null;
   };
 
+  /** Só nas novidades ainda não vistas; confirma antes de marcar. */
+  protected readonly acaoVisto: TableRowAction<AndamentoApi> = {
+    label: 'Marcar como visto',
+    icon: 'fa-regular fa-eye',
+    iconOnly: true,
+    visible: (a) => this.ehNovo(a),
+    onClick: (a) => this.aConfirmar.set(a),
+  };
+
   /** Novidade ainda não vista em negrito. */
   protected readonly linhaClasse = (a: AndamentoApi): Record<string, boolean> => ({ 'is-novo': this.ehNovo(a) });
 
@@ -137,9 +152,12 @@ export class AndamentosListaAndamentosComponent {
     this.somenteNovos.set((event.target as HTMLInputElement).checked);
   }
 
-  /** Clicar na linha é o sinal de que o usuário viu o andamento. */
-  protected selecionar(a: AndamentoApi): void {
-    this.andamentosService.marcarVistos(this.processoId(), [a]);
+  protected confirmarVisto(): void {
+    const a = this.aConfirmar();
+    this.aConfirmar.set(null);
+    if (a) {
+      this.andamentosService.marcarVistos(this.processoId(), [a]);
+    }
   }
 
   protected marcarTodosVistos(): void {

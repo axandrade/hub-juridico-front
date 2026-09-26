@@ -36,6 +36,9 @@
             }
           </th>
         }
+        @if (rowAction(); as acao) {
+          <th class="data-table__action">{{ acao.header ?? '' }}</th>
+        }
       </tr>
       @if (hasColumnFilters()) {
         <tr class="data-table__filter-row">
@@ -61,6 +64,9 @@
                 />
               }
             </th>
+          }
+          @if (rowAction()) {
+            <th class="data-table__action"></th>
           }
         </tr>
       }
@@ -117,6 +123,27 @@
                   @default {
                     {{ displayValue(row, column) }}
                   }
+                }
+              </td>
+            }
+            @if (rowAction(); as acao) {
+              <td class="data-table__action">
+                @if (!acao.visible || acao.visible(row)) {
+                  <button
+                    type="button"
+                    class="data-table__action-button"
+                    [class.data-table__action-button--icon]="acao.iconOnly"
+                    [attr.title]="acao.label"
+                    [attr.aria-label]="acao.label"
+                    (click)="$event.stopPropagation(); acao.onClick(row, $event)"
+                  >
+                    @if (acao.icon) {
+                      <i [class]="acao.icon" aria-hidden="true"></i>
+                    }
+                    @if (!acao.iconOnly) {
+                      {{ acao.label }}
+                    }
+                  </button>
                 }
               </td>
             }

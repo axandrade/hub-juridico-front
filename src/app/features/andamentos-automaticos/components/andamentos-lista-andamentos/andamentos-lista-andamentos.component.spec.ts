@@ -64,22 +64,53 @@ describe('AndamentosListaAndamentosComponent — novidades', () => {
     expect(el.textContent).toContain('1 novo(s)');
   });
 
-  it('clicar na linha marca como visto e tira o negrito', () => {
-    linha('Conclusão').click();
+  function botaoDaLinha(nome: string): HTMLButtonElement | null {
+    return linha(nome).querySelector<HTMLButtonElement>('.data-table__action-button');
+  }
+
+  it('só a novidade tem o botão "Marcar como visto" na última coluna', () => {
+    expect(botaoDaLinha('Conclusão')?.getAttribute('aria-label')).toBe('Marcar como visto');
+    expect(botaoDaLinha('Distribuição')).toBeNull();
+  });
+
+  it('o botão pede confirmação e só então marca como visto e tira o negrito', () => {
+    botaoDaLinha('Conclusão')!.click();
+    fixture.detectChanges();
+    http.expectNone(`${URL}/vistos`);
+    expect(el.querySelector('[role="dialog"]')?.textContent).toContain('Conclusão');
+
+    Array.from(el.querySelectorAll<HTMLButtonElement>('[role="dialog"] button'))
+      .find((b) => b.textContent?.includes('Marcar como visto'))!
+      .click();
     fixture.detectChanges();
 
     const req = http.expectOne(`${URL}/vistos`);
     expect(req.request.body).toEqual({ chaves: ['novo-1'] });
     req.flush(null, { status: 204, statusText: 'No Content' });
+    fixture.detectChanges();
     expect(linha('Conclusão').classList).not.toContain('is-novo');
-    expect(botao('Marcar todos como vistos')).toBeUndefined();
+    expect(botaoDaLinha('Conclusão')).toBeNull();
+    expect(el.querySelector('[role="dialog"]')).toBeNull();
   });
 
-  it('clicar numa linha que não é novidade não chama o backend', () => {
-    linha('Distribuição').click();
+  it('cancelar a confirmação não marca nada', () => {
+    botaoDaLinha('Conclusão')!.click();
+    fixture.detectChanges();
+    Array.from(el.querySelectorAll<HTMLButtonElement>('[role="dialog"] button'))
+      .find((b) => b.textContent?.includes('Cancelar'))!
+      .click();
     fixture.detectChanges();
 
     http.expectNone(`${URL}/vistos`);
+    expect(linha('Conclusão').classList).toContain('is-novo');
+  });
+
+  it('clicar na linha não marca mais como visto', () => {
+    linha('Conclusão').click();
+    fixture.detectChanges();
+
+    http.expectNone(`${URL}/vistos`);
+    expect(linha('Conclusão').classList).toContain('is-novo');
   });
 
   it('"Somente novos" mostra só as novidades não vistas', () => {

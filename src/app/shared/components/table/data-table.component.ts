@@ -8,7 +8,7 @@ import { CurrencyFormatPipe } from '../../pipes/currency-format.pipe';
 import { BadgeComponent } from '../badge/badge.component';
 import { ColumnsMenuComponent } from '../columns-menu/columns-menu.component';
 import { TableColumn } from './table-column.model';
-import { TablePagination, TablePinAction, TableSort } from './table.model';
+import { TablePagination, TablePinAction, TableRowAction, TableSort } from './table.model';
 
 /**
  * Tabela de dados genérica, estilizada com a paleta botânica.
@@ -75,6 +75,8 @@ export class DataTableComponent<T extends object> {
   readonly rowTitle = input<((row: T) => string | null) | null>(null);
   /** Coluna de ação fixa (ex.: favoritar) desenhada pela própria tabela. */
   readonly pinAction = input<TablePinAction<T> | null>(null);
+  /** Botão por linha na última coluna (ver `TableRowAction`). */
+  readonly rowAction = input<TableRowAction<T> | null>(null);
 
   /** Valor atual do filtro por coluna (chave = `column.key`), controlado pelo pai. */
   readonly columnFilterValues = input<Record<string, string> | null>(null);
@@ -146,7 +148,9 @@ export class DataTableComponent<T extends object> {
     return rows;
   });
 
-  protected readonly colspan = computed(() => this.visibleColumns().length + (this.pinAction() ? 1 : 0));
+  protected readonly colspan = computed(
+    () => this.visibleColumns().length + (this.pinAction() ? 1 : 0) + (this.rowAction() ? 1 : 0),
+  );
 
   protected readonly hasColumnFilters = computed(() => this.visibleColumns().some((column) => column.filter));
 

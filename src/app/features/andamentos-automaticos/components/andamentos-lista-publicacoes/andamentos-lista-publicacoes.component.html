@@ -21,7 +21,8 @@
       [sortable]="true"
       [rowClass]="linhaSelecionada"
       [emptyMessage]="carregando() ? '' : 'Nenhuma publicação deste processo no DJEN nem no DJe do STF.'"
-      (rowClick)="selecionar($event)"
+      [rowAction]="acaoVisto"
+      (rowClick)="selecionada.set($event)"
     />
 
     @if (carregando()) {
@@ -63,3 +64,11 @@
     </button>
   </div>
 </div>
+
+<app-modal [open]="aConfirmar() !== null" [elevated]="true" title="Marcar como vista" (closed)="aConfirmar.set(null)">
+  <p>Marcar a publicação "{{ aConfirmar()?.documento }}" como vista? Ela deixa de aparecer em negrito pra você.</p>
+  <div modalFooter class="andamentos-lista-publicacoes__modal-footer">
+    <app-button variant="tertiary" label="Cancelar" (clicked)="aConfirmar.set(null)" />
+    <app-button variant="primary" label="Marcar como vista" (clicked)="confirmarVisto()" />
+  </div>
+</app-modal>

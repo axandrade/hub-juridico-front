@@ -26,9 +26,15 @@
           }
           @case ('andamentos') {
             Andamentos
+            @if (novos().andamentos) {
+              <span class="andamentos-processo-panel__novos">({{ novos().andamentos }} {{ novos().andamentos === 1 ? 'novo' : 'novos' }})</span>
+            }
           }
           @case ('publicacoes') {
             Publicações
+            @if (novos().publicacoes) {
+              <span class="andamentos-processo-panel__novos">({{ novos().publicacoes }} {{ novos().publicacoes === 1 ? 'nova' : 'novas' }})</span>
+            }
           }
         }
       </button>

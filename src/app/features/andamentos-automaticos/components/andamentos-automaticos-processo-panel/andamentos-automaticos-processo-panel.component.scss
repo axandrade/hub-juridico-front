@@ -116,3 +116,9 @@
     color: $color-text-secondary;
   }
 }
+
+// Contador de novidades não vistas nas abas "Andamentos" e "Publicações".
+.andamentos-processo-panel__novos {
+  color: $color-primary;
+  font-weight: $font-weight-bold;
+}

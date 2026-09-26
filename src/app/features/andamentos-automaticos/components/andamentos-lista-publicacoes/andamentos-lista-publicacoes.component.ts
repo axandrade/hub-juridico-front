@@ -16,8 +16,9 @@ import { AndamentosProcessoApi, AndamentosService, PublicacaoApi } from '../../s
  * consultada uma vez) — por isso espera o DataJud e recarrega junto no "Atualizar". Falha no
  * Comunica ou no STF não vira erro: a lista sai com a outra fonte e um aviso diz o que ficou de fora.
  *
- * Coluna "Novo" do protótipo fica de fora pelo mesmo motivo do "Somente novos" da aba Andamentos:
- * depende de gravar as consultas pra comparar com a anterior.
+ * Novidades (publicação que apareceu num "Atualizar" e o usuário ainda não viu) ficam em negrito
+ * (`is-novo`) até ele selecionar a linha ou clicar em "Marcar todos como vistos" — mesmo estado da
+ * aba Andamentos (`AndamentosService`): a publicação do DJEN vista aqui sai do negrito lá também.
  */
 @Component({
   selector: 'app-andamentos-lista-publicacoes',
@@ -46,6 +47,10 @@ export class AndamentosListaPublicacoesComponent {
   protected readonly segundosEsperando = signal(0);
   /** Fontes de publicação que falharam nesta consulta (a lista sai sem elas). */
   protected readonly fontesComFalha = signal<string[]>([]);
+
+  protected readonly totalNovos = computed(
+    () => this.publicacoes().filter((p) => this.andamentosService.ehNovo(this.processoId(), p)).length,
+  );
 
   protected readonly colunas: TableColumn<PublicacaoApi>[] = [
     { key: 'ordem', header: 'Ordem', width: '70px', align: 'center', formatter: (v) => `${v}º` },
@@ -100,6 +105,7 @@ export class AndamentosListaPublicacoesComponent {
   protected readonly linhaSelecionada = (p: PublicacaoApi): Record<string, boolean> => ({
     'is-selected': this.selecionada() === p,
     'is-cancelada': p.cancelada,
+    'is-novo': this.andamentosService.ehNovo(this.processoId(), p),
   });
 
   constructor() {
@@ -111,8 +117,14 @@ export class AndamentosListaPublicacoesComponent {
     this.destroyRef.onDestroy(() => this.cancelar());
   }
 
+  /** Selecionar é o sinal de que o usuário viu a publicação. */
   protected selecionar(p: PublicacaoApi): void {
     this.selecionada.set(p);
+    this.andamentosService.marcarVistos(this.processoId(), [p]);
+  }
+
+  protected marcarTodosVistos(): void {
+    this.andamentosService.marcarTodosVistos(this.processoId());
   }
 
   protected copiarTexto(): void {

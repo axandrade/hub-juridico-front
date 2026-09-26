@@ -18,9 +18,10 @@ const TODOS_OS_TIPOS = 'Todos os tipos';
  * projeto); a consulta ao DataJud é compartilhada com a aba "Visão geral" pelo `AndamentosService` —
  * os andamentos já vêm consolidados entre as capas, do mais recente pro mais antigo.
  *
- * Fonte/Tipo listam o que veio nos dados (hoje só "DataJud"/"Movimento" — crescem sozinhos quando
- * entrarem Comunica/DJEN e documentos). "Somente novos" fica desabilitado: "novo" depende de gravar
- * as consultas pra comparar com a anterior, o que ainda não existe.
+ * Fonte/Tipo listam o que veio nos dados. Novidades (andamento que apareceu num "Atualizar" e o
+ * usuário ainda não viu) ficam em negrito (`is-novo`): clicar na linha marca como visto, "Marcar
+ * todos como vistos" marca todas do processo (as publicações também) e "Somente novos" filtra —
+ * estado em `AndamentosService` (`ehNovo`/`marcarVistos`), compartilhado com a aba "Publicações".
  */
 @Component({
   selector: 'app-andamentos-lista-andamentos',
@@ -49,6 +50,9 @@ export class AndamentosListaAndamentosComponent {
   protected readonly fonte = signal(TODAS_AS_FONTES);
   protected readonly tipo = signal(TODOS_OS_TIPOS);
   protected readonly comDocumentoOuLink = signal(false);
+  protected readonly somenteNovos = signal(false);
+
+  protected readonly totalNovos = computed(() => this.andamentos().filter((a) => this.ehNovo(a)).length);
 
   protected readonly fonteOpcoes = computed(() => [TODAS_AS_FONTES, ...this.distintos((a) => a.fonte)]);
   protected readonly tipoOpcoes = computed(() => [TODOS_OS_TIPOS, ...this.distintos((a) => a.tipo)]);
@@ -58,8 +62,10 @@ export class AndamentosListaAndamentosComponent {
     const fonte = this.fonte();
     const tipo = this.tipo();
     const comLink = this.comDocumentoOuLink();
+    const somenteNovos = this.somenteNovos();
     return this.andamentos().filter(
       (a) =>
+        (!somenteNovos || this.ehNovo(a)) &&
         (fonte === TODAS_AS_FONTES || a.fonte === fonte) &&
         (tipo === TODOS_OS_TIPOS || a.tipo === tipo) &&
         (!comLink || !!a.link) &&
@@ -72,7 +78,8 @@ export class AndamentosListaAndamentosComponent {
       !!this.busca().trim() ||
       this.fonte() !== TODAS_AS_FONTES ||
       this.tipo() !== TODOS_OS_TIPOS ||
-      this.comDocumentoOuLink(),
+      this.comDocumentoOuLink() ||
+      this.somenteNovos(),
   );
 
   protected readonly colunas: TableColumn<AndamentoApi>[] = [
@@ -106,6 +113,9 @@ export class AndamentosListaAndamentosComponent {
     return partes.length ? partes.join(' · ') : null;
   };
 
+  /** Novidade ainda não vista em negrito. */
+  protected readonly linhaClasse = (a: AndamentoApi): Record<string, boolean> => ({ 'is-novo': this.ehNovo(a) });
+
   constructor() {
     effect(() => {
       const processoId = this.processoId();
@@ -123,11 +133,29 @@ export class AndamentosListaAndamentosComponent {
     this.comDocumentoOuLink.set((event.target as HTMLInputElement).checked);
   }
 
+  protected onSomenteNovos(event: Event): void {
+    this.somenteNovos.set((event.target as HTMLInputElement).checked);
+  }
+
+  /** Clicar na linha é o sinal de que o usuário viu o andamento. */
+  protected selecionar(a: AndamentoApi): void {
+    this.andamentosService.marcarVistos(this.processoId(), [a]);
+  }
+
+  protected marcarTodosVistos(): void {
+    this.andamentosService.marcarTodosVistos(this.processoId());
+  }
+
   protected limpar(): void {
     this.busca.set('');
     this.fonte.set(TODAS_AS_FONTES);
     this.tipo.set(TODOS_OS_TIPOS);
     this.comDocumentoOuLink.set(false);
+    this.somenteNovos.set(false);
+  }
+
+  private ehNovo(a: AndamentoApi): boolean {
+    return this.andamentosService.ehNovo(this.processoId(), a);
   }
 
   private carregar(processoId: number): void {

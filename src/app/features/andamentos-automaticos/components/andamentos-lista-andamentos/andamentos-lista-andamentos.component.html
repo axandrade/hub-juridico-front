@@ -35,11 +35,8 @@
       />
     </div>
 
-    <label
-      class="andamentos-lista-andamentos__check is-disabled"
-      title="Disponível quando as consultas ao DataJud passarem a ser gravadas (pra comparar com a anterior)."
-    >
-      <input type="checkbox" disabled />
+    <label class="andamentos-lista-andamentos__check" title="Andamentos que apareceram no último Atualizar e você ainda não viu.">
+      <input type="checkbox" [checked]="somenteNovos()" (change)="onSomenteNovos($event)" />
       Somente novos
     </label>
 
@@ -52,7 +49,16 @@
       Limpar
     </button>
 
+    @if (totalNovos()) {
+      <button type="button" class="andamentos-lista-andamentos__limpar" (click)="marcarTodosVistos()">
+        Marcar todos como vistos
+      </button>
+    }
+
     <span class="andamentos-lista-andamentos__contador">
+      @if (totalNovos()) {
+        <strong class="andamentos-lista-andamentos__novos">{{ totalNovos() }} novo(s) ·</strong>
+      }
       @if (temFiltro()) {
         {{ filtrados().length }} de {{ andamentos().length }} item(ns)
       } @else {
@@ -75,6 +81,7 @@
       [columnsToolbar]="false"
       [sortable]="true"
       [rowTitle]="tituloLinha"
+      [rowClass]="linhaClasse"
       [emptyMessage]="
         carregando()
           ? ''
@@ -82,6 +89,7 @@
             ? 'Nenhum andamento com esses filtros.'
             : 'Nenhum andamento encontrado no DataJud, no STF nem no Comunica/DJEN.'
       "
+      (rowClick)="selecionar($event)"
     />
 
     @if (carregando()) {

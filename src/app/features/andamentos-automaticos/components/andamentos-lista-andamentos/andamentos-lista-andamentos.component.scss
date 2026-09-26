@@ -119,6 +119,15 @@
 .andamentos-lista-andamentos__tabela {
   position: relative;
   min-height: 180px;
+
+  // Novidade ainda não vista — sai do negrito ao clicar na linha.
+  ::ng-deep tr.is-novo td {
+    font-weight: $font-weight-bold;
+  }
+}
+
+.andamentos-lista-andamentos__novos {
+  color: $color-primary;
 }
 
 // Mesma camada de carregamento da Visão geral.

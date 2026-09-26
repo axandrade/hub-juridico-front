@@ -13,6 +13,13 @@
     </div>
   }
 
+  @if (totalNovos()) {
+    <div class="andamentos-lista-publicacoes__novidades">
+      <strong>{{ totalNovos() }} publicação(ões) nova(s)</strong>
+      <button type="button" (click)="marcarTodosVistos()">Marcar todos como vistos</button>
+    </div>
+  }
+
   <div class="andamentos-lista-publicacoes__tabela" [attr.aria-busy]="carregando()">
     <app-data-table
       [columns]="colunas"

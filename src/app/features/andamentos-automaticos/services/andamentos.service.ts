@@ -1,6 +1,6 @@
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject, signal } from '@angular/core';
-import { Observable, catchError, shareReplay, throwError } from 'rxjs';
+import { Observable, catchError, shareReplay, tap, throwError } from 'rxjs';
 
 import { environment } from '../../../../environments/environment';
 
@@ -66,6 +66,10 @@ export interface AndamentoApi {
   link: string | null;
   /** Data (`yyyy-MM-dd`) em que a publicação foi disponibilizada no DJEN. */
   data_disponibilizacao_djen: string | null;
+  /** Identificador estável do item — a mesma publicação do DJEN tem a mesma chave nas duas abas. */
+  chave: string;
+  /** Apareceu num "Atualizar" e o usuário ainda não marcou como visto (no servidor — ver `ehNovo`). */
+  novo: boolean;
 }
 
 /** Processo do STF com o mesmo número único — `identificacao` = classe + número ("RE 1610218"). */
@@ -121,7 +125,14 @@ export interface PublicacaoApi {
   certidao_url: string | null;
   numero_comunicacao: number | null;
   hash: string | null;
+  /** Ver `AndamentoApi.chave`. */
+  chave: string;
+  /** Ver `AndamentoApi.novo`. */
+  novo: boolean;
 }
+
+/** Item que pode ser novidade — andamento ou publicação. */
+export type ItemComNovidade = Pick<AndamentoApi, 'chave' | 'novo'>;
 
 /**
  * `AndamentosProcessoResponse` do backend (`GET /api/v1/processos/{id}/andamentos`) — alimenta as
@@ -171,12 +182,27 @@ export interface AndamentosProcessoApi {
  * concluída) em vez de consultar de novo. Erro não fica no cache. `recarregar` descarta o cache
  * daquele processo e avança `versao`, que as abas observam pra pedir de novo — juntas, numa
  * requisição só.
+ *
+ * O backend grava a última consulta de cada fonte: sem parâmetro, devolve o que está gravado (e só
+ * consulta as APIs externas pelo que falta); depois de `recarregar`, a próxima consulta daquele
+ * processo vai com `atualizar=true` e consulta tudo de novo.
+ *
+ * Novidades: item com `novo = true` fica em negrito até o usuário marcar como visto (clicar na linha
+ * ou "Marcar todos como vistos"). A marcação vale na hora pra todas as abas (`vistos`, sinal
+ * compartilhado) e vai pro backend (`POST .../andamentos/vistos`); se o POST falhar, o item volta a
+ * aparecer como novo. `novos(processoId)` conta o que ainda falta ver, pras abas mostrarem o total.
  */
 @Injectable({ providedIn: 'root' })
 export class AndamentosService {
   private readonly http = inject(HttpClient);
   private readonly cache = new Map<number, Observable<AndamentosProcessoApi>>();
   private readonly versaoInterna = signal(0);
+  /** Última resposta de cada processo — base de `novos`. */
+  private readonly respostas = signal<ReadonlyMap<number, AndamentosProcessoApi>>(new Map());
+  /** `processoId:chave` marcados como vistos nesta sessão (antes ou depois de o servidor confirmar). */
+  private readonly vistos = signal<ReadonlySet<string>>(new Set());
+  /** Processos cujo "Atualizar" ainda não virou requisição — a próxima vai com `atualizar=true`. */
+  private readonly aAtualizar = new Set<number>();
 
   /** Muda a cada `recarregar` — as abas leem num `effect` pra refazer a consulta. */
   readonly versao = this.versaoInterna.asReadonly();
@@ -184,9 +210,12 @@ export class AndamentosService {
   consultar(processoId: number): Observable<AndamentosProcessoApi> {
     let consulta = this.cache.get(processoId);
     if (!consulta) {
+      const atualizar = this.aAtualizar.delete(processoId);
+      const params = atualizar ? new HttpParams().set('atualizar', true) : undefined;
       consulta = this.http
-        .get<AndamentosProcessoApi>(`${environment.apiBaseUrl}/processos/${processoId}/andamentos`)
+        .get<AndamentosProcessoApi>(`${environment.apiBaseUrl}/processos/${processoId}/andamentos`, { params })
         .pipe(
+          tap((resposta) => this.respostas.update((m) => new Map(m).set(processoId, resposta))),
           catchError((err: unknown) => {
             this.cache.delete(processoId);
             return throwError(() => err);
@@ -200,6 +229,52 @@ export class AndamentosService {
 
   recarregar(processoId: number): void {
     this.cache.delete(processoId);
+    this.aAtualizar.add(processoId);
     this.versaoInterna.update((v) => v + 1);
+  }
+
+  /** Novidade que o usuário ainda não viu — lê o sinal `vistos`, então serve em `computed`/template. */
+  ehNovo(processoId: number, item: ItemComNovidade): boolean {
+    return item.novo && !this.vistos().has(`${processoId}:${item.chave}`);
+  }
+
+  /** Andamentos e publicações ainda não vistos do processo (0 antes da primeira resposta). */
+  novos(processoId: number): { andamentos: number; publicacoes: number } {
+    const resposta = this.respostas().get(processoId);
+    return {
+      andamentos: resposta?.andamentos.filter((a) => this.ehNovo(processoId, a)).length ?? 0,
+      publicacoes: resposta?.publicacoes.filter((p) => this.ehNovo(processoId, p)).length ?? 0,
+    };
+  }
+
+  /** Marca estes itens como vistos (os que não são novidade são ignorados). */
+  marcarVistos(processoId: number, itens: ItemComNovidade[]): void {
+    const chaves = [...new Set(itens.filter((i) => this.ehNovo(processoId, i)).map((i) => i.chave))];
+    if (chaves.length) {
+      this.enviarVistos(processoId, chaves, { chaves });
+    }
+  }
+
+  /** "Marcar todos como vistos" — todas as novidades do processo, nas duas abas. */
+  marcarTodosVistos(processoId: number): void {
+    const resposta = this.respostas().get(processoId);
+    const itens: ItemComNovidade[] = [...(resposta?.andamentos ?? []), ...(resposta?.publicacoes ?? [])];
+    const chaves = [...new Set(itens.filter((i) => this.ehNovo(processoId, i)).map((i) => i.chave))];
+    if (chaves.length) {
+      this.enviarVistos(processoId, chaves, { todos: true });
+    }
+  }
+
+  private enviarVistos(processoId: number, chaves: string[], corpo: { chaves: string[] } | { todos: true }): void {
+    const ids = chaves.map((c) => `${processoId}:${c}`);
+    this.vistos.update((v) => new Set([...v, ...ids]));
+    this.http.post<void>(`${environment.apiBaseUrl}/processos/${processoId}/andamentos/vistos`, corpo).subscribe({
+      error: () =>
+        this.vistos.update((v) => {
+          const restantes = new Set(v);
+          ids.forEach((id) => restantes.delete(id));
+          return restantes;
+        }),
+    });
   }
 }

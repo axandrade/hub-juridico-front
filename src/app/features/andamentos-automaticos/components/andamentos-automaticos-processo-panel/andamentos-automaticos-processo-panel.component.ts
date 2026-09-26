@@ -1,9 +1,10 @@
-import { ChangeDetectionStrategy, Component, input, output, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input, output, signal } from '@angular/core';
 
 import { PanelLayoutSwitcherComponent } from '../../../../shared/components/panel-layout-switcher/panel-layout-switcher.component';
 import { PAINEL_LAYOUT_PADRAO, PainelLayout } from '../../../../shared/models/panel-layout';
 import { AndamentosListaAndamentosComponent } from '../andamentos-lista-andamentos/andamentos-lista-andamentos.component';
 import { AndamentosListaPublicacoesComponent } from '../andamentos-lista-publicacoes/andamentos-lista-publicacoes.component';
+import { AndamentosService } from '../../services/andamentos.service';
 import { AndamentosVisaoGeralComponent } from '../andamentos-visao-geral/andamentos-visao-geral.component';
 
 type AndamentosAba = 'visaoGeral' | 'andamentos' | 'publicacoes';
@@ -16,6 +17,7 @@ type AndamentosAba = 'visaoGeral' | 'andamentos' | 'publicacoes';
  *
  * Cada aba é um componente próprio que recebe o `processoId` e carrega seus dados (padrão das abas
  * de Operação/Processo) — a consulta (DataJud + STF) é compartilhada entre elas pelo `AndamentosService`.
+ * As abas "Andamentos" e "Publicações" mostram quantas novidades o usuário ainda não viu.
  */
 @Component({
   selector: 'app-andamentos-automaticos-processo-panel',
@@ -30,6 +32,8 @@ type AndamentosAba = 'visaoGeral' | 'andamentos' | 'publicacoes';
   styleUrl: './andamentos-automaticos-processo-panel.component.scss',
 })
 export class AndamentosAutomaticosProcessoPanelComponent {
+  private readonly andamentosService = inject(AndamentosService);
+
   readonly processoId = input.required<number>();
   readonly numeroCnj = input<string | null>(null);
   readonly clienteNome = input<string | null>(null);
@@ -40,6 +44,7 @@ export class AndamentosAutomaticosProcessoPanelComponent {
 
   protected readonly abas: readonly AndamentosAba[] = ['visaoGeral', 'andamentos', 'publicacoes'];
   protected readonly abaAtiva = signal<AndamentosAba>('visaoGeral');
+  protected readonly novos = computed(() => this.andamentosService.novos(this.processoId()));
 
   protected trocarAba(aba: AndamentosAba): void {
     this.abaAtiva.set(aba);

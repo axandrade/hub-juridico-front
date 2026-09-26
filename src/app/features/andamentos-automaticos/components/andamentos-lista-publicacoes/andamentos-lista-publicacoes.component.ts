@@ -9,9 +9,11 @@ import { PublicacaoApi, PublicacoesService } from '../../services/publicacoes.se
 
 /**
  * Aba "Publicações" do painel de Andamentos Automáticos — publicações do processo no DJEN
- * (Comunica PJe), no layout do protótipo (Monitor de Processos): tabela + detalhe da publicação
- * selecionada embaixo, com "Copiar texto", "Abrir certidão" e "Abrir publicação". Carrega pelo
- * `processoId` (padrão das abas do projeto); o Comunica responde rápido, sem cache.
+ * (Comunica PJe) e no DJe do STF, numa lista só (coluna Fonte), no layout do protótipo (Monitor de
+ * Processos): tabela + detalhe da publicação selecionada embaixo, com "Copiar texto", "Abrir
+ * certidão" e "Abrir publicação". Carrega pelo `processoId` (padrão das abas do projeto); as duas
+ * fontes respondem em poucos segundos, sem cache. Só falha do Comunica vira erro na aba — falha
+ * do STF só deixa as publicações dele de fora.
  *
  * Coluna "Novo" do protótipo fica de fora pelo mesmo motivo do "Somente novos" da aba Andamentos:
  * depende de gravar as consultas pra comparar com a anterior.

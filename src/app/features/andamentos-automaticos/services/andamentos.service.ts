@@ -65,6 +65,15 @@ export interface ProcessoStfApi {
 }
 
 /**
+ * `StfResumo` do backend — campo `stf` das abas "Andamentos" e "Publicações". `FALHA` não derruba a
+ * aba (as demais fontes continuam); `processos` só vem preenchido em `ENCONTRADO`.
+ */
+export interface StfResumoApi {
+  status: StatusStf;
+  processos: ProcessoStfApi[];
+}
+
+/**
  * `AndamentosProcessoResponse` do backend (`GET /api/v1/processos/{id}/andamentos`) — alimenta as
  * abas "Visão geral" e "Andamentos" numa consulta só, juntando DataJud e STF (o DataJud chega a
  * levar ~1 min). Bean comum, então vem em snake_case (`JacksonConfig`). `status` e os campos da
@@ -96,7 +105,7 @@ export interface AndamentosProcessoApi {
   ultimo_movimento: { data_hora: string | null; nome: string | null } | null;
   capas: DatajudCapaResumoApi[];
   andamentos: AndamentoApi[];
-  stf: { status: StatusStf; processos: ProcessoStfApi[] };
+  stf: StfResumoApi;
 }
 
 /**

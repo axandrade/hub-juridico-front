@@ -1,19 +1,20 @@
 import { DOCUMENT } from '@angular/common';
 import { ChangeDetectionStrategy, Component, DestroyRef, computed, effect, inject, input, signal, untracked } from '@angular/core';
-import { Subscription } from 'rxjs';
+import { Subscription, interval } from 'rxjs';
 
 import { DataTableComponent } from '../../../../shared/components/table/data-table.component';
 import { TableColumn } from '../../../../shared/components/table/table-column.model';
 import { ToastService } from '../../../../shared/services/toast.service';
-import { PublicacaoApi, PublicacoesService } from '../../services/publicacoes.service';
+import { AndamentosProcessoApi, AndamentosService, PublicacaoApi } from '../../services/andamentos.service';
 
 /**
  * Aba "Publicações" do painel de Andamentos Automáticos — publicações do processo no DJEN
  * (Comunica PJe) e no DJe do STF, numa lista só (coluna Fonte), no layout do protótipo (Monitor de
  * Processos): tabela + detalhe da publicação selecionada embaixo, com "Copiar texto", "Abrir
- * certidão" e "Abrir publicação". Carrega pelo `processoId` (padrão das abas do projeto); as duas
- * fontes respondem em poucos segundos, sem cache. Só falha do Comunica vira erro na aba — falha
- * do STF só deixa as publicações dele de fora.
+ * certidão" e "Abrir publicação". Carrega pelo `processoId` (padrão das abas do projeto), mas a
+ * resposta é a mesma das abas "Visão geral" e "Andamentos" (`AndamentosService`, cada fonte
+ * consultada uma vez) — por isso espera o DataJud e recarrega junto no "Atualizar". Falha no
+ * Comunica ou no STF não vira erro: a lista sai com a outra fonte e um aviso diz o que ficou de fora.
  *
  * Coluna "Novo" do protótipo fica de fora pelo mesmo motivo do "Somente novos" da aba Andamentos:
  * depende de gravar as consultas pra comparar com a anterior.
@@ -26,13 +27,14 @@ import { PublicacaoApi, PublicacoesService } from '../../services/publicacoes.se
   styleUrl: './andamentos-lista-publicacoes.component.scss',
 })
 export class AndamentosListaPublicacoesComponent {
-  private readonly publicacoesService = inject(PublicacoesService);
+  private readonly andamentosService = inject(AndamentosService);
   private readonly toast = inject(ToastService);
   private readonly document = inject(DOCUMENT);
   private readonly destroyRef = inject(DestroyRef);
 
-  /** Consulta em andamento — cancelada ao trocar de processo/destruir. */
+  /** Consulta em andamento + contador de segundos — cancelados ao trocar de processo/recarregar/destruir. */
   private consulta?: Subscription;
+  private cronometro?: Subscription;
 
   readonly processoId = input.required<number>();
 
@@ -40,6 +42,10 @@ export class AndamentosListaPublicacoesComponent {
   protected readonly carregando = signal(false);
   protected readonly erro = signal('');
   protected readonly selecionada = signal<PublicacaoApi | null>(null);
+  /** Segundos desde o início da consulta — espera o DataJud (~1 min), o contador mostra que não travou. */
+  protected readonly segundosEsperando = signal(0);
+  /** Fontes de publicação que falharam nesta consulta (a lista sai sem elas). */
+  protected readonly fontesComFalha = signal<string[]>([]);
 
   protected readonly colunas: TableColumn<PublicacaoApi>[] = [
     { key: 'ordem', header: 'Ordem', width: '70px', align: 'center', formatter: (v) => `${v}º` },
@@ -90,17 +96,19 @@ export class AndamentosListaPublicacoesComponent {
     ].join('\n');
   });
 
+  // Pela própria linha, não pelo `id`: publicação do STF não tem id (todas seriam "a selecionada").
   protected readonly linhaSelecionada = (p: PublicacaoApi): Record<string, boolean> => ({
-    'is-selected': this.selecionada()?.id === p.id,
+    'is-selected': this.selecionada() === p,
     'is-cancelada': p.cancelada,
   });
 
   constructor() {
     effect(() => {
       const processoId = this.processoId();
+      this.andamentosService.versao();
       untracked(() => this.carregar(processoId));
     });
-    this.destroyRef.onDestroy(() => this.consulta?.unsubscribe());
+    this.destroyRef.onDestroy(() => this.cancelar());
   }
 
   protected selecionar(p: PublicacaoApi): void {
@@ -126,22 +134,43 @@ export class AndamentosListaPublicacoesComponent {
 
   private carregar(processoId: number): void {
     // Resposta atrasada do processo anterior não pode sobrescrever a do atual.
-    this.consulta?.unsubscribe();
+    this.cancelar();
     this.carregando.set(true);
     this.erro.set('');
     this.publicacoes.set([]);
+    this.fontesComFalha.set([]);
     this.selecionada.set(null);
-    this.consulta = this.publicacoesService.consultar(processoId).subscribe({
+    this.segundosEsperando.set(0);
+    this.cronometro = interval(1000).subscribe(() => this.segundosEsperando.update((s) => s + 1));
+    this.consulta = this.andamentosService.consultar(processoId).subscribe({
       next: (resposta) => {
         this.publicacoes.set(resposta.publicacoes);
-        this.carregando.set(false);
+        this.fontesComFalha.set(fontesComFalha(resposta));
+        this.finalizar();
       },
       error: (err: unknown) => {
         this.erro.set(httpErrorMessage(err));
-        this.carregando.set(false);
+        this.finalizar();
       },
     });
   }
+
+  private finalizar(): void {
+    this.cronometro?.unsubscribe();
+    this.carregando.set(false);
+  }
+
+  private cancelar(): void {
+    this.consulta?.unsubscribe();
+    this.cronometro?.unsubscribe();
+  }
+}
+
+function fontesComFalha(resposta: AndamentosProcessoApi): string[] {
+  return [
+    ...(resposta.comunica.status === 'FALHA' ? ['Comunica/DJEN'] : []),
+    ...(resposta.stf.status === 'FALHA' ? ['STF'] : []),
+  ];
 }
 
 function texto(valor: unknown): string {
@@ -158,5 +187,5 @@ function httpErrorMessage(err: unknown): string {
   if (e?.status === 0) {
     return 'Sem conexão com o servidor.';
   }
-  return e?.error?.detail || e?.error?.title || 'Não foi possível consultar o Comunica/DJEN.';
+  return e?.error?.detail || e?.error?.title || 'Não foi possível consultar as publicações do processo.';
 }

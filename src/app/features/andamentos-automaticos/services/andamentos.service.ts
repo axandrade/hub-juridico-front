@@ -12,6 +12,14 @@ export const STATUS_DATAJUD_LABEL: Record<StatusDatajud, string> = {
   NAO_ENCONTRADO: 'Não encontrado no DataJud',
 };
 
+export type StatusComunica = 'OK' | 'NAO_ENCONTRADO' | 'FALHA';
+
+export const STATUS_COMUNICA_LABEL: Record<StatusComunica, string> = {
+  OK: 'OK',
+  NAO_ENCONTRADO: 'Sem publicações no DJEN',
+  FALHA: 'Erro',
+};
+
 export type StatusStf = 'ENCONTRADO' | 'NAO_ENCONTRADO' | 'FALHA';
 
 export const STATUS_STF_LABEL: Record<StatusStf, string> = {
@@ -37,7 +45,11 @@ export interface DatajudCapaResumoApi {
  * - `STF`: andamento da consulta pública do portal — `data_hora` só com a data (00:00), `tipo`
  *   classificado pelo nome (Acórdão/Decisão/Despacho...), `codigo` `null`, `graus` ["STF"],
  *   `orgao_julgador` = ministro/órgão, `complementos` = observação e "Peça: ...", `link` = 1ª peça.
- * `data_disponibilizacao_djen` segue `null` (vem com a integração Comunica/DJEN).
+ * - `Comunica/DJEN`: cada publicação da aba "Publicações" vinda do Comunica — `data_hora` = dia da
+ *   disponibilização (00:00), `tipo` = documento, `nome` = documento + " — conteúdo localizado no
+ *   Comunica/DJEN", `graus` vazio, `orgao_julgador` = órgão, `link` = documento no PJe,
+ *   `complementos` = "Conteúdo identificado: ..." quando difere do documento.
+ * `data_disponibilizacao_djen` só vem nas linhas do Comunica.
  */
 export interface AndamentoApi {
   /** Posição cronológica (1 = mais antigo). A lista já vem do mais recente pro mais antigo. */
@@ -74,11 +86,49 @@ export interface StfResumoApi {
 }
 
 /**
+ * Uma publicação — `PublicacoesProcessoResponse.Publicacao` do backend (snake_case). `fonte` diz de
+ * onde veio: `Comunica/DJEN` ou `STF/DJe` (andamento do STF que é publicação no DJe, ou edição do
+ * índice DJ/DJe do STF — `documento` "Índice DJ/DJe STF"; sem destinatários/advogados/certidão).
+ * Datas são `yyyy-MM-dd` (dia da origem, sem fuso). `conteudo_identificado` é o que a publicação
+ * contém de fato (pode diferir de `documento`: uma "Intimação" com inteiro teor de acórdão vira
+ * "Acórdão"). `texto` já vem convertido de HTML.
+ */
+export interface PublicacaoApi {
+  /** Posição cronológica (1 = mais antiga). A lista já vem da mais recente pra mais antiga. */
+  ordem: number;
+  id: number | null;
+  data_disponibilizacao: string | null;
+  /** Comunica normalmente não informa; STF sempre informa (`data_disponibilizacao` = "divulgado em"). */
+  data_publicacao: string | null;
+  fonte: string;
+  tribunal: string | null;
+  tipo: string | null;
+  documento: string | null;
+  conteudo_identificado: string;
+  meio: string | null;
+  orgao: string | null;
+  classe: string | null;
+  /** "NOME (polo ativo|passivo)". */
+  destinatarios: string[];
+  /** "NOME — OAB UF NÚMERO". */
+  advogados: string[];
+  cancelada: boolean;
+  motivo_cancelamento: string | null;
+  texto: string;
+  /** Comunica: documento no PJe do tribunal. STF: peça (PDF), matéria no DJ ou ficha do processo. */
+  link: string | null;
+  /** PDF da certidão de publicação no Comunica. */
+  certidao_url: string | null;
+  numero_comunicacao: number | null;
+  hash: string | null;
+}
+
+/**
  * `AndamentosProcessoResponse` do backend (`GET /api/v1/processos/{id}/andamentos`) — alimenta as
- * abas "Visão geral" e "Andamentos" numa consulta só, juntando DataJud e STF (o DataJud chega a
- * levar ~1 min). Bean comum, então vem em snake_case (`JacksonConfig`). `status` e os campos da
+ * abas "Visão geral", "Andamentos" e "Publicações" numa consulta só, juntando DataJud, STF e Comunica
+ * (cada fonte chamada uma vez; o DataJud chega a levar ~1 min). Bean comum, então vem em snake_case (`JacksonConfig`). `status` e os campos da
  * capa são do DataJud (capa `null` quando `status = 'NAO_ENCONTRADO'`); `stf` resume a consulta ao
- * STF; `andamentos`, `total_andamentos` e `ultimo_movimento` contam todas as fontes.
+ * STF e `comunica` a do Comunica; `andamentos`, `total_andamentos` e `ultimo_movimento` contam todas as fontes.
  */
 export interface AndamentosProcessoApi {
   processo_id: number;
@@ -105,15 +155,19 @@ export interface AndamentosProcessoApi {
   ultimo_movimento: { data_hora: string | null; nome: string | null } | null;
   capas: DatajudCapaResumoApi[];
   andamentos: AndamentoApi[];
+  /** Aba "Publicações": Comunica/DJEN + DJe do STF, da mais recente pra mais antiga. */
+  publicacoes: PublicacaoApi[];
   stf: StfResumoApi;
+  /** Resumo da consulta ao Comunica pra linha do tempo — `FALHA` não derruba o painel. */
+  comunica: { status: StatusComunica; total_publicacoes: number };
 }
 
 /**
- * Consulta dos andamentos automáticos (DataJud + STF) — feita pelo backend, aqui só chama.
+ * Consulta dos andamentos automáticos (DataJud + STF + Comunica/DJEN) — feita pelo backend, aqui só chama.
  *
- * As abas "Visão geral" e "Andamentos" carregam cada uma por conta própria (padrão das abas do
- * projeto), mas o DataJud chega a levar ~1 min: por isso a resposta é compartilhada por processo —
- * a segunda aba que pede o mesmo `processoId` reaproveita a mesma requisição (em andamento ou já
+ * As abas "Visão geral", "Andamentos" e "Publicações" carregam cada uma por conta própria (padrão
+ * das abas do projeto), mas o DataJud chega a levar ~1 min: por isso a resposta é compartilhada por
+ * processo — a aba que pede o mesmo `processoId` depois reaproveita a mesma requisição (em andamento ou já
  * concluída) em vez de consultar de novo. Erro não fica no cache. `recarregar` descarta o cache
  * daquele processo e avança `versao`, que as abas observam pra pedir de novo — juntas, numa
  * requisição só.

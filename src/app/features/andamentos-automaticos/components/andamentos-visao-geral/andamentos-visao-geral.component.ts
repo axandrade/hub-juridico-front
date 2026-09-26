@@ -7,6 +7,7 @@ import { DateFormatPipe } from '../../../../shared/pipes/date-format.pipe';
 import {
   AndamentosProcessoApi,
   AndamentosService,
+  STATUS_COMUNICA_LABEL,
   STATUS_DATAJUD_LABEL,
   STATUS_STF_LABEL,
 } from '../../services/andamentos.service';
@@ -24,7 +25,7 @@ interface CampoVisaoGeral {
  * Processos). Carrega pelo `processoId` (padrão das abas do projeto); a consulta é
  * compartilhada com a aba "Andamentos" pelo `AndamentosService`, e "Atualizar" recarrega as duas.
  *
- * Referência, Status Comunica/DJEN e Ativo no monitoramento estão no protótipo mas ainda não têm
+ * Referência e Ativo no monitoramento estão no protótipo mas ainda não têm
  * fonte — aparecem com "—"/"Não integrado" até existirem.
  */
 @Component({
@@ -70,7 +71,7 @@ export class AndamentosVisaoGeralComponent {
       { label: 'Nível de sigilo', valor: encontrado && v?.nivel_sigilo != null ? String(v.nivel_sigilo) : '—' },
       { label: 'Última atualização DataJud', valor: this.data(v?.data_ultima_atualizacao, DATE_FORMAT.LONG) },
       { label: 'Status DataJud', valor: this.statusDatajud() },
-      { label: 'Status Comunica/DJEN', valor: 'Não integrado' },
+      { label: 'Status Comunica/DJEN', valor: this.statusComunica() },
       { label: 'Status STF', valor: this.statusStf() },
       { label: 'Identificação STF', valor: this.identificacaoStf() },
       { label: 'Ativo no monitoramento', valor: '—' },
@@ -79,11 +80,11 @@ export class AndamentosVisaoGeralComponent {
 
   /**
    * Caixa "Diagnóstico das fontes" abaixo do Conteúdo armazenado — resumo em texto, no formato do
-   * protótipo (Monitor de Processos). Comunica/DJEN ainda não integrado.
+   * protótipo (Monitor de Processos).
    */
   protected readonly diagnostico = computed<string[]>(() => {
     if (this.carregando()) {
-      return ['Consultando DataJud e STF...'];
+      return ['Consultando DataJud, STF e Comunica/DJEN...'];
     }
     const v = this.visao();
     const erro = this.erro();
@@ -103,17 +104,21 @@ export class AndamentosVisaoGeralComponent {
         }`,
       );
     }
-    linhas.push('Comunica/DJEN: Não integrado');
-    linhas.push('Publicações Comunica/DJEN/STF armazenadas: 0');
+    linhas.push(`Comunica/DJEN: ${this.statusComunica()}`);
+    if (v?.comunica.status === 'OK') {
+      linhas.push(`Publicações Comunica/DJEN na linha do tempo: ${v.comunica.total_publicacoes}`);
+    }
     linhas.push(`STF: ${this.statusStf()}`);
     if (v?.stf.status === 'ENCONTRADO') {
       linhas.push(`Processo(s) no STF: ${this.identificacaoStf()}`);
     }
     if (v) {
-      const fontes = v.stf.status === 'ENCONTRADO' ? 'DataJud e STF' : 'DataJud';
-      linhas.push(
-        `Linha do tempo consolidada: ${fontes}, com ${v.total_andamentos} andamento(s) e 0 publicação(ões) armazenada(s).`,
-      );
+      const fontes = [
+        'DataJud',
+        ...(v.stf.status === 'ENCONTRADO' ? ['STF'] : []),
+        ...(v.comunica.status === 'OK' ? ['Comunica/DJEN'] : []),
+      ].join(', ');
+      linhas.push(`Linha do tempo consolidada: ${fontes}, com ${v.total_andamentos} andamento(s).`);
       linhas.push('As datas processuais são exibidas como informadas pela fonte.');
       linhas.push(`Última consulta DataJud: ${this.data(v.consultado_em, DATE_FORMAT.LONG)}`);
     }
@@ -180,6 +185,15 @@ export class AndamentosVisaoGeralComponent {
     }
     const label = STATUS_DATAJUD_LABEL[v.status];
     return v.tribunais_com_falha.length ? `${label} — falhou: ${v.tribunais_com_falha.join(', ')}` : label;
+  }
+
+  /** Sem resposta (erro no DataJud de origem derruba a consulta toda), o Comunica fica sem status: "—". */
+  private statusComunica(): string {
+    if (this.carregando()) {
+      return 'Consultando...';
+    }
+    const comunica = this.visao()?.comunica;
+    return comunica ? STATUS_COMUNICA_LABEL[comunica.status] : '—';
   }
 
   /** Sem resposta (erro no DataJud de origem derruba a consulta toda), o STF fica sem status: "—". */

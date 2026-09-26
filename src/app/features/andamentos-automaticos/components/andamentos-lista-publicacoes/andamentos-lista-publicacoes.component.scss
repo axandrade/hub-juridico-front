@@ -32,12 +32,45 @@
 }
 
 .andamentos-lista-publicacoes__tabela {
-  min-height: 140px;
+  position: relative;
+  min-height: 180px;
 
   // `is-selected` já tem estilo no app-data-table; aqui só a publicação cancelada.
   ::ng-deep tr.is-cancelada td {
     color: $color-text-muted;
     text-decoration: line-through;
+  }
+}
+
+// Mesma camada de carregamento das abas Visão geral e Andamentos — a resposta é a mesma.
+.andamentos-lista-publicacoes__loading {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: $spacing-xs;
+  border-radius: $border-radius-sm;
+  background-color: rgba($color-surface, 0.82);
+  text-align: center;
+
+  i {
+    margin-bottom: $spacing-xs;
+    color: $color-primary;
+    font-size: $font-size-2xl;
+  }
+
+  strong {
+    color: $color-text-primary;
+    font-size: $font-size-base;
+    font-weight: $font-weight-medium;
+  }
+
+  span {
+    color: $color-text-muted;
+    font-size: $font-size-xs;
   }
 }
 

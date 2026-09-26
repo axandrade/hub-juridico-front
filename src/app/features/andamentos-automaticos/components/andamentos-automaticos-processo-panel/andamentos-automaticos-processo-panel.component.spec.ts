@@ -13,7 +13,7 @@ import { AndamentosAutomaticosProcessoPanelComponent } from './andamentos-automa
 // As abas formatam datas em pt-BR — o app registra em `app.config.ts`.
 registerLocaleData(localePt);
 
-const URL = `${environment.apiBaseUrl}/processos/1/andamentos`;
+const URL = `${environment.apiBaseUrl}/andamentos/00171629820175160015`;
 
 describe('AndamentosAutomaticosProcessoPanelComponent — contador de novidades nas abas', () => {
   let fixture: ComponentFixture<AndamentosAutomaticosProcessoPanelComponent>;
@@ -33,7 +33,7 @@ describe('AndamentosAutomaticosProcessoPanelComponent — contador de novidades 
     });
     http = TestBed.inject(HttpTestingController);
     fixture = TestBed.createComponent(AndamentosAutomaticosProcessoPanelComponent);
-    fixture.componentRef.setInput('processoId', 1);
+    fixture.componentRef.setInput('numeroCnj', '0017162-98.2017.5.16.0015');
     fixture.detectChanges();
   });
 
@@ -56,7 +56,7 @@ describe('AndamentosAutomaticosProcessoPanelComponent — contador de novidades 
     expect(aba('Andamentos')).toBe('Andamentos (2 novos)');
     expect(aba('Publicações')).toBe('Publicações (1 nova)');
 
-    TestBed.inject(AndamentosService).marcarVistos(1, [djen]);
+    TestBed.inject(AndamentosService).marcarVistos('0017162-98.2017.5.16.0015', [djen]);
     http.expectOne(`${URL}/vistos`).flush(null, { status: 204, statusText: 'No Content' });
     fixture.detectChanges();
 

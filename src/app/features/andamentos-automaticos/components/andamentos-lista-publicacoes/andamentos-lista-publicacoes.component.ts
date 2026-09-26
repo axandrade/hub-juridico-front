@@ -14,7 +14,7 @@ import { AndamentosService, PublicacaoApi } from '../../services/andamentos.serv
  * Aba "Publicações" do painel de Andamentos Automáticos — publicações do processo no DJEN
  * (Comunica PJe) e no DJe do STF, numa lista só (coluna Fonte), no layout do protótipo (Monitor de
  * Processos): tabela + detalhe da publicação selecionada embaixo, com "Copiar texto", "Abrir
- * certidão" e "Abrir publicação". Carrega pelo `processoId` (padrão das abas do projeto), mas a
+ * certidão" e "Abrir publicação". Carrega pelo número CNJ (padrão das abas do projeto), mas a
  * resposta é a mesma das abas "Visão geral" e "Andamentos" (`AndamentosService`, cada fonte
  * consultada uma vez) — por isso espera o DataJud e recarrega junto no "Atualizar". Falha no
  * Comunica ou no STF não vira erro: a lista sai com a outra fonte e um aviso diz o que ficou de fora.
@@ -41,7 +41,7 @@ export class AndamentosListaPublicacoesComponent {
   private consulta?: Subscription;
   private cronometro?: Subscription;
 
-  readonly processoId = input.required<number>();
+  readonly numeroCnj = input.required<string>();
 
   protected readonly publicacoes = signal<PublicacaoApi[]>([]);
   protected readonly carregando = signal(false);
@@ -53,7 +53,7 @@ export class AndamentosListaPublicacoesComponent {
   protected readonly segundosEsperando = signal(0);
 
   protected readonly totalNovos = computed(
-    () => this.publicacoes().filter((p) => this.andamentosService.ehNovo(this.processoId(), p)).length,
+    () => this.publicacoes().filter((p) => this.andamentosService.ehNovo(this.numeroCnj(), p)).length,
   );
 
   protected readonly colunas: TableColumn<PublicacaoApi>[] = [
@@ -110,7 +110,7 @@ export class AndamentosListaPublicacoesComponent {
     label: 'Marcar como vista',
     icon: 'fa-regular fa-eye',
     iconOnly: true,
-    visible: (p) => this.andamentosService.ehNovo(this.processoId(), p),
+    visible: (p) => this.andamentosService.ehNovo(this.numeroCnj(), p),
     onClick: (p) => this.aConfirmar.set(p),
   };
 
@@ -118,14 +118,14 @@ export class AndamentosListaPublicacoesComponent {
   protected readonly linhaSelecionada = (p: PublicacaoApi): Record<string, boolean> => ({
     'is-selected': this.selecionada() === p,
     'is-cancelada': p.cancelada,
-    'is-novo': this.andamentosService.ehNovo(this.processoId(), p),
+    'is-novo': this.andamentosService.ehNovo(this.numeroCnj(), p),
   });
 
   constructor() {
     effect(() => {
-      const processoId = this.processoId();
+      const numeroCnj = this.numeroCnj();
       this.andamentosService.versao();
-      untracked(() => this.carregar(processoId));
+      untracked(() => this.carregar(numeroCnj));
     });
     this.destroyRef.onDestroy(() => this.cancelar());
   }
@@ -134,12 +134,12 @@ export class AndamentosListaPublicacoesComponent {
     const p = this.aConfirmar();
     this.aConfirmar.set(null);
     if (p) {
-      this.andamentosService.marcarVistos(this.processoId(), [p]);
+      this.andamentosService.marcarVistos(this.numeroCnj(), [p]);
     }
   }
 
   protected marcarTodosVistos(): void {
-    this.andamentosService.marcarTodosVistos(this.processoId());
+    this.andamentosService.marcarTodosVistos(this.numeroCnj());
   }
 
   protected copiarTexto(): void {
@@ -159,7 +159,7 @@ export class AndamentosListaPublicacoesComponent {
     }
   }
 
-  private carregar(processoId: number): void {
+  private carregar(numeroCnj: string): void {
     // Resposta atrasada do processo anterior não pode sobrescrever a do atual.
     this.cancelar();
     this.carregando.set(true);
@@ -168,7 +168,7 @@ export class AndamentosListaPublicacoesComponent {
     this.selecionada.set(null);
     this.segundosEsperando.set(0);
     this.cronometro = interval(1000).subscribe(() => this.segundosEsperando.update((s) => s + 1));
-    this.consulta = this.andamentosService.consultar(processoId).subscribe({
+    this.consulta = this.andamentosService.consultar(numeroCnj).subscribe({
       next: (resposta) => {
         this.publicacoes.set(resposta.publicacoes);
         this.finalizar();

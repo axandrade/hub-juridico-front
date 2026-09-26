@@ -191,7 +191,7 @@ export interface AndamentosProcessoApi {
  *
  * As abas "Visão geral", "Andamentos" e "Publicações" carregam cada uma por conta própria (padrão
  * das abas do projeto), mas o DataJud chega a levar ~1 min: por isso a resposta é compartilhada por
- * processo — a aba que pede o mesmo `processoId` depois reaproveita a mesma requisição (em andamento ou já
+ * número CNJ — a aba que pede o mesmo número depois reaproveita a mesma requisição (em andamento ou já
  * concluída) em vez de consultar de novo. Erro não fica no cache. Quando nenhuma aba quer mais a
  * resposta (o usuário trocou de processo antes de ela chegar), a requisição é cancelada e sai do
  * cache — clicar rápido entre processos não acumula requisições; voltar ao processo consulta de novo
@@ -205,98 +205,109 @@ export interface AndamentosProcessoApi {
  *
  * Novidades: item com `novo = true` fica em negrito até o usuário marcar como visto (clicar na linha
  * ou "Marcar todos como vistos"). A marcação vale na hora pra todas as abas (`vistos`, sinal
- * compartilhado) e vai pro backend (`POST .../andamentos/vistos`); se o POST falhar, o item volta a
- * aparecer como novo. `novos(processoId)` conta o que ainda falta ver, pras abas mostrarem o total.
+ * compartilhado) e vai pro backend (`POST /andamentos/{numeroCnj}/vistos`); se o POST falhar, o item volta a
+ * aparecer como novo. `novos(numeroCnj)` conta o que ainda falta ver, pras abas mostrarem o total.
  */
+/** O número CNJ só com os dígitos — a chave do cache e das URLs, com ou sem máscara na entrada. */
+function soDigitos(numeroCnj: string): string {
+  return numeroCnj.replace(/\D/g, '');
+}
+
 @Injectable({ providedIn: 'root' })
 export class AndamentosService {
   private readonly http = inject(HttpClient);
-  private readonly cache = new Map<number, Observable<AndamentosProcessoApi>>();
+  private readonly cache = new Map<string, Observable<AndamentosProcessoApi>>();
   private readonly versaoInterna = signal(0);
   /** Última resposta de cada processo — base de `novos`. */
-  private readonly respostas = signal<ReadonlyMap<number, AndamentosProcessoApi>>(new Map());
-  /** `processoId:chave` marcados como vistos nesta sessão (antes ou depois de o servidor confirmar). */
+  private readonly respostas = signal<ReadonlyMap<string, AndamentosProcessoApi>>(new Map());
+  /** `numeroCnj:chave` marcados como vistos nesta sessão (antes ou depois de o servidor confirmar). */
   private readonly vistos = signal<ReadonlySet<string>>(new Set());
   /** Processos cujo "Atualizar" ainda não virou requisição — a próxima vai com `atualizar=true`. */
-  private readonly aAtualizar = new Set<number>();
+  private readonly aAtualizar = new Set<string>();
 
   /** Muda a cada `recarregar` — as abas leem num `effect` pra refazer a consulta. */
   readonly versao = this.versaoInterna.asReadonly();
 
-  consultar(processoId: number): Observable<AndamentosProcessoApi> {
-    let consulta = this.cache.get(processoId);
+  consultar(numeroCnj: string): Observable<AndamentosProcessoApi> {
+    numeroCnj = soDigitos(numeroCnj);
+    let consulta = this.cache.get(numeroCnj);
     if (!consulta) {
-      const atualizar = this.aAtualizar.delete(processoId);
+      const atualizar = this.aAtualizar.delete(numeroCnj);
       const params = atualizar ? new HttpParams().set('atualizar', true) : undefined;
       consulta = this.http
-        .get<AndamentosProcessoApi>(`${environment.apiBaseUrl}/processos/${processoId}/andamentos`, { params })
+        .get<AndamentosProcessoApi>(`${environment.apiBaseUrl}/andamentos/${numeroCnj}`, { params })
         .pipe(
           tap((resposta) => {
-            this.respostas.update((m) => new Map(m).set(processoId, resposta));
+            this.respostas.update((m) => new Map(m).set(numeroCnj, resposta));
             // Chegou: o cache passa a guardar a resposta em si — a requisição já pode ser encerrada.
-            if (this.cache.get(processoId) === requisicao) {
-              this.cache.set(processoId, of(resposta));
+            if (this.cache.get(numeroCnj) === requisicao) {
+              this.cache.set(numeroCnj, of(resposta));
             }
           }),
           // Erro, ou ninguém mais inscrito antes da resposta (cancelada): não fica no cache.
-          finalize(() => this.descartar(processoId, requisicao)),
+          finalize(() => this.descartar(numeroCnj, requisicao)),
           shareReplay({ bufferSize: 1, refCount: true }),
         );
       const requisicao = consulta;
-      this.cache.set(processoId, requisicao);
+      this.cache.set(numeroCnj, requisicao);
     }
     return consulta;
   }
 
   /** Tira do cache só se ainda for esta requisição (um `recarregar` pode já ter posto outra no lugar). */
-  private descartar(processoId: number, requisicao: Observable<AndamentosProcessoApi>): void {
-    if (this.cache.get(processoId) === requisicao) {
-      this.cache.delete(processoId);
+  private descartar(numeroCnj: string, requisicao: Observable<AndamentosProcessoApi>): void {
+    if (this.cache.get(numeroCnj) === requisicao) {
+      this.cache.delete(numeroCnj);
     }
   }
 
-  recarregar(processoId: number): void {
-    this.cache.delete(processoId);
-    this.aAtualizar.add(processoId);
+  recarregar(numeroCnj: string): void {
+    numeroCnj = soDigitos(numeroCnj);
+    this.cache.delete(numeroCnj);
+    this.aAtualizar.add(numeroCnj);
     this.versaoInterna.update((v) => v + 1);
   }
 
   /** Novidade que o usuário ainda não viu — lê o sinal `vistos`, então serve em `computed`/template. */
-  ehNovo(processoId: number, item: ItemComNovidade): boolean {
-    return item.novo && !this.vistos().has(`${processoId}:${item.chave}`);
+  ehNovo(numeroCnj: string, item: ItemComNovidade): boolean {
+    numeroCnj = soDigitos(numeroCnj);
+    return item.novo && !this.vistos().has(`${numeroCnj}:${item.chave}`);
   }
 
   /** Andamentos e publicações ainda não vistos do processo (0 antes da primeira resposta). */
-  novos(processoId: number): { andamentos: number; publicacoes: number } {
-    const resposta = this.respostas().get(processoId);
+  novos(numeroCnj: string): { andamentos: number; publicacoes: number } {
+    numeroCnj = soDigitos(numeroCnj);
+    const resposta = this.respostas().get(numeroCnj);
     return {
-      andamentos: resposta?.andamentos.filter((a) => this.ehNovo(processoId, a)).length ?? 0,
-      publicacoes: resposta?.publicacoes.filter((p) => this.ehNovo(processoId, p)).length ?? 0,
+      andamentos: resposta?.andamentos.filter((a) => this.ehNovo(numeroCnj, a)).length ?? 0,
+      publicacoes: resposta?.publicacoes.filter((p) => this.ehNovo(numeroCnj, p)).length ?? 0,
     };
   }
 
   /** Marca estes itens como vistos (os que não são novidade são ignorados). */
-  marcarVistos(processoId: number, itens: ItemComNovidade[]): void {
-    const chaves = [...new Set(itens.filter((i) => this.ehNovo(processoId, i)).map((i) => i.chave))];
+  marcarVistos(numeroCnj: string, itens: ItemComNovidade[]): void {
+    numeroCnj = soDigitos(numeroCnj);
+    const chaves = [...new Set(itens.filter((i) => this.ehNovo(numeroCnj, i)).map((i) => i.chave))];
     if (chaves.length) {
-      this.enviarVistos(processoId, chaves, { chaves });
+      this.enviarVistos(numeroCnj, chaves, { chaves });
     }
   }
 
   /** "Marcar todos como vistos" — todas as novidades do processo, nas duas abas. */
-  marcarTodosVistos(processoId: number): void {
-    const resposta = this.respostas().get(processoId);
+  marcarTodosVistos(numeroCnj: string): void {
+    numeroCnj = soDigitos(numeroCnj);
+    const resposta = this.respostas().get(numeroCnj);
     const itens: ItemComNovidade[] = [...(resposta?.andamentos ?? []), ...(resposta?.publicacoes ?? [])];
-    const chaves = [...new Set(itens.filter((i) => this.ehNovo(processoId, i)).map((i) => i.chave))];
+    const chaves = [...new Set(itens.filter((i) => this.ehNovo(numeroCnj, i)).map((i) => i.chave))];
     if (chaves.length) {
-      this.enviarVistos(processoId, chaves, { todos: true });
+      this.enviarVistos(numeroCnj, chaves, { todos: true });
     }
   }
 
-  private enviarVistos(processoId: number, chaves: string[], corpo: { chaves: string[] } | { todos: true }): void {
-    const ids = chaves.map((c) => `${processoId}:${c}`);
+  private enviarVistos(numeroCnj: string, chaves: string[], corpo: { chaves: string[] } | { todos: true }): void {
+    const ids = chaves.map((c) => `${numeroCnj}:${c}`);
     this.vistos.update((v) => new Set([...v, ...ids]));
-    this.http.post<void>(`${environment.apiBaseUrl}/processos/${processoId}/andamentos/vistos`, corpo).subscribe({
+    this.http.post<void>(`${environment.apiBaseUrl}/andamentos/${numeroCnj}/vistos`, corpo).subscribe({
       error: () =>
         this.vistos.update((v) => {
           const restantes = new Set(v);

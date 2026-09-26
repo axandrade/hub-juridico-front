@@ -63,11 +63,10 @@
   <div class="andamentos-processo-panel__body">
     <app-andamentos-visao-geral
       [hidden]="abaAtiva() !== 'visaoGeral'"
-      [processoId]="processoId()"
       [numeroCnj]="numeroCnj()"
       [clienteNome]="clienteNome()"
     />
-    <app-andamentos-lista-andamentos [hidden]="abaAtiva() !== 'andamentos'" [processoId]="processoId()" />
-    <app-andamentos-lista-publicacoes [hidden]="abaAtiva() !== 'publicacoes'" [processoId]="processoId()" />
+    <app-andamentos-lista-andamentos [hidden]="abaAtiva() !== 'andamentos'" [numeroCnj]="numeroCnj()" />
+    <app-andamentos-lista-publicacoes [hidden]="abaAtiva() !== 'publicacoes'" [numeroCnj]="numeroCnj()" />
   </div>
 </section>

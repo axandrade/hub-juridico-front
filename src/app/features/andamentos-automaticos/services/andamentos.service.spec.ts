@@ -7,7 +7,8 @@ import { environment } from '../../../../environments/environment';
 import { AndamentoApi, AndamentosProcessoApi, AndamentosService, PublicacaoApi } from './andamentos.service';
 import { andamento, painel, publicacao } from './andamentos.testing';
 
-const URL = `${environment.apiBaseUrl}/processos/1/andamentos`;
+const CNJ = '0017162-98.2017.5.16.0015';
+const URL = `${environment.apiBaseUrl}/andamentos/00171629820175160015`;
 
 describe('AndamentosService', () => {
   let service: AndamentosService;
@@ -22,14 +23,14 @@ describe('AndamentosService', () => {
   afterEach(() => http.verify());
 
   async function carregar(resposta: AndamentosProcessoApi): Promise<void> {
-    const pronto = firstValueFrom(service.consultar(1));
+    const pronto = firstValueFrom(service.consultar(CNJ));
     http.expectOne((r) => r.url === URL).flush(resposta);
     await pronto;
   }
 
   describe('consulta', () => {
     it('abre o processo sem `atualizar` — o backend devolve o que está gravado', async () => {
-      const pronto = firstValueFrom(service.consultar(1));
+      const pronto = firstValueFrom(service.consultar(CNJ));
       const req = http.expectOne((r) => r.url === URL);
       expect(req.request.params.has('atualizar')).toBe(false);
       req.flush(painel());
@@ -38,16 +39,16 @@ describe('AndamentosService', () => {
 
     it('reaproveita a mesma resposta entre as abas (uma requisição só)', async () => {
       await carregar(painel());
-      await firstValueFrom(service.consultar(1));
+      await firstValueFrom(service.consultar(CNJ));
       http.expectNone((r) => r.url === URL);
     });
 
     it('depois do "Atualizar", a próxima consulta vai com `atualizar=true` — uma vez só, pras três abas', async () => {
       await carregar(painel());
 
-      service.recarregar(1);
-      const aba1 = firstValueFrom(service.consultar(1));
-      const aba2 = firstValueFrom(service.consultar(1));
+      service.recarregar(CNJ);
+      const aba1 = firstValueFrom(service.consultar(CNJ));
+      const aba2 = firstValueFrom(service.consultar(CNJ));
       const req = http.expectOne((r) => r.url === URL);
       expect(req.request.params.get('atualizar')).toBe('true');
       req.flush(painel());
@@ -55,21 +56,21 @@ describe('AndamentosService', () => {
     });
 
     it('trocar de processo antes da resposta cancela a requisição e ela sai do cache', async () => {
-      const inscricao = service.consultar(1).subscribe();
+      const inscricao = service.consultar(CNJ).subscribe();
       const req = http.expectOne((r) => r.url === URL);
 
       inscricao.unsubscribe();
 
       expect(req.cancelled).toBe(true);
       // Voltar ao processo consulta de novo (não fica pendurado numa requisição cancelada).
-      const volta = firstValueFrom(service.consultar(1));
+      const volta = firstValueFrom(service.consultar(CNJ));
       http.expectOne((r) => r.url === URL).flush(painel());
       await volta;
     });
 
     it('enquanto alguma aba ainda espera, a requisição não é cancelada', () => {
-      const aba1 = service.consultar(1).subscribe();
-      const aba2 = service.consultar(1).subscribe();
+      const aba1 = service.consultar(CNJ).subscribe();
+      const aba2 = service.consultar(CNJ).subscribe();
       const req = http.expectOne((r) => r.url === URL);
 
       aba1.unsubscribe();
@@ -80,10 +81,10 @@ describe('AndamentosService', () => {
     });
 
     it('o "Atualizar" de um processo não vale pro outro', async () => {
-      service.recarregar(1);
+      service.recarregar(CNJ);
 
-      const outro = firstValueFrom(service.consultar(2));
-      const req = http.expectOne(`${environment.apiBaseUrl}/processos/2/andamentos`);
+      const outro = firstValueFrom(service.consultar('0010186-89.2016.5.03.0074'));
+      const req = http.expectOne(`${environment.apiBaseUrl}/andamentos/00101868920165030074`);
       expect(req.request.params.has('atualizar')).toBe(false);
       req.flush(painel());
       await outro;
@@ -98,22 +99,22 @@ describe('AndamentosService', () => {
     it('conta só o que o servidor marcou como novo', async () => {
       await carregar(painel({ andamentos: [novoAndamento, andamentoVisto], publicacoes: [novaPublicacao] }));
 
-      expect(service.novos(1)).toEqual({ andamentos: 1, publicacoes: 1 });
-      expect(service.ehNovo(1, novoAndamento)).toBe(true);
-      expect(service.ehNovo(1, andamentoVisto)).toBe(false);
+      expect(service.novos(CNJ)).toEqual({ andamentos: 1, publicacoes: 1 });
+      expect(service.ehNovo(CNJ, novoAndamento)).toBe(true);
+      expect(service.ehNovo(CNJ, andamentoVisto)).toBe(false);
     });
 
     it('sem resposta ainda, não há novidades', () => {
-      expect(service.novos(1)).toEqual({ andamentos: 0, publicacoes: 0 });
+      expect(service.novos(CNJ)).toEqual({ andamentos: 0, publicacoes: 0 });
     });
 
     it('marcar como visto tira o negrito na hora e avisa o backend com as chaves', async () => {
       await carregar(painel({ andamentos: [novoAndamento, andamentoVisto] }));
 
-      service.marcarVistos(1, [novoAndamento, andamentoVisto]);
+      service.marcarVistos(CNJ, [novoAndamento, andamentoVisto]);
 
-      expect(service.ehNovo(1, novoAndamento)).toBe(false);
-      expect(service.novos(1).andamentos).toBe(0);
+      expect(service.ehNovo(CNJ, novoAndamento)).toBe(false);
+      expect(service.novos(CNJ).andamentos).toBe(0);
       const req = http.expectOne(`${URL}/vistos`);
       expect(req.request.method).toBe('POST');
       // Só o que era novidade vai pro servidor.
@@ -123,10 +124,10 @@ describe('AndamentosService', () => {
 
     it('clicar de novo num item já visto não chama o backend', async () => {
       await carregar(painel({ andamentos: [novoAndamento] }));
-      service.marcarVistos(1, [novoAndamento]);
+      service.marcarVistos(CNJ, [novoAndamento]);
       http.expectOne(`${URL}/vistos`).flush(null, { status: 204, statusText: 'No Content' });
 
-      service.marcarVistos(1, [novoAndamento]);
+      service.marcarVistos(CNJ, [novoAndamento]);
 
       http.expectNone(`${URL}/vistos`);
     });
@@ -134,10 +135,10 @@ describe('AndamentosService', () => {
     it('se o backend recusar, o item volta a aparecer como novo', async () => {
       await carregar(painel({ andamentos: [novoAndamento] }));
 
-      service.marcarVistos(1, [novoAndamento]);
+      service.marcarVistos(CNJ, [novoAndamento]);
       http.expectOne(`${URL}/vistos`).flush(null, { status: 500, statusText: 'Erro' });
 
-      expect(service.ehNovo(1, novoAndamento)).toBe(true);
+      expect(service.ehNovo(CNJ, novoAndamento)).toBe(true);
     });
 
     it('a publicação do DJEN vista numa aba sai do negrito na outra (mesma chave)', async () => {
@@ -145,19 +146,19 @@ describe('AndamentosService', () => {
       const comoPublicacao = publicacao({ chave: 'djen-1', novo: true });
       await carregar(painel({ andamentos: [comoAndamento], publicacoes: [comoPublicacao] }));
 
-      service.marcarVistos(1, [comoPublicacao]);
+      service.marcarVistos(CNJ, [comoPublicacao]);
       http.expectOne(`${URL}/vistos`).flush(null, { status: 204, statusText: 'No Content' });
 
-      expect(service.ehNovo(1, comoAndamento)).toBe(false);
-      expect(service.novos(1)).toEqual({ andamentos: 0, publicacoes: 0 });
+      expect(service.ehNovo(CNJ, comoAndamento)).toBe(false);
+      expect(service.novos(CNJ)).toEqual({ andamentos: 0, publicacoes: 0 });
     });
 
     it('"Marcar todos como vistos" zera as duas abas e manda `todos: true`', async () => {
       await carregar(painel({ andamentos: [novoAndamento, andamentoVisto], publicacoes: [novaPublicacao] }));
 
-      service.marcarTodosVistos(1);
+      service.marcarTodosVistos(CNJ);
 
-      expect(service.novos(1)).toEqual({ andamentos: 0, publicacoes: 0 });
+      expect(service.novos(CNJ)).toEqual({ andamentos: 0, publicacoes: 0 });
       const req = http.expectOne(`${URL}/vistos`);
       expect(req.request.body).toEqual({ todos: true });
       req.flush(null, { status: 204, statusText: 'No Content' });
@@ -166,7 +167,7 @@ describe('AndamentosService', () => {
     it('"Marcar todos" sem novidades não chama o backend', async () => {
       await carregar(painel({ andamentos: [andamentoVisto] }));
 
-      service.marcarTodosVistos(1);
+      service.marcarTodosVistos(CNJ);
 
       http.expectNone(`${URL}/vistos`);
     });

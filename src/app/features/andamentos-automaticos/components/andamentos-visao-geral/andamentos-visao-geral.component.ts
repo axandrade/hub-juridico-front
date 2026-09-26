@@ -21,7 +21,7 @@ interface CampoVisaoGeral {
 /**
  * Aba "Visão geral" do painel de Andamentos Automáticos — o que o DataJud diz do processo
  * (capa de referência) e o resultado da consulta ao STF, no layout de duas colunas "rótulo: valor" do protótipo (Monitor de
- * Processos). Carrega pelo `processoId` (padrão das abas do projeto); a consulta é
+ * Processos). Carrega pelo número CNJ (padrão das abas do projeto); a consulta é
  * compartilhada com as outras abas pelo `AndamentosService`; o "Atualizar" fica no painel e recarrega todas.
  *
  * Referência e Ativo no monitoramento estão no protótipo mas ainda não têm
@@ -41,8 +41,7 @@ export class AndamentosVisaoGeralComponent {
   private consulta?: Subscription;
   private cronometro?: Subscription;
 
-  readonly processoId = input.required<number>();
-  readonly numeroCnj = input<string | null>(null);
+  readonly numeroCnj = input.required<string>();
   readonly clienteNome = input<string | null>(null);
 
   protected readonly visao = signal<AndamentosProcessoApi | null>(null);
@@ -82,7 +81,7 @@ export class AndamentosVisaoGeralComponent {
    */
   protected readonly kpis = computed<{ label: string; valor: number }[]>(() => {
     const v = this.visao();
-    const novos = this.andamentosService.novos(this.processoId());
+    const novos = this.andamentosService.novos(this.numeroCnj());
     return [
       { label: 'Capas DataJud', valor: v?.total_capas ?? 0 },
       { label: 'Andamentos', valor: v?.total_andamentos ?? 0 },
@@ -150,14 +149,14 @@ export class AndamentosVisaoGeralComponent {
 
   constructor() {
     effect(() => {
-      const processoId = this.processoId();
+      const numeroCnj = this.numeroCnj();
       this.andamentosService.versao();
-      untracked(() => this.carregar(processoId));
+      untracked(() => this.carregar(numeroCnj));
     });
     this.destroyRef.onDestroy(() => this.cancelar());
   }
 
-  private carregar(processoId: number): void {
+  private carregar(numeroCnj: string): void {
     // Resposta atrasada do processo anterior não pode sobrescrever a do atual.
     this.cancelar();
     this.carregando.set(true);
@@ -165,7 +164,7 @@ export class AndamentosVisaoGeralComponent {
     this.visao.set(null);
     this.segundosEsperando.set(0);
     this.cronometro = interval(1000).subscribe(() => this.segundosEsperando.update((s) => s + 1));
-    this.consulta = this.andamentosService.consultar(processoId).subscribe({
+    this.consulta = this.andamentosService.consultar(numeroCnj).subscribe({
       next: (visao) => {
         this.visao.set(visao);
         this.finalizar();

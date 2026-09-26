@@ -1,0 +1,131 @@
+@use 'variables' as *;
+@use 'mixins' as *;
+
+.mp-form {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-lg;
+  width: 100%;
+
+  &__contexto {
+    margin: 0;
+    color: $color-text-muted;
+    font-size: $font-size-xs;
+  }
+
+  &__adicionados {
+    @include flex-between;
+    gap: $spacing-md;
+    padding: $spacing-sm $spacing-md;
+    border: 1px solid rgba($color-success, 0.4);
+    border-radius: $border-radius-sm;
+    background-color: rgba($color-success, 0.12);
+    color: darken-color($color-success, 14%);
+    font-size: $font-size-xs;
+  }
+
+  &__row {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: $spacing-lg;
+  }
+
+  &__field {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-xs;
+    min-width: 0;
+
+    > span {
+      font-size: $font-size-xs;
+      font-weight: $font-weight-medium;
+      color: $color-text-secondary;
+
+      em {
+        color: $color-primary;
+        font-style: normal;
+      }
+    }
+
+    input,
+    textarea {
+      min-height: 38px;
+      padding: $spacing-sm $spacing-md;
+      border: 1px solid $color-border;
+      border-radius: $border-radius-sm;
+      background-color: $color-surface;
+      color: $color-text-primary;
+      font: inherit;
+
+      &:focus {
+        outline: none;
+        border-color: $color-primary-light;
+        box-shadow: 0 0 0 3px rgba($rouge-light, 0.16);
+      }
+    }
+
+    textarea {
+      resize: vertical;
+    }
+  }
+
+  &__cnj {
+    font-family: Consolas, 'Courier New', monospace;
+    font-size: $font-size-lg;
+    letter-spacing: 0.04em;
+
+    &.is-erro {
+      border-color: $color-error;
+    }
+
+    &.is-ok {
+      border-color: rgba($color-success, 0.6);
+    }
+  }
+
+  &__aviso {
+    font-size: $font-size-xs;
+    font-weight: $font-weight-medium;
+
+    &--neutro {
+      color: $color-text-muted;
+    }
+
+    &--erro {
+      color: $color-error;
+    }
+
+    &--ok {
+      color: darken-color($color-success, 14%);
+    }
+  }
+
+  &__cadastrado {
+    @include flex-between;
+    gap: $spacing-md;
+    padding: $spacing-sm $spacing-md;
+    border: 1px solid $color-border;
+    border-radius: $border-radius-sm;
+    background-color: $color-neutral-light;
+    font-size: $font-size-xs;
+  }
+
+  &__check {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    font-size: $font-size-base;
+
+    input {
+      width: 16px;
+      height: 16px;
+      accent-color: $color-primary;
+    }
+  }
+}
+
+@include respond-below($breakpoint-sm) {
+  .mp-form__row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

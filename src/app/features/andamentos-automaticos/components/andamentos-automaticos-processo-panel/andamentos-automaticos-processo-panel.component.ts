@@ -20,7 +20,7 @@ type AndamentosAba = 'visaoGeral' | 'andamentos' | 'publicacoes';
  * mesmo desenho das abas do cadastro de operação. O dono do `PanelShellController` é o
  * `app-processo-lista-painel`; este componente só recebe `layoutPainel`/emite `layoutPainelChange`.
  *
- * Cada aba é um componente próprio que recebe o `processoId` e carrega seus dados (padrão das abas
+ * Cada aba é um componente próprio que recebe o número CNJ e carrega seus dados (padrão das abas
  * de Operação/Processo) — a consulta (DataJud + STF) é compartilhada entre elas pelo `AndamentosService`.
  * As abas "Andamentos" e "Publicações" mostram quantas novidades o usuário ainda não viu. O
  * "Atualizado em" e o botão "Atualizar" ficam logo abaixo das abas, visíveis em todas — a data vem da
@@ -46,8 +46,7 @@ export class AndamentosAutomaticosProcessoPanelComponent {
   private readonly toast = inject(ToastService);
   private consulta?: Subscription;
 
-  readonly processoId = input.required<number>();
-  readonly numeroCnj = input<string | null>(null);
+  readonly numeroCnj = input.required<string>();
   readonly clienteNome = input<string | null>(null);
   /** Posição atual do painel na tela (quem aplica/persiste é o `app-processo-lista-painel`). */
   readonly layoutPainel = input<PainelLayout>(PAINEL_LAYOUT_PADRAO);
@@ -56,22 +55,22 @@ export class AndamentosAutomaticosProcessoPanelComponent {
 
   protected readonly abas: readonly AndamentosAba[] = ['visaoGeral', 'andamentos', 'publicacoes'];
   protected readonly abaAtiva = signal<AndamentosAba>('visaoGeral');
-  protected readonly novos = computed(() => this.andamentosService.novos(this.processoId()));
+  protected readonly novos = computed(() => this.andamentosService.novos(this.numeroCnj()));
   protected readonly consultadoEm = signal<string | null>(null);
   protected readonly carregando = signal(false);
 
   constructor() {
     effect(() => {
-      const processoId = this.processoId();
+      const numeroCnj = this.numeroCnj();
       this.andamentosService.versao();
-      untracked(() => this.carregar(processoId));
+      untracked(() => this.carregar(numeroCnj));
     });
     inject(DestroyRef).onDestroy(() => this.consulta?.unsubscribe());
   }
 
   /** Descarta o cache do processo — as três abas refazem a consulta juntas. */
   protected atualizar(): void {
-    this.andamentosService.recarregar(this.processoId());
+    this.andamentosService.recarregar(this.numeroCnj());
   }
 
   protected trocarAba(aba: AndamentosAba): void {
@@ -95,11 +94,11 @@ export class AndamentosAutomaticosProcessoPanelComponent {
   }
 
   /** Erro fica por conta das abas (a Visão Geral mostra a mensagem); aqui só some a data. */
-  private carregar(processoId: number): void {
+  private carregar(numeroCnj: string): void {
     this.consulta?.unsubscribe();
     this.carregando.set(true);
     this.consultadoEm.set(null);
-    this.consulta = this.andamentosService.consultar(processoId).subscribe({
+    this.consulta = this.andamentosService.consultar(numeroCnj).subscribe({
       next: (resposta) => {
         this.consultadoEm.set(resposta.consultado_em);
         resposta.fontes.filter((f) => f.falhou).forEach((f) => this.toast.erro(this.mensagemFalha(f)));

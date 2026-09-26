@@ -17,7 +17,7 @@ const TODOS_OS_TIPOS = 'Todos os tipos';
 /**
  * Aba "Andamentos" do painel de Andamentos Automáticos — linha do tempo do processo no layout do
  * protótipo (Monitor de Processos): barra de filtros (pesquisa, fonte, tipo, somente novos, com
- * documento/link, limpar, contador) + tabela. Carrega pelo `processoId` (padrão das abas do
+ * documento/link, limpar, contador) + tabela. Carrega pelo número CNJ (padrão das abas do
  * projeto); a consulta ao DataJud é compartilhada com a aba "Visão geral" pelo `AndamentosService` —
  * os andamentos já vêm consolidados entre as capas, do mais recente pro mais antigo.
  *
@@ -42,7 +42,7 @@ export class AndamentosListaAndamentosComponent {
   private consulta?: Subscription;
   private cronometro?: Subscription;
 
-  readonly processoId = input.required<number>();
+  readonly numeroCnj = input.required<string>();
 
   protected readonly andamentos = signal<AndamentoApi[]>([]);
   protected readonly carregando = signal(false);
@@ -133,9 +133,9 @@ export class AndamentosListaAndamentosComponent {
 
   constructor() {
     effect(() => {
-      const processoId = this.processoId();
+      const numeroCnj = this.numeroCnj();
       this.andamentosService.versao();
-      untracked(() => this.carregar(processoId));
+      untracked(() => this.carregar(numeroCnj));
     });
     this.destroyRef.onDestroy(() => this.cancelar());
   }
@@ -156,12 +156,12 @@ export class AndamentosListaAndamentosComponent {
     const a = this.aConfirmar();
     this.aConfirmar.set(null);
     if (a) {
-      this.andamentosService.marcarVistos(this.processoId(), [a]);
+      this.andamentosService.marcarVistos(this.numeroCnj(), [a]);
     }
   }
 
   protected marcarTodosVistos(): void {
-    this.andamentosService.marcarTodosVistos(this.processoId());
+    this.andamentosService.marcarTodosVistos(this.numeroCnj());
   }
 
   protected limpar(): void {
@@ -173,10 +173,10 @@ export class AndamentosListaAndamentosComponent {
   }
 
   private ehNovo(a: AndamentoApi): boolean {
-    return this.andamentosService.ehNovo(this.processoId(), a);
+    return this.andamentosService.ehNovo(this.numeroCnj(), a);
   }
 
-  private carregar(processoId: number): void {
+  private carregar(numeroCnj: string): void {
     // Resposta atrasada do processo anterior não pode sobrescrever a do atual.
     this.cancelar();
     this.carregando.set(true);
@@ -184,7 +184,7 @@ export class AndamentosListaAndamentosComponent {
     this.andamentos.set([]);
     this.segundosEsperando.set(0);
     this.cronometro = interval(1000).subscribe(() => this.segundosEsperando.update((s) => s + 1));
-    this.consulta = this.andamentosService.consultar(processoId).subscribe({
+    this.consulta = this.andamentosService.consultar(numeroCnj).subscribe({
       next: (dados) => {
         this.andamentos.set(dados.andamentos);
         this.finalizar();

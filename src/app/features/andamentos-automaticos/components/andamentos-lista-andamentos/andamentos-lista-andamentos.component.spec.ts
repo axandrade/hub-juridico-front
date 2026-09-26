@@ -12,7 +12,7 @@ import { AndamentosListaAndamentosComponent } from './andamentos-lista-andamento
 // A coluna de data formata em pt-BR — o app registra em `app.config.ts`.
 registerLocaleData(localePt);
 
-const URL = `${environment.apiBaseUrl}/processos/1/andamentos`;
+const URL = `${environment.apiBaseUrl}/andamentos/00171629820175160015`;
 
 describe('AndamentosListaAndamentosComponent — novidades', () => {
   let fixture: ComponentFixture<AndamentosListaAndamentosComponent>;
@@ -33,7 +33,7 @@ describe('AndamentosListaAndamentosComponent — novidades', () => {
     });
     http = TestBed.inject(HttpTestingController);
     fixture = TestBed.createComponent(AndamentosListaAndamentosComponent);
-    fixture.componentRef.setInput('processoId', 1);
+    fixture.componentRef.setInput('numeroCnj', '0017162-98.2017.5.16.0015');
     el = fixture.nativeElement;
     fixture.detectChanges();
     http.expectOne((r) => r.url === URL).flush(RESPOSTA);

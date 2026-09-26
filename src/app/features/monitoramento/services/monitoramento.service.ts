@@ -1,0 +1,173 @@
+import { HttpClient } from '@angular/common/http';
+import { Injectable, inject } from '@angular/core';
+import { Observable, map } from 'rxjs';
+
+import { DomainService } from '../../../core/services/domain.service';
+import { environment } from '../../../../environments/environment';
+
+/** Situação de uma fonte na última consulta do número (`andamento_resumos`). */
+export type SituacaoFonte = 'ENCONTRADO' | 'NAO_ENCONTRADO' | 'FALHOU';
+
+/** Resumo das três fontes, pra filtro/contagem (ver `vw_monitoramento_processos`). */
+export type SituacaoProcesso = 'NUMERO_INVALIDO' | 'NAO_CONSULTADO' | 'COM_FALHA' | 'ENCONTRADO' | 'NAO_ENCONTRADO';
+
+/** Linha de `/domain/monitoramento-resumo` (camelCase — leitura do ddd-noap). */
+export interface MonitoramentoResumoRow {
+  id: number;
+  nome: string;
+  descricao: string | null;
+  ativo: boolean;
+  ultimaAtualizacaoEm: string | null;
+  totalProcessos: number;
+  totalEncontrados: number;
+  totalNaoEncontrados: number;
+  totalComFalha: number;
+  totalNaoConsultados: number;
+  totalNumeroInvalido: number;
+}
+
+/** Linha de `/domain/monitoramento-processo-resumo` — dados informados + resumo da última consulta. */
+export interface MonitoramentoProcessoRow {
+  id: number;
+  monitoramentoId: number;
+  numeroCnj: string;
+  numeroCnjDigitos: string;
+  cliente: string;
+  contrario: string | null;
+  acaoId: number | null;
+  acao: string | null;
+  statusId: number | null;
+  status: string | null;
+  observacao: string | null;
+  datajud: SituacaoFonte | null;
+  stf: SituacaoFonte | null;
+  comunica: SituacaoFonte | null;
+  tribunal: string | null;
+  ultimoMovimentoEm: string | null;
+  ultimoMovimento: string | null;
+  consultadoEm: string | null;
+  /** Dígito verificador confere — número inválido não é consultável (as fontes recusam). */
+  numeroValido: boolean;
+  situacao: SituacaoProcesso;
+  processoId: number | null;
+  processoPasta: string | null;
+}
+
+/** O que a tela aproveita de um processo já cadastrado com o mesmo número (`/domain/processo-operacoes`). */
+export interface ProcessoCadastradoRow {
+  id: number;
+  numeroCnj: string;
+  clientePrincipalNome: string | null;
+  contrarioPrincipalNome: string | null;
+}
+
+/** Corpo de escrita de `/domain/monitoramento` (snake_case — escrita do ddd-noap). */
+export interface MonitoramentoCorpo {
+  nome: string;
+  descricao: string | null;
+  ativo?: boolean;
+}
+
+/** Corpo de escrita de `/domain/monitoramento-processo`. */
+export interface MonitoramentoProcessoCorpo {
+  monitoramento_id?: number;
+  numero_cnj: string;
+  cliente: string;
+  contrario: string | null;
+  acao_id: number | null;
+  status_id: number | null;
+  observacao: string | null;
+}
+
+/** Andamento do "Atualizar" do monitoramento (`MonitoramentoAtualizacaoService.Situacao` no backend). */
+export interface AtualizacaoApi {
+  monitoramento_id: number;
+  em_andamento: boolean;
+  cancelada: boolean;
+  total: number;
+  concluidos: number;
+  falhas: number;
+  iniciada_em: string;
+  terminada_em: string | null;
+}
+
+/**
+ * Tela de Monitoramento. Listagens vão direto pelo `app-domain-model-table` (views
+ * `monitoramento-resumo`/`monitoramento-processo-resumo`); aqui fica a escrita genérica em
+ * `/domain/monitoramento` e `/domain/monitoramento-processo` e o que é específico do
+ * `MonitoramentoController`: novidades por usuário e o "Atualizar" em segundo plano.
+ */
+@Injectable({ providedIn: 'root' })
+export class MonitoramentoService {
+  private readonly http = inject(HttpClient);
+  private readonly domain = inject(DomainService);
+  private readonly base = `${environment.apiBaseUrl}/monitoramentos`;
+
+  buscarResumo(id: number): Observable<MonitoramentoResumoRow> {
+    return this.domain.get<MonitoramentoResumoRow>({ entityName: 'monitoramento-resumo', entityId: id });
+  }
+
+  criar(corpo: MonitoramentoCorpo): Observable<number> {
+    return this.domain.post<MonitoramentoCorpo>({ entityName: 'monitoramento', body: corpo }).pipe(map((r) => r.id));
+  }
+
+  editar(id: number, corpo: MonitoramentoCorpo): Observable<void> {
+    return this.domain.patch<MonitoramentoCorpo>({ entityName: 'monitoramento', entityId: id, body: corpo });
+  }
+
+  adicionarProcesso(corpo: MonitoramentoProcessoCorpo): Observable<number> {
+    return this.domain.post<MonitoramentoProcessoCorpo>({ entityName: 'monitoramento-processo', body: corpo }).pipe(map((r) => r.id));
+  }
+
+  editarProcesso(id: number, corpo: MonitoramentoProcessoCorpo): Observable<void> {
+    return this.domain.patch<MonitoramentoProcessoCorpo>({ entityName: 'monitoramento-processo', entityId: id, body: corpo });
+  }
+
+  removerProcesso(id: number): Observable<void> {
+    return this.domain.delete({ entityName: 'monitoramento-processo', entityId: id });
+  }
+
+  /** Novidades não vistas pelo usuário logado, por monitoramento (`{id: total}`, só os que têm). */
+  novidadesPorMonitoramento(): Observable<Record<string, number>> {
+    return this.http.get<Record<string, number>>(`${this.base}/novidades`);
+  }
+
+  /** Novidades não vistas pelo usuário logado, por número CNJ (20 dígitos) do monitoramento. */
+  novidadesPorNumero(monitoramentoId: number): Observable<Record<string, number>> {
+    return this.http.get<Record<string, number>>(`${this.base}/${monitoramentoId}/novidades`);
+  }
+
+  iniciarAtualizacao(monitoramentoId: number): Observable<AtualizacaoApi> {
+    return this.http.post<AtualizacaoApi>(`${this.base}/${monitoramentoId}/atualizacao`, null);
+  }
+
+  /** `null` quando não houve atualização recente (204). */
+  situacaoAtualizacao(monitoramentoId: number): Observable<AtualizacaoApi | null> {
+    return this.http.get<AtualizacaoApi | null>(`${this.base}/${monitoramentoId}/atualizacao`);
+  }
+
+  cancelarAtualizacao(monitoramentoId: number): Observable<void> {
+    return this.http.delete<void>(`${this.base}/${monitoramentoId}/atualizacao`);
+  }
+
+  /**
+   * Primeira consulta das fontes de um número recém-adicionado ("Consultar as fontes ao salvar") —
+   * o mesmo endpoint do painel de Andamentos Automáticos, sem `atualizar`: se o número já foi
+   * consultado por outro monitoramento ou pelo cadastro, reaproveita a gravação.
+   */
+  consultarFontes(numeroCnj: string): Observable<unknown> {
+    return this.http.get(`${environment.apiBaseUrl}/andamentos/${numeroCnj.replace(/\D/g, '')}`);
+  }
+
+  /** Processo do cadastro com este número (máscara exata), pra oferecer "usar dados do cadastro". */
+  processoCadastrado(numeroCnj: string): Observable<ProcessoCadastradoRow | null> {
+    return this.domain
+      .get<{ content: ProcessoCadastradoRow[] }>({
+        entityName: 'processo-operacoes',
+        fields: 'id,numeroCnj,clientePrincipalNome,contrarioPrincipalNome',
+        filter: `numeroCnj eq '${numeroCnj}'`,
+        size: 1,
+      })
+      .pipe(map((pagina) => pagina.content?.[0] ?? null));
+  }
+}

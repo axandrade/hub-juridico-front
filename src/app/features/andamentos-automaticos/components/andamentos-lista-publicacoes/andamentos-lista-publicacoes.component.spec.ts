@@ -7,7 +7,7 @@ import { andamento, painel, publicacao } from '../../services/andamentos.testing
 import { AndamentosService } from '../../services/andamentos.service';
 import { AndamentosListaPublicacoesComponent } from './andamentos-lista-publicacoes.component';
 
-const URL = `${environment.apiBaseUrl}/processos/1/andamentos`;
+const URL = `${environment.apiBaseUrl}/andamentos/00171629820175160015`;
 
 describe('AndamentosListaPublicacoesComponent — novidades', () => {
   let fixture: ComponentFixture<AndamentosListaPublicacoesComponent>;
@@ -25,7 +25,7 @@ describe('AndamentosListaPublicacoesComponent — novidades', () => {
     });
     http = TestBed.inject(HttpTestingController);
     fixture = TestBed.createComponent(AndamentosListaPublicacoesComponent);
-    fixture.componentRef.setInput('processoId', 1);
+    fixture.componentRef.setInput('numeroCnj', '0017162-98.2017.5.16.0015');
     el = fixture.nativeElement;
     fixture.detectChanges();
     http
@@ -73,7 +73,7 @@ describe('AndamentosListaPublicacoesComponent — novidades', () => {
     req.flush(null, { status: 204, statusText: 'No Content' });
     expect(linha('Intimação nova').classList).not.toContain('is-novo');
     expect(el.textContent).not.toContain('publicação(ões) nova(s)');
-    expect(TestBed.inject(AndamentosService).ehNovo(1, MESMA_NA_LINHA_DO_TEMPO)).toBe(false);
+    expect(TestBed.inject(AndamentosService).ehNovo('0017162-98.2017.5.16.0015', MESMA_NA_LINHA_DO_TEMPO)).toBe(false);
   });
 
   it('"Marcar todos como vistos" limpa as novidades', () => {

@@ -1,0 +1,130 @@
+<app-modal [open]="true" [wide]="true" [title]="titulo()" (closed)="fechar.emit()">
+  <div class="mp-form">
+    @if (monitoramentoNome()) {
+      <p class="mp-form__contexto">em {{ monitoramentoNome() }}</p>
+    }
+
+    @if (adicionados().length) {
+      <div class="mp-form__adicionados" role="status">
+        <span><strong>{{ adicionados()[adicionados().length - 1] }}</strong> adicionado. Pode seguir com o próximo.</span>
+        <span>{{ adicionados().length }} nesta sessão</span>
+      </div>
+    }
+
+    <label class="mp-form__field">
+      <span>Número CNJ <em aria-hidden="true">*</em></span>
+      <input
+        type="text"
+        inputmode="numeric"
+        autocomplete="off"
+        class="mp-form__cnj"
+        [class.is-erro]="avisoCnj().tom === 'erro'"
+        [class.is-ok]="avisoCnj().tom === 'ok'"
+        placeholder="0000000-00.0000.0.00.0000"
+        [value]="numero()"
+        (input)="onNumeroInput($event)"
+      />
+      <small class="mp-form__aviso" [class]="'mp-form__aviso mp-form__aviso--' + avisoCnj().tom">{{ avisoCnj().texto }}</small>
+    </label>
+
+    @if (cadastrado(); as p) {
+      <div class="mp-form__cadastrado">
+        <span>
+          Este número já está no cadastro de processos
+          @if (p.clientePrincipalNome) {
+            (cliente {{ p.clientePrincipalNome }})
+          }.
+        </span>
+        <app-button variant="secondary" size="sm" label="Usar dados do cadastro" (clicked)="usarCadastro()" />
+      </div>
+    }
+
+    <div class="mp-form__row">
+      <label class="mp-form__field">
+        <span>Cliente <em aria-hidden="true">*</em></span>
+        <input type="text" placeholder="Nome do cliente" [value]="cliente()" (input)="onTexto('cliente', $event)" />
+      </label>
+      <label class="mp-form__field">
+        <span>Parte contrária</span>
+        <input type="text" placeholder="Nome da parte contrária" [value]="contrario()" (input)="onTexto('contrario', $event)" />
+      </label>
+    </div>
+
+    <div class="mp-form__row">
+      <div class="mp-form__field">
+        <span>Ação</span>
+        <app-domain-model-dropdown
+          ariaLabel="Ação"
+          placeholder="Buscar ação..."
+          emptyLabel="— Sem ação —"
+          noResultsText="Nenhuma ação encontrada"
+          itemNoun="ação"
+          entityName="acao-processo"
+          fields="id,nome"
+          [searchFields]="['nome']"
+          sort="nome"
+          [displayFormatter]="rotuloCatalogo"
+          [value]="acaoId() === null ? '' : '' + acaoId()"
+          [valueLabel]="acaoLabel()"
+          (valueChange)="onAcao($event)"
+        />
+      </div>
+      <div class="mp-form__field">
+        <span>Status</span>
+        <app-domain-model-dropdown
+          ariaLabel="Status"
+          placeholder="Buscar status..."
+          emptyLabel="— Sem status —"
+          noResultsText="Nenhum status encontrado"
+          itemNoun="status"
+          entityName="status-processo"
+          fields="id,nome"
+          [searchFields]="['nome']"
+          sort="nome"
+          [displayFormatter]="rotuloCatalogo"
+          [value]="statusId() === null ? '' : '' + statusId()"
+          [valueLabel]="statusLabel()"
+          (valueChange)="onStatus($event)"
+        />
+      </div>
+    </div>
+
+    <label class="mp-form__field">
+      <span>Observação</span>
+      <textarea
+        rows="4"
+        placeholder="Algo que a equipe precisa saber sobre este processo"
+        [value]="observacao()"
+        (input)="onTexto('observacao', $event)"
+      ></textarea>
+    </label>
+
+    @if (!editando()) {
+      <label class="mp-form__check">
+        <input type="checkbox" [checked]="consultarAoSalvar()" (change)="consultarAoSalvar.set(!consultarAoSalvar())" />
+        Consultar as fontes ao salvar
+      </label>
+    }
+  </div>
+
+  <app-button modalFooter variant="tertiary" size="sm" label="Cancelar" (clicked)="fechar.emit()" />
+  @if (!editando()) {
+    <app-button
+      modalFooter
+      variant="secondary"
+      size="sm"
+      label="Salvar e adicionar outro"
+      [disabled]="!podeSalvar()"
+      (clicked)="salvar(true)"
+    />
+  }
+  <app-button
+    modalFooter
+    variant="primary"
+    size="sm"
+    icon="fa-solid fa-check"
+    label="Salvar"
+    [disabled]="!podeSalvar()"
+    (clicked)="salvar(false)"
+  />
+</app-modal>

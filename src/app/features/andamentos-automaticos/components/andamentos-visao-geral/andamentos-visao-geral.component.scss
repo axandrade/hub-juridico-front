@@ -3,6 +3,7 @@
 
 :host {
   display: block;
+  flex-shrink: 0;
 }
 
 :host([hidden]) {

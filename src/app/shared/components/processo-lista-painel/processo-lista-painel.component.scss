@@ -36,6 +36,7 @@
 
     .processo-lista-panel-slot {
       order: 2;
+      height: auto;
       min-height: 0;
       overflow: auto;
     }
@@ -230,9 +231,13 @@
   text-decoration: underline;
 }
 
+// Painel à esquerda/direita: mesma altura máxima da lista ao lado — o conteúdo rola dentro do
+// painel (e as tabelas dele, por dentro de si) em vez de esticar a página. `bottom` e `dialog`
+// definem a altura por conta própria.
 .processo-lista-panel-slot {
   position: relative;
   min-width: 0;
+  height: calc(100vh - 132px);
 }
 
 // Estado vazio do painel — sem processo selecionado, ocupa o mesmo espaço que o painel de

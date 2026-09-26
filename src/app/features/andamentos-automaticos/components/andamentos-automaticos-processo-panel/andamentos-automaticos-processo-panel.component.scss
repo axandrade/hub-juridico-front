@@ -146,8 +146,12 @@
   }
 }
 
+// Coluna flex: as abas de tabela ocupam a altura que sobra e rolam por dentro (a barra de rolagem
+// horizontal fica à vista, não no fim da tabela); a Visão Geral mantém a altura e rola aqui.
 .andamentos-processo-panel__body {
   @include thin-scrollbar;
+  display: flex;
+  flex-direction: column;
   flex: 1;
   min-height: 0;
   overflow: auto;

@@ -1,0 +1,47 @@
+@use 'variables' as *;
+@use 'mixins' as *;
+
+:host {
+  display: block;
+}
+
+.monitoramento {
+  padding: $spacing-lg;
+  border: 1px solid $color-border;
+  border-radius: $border-radius-md;
+  background-color: $color-surface;
+  box-shadow: $shadow-sm;
+
+  &__header {
+    @include flex-between;
+    gap: $spacing-md;
+    margin-bottom: $spacing-md;
+
+    h1 {
+      margin: 0;
+    }
+  }
+
+  &__empty {
+    @include flex-center;
+    flex-direction: column;
+    gap: $spacing-sm;
+    min-height: 220px;
+    padding: $spacing-lg;
+    border: 1px dashed $color-border;
+    border-radius: $border-radius-md;
+    background-color: $color-neutral-light;
+    color: $color-text-muted;
+    text-align: center;
+
+    i {
+      font-size: 1.75rem;
+      color: $color-text-secondary;
+    }
+
+    p {
+      margin: 0;
+      font-size: $font-size-base;
+    }
+  }
+}

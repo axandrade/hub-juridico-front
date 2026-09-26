@@ -63,6 +63,14 @@ export const routes: Routes = [
         title: 'Hub Jurídico · Andamentos Automáticos',
       },
       {
+        path: 'monitoramento',
+        loadChildren: () =>
+          import('./features/monitoramento/monitoramento.routes').then(
+            (m) => m.MONITORAMENTO_ROUTES,
+          ),
+        title: 'Hub Jurídico · Monitoramento',
+      },
+      {
         path: 'usuarios',
         canActivate: [adminGuard],
         loadChildren: () =>

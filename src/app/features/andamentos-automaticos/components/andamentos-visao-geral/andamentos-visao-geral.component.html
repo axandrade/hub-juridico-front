@@ -24,14 +24,12 @@
     <fieldset class="visao-geral__conteudo">
       <legend>Conteúdo armazenado</legend>
       <div class="visao-geral__kpis">
-        <div class="visao-geral__kpi">
-          <strong>{{ visao()?.total_capas ?? 0 }}</strong>
-          <span>Capas DataJud</span>
-        </div>
-        <div class="visao-geral__kpi">
-          <strong>{{ visao()?.total_andamentos ?? 0 }}</strong>
-          <span>Andamentos</span>
-        </div>
+        @for (kpi of kpis(); track kpi.label) {
+          <div class="visao-geral__kpi">
+            <strong>{{ kpi.valor }}</strong>
+            <span>{{ kpi.label }}</span>
+          </div>
+        }
       </div>
     </fieldset>
 
@@ -44,7 +42,7 @@
     @if (carregando()) {
       <div class="visao-geral__loading" role="status" aria-live="polite">
         <i class="fa-solid fa-spinner fa-spin" aria-hidden="true"></i>
-        <strong>Consultando o DataJud...</strong>
+        <strong>Consultando DataJud, STF e Comunica/DJEN...</strong>
         <span>A resposta pode levar até 1 minuto. · {{ segundosEsperando() }}s</span>
       </div>
     }

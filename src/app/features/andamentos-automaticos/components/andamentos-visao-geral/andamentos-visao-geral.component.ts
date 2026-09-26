@@ -77,6 +77,24 @@ export class AndamentosVisaoGeralComponent {
   });
 
   /**
+   * "Conteúdo armazenado" — totais da consulta gravada, no formato do protótipo (Monitor de
+   * Processos). Os novos descontam o que o usuário já marcou como visto (mesma conta das abas).
+   */
+  protected readonly kpis = computed<{ label: string; valor: number }[]>(() => {
+    const v = this.visao();
+    const novos = this.andamentosService.novos(this.processoId());
+    return [
+      { label: 'Capas DataJud', valor: v?.total_capas ?? 0 },
+      { label: 'Andamentos', valor: v?.total_andamentos ?? 0 },
+      { label: 'Publicações', valor: v?.publicacoes.length ?? 0 },
+      { label: 'Novos andamentos', valor: novos.andamentos },
+      { label: 'Novas publicações', valor: novos.publicacoes },
+      { label: 'Andamentos STF', valor: v?.andamentos.filter((a) => a.fonte === 'STF').length ?? 0 },
+      { label: 'Publicações STF', valor: v?.publicacoes.filter((p) => p.fonte === 'STF/DJe').length ?? 0 },
+    ];
+  });
+
+  /**
    * Caixa "Diagnóstico das fontes" abaixo do Conteúdo armazenado — resumo em texto, no formato do
    * protótipo (Monitor de Processos).
    */
@@ -222,5 +240,5 @@ function httpErrorMessage(err: unknown): string {
   if (e?.status === 0) {
     return 'Sem conexão com o servidor.';
   }
-  return e?.error?.detail || e?.error?.title || 'Não foi possível consultar o DataJud.';
+  return e?.error?.detail || e?.error?.title || 'Não foi possível consultar os andamentos do processo.';
 }

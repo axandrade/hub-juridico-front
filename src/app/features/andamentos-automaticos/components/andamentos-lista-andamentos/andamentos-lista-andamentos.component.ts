@@ -220,5 +220,5 @@ function httpErrorMessage(err: unknown): string {
   if (e?.status === 0) {
     return 'Sem conexão com o servidor.';
   }
-  return e?.error?.detail || e?.error?.title || 'Não foi possível consultar o DataJud.';
+  return e?.error?.detail || e?.error?.title || 'Não foi possível consultar os andamentos do processo.';
 }

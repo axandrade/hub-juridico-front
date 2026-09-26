@@ -102,7 +102,7 @@ function porId(linhas: NovidadesApi[]): Record<number, number> {
   return Object.fromEntries(linhas.map((l) => [l.id, l.total]));
 }
 
-/** Andamento do "Atualizar" do monitoramento (`MonitoramentoAtualizacaoService.Situacao` no backend). */
+/** Andamento do "Atualizar" do monitoramento (`MonitoramentoAtualizacaoService.Situacao` no backend, snake_case). */
 export interface AtualizacaoApi {
   monitoramento_id: number;
   em_andamento: boolean;
@@ -117,14 +117,14 @@ export interface AtualizacaoApi {
 /**
  * Tela de Monitoramento. Listagens vão direto pelo `app-domain-model-table` (views
  * `monitoramento-resumo`/`monitoramento-processo-resumo`); aqui fica a escrita genérica em
- * `/domain/monitoramento` e `/domain/monitoramento-processo`, as novidades por usuário
- * (`/domain/service/monitoramento-service`) e o "Atualizar" em segundo plano (`MonitoramentoController`).
+ * `/domain/monitoramento` e `/domain/monitoramento-processo`, e o que é do `MonitoramentoService` do
+ * backend (`/domain/service/monitoramento-service`): novidades por usuário e o "Atualizar" em
+ * segundo plano.
  */
 @Injectable({ providedIn: 'root' })
 export class MonitoramentoService {
   private readonly http = inject(HttpClient);
   private readonly domain = inject(DomainService);
-  private readonly base = `${environment.apiBaseUrl}/monitoramentos`;
 
   buscarResumo(id: number): Observable<MonitoramentoResumoRow> {
     return this.domain.get<MonitoramentoResumoRow>({ entityName: 'monitoramento-resumo', entityId: id });
@@ -175,17 +175,24 @@ export class MonitoramentoService {
       .pipe(map(porId));
   }
 
+  /** "Atualizar": o backend consulta todos os números em segundo plano e devolve na hora. */
   iniciarAtualizacao(monitoramentoId: number): Observable<AtualizacaoApi> {
-    return this.http.post<AtualizacaoApi>(`${this.base}/${monitoramentoId}/atualizacao`, null);
+    return this.domain.postServiceMethod<AtualizacaoApi>({
+      serviceName: SERVICE,
+      method: 'iniciar-atualizacao',
+      args: { monitoramentoId },
+    });
   }
 
-  /** `null` quando não houve atualização recente (204). */
+  /** `null` quando não houve atualização recente. */
   situacaoAtualizacao(monitoramentoId: number): Observable<AtualizacaoApi | null> {
-    return this.http.get<AtualizacaoApi | null>(`${this.base}/${monitoramentoId}/atualizacao`);
+    return this.domain
+      .postServiceMethod<AtualizacaoApi | null>({ serviceName: SERVICE, method: 'situacao-atualizacao', args: { monitoramentoId } })
+      .pipe(map((a) => a ?? null));
   }
 
   cancelarAtualizacao(monitoramentoId: number): Observable<void> {
-    return this.http.delete<void>(`${this.base}/${monitoramentoId}/atualizacao`);
+    return this.domain.postServiceMethod<void>({ serviceName: SERVICE, method: 'cancelar-atualizacao', args: { monitoramentoId } });
   }
 
   /**

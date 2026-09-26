@@ -27,6 +27,21 @@ describe('MonitoramentoService — novidades', () => {
     expect(mapa).toEqual({ 7: 3, 9: 1 });
   });
 
+  it('"Atualizar" também vai pelo /domain/service, com o id do monitoramento', async () => {
+    domain.postServiceMethod.mockReturnValue(of(null));
+
+    expect(await firstValueFrom(service.situacaoAtualizacao(4))).toBeNull();
+    service.iniciarAtualizacao(4).subscribe();
+    service.cancelarAtualizacao(4).subscribe();
+
+    const metodos = domain.postServiceMethod.mock.calls.map(([c]) => [c.method, c.args]);
+    expect(metodos).toEqual([
+      ['situacao-atualizacao', { monitoramentoId: 4 }],
+      ['iniciar-atualizacao', { monitoramentoId: 4 }],
+      ['cancelar-atualizacao', { monitoramentoId: 4 }],
+    ]);
+  });
+
   it('dentro do monitoramento: manda o id do monitoramento como argumento nomeado', async () => {
     const mapa = await firstValueFrom(service.novidadesDoMonitoramento(4));
 

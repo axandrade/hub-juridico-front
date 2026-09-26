@@ -104,6 +104,48 @@
   }
 }
 
+.andamentos-processo-panel__toolbar {
+  @include flex-between;
+  flex-shrink: 0;
+  gap: $spacing-sm;
+  padding: $spacing-sm $spacing-md;
+  border-bottom: 1px solid rgba($color-border, 0.7);
+}
+
+.andamentos-processo-panel__atualizado {
+  color: $color-text-muted;
+  font-size: $font-size-xs;
+}
+
+.andamentos-processo-panel__atualizar {
+  display: inline-flex;
+  align-items: center;
+  gap: $spacing-xs;
+  min-height: 28px;
+  padding: 0 $spacing-sm;
+  border: 1px solid $color-border;
+  border-radius: $border-radius-sm;
+  background-color: $color-neutral-light;
+  color: $color-text-secondary;
+  font: inherit;
+  font-size: $font-size-xs;
+  font-weight: $font-weight-medium;
+  cursor: pointer;
+  transition:
+    color $transition-fast,
+    border-color $transition-fast;
+
+  &:hover:not(:disabled) {
+    border-color: $color-primary-light;
+    color: $color-primary;
+  }
+
+  &:disabled {
+    cursor: default;
+    opacity: 0.6;
+  }
+}
+
 .andamentos-processo-panel__body {
   @include thin-scrollbar;
   flex: 1;

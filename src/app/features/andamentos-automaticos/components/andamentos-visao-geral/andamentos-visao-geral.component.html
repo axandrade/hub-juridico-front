@@ -1,23 +1,4 @@
 <div class="visao-geral">
-  <div class="visao-geral__toolbar">
-    <span class="visao-geral__fonte">
-      @if (visao(); as v) {
-        Atualizado em {{ v.consultado_em | dateFormat: 'dd/MM/yyyy HH:mm' }}
-      } @else if (carregando()) {
-        Consultando...
-      }
-    </span>
-    <button
-      type="button"
-      class="visao-geral__atualizar"
-      [disabled]="carregando()"
-      (click)="atualizar()"
-    >
-      <i class="fa-solid fa-rotate" [class.fa-spin]="carregando()" aria-hidden="true"></i>
-      Atualizar
-    </button>
-  </div>
-
   @if (erro()) {
     <div class="visao-geral__aviso visao-geral__aviso--erro" role="alert">
       <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>

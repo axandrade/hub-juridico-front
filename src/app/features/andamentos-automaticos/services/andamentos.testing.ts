@@ -77,6 +77,11 @@ export function painel(parcial: Partial<AndamentosProcessoApi> = {}): Andamentos
     publicacoes: [],
     stf: { status: 'NAO_ENCONTRADO', processos: [] },
     comunica: { status: 'OK', total_publicacoes: parcial.publicacoes?.length ?? 0 },
+    fontes: [
+      { fonte: 'DataJud', consultado_em: '2026-09-26T12:00:00Z', falhou: false },
+      { fonte: 'STF', consultado_em: '2026-09-26T12:00:00Z', falhou: false },
+      { fonte: 'Comunica/DJEN', consultado_em: '2026-09-26T12:00:00Z', falhou: false },
+    ],
     ...parcial,
   };
 }

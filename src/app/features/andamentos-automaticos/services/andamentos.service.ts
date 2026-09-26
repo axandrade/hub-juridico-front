@@ -135,6 +135,16 @@ export interface PublicacaoApi {
 export type ItemComNovidade = Pick<AndamentoApi, 'chave' | 'novo'>;
 
 /**
+ * Situação de uma fonte na consulta — `falhou`: a fonte não respondeu desta vez e o que aparece é a
+ * gravação de `consultado_em` (`null` = nunca respondeu, o painel está sem os dados de lá).
+ */
+export interface SituacaoFonteApi {
+  fonte: string;
+  consultado_em: string | null;
+  falhou: boolean;
+}
+
+/**
  * `AndamentosProcessoResponse` do backend (`GET /api/v1/processos/{id}/andamentos`) — alimenta as
  * abas "Visão geral", "Andamentos" e "Publicações" numa consulta só, juntando DataJud, STF e Comunica
  * (cada fonte chamada uma vez; o DataJud chega a levar ~1 min). Bean comum, então vem em snake_case (`JacksonConfig`). `status` e os campos da
@@ -145,7 +155,8 @@ export interface AndamentosProcessoApi {
   processo_id: number;
   numero_cnj: string;
   status: StatusDatajud;
-  consultado_em: string;
+  /** Consulta mais antiga entre as fontes com dado — a tela nunca parece mais atualizada do que está. */
+  consultado_em: string | null;
   tribunais_consultados: string[];
   tribunais_com_falha: string[];
   tribunal: string | null;
@@ -171,6 +182,8 @@ export interface AndamentosProcessoApi {
   stf: StfResumoApi;
   /** Resumo da consulta ao Comunica pra linha do tempo — `FALHA` não derruba o painel. */
   comunica: { status: StatusComunica; total_publicacoes: number };
+  /** DataJud, STF e Comunica/DJEN, nessa ordem. */
+  fontes: SituacaoFonteApi[];
 }
 
 /**

@@ -41,6 +41,25 @@
     }
   </nav>
 
+  <div class="andamentos-processo-panel__toolbar">
+    <span class="andamentos-processo-panel__atualizado">
+      @if (carregando()) {
+        Consultando...
+      } @else if (consultadoEm(); as consultadoEm) {
+        Atualizado em {{ consultadoEm | dateFormat: 'dd/MM/yyyy HH:mm' }}
+      }
+    </span>
+    <button
+      type="button"
+      class="andamentos-processo-panel__atualizar"
+      [disabled]="carregando()"
+      (click)="atualizar()"
+    >
+      <i class="fa-solid fa-rotate" [class.fa-spin]="carregando()" aria-hidden="true"></i>
+      Atualizar
+    </button>
+  </div>
+
   <div class="andamentos-processo-panel__body">
     <app-andamentos-visao-geral
       [hidden]="abaAtiva() !== 'visaoGeral'"

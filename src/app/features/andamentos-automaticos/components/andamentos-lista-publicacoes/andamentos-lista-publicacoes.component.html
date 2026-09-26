@@ -6,13 +6,6 @@
     </div>
   }
 
-  @if (fontesComFalha().length) {
-    <div class="andamentos-lista-publicacoes__aviso andamentos-lista-publicacoes__aviso--erro" role="alert">
-      <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
-      Não foi possível consultar {{ fontesComFalha().join(' e ') }} — a lista está sem as publicações de lá.
-    </div>
-  }
-
   @if (totalNovos()) {
     <div class="andamentos-lista-publicacoes__novidades">
       <strong>{{ totalNovos() }} publicação(ões) nova(s)</strong>

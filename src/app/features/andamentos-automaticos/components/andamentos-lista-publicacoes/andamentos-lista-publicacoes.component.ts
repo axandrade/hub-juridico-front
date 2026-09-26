@@ -5,7 +5,7 @@ import { Subscription, interval } from 'rxjs';
 import { DataTableComponent } from '../../../../shared/components/table/data-table.component';
 import { TableColumn } from '../../../../shared/components/table/table-column.model';
 import { ToastService } from '../../../../shared/services/toast.service';
-import { AndamentosProcessoApi, AndamentosService, PublicacaoApi } from '../../services/andamentos.service';
+import { AndamentosService, PublicacaoApi } from '../../services/andamentos.service';
 
 /**
  * Aba "Publicações" do painel de Andamentos Automáticos — publicações do processo no DJEN
@@ -45,8 +45,6 @@ export class AndamentosListaPublicacoesComponent {
   protected readonly selecionada = signal<PublicacaoApi | null>(null);
   /** Segundos desde o início da consulta — espera o DataJud (~1 min), o contador mostra que não travou. */
   protected readonly segundosEsperando = signal(0);
-  /** Fontes de publicação que falharam nesta consulta (a lista sai sem elas). */
-  protected readonly fontesComFalha = signal<string[]>([]);
 
   protected readonly totalNovos = computed(
     () => this.publicacoes().filter((p) => this.andamentosService.ehNovo(this.processoId(), p)).length,
@@ -150,14 +148,12 @@ export class AndamentosListaPublicacoesComponent {
     this.carregando.set(true);
     this.erro.set('');
     this.publicacoes.set([]);
-    this.fontesComFalha.set([]);
     this.selecionada.set(null);
     this.segundosEsperando.set(0);
     this.cronometro = interval(1000).subscribe(() => this.segundosEsperando.update((s) => s + 1));
     this.consulta = this.andamentosService.consultar(processoId).subscribe({
       next: (resposta) => {
         this.publicacoes.set(resposta.publicacoes);
-        this.fontesComFalha.set(fontesComFalha(resposta));
         this.finalizar();
       },
       error: (err: unknown) => {
@@ -176,13 +172,6 @@ export class AndamentosListaPublicacoesComponent {
     this.consulta?.unsubscribe();
     this.cronometro?.unsubscribe();
   }
-}
-
-function fontesComFalha(resposta: AndamentosProcessoApi): string[] {
-  return [
-    ...(resposta.comunica.status === 'FALHA' ? ['Comunica/DJEN'] : []),
-    ...(resposta.stf.status === 'FALHA' ? ['STF'] : []),
-  ];
 }
 
 function texto(valor: unknown): string {

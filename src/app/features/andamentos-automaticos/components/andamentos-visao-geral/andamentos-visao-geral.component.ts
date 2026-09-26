@@ -3,7 +3,6 @@ import { ChangeDetectionStrategy, Component, DestroyRef, computed, effect, injec
 import { Subscription, interval } from 'rxjs';
 
 import { DATE_FORMAT } from '../../../../core/constants/app-constants';
-import { DateFormatPipe } from '../../../../shared/pipes/date-format.pipe';
 import {
   AndamentosProcessoApi,
   AndamentosService,
@@ -23,7 +22,7 @@ interface CampoVisaoGeral {
  * Aba "Visão geral" do painel de Andamentos Automáticos — o que o DataJud diz do processo
  * (capa de referência) e o resultado da consulta ao STF, no layout de duas colunas "rótulo: valor" do protótipo (Monitor de
  * Processos). Carrega pelo `processoId` (padrão das abas do projeto); a consulta é
- * compartilhada com a aba "Andamentos" pelo `AndamentosService`, e "Atualizar" recarrega as duas.
+ * compartilhada com as outras abas pelo `AndamentosService`; o "Atualizar" fica no painel e recarrega todas.
  *
  * Referência e Ativo no monitoramento estão no protótipo mas ainda não têm
  * fonte — aparecem com "—"/"Não integrado" até existirem.
@@ -31,7 +30,6 @@ interface CampoVisaoGeral {
 @Component({
   selector: 'app-andamentos-visao-geral',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [DateFormatPipe],
   templateUrl: './andamentos-visao-geral.component.html',
   styleUrl: './andamentos-visao-geral.component.scss',
 })
@@ -120,7 +118,11 @@ export class AndamentosVisaoGeralComponent {
       ].join(', ');
       linhas.push(`Linha do tempo consolidada: ${fontes}, com ${v.total_andamentos} andamento(s).`);
       linhas.push('As datas processuais são exibidas como informadas pela fonte.');
-      linhas.push(`Última consulta DataJud: ${this.data(v.consultado_em, DATE_FORMAT.LONG)}`);
+      for (const fonte of v.fontes) {
+        const quando = this.data(fonte.consultado_em, DATE_FORMAT.LONG);
+        const falha = !fonte.falhou ? '' : fonte.consultado_em ? ' (não respondeu agora — dado gravado)' : ' (não respondeu)';
+        linhas.push(`Última consulta ${fonte.fonte}: ${quando}${falha}`);
+      }
     }
     if (erro) {
       linhas.push('', `Erro DataJud:`, erro);
@@ -135,11 +137,6 @@ export class AndamentosVisaoGeralComponent {
       untracked(() => this.carregar(processoId));
     });
     this.destroyRef.onDestroy(() => this.cancelar());
-  }
-
-  /** Descarta o cache do processo — esta aba e a de Andamentos refazem a consulta juntas. */
-  protected atualizar(): void {
-    this.andamentosService.recarregar(this.processoId());
   }
 
   private carregar(processoId: number): void {

@@ -54,6 +54,31 @@ describe('AndamentosService', () => {
       await Promise.all([aba1, aba2]);
     });
 
+    it('trocar de processo antes da resposta cancela a requisição e ela sai do cache', async () => {
+      const inscricao = service.consultar(1).subscribe();
+      const req = http.expectOne((r) => r.url === URL);
+
+      inscricao.unsubscribe();
+
+      expect(req.cancelled).toBe(true);
+      // Voltar ao processo consulta de novo (não fica pendurado numa requisição cancelada).
+      const volta = firstValueFrom(service.consultar(1));
+      http.expectOne((r) => r.url === URL).flush(painel());
+      await volta;
+    });
+
+    it('enquanto alguma aba ainda espera, a requisição não é cancelada', () => {
+      const aba1 = service.consultar(1).subscribe();
+      const aba2 = service.consultar(1).subscribe();
+      const req = http.expectOne((r) => r.url === URL);
+
+      aba1.unsubscribe();
+
+      expect(req.cancelled).toBe(false);
+      req.flush(painel());
+      aba2.unsubscribe();
+    });
+
     it('o "Atualizar" de um processo não vale pro outro', async () => {
       service.recarregar(1);
 

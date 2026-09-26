@@ -1,6 +1,6 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject, signal } from '@angular/core';
-import { Observable, catchError, shareReplay, tap, throwError } from 'rxjs';
+import { Observable, finalize, of, shareReplay, tap } from 'rxjs';
 
 import { environment } from '../../../../environments/environment';
 
@@ -192,7 +192,10 @@ export interface AndamentosProcessoApi {
  * As abas "Visão geral", "Andamentos" e "Publicações" carregam cada uma por conta própria (padrão
  * das abas do projeto), mas o DataJud chega a levar ~1 min: por isso a resposta é compartilhada por
  * processo — a aba que pede o mesmo `processoId` depois reaproveita a mesma requisição (em andamento ou já
- * concluída) em vez de consultar de novo. Erro não fica no cache. `recarregar` descarta o cache
+ * concluída) em vez de consultar de novo. Erro não fica no cache. Quando nenhuma aba quer mais a
+ * resposta (o usuário trocou de processo antes de ela chegar), a requisição é cancelada e sai do
+ * cache — clicar rápido entre processos não acumula requisições; voltar ao processo consulta de novo
+ * (o backend termina e grava a consulta cancelada, então a volta costuma ser rápida). `recarregar` descarta o cache
  * daquele processo e avança `versao`, que as abas observam pra pedir de novo — juntas, numa
  * requisição só.
  *
@@ -228,16 +231,28 @@ export class AndamentosService {
       consulta = this.http
         .get<AndamentosProcessoApi>(`${environment.apiBaseUrl}/processos/${processoId}/andamentos`, { params })
         .pipe(
-          tap((resposta) => this.respostas.update((m) => new Map(m).set(processoId, resposta))),
-          catchError((err: unknown) => {
-            this.cache.delete(processoId);
-            return throwError(() => err);
+          tap((resposta) => {
+            this.respostas.update((m) => new Map(m).set(processoId, resposta));
+            // Chegou: o cache passa a guardar a resposta em si — a requisição já pode ser encerrada.
+            if (this.cache.get(processoId) === requisicao) {
+              this.cache.set(processoId, of(resposta));
+            }
           }),
-          shareReplay({ bufferSize: 1, refCount: false }),
+          // Erro, ou ninguém mais inscrito antes da resposta (cancelada): não fica no cache.
+          finalize(() => this.descartar(processoId, requisicao)),
+          shareReplay({ bufferSize: 1, refCount: true }),
         );
-      this.cache.set(processoId, consulta);
+      const requisicao = consulta;
+      this.cache.set(processoId, requisicao);
     }
     return consulta;
+  }
+
+  /** Tira do cache só se ainda for esta requisição (um `recarregar` pode já ter posto outra no lugar). */
+  private descartar(processoId: number, requisicao: Observable<AndamentosProcessoApi>): void {
+    if (this.cache.get(processoId) === requisicao) {
+      this.cache.delete(processoId);
+    }
   }
 
   recarregar(processoId: number): void {

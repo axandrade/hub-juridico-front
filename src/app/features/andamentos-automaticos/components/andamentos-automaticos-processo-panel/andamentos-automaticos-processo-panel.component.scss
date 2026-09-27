@@ -1,0 +1,170 @@
+@use 'variables' as *;
+@use 'mixins' as *;
+
+:host {
+  display: block;
+  min-width: 0;
+  height: 100%;
+}
+
+.andamentos-processo-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid $color-border;
+  border-radius: $border-radius-md;
+  background-color: $color-surface;
+  box-shadow: $shadow-sm;
+}
+
+.andamentos-processo-panel__header {
+  @include flex-between;
+  align-items: flex-start;
+  gap: $spacing-sm;
+  padding: $spacing-md;
+  border-bottom: 1px solid rgba($color-border, 0.75);
+
+  h2 {
+    display: flex;
+    align-items: baseline;
+    gap: $spacing-xs;
+    margin: 0;
+    font-size: $font-size-lg;
+    font-weight: $font-weight-medium;
+    color: $color-text-primary;
+  }
+}
+
+.andamentos-processo-panel__cnj {
+  color: $color-text-secondary;
+  font-size: $font-size-base;
+  font-weight: $font-weight-regular;
+}
+
+.andamentos-processo-panel__tools {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.andamentos-processo-panel__close {
+  @include flex-center;
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  border: 1px solid $color-border;
+  border-radius: $border-radius-sm;
+  background-color: $color-neutral-light;
+  color: $color-text-secondary;
+  cursor: pointer;
+  transition:
+    color $transition-fast,
+    border-color $transition-fast;
+
+  &:hover {
+    border-color: $color-primary-light;
+    color: $color-primary;
+  }
+}
+
+.andamentos-processo-panel__tabs {
+  display: flex;
+  flex-shrink: 0;
+  gap: $spacing-sm;
+  padding: $spacing-md $spacing-md $spacing-sm;
+  border-bottom: 1px solid rgba($color-border, 0.7);
+
+  button {
+    flex: 1 1 auto;
+    min-height: 34px;
+    padding: $spacing-xs $spacing-sm;
+    border: 1px solid $color-border;
+    border-radius: $border-radius-sm;
+    background-color: $color-neutral-light;
+    color: $color-text-secondary;
+    font: inherit;
+    font-size: $font-size-xs;
+    font-weight: $font-weight-medium;
+    white-space: nowrap;
+    cursor: pointer;
+    transition:
+      background-color $transition-fast,
+      border-color $transition-fast,
+      color $transition-fast;
+
+    &:hover,
+    &.is-active {
+      border-color: $color-primary-light;
+      background-color: rgba($color-primary-pale, 0.55);
+      color: $color-primary;
+    }
+  }
+}
+
+.andamentos-processo-panel__toolbar {
+  @include flex-between;
+  flex-shrink: 0;
+  gap: $spacing-sm;
+  padding: $spacing-sm $spacing-md;
+  border-bottom: 1px solid rgba($color-border, 0.7);
+}
+
+.andamentos-processo-panel__atualizado {
+  color: $color-text-muted;
+  font-size: $font-size-xs;
+}
+
+.andamentos-processo-panel__atualizar {
+  display: inline-flex;
+  align-items: center;
+  gap: $spacing-xs;
+  min-height: 28px;
+  padding: 0 $spacing-sm;
+  border: 1px solid $color-border;
+  border-radius: $border-radius-sm;
+  background-color: $color-neutral-light;
+  color: $color-text-secondary;
+  font: inherit;
+  font-size: $font-size-xs;
+  font-weight: $font-weight-medium;
+  cursor: pointer;
+  transition:
+    color $transition-fast,
+    border-color $transition-fast;
+
+  &:hover:not(:disabled) {
+    border-color: $color-primary-light;
+    color: $color-primary;
+  }
+
+  &:disabled {
+    cursor: default;
+    opacity: 0.6;
+  }
+}
+
+// Coluna flex: as abas de tabela ocupam a altura que sobra e rolam por dentro (a barra de rolagem
+// horizontal fica à vista, não no fim da tabela); a Visão Geral mantém a altura e rola aqui.
+.andamentos-processo-panel__body {
+  @include thin-scrollbar;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: $spacing-md;
+
+  p {
+    margin: 0;
+    color: $color-text-secondary;
+  }
+}
+
+// Contador de novidades não vistas nas abas "Andamentos" e "Publicações".
+.andamentos-processo-panel__novos {
+  color: $color-primary;
+  font-weight: $font-weight-bold;
+}

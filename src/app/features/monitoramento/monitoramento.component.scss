@@ -1,0 +1,535 @@
+@use 'variables' as *;
+@use 'mixins' as *;
+
+:host {
+  display: block;
+}
+
+// Lista de monitoramentos à esquerda (largura fixa) + área do monitoramento selecionado.
+.monitoramento {
+  display: grid;
+  grid-template-columns: 320px minmax(0, 1fr);
+  gap: $spacing-lg;
+  min-height: calc(100vh - 160px);
+
+  &--lista-recolhida {
+    grid-template-columns: 44px minmax(0, 1fr);
+  }
+}
+
+.monitoramento-lista,
+.monitoramento-main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  max-height: calc(100vh - 132px);
+  overflow: hidden;
+  padding: $spacing-lg;
+  border: 1px solid $color-border;
+  border-radius: $border-radius-md;
+  background-color: $color-surface;
+  box-shadow: $shadow-sm;
+}
+
+.monitoramento-lista {
+  gap: $spacing-sm;
+
+  &__header {
+    @include flex-between;
+    gap: $spacing-sm;
+
+    h1 {
+      margin: 0;
+      font-size: $font-size-xl;
+    }
+  }
+
+  &__header-acoes {
+    display: flex;
+    align-items: center;
+    gap: $spacing-xs;
+  }
+
+  &__alternar {
+    @include flex-center;
+    width: 30px;
+    height: 30px;
+    flex-shrink: 0;
+    border: 1px solid $color-border;
+    border-radius: $border-radius-sm;
+    background-color: $color-neutral-light;
+    color: $color-text-secondary;
+    cursor: pointer;
+
+    &:hover {
+      border-color: $color-primary-light;
+      color: $color-primary;
+    }
+  }
+
+  &--recolhida {
+    align-items: center;
+    padding: $spacing-sm 0;
+  }
+
+  &__vertical {
+    writing-mode: vertical-rl;
+    transform: rotate(180deg);
+    color: $color-text-muted;
+    font-family: $font-family-heading;
+    font-size: $font-size-base;
+    white-space: nowrap;
+  }
+
+  &__inativos {
+    display: flex;
+    align-items: center;
+    gap: $spacing-xs;
+    color: $color-text-muted;
+    font-size: $font-size-xs;
+
+    input {
+      accent-color: $color-primary;
+    }
+  }
+
+  &__tabela {
+    @include thin-scrollbar;
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+  }
+}
+
+.monitoramento-busca {
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+  min-width: 0;
+  min-height: 36px;
+  padding: 0 $spacing-sm;
+  border: 1px solid $color-border;
+  border-radius: $border-radius-sm;
+  background-color: $color-surface;
+  color: $color-text-muted;
+
+  &:focus-within {
+    border-color: $color-primary-light;
+    box-shadow: 0 0 0 3px rgba($rouge-light, 0.16);
+  }
+
+  > i {
+    font-size: $font-size-xs;
+  }
+
+  input {
+    flex: 1;
+    min-width: 0;
+    border: 0;
+    background: transparent;
+    color: $color-text-primary;
+    font: inherit;
+    outline: none;
+
+    &::placeholder {
+      color: $color-text-muted;
+    }
+  }
+
+  &--processos {
+    width: 300px;
+  }
+}
+
+// ------------------------------------------------------------------ área + painel posicionável
+// Mesmo mecanismo de `processo-lista-painel` (`PanelShellController`): o painel divide espaço
+// com a tabela; só o layout `dialog` flutua. Sem processo aberto, a área tem coluna única.
+.monitoramento-area {
+  --painel-largura: 620px;
+  --painel-altura: 340px;
+
+  position: relative;
+  display: grid;
+  gap: $spacing-lg;
+  min-width: 0;
+  grid-template-columns: var(--painel-largura) minmax(0, 1fr);
+
+  &[data-layout='right'] {
+    grid-template-columns: minmax(0, 1fr) var(--painel-largura);
+
+    .monitoramento-panel-slot {
+      order: 2;
+    }
+    .monitoramento-main {
+      order: 1;
+    }
+  }
+
+  &[data-layout='bottom'] {
+    height: calc(100vh - 160px);
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr) var(--painel-altura);
+
+    .monitoramento-panel-slot {
+      order: 2;
+      height: auto;
+      min-height: 0;
+      overflow: auto;
+    }
+    .monitoramento-main {
+      order: 1;
+      min-height: 0;
+      max-height: none;
+    }
+  }
+
+  &[data-layout='dialog'] {
+    grid-template-columns: minmax(0, 1fr);
+
+    .monitoramento-panel-slot {
+      position: fixed;
+      z-index: $z-overlay;
+      top: 50%;
+      left: 50%;
+      width: min(720px, 94vw);
+      height: min(80vh, 720px);
+      transform: translate(-50%, -50%);
+    }
+  }
+
+  &.monitoramento-area--panel-hidden {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: none;
+    height: auto;
+
+    .monitoramento-panel-slot {
+      display: none;
+    }
+  }
+}
+
+.monitoramento-panel-slot {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-sm;
+  min-width: 0;
+  height: calc(100vh - 132px);
+
+  > app-andamentos-automaticos-processo-panel,
+  > .monitoramento-invalido {
+    flex: 1;
+    min-height: 0;
+  }
+}
+
+// Faixa acima do painel: vínculo com o cadastro de processos, ou o botão pra cadastrar.
+.monitoramento-vinculo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: $spacing-sm;
+  padding: $spacing-sm $spacing-md;
+  border: 1px solid $color-border;
+  border-radius: $border-radius-sm;
+  background-color: $color-neutral-light;
+  color: $color-text-muted;
+  font-size: $font-size-xs;
+
+  span {
+    flex: 1;
+  }
+
+  strong {
+    color: $color-text-primary;
+  }
+
+  &--ok {
+    border-color: rgba($color-success, 0.4);
+    background-color: rgba($color-success, 0.1);
+
+    i {
+      color: darken-color($color-success, 14%);
+    }
+  }
+}
+
+.monitoramento-panel-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: $z-overlay - 1;
+  border: 0;
+  padding: 0;
+  background-color: rgba($burgundy-deep, 0.45);
+  cursor: pointer;
+}
+
+.monitoramento-resizer {
+  position: absolute;
+  z-index: 4;
+  touch-action: none;
+
+  &::after {
+    content: '';
+    position: absolute;
+    border-radius: 999px;
+    background-color: rgba($color-border, 0.9);
+    transition: background-color $transition-fast;
+  }
+
+  &:hover::after,
+  &:active::after {
+    background-color: $color-primary-light;
+  }
+
+  &--left,
+  &--right {
+    top: 0;
+    bottom: 0;
+    width: $spacing-lg;
+    cursor: col-resize;
+
+    &::after {
+      top: 0;
+      bottom: 0;
+      left: 50%;
+      width: 3px;
+      transform: translateX(-50%);
+    }
+  }
+
+  &--left {
+    left: var(--painel-largura);
+    transform: translateX(-50%);
+  }
+
+  &--right {
+    right: var(--painel-largura);
+    transform: translateX(50%);
+  }
+
+  &--bottom {
+    left: 0;
+    right: 0;
+    bottom: var(--painel-altura);
+    height: $spacing-lg;
+    transform: translateY(50%);
+    cursor: row-resize;
+
+    &::after {
+      left: 0;
+      right: 0;
+      top: 50%;
+      height: 3px;
+      transform: translateY(-50%);
+    }
+  }
+}
+
+// ------------------------------------------------------------------ monitoramento selecionado
+.monitoramento-main {
+  gap: $spacing-md;
+
+  // Título e ações lado a lado quando cabe; sem espaço (painel aberto), as ações descem.
+  &__header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: $spacing-sm $spacing-md;
+  }
+
+  &__titulo {
+    display: flex;
+    flex: 1 1 260px;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+
+    h2 {
+      margin: 0;
+    }
+
+    span {
+      color: $color-text-muted;
+      font-size: $font-size-xs;
+    }
+  }
+
+  &__acoes {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: $spacing-sm;
+  }
+
+  &__tabela {
+    @include thin-scrollbar;
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+
+    // Número com novidade não vista pelo usuário: linha em negrito (mesma ideia do painel).
+    ::ng-deep tr.tem-novidade td {
+      font-weight: $font-weight-bold;
+    }
+  }
+
+  &--vazio {
+    justify-content: center;
+  }
+}
+
+.monitoramento-progresso {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-sm;
+  padding: $spacing-sm $spacing-md;
+  border: 1px solid $color-border;
+  border-radius: $border-radius-sm;
+  background-color: $color-neutral-light;
+  font-size: $font-size-xs;
+
+  &__linha {
+    @include flex-between;
+    gap: $spacing-md;
+  }
+
+  &__barra {
+    height: 6px;
+    overflow: hidden;
+    border-radius: 3px;
+    background-color: rgba($color-primary-pale, 0.6);
+
+    div {
+      height: 100%;
+      border-radius: 3px;
+      background-color: $color-primary;
+      transition: width 0.4s ease;
+    }
+  }
+}
+
+.monitoramento-filtros {
+  @include flex-between;
+  flex-wrap: wrap;
+  gap: $spacing-sm;
+}
+
+.monitoramento-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $spacing-xs;
+
+  button {
+    min-height: 32px;
+    padding: 0 $spacing-md;
+    border: 1px solid $color-border;
+    border-radius: 999px;
+    background-color: $color-surface;
+    color: $color-text-primary;
+    cursor: pointer;
+    font: inherit;
+    font-size: $font-size-xs;
+    transition:
+      background-color $transition-fast,
+      border-color $transition-fast;
+
+    &:hover {
+      border-color: $color-primary-light;
+    }
+
+    &.is-active {
+      border-color: $color-primary;
+      background-color: $color-primary;
+      color: #fff;
+    }
+  }
+}
+
+.monitoramento-vazio {
+  @include flex-center;
+  flex-direction: column;
+  gap: $spacing-sm;
+  flex: 1;
+  min-height: 240px;
+  padding: $spacing-2xl;
+  border: 1px dashed $color-border;
+  border-radius: $border-radius-md;
+  background-color: $color-neutral-light;
+  color: $color-text-muted;
+  text-align: center;
+
+  i {
+    font-size: 2rem;
+    color: $color-primary-light;
+  }
+
+  p {
+    max-width: 52ch;
+    margin: 0;
+  }
+
+  strong {
+    color: $color-text-primary;
+  }
+}
+
+@include respond-below($breakpoint-lg) {
+  .monitoramento {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .monitoramento-area[data-layout='left'],
+  .monitoramento-area[data-layout='right'],
+  .monitoramento-area[data-layout='bottom'] {
+    height: auto;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: none;
+  }
+
+  .monitoramento-resizer {
+    display: none;
+  }
+
+  .monitoramento-lista,
+  .monitoramento-main {
+    max-height: none;
+  }
+}
+
+// Painel de número inválido: explica e oferece a correção em vez de consultar (as fontes dariam 422).
+.monitoramento-invalido {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: $spacing-sm;
+  height: 100%;
+  padding: $spacing-lg;
+  border: 1px solid rgba($color-error, 0.4);
+  border-radius: $border-radius-md;
+  background-color: $color-surface;
+  text-align: center;
+
+  &__topo {
+    @include flex-between;
+    align-self: stretch;
+    font-family: $font-family-heading;
+  }
+
+  &__icone {
+    margin-top: $spacing-2xl;
+    font-size: 2rem;
+    color: $color-error;
+  }
+
+  p {
+    max-width: 48ch;
+    margin: 0;
+    color: $color-text-muted;
+  }
+
+  strong {
+    color: $color-text-primary;
+  }
+}

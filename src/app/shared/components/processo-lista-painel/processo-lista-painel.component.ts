@@ -29,6 +29,7 @@ interface ProcessoOperacoesRow {
   numeroCnj: string | null;
   acao: string | null;
   status: string | null;
+  tipo: string | null;
   clientePrincipalNome: string | null;
   contrarioPrincipalNome: string | null;
   clientePrincipalId: number | null;
@@ -93,6 +94,12 @@ export class ProcessoListaPainelComponent implements OnInit {
   /** `tipoEntidade` dos favoritos da tabela — ausente, cai no padrão (`processo-operacoes`, o `entityName`). */
   readonly favoritoTipo = input<string | null>(null);
   readonly textoPainelVazio = input('Selecione um processo na tabela para visualizar os detalhes dele aqui.');
+  /**
+   * Filtro RQL fixo da tela, anexado com `and` depois da busca livre — ex.: Andamentos
+   * Automáticos passa `tipo eq 'JUDICIAL'`. Ausente, lista todos os processos ativos. Só
+   * condições ligadas por `and` (ver precedência em `buildFilter`).
+   */
+  readonly filtroFixo = input<string | null>(null);
 
   /** Conteúdo do painel, projetado pela tela — recebe `ProcessoPainelContexto`. */
   protected readonly painel = contentChild.required(TemplateRef<ProcessoPainelContexto>);
@@ -113,7 +120,7 @@ export class ProcessoListaPainelComponent implements OnInit {
     { initialValue: this.busca() },
   );
 
-  protected readonly filtro = computed(() => this.buildFilter(this.buscaDebounced()));
+  protected readonly filtro = computed(() => this.buildFilter(this.buscaDebounced(), this.filtroFixo()));
 
   /** Linha do processo aberto no painel — destaque inequívoco (tinta + fita lateral), mesmo padrão de Clientes/Processos. */
   protected readonly processoRowClass = (row: ProcessoOperacoesRow): Record<string, boolean> => ({
@@ -174,10 +181,22 @@ export class ProcessoListaPainelComponent implements OnInit {
     };
   }
 
-  /** Monta o filtro RQL: `campo1 ilike '*x*' or campo2 ilike '*x*' or campo3 ilike '*x*'`. */
-  private buildFilter(busca: string): string {
+  /**
+   * Monta o filtro RQL: `campo1 ilike '*x*' or campo2 ilike '*x*' or campo3 ilike '*x*' and <filtroFixo>`.
+   * RQL do ddd-noap não tem parênteses — avalia estritamente da esquerda pra direita — então o
+   * filtro fixo vai por último, aplicando-se ao resultado acumulado dos `or` (mesmo padrão do
+   * `and ativo eq true` de Advogados).
+   */
+  private buildFilter(busca: string, filtroFixo: string | null): string {
     const termo = busca.trim().replace(/'/g, '');
-    return termo ? CAMPOS_BUSCA.map((campo) => `${campo} ilike '*${termo}*'`).join(' or ') : '';
+    const clausulas: string[] = [];
+    if (termo) {
+      clausulas.push(CAMPOS_BUSCA.map((campo) => `${campo} ilike '*${termo}*'`).join(' or '));
+    }
+    if (filtroFixo) {
+      clausulas.push(filtroFixo);
+    }
+    return clausulas.join(' and ');
   }
 
   protected onBuscaInput(event: Event): void {

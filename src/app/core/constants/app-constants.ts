@@ -13,6 +13,7 @@ export const ROUTES = {
   PROCESSOS: 'processos',
   OPERACOES: 'operacoes',
   ANDAMENTOS_AUTOMATICOS: 'andamentos-automaticos',
+  MONITORAMENTO: 'monitoramento',
   USUARIOS: 'usuarios',
   LOGIN: 'login',
   CHANGE_PASSWORD: 'trocar-senha',
@@ -42,7 +43,12 @@ export const SIDEBAR_NAV: readonly NavItem[] = [
     route: `/${ROUTES.ANDAMENTOS_AUTOMATICOS}`,
     emphasis: 'accent',
   },
-  { label: 'Rastreamentos', icon: 'fa-solid fa-tower-broadcast', emphasis: 'accent' },
+  {
+    label: 'Monitoramento',
+    icon: 'fa-solid fa-satellite-dish',
+    route: `/${ROUTES.MONITORAMENTO}`,
+    emphasis: 'accent',
+  },
   {
     label: 'Clientes',
     icon: 'fa-solid fa-address-book',

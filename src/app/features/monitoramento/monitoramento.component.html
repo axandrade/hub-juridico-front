@@ -1,0 +1,296 @@
+<div class="monitoramento" [class.monitoramento--lista-recolhida]="listaRecolhida()">
+  <!-- ============================================================ lista de monitoramentos -->
+  @if (listaRecolhida()) {
+    <aside class="monitoramento-lista monitoramento-lista--recolhida" aria-label="Monitoramentos">
+      <button type="button" class="monitoramento-lista__alternar" aria-label="Mostrar a lista de monitoramentos" title="Mostrar a lista de monitoramentos" (click)="alternarLista()">
+        <i class="fa-solid fa-angles-right" aria-hidden="true"></i>
+      </button>
+      <span class="monitoramento-lista__vertical">Monitoramentos</span>
+    </aside>
+  } @else {
+  <aside class="monitoramento-lista" aria-label="Monitoramentos">
+    <div class="monitoramento-lista__header">
+      <h1>Monitoramentos</h1>
+      <div class="monitoramento-lista__header-acoes">
+        <app-button variant="primary" size="sm" icon="fa-solid fa-plus" label="Novo" (clicked)="monitoramentoEmEdicao.set('novo')" />
+        <button type="button" class="monitoramento-lista__alternar" aria-label="Recolher a lista de monitoramentos" title="Recolher a lista" (click)="alternarLista()">
+          <i class="fa-solid fa-angles-left" aria-hidden="true"></i>
+        </button>
+      </div>
+    </div>
+
+    <label class="monitoramento-busca">
+      <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+      <input
+        type="text"
+        placeholder="Buscar monitoramento"
+        aria-label="Buscar monitoramento"
+        [value]="buscaMonitoramento()"
+        (input)="onBuscaMonitoramento($event)"
+      />
+    </label>
+
+    <label class="monitoramento-lista__inativos">
+      <input type="checkbox" [checked]="incluirInativos()" (change)="incluirInativos.set(!incluirInativos())" />
+      Incluir inativos
+    </label>
+
+    <div class="monitoramento-lista__tabela">
+      <app-domain-model-table
+        #gradeMonitoramentos
+        entityName="monitoramento-resumo"
+        fields="id,nome,descricao,ativo,ultimaAtualizacaoEm,totalProcessos,totalEncontrados,totalNaoEncontrados,totalComFalha,totalNaoConsultados,totalNumeroInvalido"
+        [columns]="colunasMonitoramentos"
+        [columnsToolbar]="false"
+        [favoritable]="false"
+        [filter]="filtroMonitoramentos()"
+        sort="nome"
+        trackKey="id"
+        emptyMessage="Nenhum monitoramento ainda. Crie o primeiro em “Novo”."
+        [sortable]="true"
+        [rowClass]="classeMonitoramento"
+        [editAction]="editarMonitoramentoAcao"
+        editAriaLabel="Editar monitoramento"
+        (rowClick)="selecionarMonitoramento($event)"
+        (dataLoaded)="onMonitoramentosCarregados($event)"
+      />
+    </div>
+  </aside>
+  }
+
+  <!-- ============================================================ monitoramento selecionado -->
+  @if (monitoramento(); as m) {
+    <div
+      class="monitoramento-area"
+      [attr.data-layout]="panelShell.layoutPainel()"
+      [class.monitoramento-area--panel-hidden]="!panelShell.panelVisible() || !processo()"
+      [style.--painel-largura.px]="panelShell.painelLargura()"
+      [style.--painel-altura.px]="panelShell.painelAltura()"
+    >
+      @if (panelShell.layoutPainel() === 'dialog' && panelShell.panelVisible() && processo()) {
+        <button type="button" class="monitoramento-panel-backdrop" aria-label="Fechar painel" (click)="panelShell.fecharDialog()"></button>
+      }
+
+      <div class="monitoramento-panel-slot">
+        @if (processo(); as p) {
+          <div class="monitoramento-vinculo" [class.monitoramento-vinculo--ok]="p.processoId">
+            @if (p.processoId) {
+              <i class="fa-solid fa-link" aria-hidden="true"></i>
+              <span>No cadastro de processos como <strong>{{ p.processoPasta }}</strong>.</span>
+            } @else {
+              <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
+              <span>Este processo não está no cadastro.</span>
+              <app-button variant="secondary" size="sm" icon="fa-solid fa-folder-plus" label="Cadastrar no sistema" (clicked)="aCadastrar.set(p)" />
+            }
+          </div>
+          @if (!p.numeroValido) {
+            <div class="monitoramento-invalido">
+              <div class="monitoramento-invalido__topo">
+                <strong>{{ p.numeroCnj }}</strong>
+                <button type="button" class="monitoramento-lista__alternar" aria-label="Fechar painel" (click)="fecharPainel()">
+                  <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+                </button>
+              </div>
+              <i class="fa-solid fa-triangle-exclamation monitoramento-invalido__icone" aria-hidden="true"></i>
+              <p><strong>Número CNJ inválido: o dígito verificador não confere.</strong></p>
+              <p>
+                As fontes (DataJud, STF e Comunica/DJEN) recusam números assim, então este processo não é consultado —
+                nem aqui, nem no Atualizar. Confira o número com o cliente e corrija.
+              </p>
+              <app-button variant="primary" size="sm" icon="fa-solid fa-pen" label="Corrigir número" (clicked)="processoEmEdicao.set(p)" />
+            </div>
+          } @else {
+          <app-andamentos-automaticos-processo-panel
+            [numeroCnj]="p.numeroCnj"
+            [clienteNome]="p.cliente"
+            [layoutPainel]="panelShell.layoutPainel()"
+            (layoutPainelChange)="panelShell.setLayoutPainel($event)"
+            (fechar)="fecharPainel()"
+          />
+          }
+        }
+      </div>
+
+      @if (panelShell.panelVisible() && processo() && panelShell.layoutPainel() !== 'dialog') {
+        <div
+          class="monitoramento-resizer"
+          [class]="'monitoramento-resizer monitoramento-resizer--' + panelShell.layoutPainel()"
+          role="separator"
+          [attr.aria-orientation]="panelShell.layoutPainel() === 'bottom' ? 'horizontal' : 'vertical'"
+          aria-label="Redimensionar painel"
+          (pointerdown)="panelShell.iniciarResize($event)"
+        ></div>
+      }
+
+      <section class="monitoramento-main" [attr.aria-label]="m.nome">
+        <div class="monitoramento-main__header">
+          <div class="monitoramento-main__titulo">
+            <h2>{{ m.nome }}</h2>
+            <span>
+              {{ m.totalProcessos }} processo(s) · {{ ultimaAtualizacao(m) }}
+              @if (m.descricao) {
+                · {{ m.descricao }}
+              }
+              @if (!m.ativo) {
+                · <strong>inativo</strong>
+              }
+            </span>
+          </div>
+          <div class="monitoramento-main__acoes">
+            @if (gradeProcessos(); as tabela) {
+              <app-columns-menu
+                [columns]="colunasProcessos"
+                [isVisible]="tabela.columnVisibilityState.isVisible"
+                [menuOpen]="tabela.columnVisibilityState.menuOpen()"
+                (menuOpenChange)="tabela.columnVisibilityState.menuOpen.set($event)"
+                (toggleColumn)="tabela.columnVisibilityState.toggle($event)"
+                (toggleAll)="tabela.columnVisibilityState.toggleAll($event)"
+              />
+            }
+            <app-button
+              variant="secondary"
+              size="sm"
+              icon="fa-solid fa-plus"
+              label="Adicionar processo"
+              (clicked)="processoEmEdicao.set('novo')"
+            />
+            <app-button
+              variant="primary"
+              size="sm"
+              icon="fa-solid fa-rotate"
+              [label]="atualizando() ? 'Atualizando…' : 'Atualizar'"
+              [disabled]="atualizando() || m.totalProcessos === 0"
+              (clicked)="atualizar()"
+            />
+          </div>
+        </div>
+
+        @if (atualizacao(); as a) {
+          @if (a.em_andamento) {
+            <div class="monitoramento-progresso" role="status">
+              <div class="monitoramento-progresso__linha">
+                <span>
+                  <strong>Consultando {{ a.concluidos }} de {{ a.total }}</strong> · DataJud, STF e Comunica/DJEN. Pode sair
+                  da tela, a consulta continua.
+                </span>
+                <app-button variant="tertiary" size="sm" label="Cancelar" [disabled]="a.cancelada" (clicked)="cancelarAtualizacao()" />
+              </div>
+              <div class="monitoramento-progresso__barra">
+                <div [style.width.%]="progresso()"></div>
+              </div>
+            </div>
+          }
+        }
+
+        @if (m.totalProcessos === 0) {
+          <div class="monitoramento-vazio">
+            <i class="fa-solid fa-satellite-dish" aria-hidden="true"></i>
+            <p><strong>Este monitoramento ainda está vazio.</strong></p>
+            <p>
+              Adicione processos pelo número CNJ, com cliente, contrário, ação e status. Eles não precisam estar
+              cadastrados no sistema. Depois é só clicar em Atualizar para procurar cada um no DataJud, no STF e no
+              Comunica/DJEN.
+            </p>
+            <app-button variant="primary" size="sm" icon="fa-solid fa-plus" label="Adicionar processo" (clicked)="processoEmEdicao.set('novo')" />
+          </div>
+        } @else {
+          <div class="monitoramento-filtros">
+            <div class="monitoramento-chips" role="group" aria-label="Filtrar por situação">
+              @for (chip of chips(); track chip.id) {
+                <button
+                  type="button"
+                  [class.is-active]="filtroSituacao() === chip.id"
+                  [attr.aria-pressed]="filtroSituacao() === chip.id"
+                  (click)="escolherSituacao(chip.id)"
+                >
+                  {{ chip.rotulo }} <strong>{{ chip.total }}</strong>
+                </button>
+              }
+            </div>
+            <label class="monitoramento-busca monitoramento-busca--processos">
+              <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+              <input
+                type="text"
+                [placeholder]="filtroSituacao() === 'novidades' ? 'Busca desligada em “Com novidades”' : 'CNJ, cliente, contrário ou ação'"
+                aria-label="Filtrar processos"
+                [disabled]="filtroSituacao() === 'novidades'"
+                [value]="buscaProcesso()"
+                (input)="onBuscaProcesso($event)"
+              />
+            </label>
+          </div>
+
+          <div class="monitoramento-main__tabela">
+            <app-domain-model-table
+              #gradeProcessos
+              entityName="monitoramento-processo-resumo"
+              [fields]="camposProcessos"
+              [columns]="colunasProcessos"
+              [columnsToolbar]="false"
+              [columnVisibility]="true"
+              [columnReorder]="true"
+              [defaultVisibleColumns]="colunasPadraoProcessos"
+              columnsStorageKey="hub-juridico.monitoramento.processos.colunas"
+              [favoritable]="false"
+              [filter]="filtroProcessos()"
+              sort="numeroCnj"
+              trackKey="id"
+              emptyMessage="Nenhum processo nesse filtro."
+              [sortable]="true"
+              [rowClass]="classeProcesso"
+              [rowTitle]="tituloProcesso"
+              [editAction]="editarProcessoAcao"
+              editAriaLabel="Editar dados do processo"
+              [deleteAction]="removerProcessoAcao"
+              deleteAriaLabel="Remover do monitoramento"
+              (rowClick)="selecionarProcesso($event)"
+            />
+          </div>
+        }
+      </section>
+    </div>
+  } @else {
+    <section class="monitoramento-main monitoramento-main--vazio">
+      <div class="monitoramento-vazio">
+        <i class="fa-solid fa-satellite-dish" aria-hidden="true"></i>
+        <p><strong>Nenhum monitoramento selecionado.</strong></p>
+        <p>Crie um monitoramento para agrupar os processos que você quer acompanhar nas fontes externas.</p>
+      </div>
+    </section>
+  }
+</div>
+
+@if (monitoramentoEmEdicao(); as edicao) {
+  <app-monitoramento-form
+    [monitoramento]="edicao === 'novo' ? null : edicao"
+    (salvo)="onMonitoramentoSalvo($event)"
+    (fechar)="monitoramentoEmEdicao.set(null)"
+  />
+}
+
+@if (processoEmEdicao(); as edicao) {
+  @if (monitoramento(); as m) {
+    <app-monitoramento-processo-form
+      [monitoramentoId]="m.id"
+      [monitoramentoNome]="m.nome"
+      [processo]="edicao === 'novo' ? null : edicao"
+      (salvo)="onProcessoSalvo($event)"
+      (fechar)="processoEmEdicao.set(null)"
+    />
+  }
+}
+
+@if (aCadastrar(); as p) {
+  <app-monitoramento-cadastrar-processo [processo]="p" (cadastrado)="onCadastradoNoSistema()" (fechar)="aCadastrar.set(null)" />
+}
+
+<app-modal [open]="aRemover() !== null" title="Remover do monitoramento" (closed)="aRemover.set(null)">
+  @if (aRemover(); as row) {
+    <p>
+      Tirar <strong>{{ row.numeroCnj }}</strong> ({{ row.cliente }}) deste monitoramento? As consultas já feitas
+      continuam gravadas e servem a outros monitoramentos e ao cadastro.
+    </p>
+  }
+  <app-button modalFooter variant="tertiary" size="sm" label="Cancelar" (clicked)="aRemover.set(null)" />
+  <app-button modalFooter variant="primary" size="sm" icon="fa-solid fa-trash" label="Remover" (clicked)="confirmarRemocao()" />
+</app-modal>

@@ -44,7 +44,9 @@ import { TablePagination, TablePinAction, TableSort } from '../table/table.model
  * Favoritar é nativo no modo `entityName` (todas as telas desse modo têm essa coluna — ver
  * Clientes/Advogados): usa a entidade genérica `Favorito` via `/domain/favorito`
  * (`DomainFavoritoService`), com `tipoEntidade = entityName()` — nenhuma tela precisa fiar nada,
- * só existe (a menos que `favoritable` seja explicitamente desligado). Sem coluna de `id` visível
+ * só existe (a menos que `favoritable` seja explicitamente desligado). Telas diferentes sobre a
+ * mesma entidade que precisam de favoritos separados informam `favoritoTipo` (ex.: Operações e
+ * Andamentos Automáticos, ambas em `processo-operacoes`). Sem coluna de `id` visível
  * nenhuma: o id da linha vem de `trackKey` (ou `'id'` por padrão).
  *
  * Favorito sempre fica fixo no topo da listagem, mesmo vindo de outra página (achado real
@@ -110,6 +112,8 @@ export class DomainModelTableComponent<T extends object> {
   readonly columnReorder = input<boolean>(false);
   /** Toda tabela tem favoritar por padrão — desligue só se a entidade genuinamente não fizer sentido favoritar. */
   readonly favoritable = input<boolean>(true);
+  /** `tipoEntidade` gravado no favorito — padrão é o próprio `entityName`. */
+  readonly favoritoTipo = input<string | null>(null);
   /** Sem isso, todo registro é favoritável. Quando informado, um registro "inativo" nunca fixa como favorito e o botão de favoritar fica desabilitado nele. */
   readonly isRowActive = input<((row: T) => boolean) | null>(null);
   /**
@@ -389,7 +393,7 @@ export class DomainModelTableComponent<T extends object> {
     const existingFavoritoId = this.favoritoMap().get(id);
     const request$ = existingFavoritoId != null
       ? this.domainFavoritoService.desfavoritar(existingFavoritoId).pipe(map(() => undefined))
-      : this.domainFavoritoService.favoritar(entityName, id).pipe(map(() => undefined));
+      : this.domainFavoritoService.favoritar(this.favoritoTipo() ?? entityName, id).pipe(map(() => undefined));
 
     // Refaz a busca inteira (pinned + página) em vez de só corrigir o Map local: é o jeito mais
     // simples de manter `pinnedRows`/exclusão da paginação normal consistentes com o servidor.
@@ -421,7 +425,7 @@ export class DomainModelTableComponent<T extends object> {
       this.favoritoMap.set(new Map());
       return of([]);
     }
-    return this.domainFavoritoService.listarTodosFavoritos(entityName).pipe(
+    return this.domainFavoritoService.listarTodosFavoritos(this.favoritoTipo() ?? entityName).pipe(
       switchMap((favoritoMap) => {
         this.favoritoMap.set(favoritoMap);
         const ids = [...favoritoMap.keys()];

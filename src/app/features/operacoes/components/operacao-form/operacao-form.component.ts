@@ -55,6 +55,8 @@ export class OperacaoFormComponent {
   readonly cancelado = output<void>();
 
   private readonly informacoesGerais = viewChild(OperacaoInformacoesGeraisComponent);
+  /** Só pra mostrar o "3/7" no título da aba Checklists. */
+  protected readonly checklists = viewChild(OperacaoChecklistsComponent);
 
   protected readonly abas: readonly OperacaoAba[] = ['informacoesGerais', 'checklists', 'comentarios', 'historico'];
   protected readonly abaAtiva = signal<OperacaoAba>('informacoesGerais');

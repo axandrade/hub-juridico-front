@@ -1,0 +1,37 @@
+<app-modal [open]="true" [wide]="true" [title]="editando() ? 'Editar monitoramento' : 'Novo monitoramento'" (closed)="fechar.emit()">
+  <div class="mp-form">
+    <label class="mp-form__field">
+      <span>Nome <em aria-hidden="true">*</em></span>
+      <input type="text" maxlength="150" placeholder="Ex.: Carteira de cobrança — lote 09/2026" [value]="nome()" (input)="onTexto('nome', $event)" />
+    </label>
+
+    <label class="mp-form__field">
+      <span>Descrição</span>
+      <textarea
+        rows="5"
+        maxlength="500"
+        placeholder="Para que serve este monitoramento"
+        [value]="descricao()"
+        (input)="onTexto('descricao', $event)"
+      ></textarea>
+    </label>
+
+    @if (editando()) {
+      <label class="mp-form__check">
+        <input type="checkbox" [checked]="ativo()" (change)="ativo.set(!ativo())" />
+        Ativo (inativo some da lista, sem apagar nada)
+      </label>
+    }
+  </div>
+
+  <app-button modalFooter variant="tertiary" size="sm" label="Cancelar" (clicked)="fechar.emit()" />
+  <app-button
+    modalFooter
+    variant="primary"
+    size="sm"
+    icon="fa-solid fa-check"
+    label="Salvar"
+    [disabled]="!podeSalvar()"
+    (clicked)="salvar()"
+  />
+</app-modal>

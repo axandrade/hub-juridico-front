@@ -136,6 +136,56 @@
     text-align: center;
   }
 
+  &__action {
+    width: 1%;
+    white-space: nowrap;
+    text-align: right;
+  }
+
+  &__action-button {
+    display: inline-flex;
+    align-items: center;
+    gap: $spacing-xs;
+    min-height: 26px;
+    padding: 0 $spacing-sm;
+    border: 1px solid $color-border;
+    border-radius: $border-radius-sm;
+    background-color: $color-neutral-light;
+    color: $color-text-secondary;
+    font: inherit;
+    font-size: $font-size-xs;
+    font-weight: $font-weight-medium;
+    white-space: nowrap;
+    cursor: pointer;
+    transition:
+      border-color $transition-fast,
+      color $transition-fast;
+
+    &:hover {
+      border-color: $color-primary-light;
+      color: $color-primary;
+    }
+
+    // Só ícone: botão redondo sem borda, que só ganha fundo no hover.
+    &--icon {
+      justify-content: center;
+      width: 28px;
+      min-height: 28px;
+      padding: 0;
+      border-color: transparent;
+      border-radius: 50%;
+      background-color: transparent;
+      color: $color-text-muted;
+      font-size: $font-size-base;
+
+      &:hover {
+        border-color: transparent;
+        background-color: rgba($color-primary-pale, 0.7);
+        color: $color-primary;
+      }
+    }
+  }
+
   &__pin-button {
     @include flex-center;
     width: 34px;

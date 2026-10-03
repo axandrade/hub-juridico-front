@@ -23,13 +23,17 @@
     z-index: 2;
     top: 0;
     text-align: left;
-    padding: $spacing-sm $spacing-md;
+    padding: 4px $spacing-sm;
     background-color: #f1ede1; // neutro quente — não rosa
     color: $color-text-primary;
     font-family: $font-family-heading;
     font-weight: $font-weight-medium;
     border-bottom: 1px solid rgba($burgundy-deep, 0.16);
     white-space: nowrap;
+
+    &:not(:last-child) {
+      border-right: 1px solid rgba($burgundy-deep, 0.1);
+    }
   }
 
   // Arrastar o cabeçalho pra reordenar (`columnReorder`) — só nas colunas com `cdkDrag` ligado.
@@ -52,9 +56,15 @@
   }
 
   tbody td {
-    padding: $spacing-sm $spacing-md;
+    padding: 3px $spacing-sm;
     border-bottom: 1px solid rgba($burgundy-deep, 0.08); // divisória neutra e discreta
+    border-right: 1px solid rgba($burgundy-deep, 0.08);
     color: $color-text-primary;
+    line-height: 1.15;
+
+    &:last-child {
+      border-right: none;
+    }
   }
 
   tbody tr {
@@ -131,15 +141,15 @@
   }
 
   &__pin {
-    width: 44px;
-    max-width: 44px;
+    width: 32px;
+    max-width: 32px;
     text-align: center;
   }
 
   &__pin-button {
     @include flex-center;
-    width: 34px;
-    height: 34px;
+    width: 24px;
+    height: 24px;
     padding: 0;
     border: 1px solid $color-border;
     border-radius: $border-radius-sm;
@@ -176,8 +186,8 @@
   }
 
   &__actions {
-    width: 88px;
-    max-width: 88px;
+    width: 68px;
+    max-width: 68px;
     text-align: center;
     white-space: nowrap;
   }
@@ -194,8 +204,8 @@
   &__action-button {
     @include flex-center;
     flex: 0 0 auto;
-    width: 34px;
-    height: 34px;
+    width: 24px;
+    height: 24px;
     padding: 0;
     border: 1px solid $color-border;
     border-radius: $border-radius-sm;

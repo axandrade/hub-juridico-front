@@ -144,8 +144,12 @@
   th,
   td {
     border-bottom: 1px solid rgba($color-border, 0.65);
-    padding: $spacing-sm;
+    padding: 4px $spacing-sm;
     text-align: left;
+
+    &:not(:last-child) {
+      border-right: 1px solid rgba($color-border, 0.5);
+    }
   }
 
   thead th {
@@ -153,6 +157,14 @@
     top: 0;
     z-index: 1;
     background-color: $color-surface;
+  }
+
+  tbody td {
+    line-height: 1.15;
+
+    &:last-child {
+      border-right: none;
+    }
   }
 }
 

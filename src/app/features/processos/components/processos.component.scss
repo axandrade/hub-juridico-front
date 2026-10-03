@@ -364,13 +364,13 @@
     content: '';
     position: absolute;
     border-radius: 999px;
-    background-color: rgba($color-border, 0.9);
+    background-color: transparent;
     transition: background-color $transition-fast;
   }
 
   &:hover::after,
   &:active::after {
-    background-color: $color-primary-light;
+    background-color: transparent;
   }
 }
 

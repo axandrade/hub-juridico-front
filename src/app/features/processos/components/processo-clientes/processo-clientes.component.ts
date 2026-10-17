@@ -175,8 +175,7 @@ export class ProcessoClientesComponent {
 
   /** Abre o diálogo de arquivos daquele cliente (botão na própria linha, não depende de seleção). */
   protected abrirPasta(linha: ClienteProcessoLinha): void {
-    this.pastaCliente.definirCliente({ id: linha.pessoaId, nome: linha.pessoaNome });
-    this.pastaCliente.abrir();
+    this.pastaCliente.abrir({ id: linha.pessoaId, nome: linha.pessoaNome });
   }
 
   protected remover(): void {

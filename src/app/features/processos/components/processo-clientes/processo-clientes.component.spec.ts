@@ -50,7 +50,7 @@ describe('ProcessoClientesComponent — editar cliente/posição de uma linha ex
             rotuloPosicaoCliente: () => of(''),
           },
         },
-        { provide: PastaClienteService, useValue: { definirCliente: () => {}, abrir: () => {} } },
+        { provide: PastaClienteService, useValue: { abrir: () => {} } },
       ],
     });
     fixture = TestBed.createComponent(ProcessoClientesComponent);

@@ -54,12 +54,24 @@ export class PastaClienteDialogComponent {
           this.pastaNotice.set(null);
           return;
         }
-        const cliente = this.pastaCliente.cliente();
+        const cliente = this.pastaCliente.avulso() ?? this.pastaCliente.cliente();
         if (cliente) {
           this.pastaExplorerPessoa.set({ id: cliente.id, nome: cliente.nome });
         } else {
           this.pastaExplorerPessoa.set(null);
           this.pastaResumoTick.update((tick) => tick + 1);
+        }
+      });
+    });
+
+    // O nome do cliente selecionado pode chegar depois da abertura (a tela de processos publica
+    // só o id e resolve o nome em seguida): completa o título se o explorador ainda é dele.
+    effect(() => {
+      const cliente = this.pastaCliente.cliente();
+      untracked(() => {
+        const atual = this.pastaExplorerPessoa();
+        if (cliente?.nome && atual && atual.id === cliente.id && !atual.nome) {
+          this.pastaExplorerPessoa.set({ id: atual.id, nome: cliente.nome });
         }
       });
     });
